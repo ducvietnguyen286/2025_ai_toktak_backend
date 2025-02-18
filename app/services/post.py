@@ -20,7 +20,7 @@ class PostService:
     @staticmethod
     def update_post(id, *args, **kwargs):
         post = Post.query.get(id)
-        post.update(*args, **kwargs)
+        post.update(**kwargs)
         return post
 
     @staticmethod
