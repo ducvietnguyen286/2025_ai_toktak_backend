@@ -76,7 +76,7 @@ class APICreateBatch(Resource):
                 posts.append(post_res)
 
             return Response(
-                data=posts,
+                data={"posts": posts, "images": image_paths},
                 message="Tạo batch thành công",
             ).to_dict()
         except Exception as e:
