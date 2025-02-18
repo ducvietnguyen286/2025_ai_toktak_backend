@@ -8,5 +8,6 @@ class Batch(db.Model, BaseModel):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     url = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=True)
     type = db.Column(db.Integer, default=1)
     status = db.Column(db.Integer, default=1)

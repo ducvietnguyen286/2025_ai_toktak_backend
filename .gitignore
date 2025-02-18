@@ -36,3 +36,5 @@ messages.pot
 .idea
 
 Pipfile.lock
+
+uploads/*
