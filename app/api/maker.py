@@ -129,21 +129,18 @@ class APIMakePost(Resource):
         if response:
             parse_caption = json.loads(response)
             parse_response = parse_caption.get("response", {})
-            caption = parse_response.get("caption", {})
-            caption_hashtag = parse_response.get("caption_hashtag", "")
-            social_content = parse_response.get("social_content", "")
-            blog_content = parse_response.get("blog_content", "")
-            social_hashtag = parse_response.get("social_hashtag", "")
-            if caption_hashtag != "" or social_hashtag != "":
-                hashtag = caption_hashtag or social_hashtag
-            if social_content != "" or blog_content != "":
-                content = social_content or blog_content
-            if (caption and "title" in caption) or (
-                blog_content and "title" in blog_content
-            ):
-                title = caption.get("title", "") or blog_content.get("title", "")
-            if blog_content and "summarize" in blog_content:
-                subtitle = blog_content.get("summarize", "")
+
+            if parse_response and "post" in parse_response:
+                content = parse_response.get("post", "")
+            if parse_response and "title" in parse_response:
+                title = parse_response.get("title", "")
+            if parse_response and "summarize" in parse_response:
+                subtitle = parse_response.get("summarize", "")
+            if parse_response and "content" in parse_response:
+                content = parse_response.get("content", "")
+            if parse_response and "caption" in parse_response:
+                content = parse_response.get("caption", "")
+
         else:
             return Response(
                 message="Tạo post that bai 2222",
