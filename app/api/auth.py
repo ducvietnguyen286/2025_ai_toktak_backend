@@ -1,9 +1,10 @@
 # coding: utf8
+from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
 from app.decorators import parameters
 from app.lib.response import Response
-from app.scraper import Scraper
-import traceback
+
+from app.services.auth import AuthService
 
 ns = Namespace(name="auth", description="Auth API")
 
@@ -14,21 +15,89 @@ class APILogin(Resource):
     @parameters(
         type="object",
         properties={
-            "url": {"type": "string"},
+            "email": {"type": "string"},
+            "password": {"type": "string"},
         },
-        required=["url"],
+        required=["email", "password"],
     )
     def post(self, args):
-        try:
-            url = args.get("url", "")
-            data = Scraper().scraper({"url": url})
-            return Response(
-                data=data,
-                message="Dịch thuật thành công",
-            ).to_dict()
-        except Exception as e:
-            traceback.print_exc()
-            return Response(
-                message="Dịch thuật thất bại",
-                status=400,
-            ).to_dict()
+        email = args.get("email", "")
+        password = args.get("password", "")
+
+        user = AuthService.login(email, password)
+        tokens = AuthService.generate_token(user)
+        tokens.update(
+            {
+                "type": "Bearer",
+                "expires_in": 7200,
+            }
+        )
+
+        return Response(
+            data=tokens,
+            message="Đăng nhập thành công",
+        ).to_dict()
+
+
+@ns.route("/register")
+class APIRegister(Resource):
+
+    @parameters(
+        type="object",
+        properties={
+            "username": {"type": "string"},
+            "email": {"type": "string"},
+            "password": {"type": "string"},
+        },
+        required=["email", "password"],
+    )
+    def post(self, args):
+        username = args.get("username", "")
+        email = args.get("email", "")
+        password = args.get("password", "")
+
+        user = AuthService.register(email, password, username)
+        tokens = AuthService.generate_token(user)
+        tokens.update(
+            {
+                "type": "Bearer",
+                "expires_in": 7200,
+                "user": user._to_json(),
+            }
+        )
+
+        return Response(
+            data=tokens,
+            message="Đăng ký thành công",
+        ).to_dict()
+
+
+@ns.route("/refresh-token")
+class APIRefreshToken(Resource):
+
+    @jwt_required(refresh=True)
+    def post(self):
+        tokens = AuthService.refresh_token()
+        tokens.update(
+            {
+                "type": "Bearer",
+                "expires_in": 7200,
+            }
+        )
+
+        return Response(
+            data=tokens,
+            message="Lấy token mới thành công",
+        ).to_dict()
+
+
+@ns.route("/me")
+class APIMe(Resource):
+
+    @jwt_required()
+    def get(self):
+        user = AuthService.get_current_identity()
+        return Response(
+            data=user._to_json(),
+            message="Lấy thông tin người dùng thành công",
+        ).to_dict()
