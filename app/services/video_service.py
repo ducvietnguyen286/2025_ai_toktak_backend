@@ -38,17 +38,16 @@ def create_video_from_images(product_name, images_url):
     headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
 
     try:
-        
-        print(json.dumps(payload))
         # Gửi yêu cầu POST đến Shotstack API
         response = requests.post(
             SHOTSTACK_URL, headers=headers, data=json.dumps(payload)
         )
 
         # Kiểm tra trạng thái phản hồi
-        print(response.json())
-        if response.status_code == 200:
+        # A new resource was created successfully.
+        if response.status_code == 201:
             result = response.json()
+            result['status_code'] = 200
             return result
         else:
             return {

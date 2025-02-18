@@ -47,7 +47,7 @@ class CreateVideo(Resource):
         status = True
         message = f"Video  created successfully"
         if result['status_code'] == 200:
-            render_id = result['response']
+            render_id = result['response']['id']
         else:
             status = False
             message = result['message']
