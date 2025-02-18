@@ -25,14 +25,27 @@ class APIMaker(Resource):
             url = args.get("url", "")
             data = Scraper().scraper({"url": url})
             images = data.get("images", [])
-            caption = {}
+            caption = []
+            social_content = ""
+            blog_content = ""
             if images:
                 response = call_chatgpt_create_caption(images)
                 if response:
                     parse_caption = json.loads(response)
-                    caption = parse_caption.get("response", {})
+                    parse_response = parse_caption.get("response", {})
+                    caption = parse_response.get("captions", [])
+                    social_content = parse_response.get("social_content", "")
+                    blog_content = parse_response.get("blog_content", "")
+            for index, image in enumerate(images):
+                placeholder = f"IMAGE_URL_{index}"
+                blog_content = blog_content.replace(placeholder, image)
+
             return Response(
-                data=caption,
+                data={
+                    "captions": caption,
+                    "social_content": social_content,
+                    "blog_content": blog_content,
+                },
                 message="Dịch thuật thành công",
             ).to_dict()
         except Exception as e:
