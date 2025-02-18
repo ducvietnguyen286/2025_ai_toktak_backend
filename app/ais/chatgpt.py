@@ -1,4 +1,6 @@
+import json
 from openai import OpenAI
+from app.services.request_log import RequestLogService
 import os
 
 chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
@@ -20,8 +22,10 @@ def call_chatgpt_create_caption(images=[]):
     for image in images:
         content.append({"type": "image_url", "image_url": {"url": image}})
 
+    model = "gpt-4o-mini"
+
     response_schema = {
-        "name": "blog_response",
+        "name": "response_schema",
         "schema": {
             "type": "object",
             "properties": {
@@ -66,21 +70,46 @@ def call_chatgpt_create_caption(images=[]):
         "strict": True,
     }
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "user",
-                "content": content,
-            }
-        ],
-        response_format={
-            "type": "json_schema",
-            "json_schema": response_schema,
-        },
-        max_tokens=3000,
-        temperature=0.9,
+    request_log = json.dumps(
+        {
+            "model": model,
+            "messages": [{"role": "user", "content": content}],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": response_schema,
+            },
+            "max_tokens": 3000,
+            "temperature": 0.9,
+        }
     )
-    if response:
-        return response.choices[0].message.content
-    return None
+
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": content,
+                }
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": response_schema,
+            },
+            max_tokens=3000,
+            temperature=0.9,
+        )
+        response_log = json.dumps(response.to_dict())
+        RequestLogService.create_request_log(
+            ai_type="chatgpt", request=request_log, response=response_log, status=1
+        )
+
+        if response:
+            return response.choices[0].message.content
+        return None
+    except Exception as e:
+        response_log = json.dumps({"error": str(e)})
+        RequestLogService.create_request_log(
+            ai_type="chatgpt", request=request_log, response=response_log, status=0
+        )
+        return None
