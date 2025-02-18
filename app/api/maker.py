@@ -109,7 +109,6 @@ class APIMakePost(Resource):
         type = post.type
         if type == "video":
             response = call_chatgpt_create_caption(images)
-            pass
         elif type == "social":
             response = call_chatgpt_create_social(images)
         elif type == "image":
