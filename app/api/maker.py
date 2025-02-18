@@ -146,7 +146,7 @@ class APIMakePost(Resource):
                 subtitle = blog_content.get("summarize", "")
         else:
             return Response(
-                message="Tạo post that bai",
+                message="Tạo post that bai 2222",
                 status=400,
             ).to_dict()
 
