@@ -7,7 +7,7 @@ from .errors.handler import api_error_handler
 
 from flask import Flask
 from flask_cors import CORS
-from .extensions import redis_client
+from .extensions import redis_client, db, bcrypt, jwt
 
 
 def create_app(config_app):
@@ -23,16 +23,22 @@ def create_app(config_app):
 
 def __config_logging(app):
     app.logger.setLevel(DEBUG)
-    app.logger.info('Start flask...')
+    app.logger.info("Start flask...")
 
 
 def __register_blueprint(app):
     from app.api import bp as api_bp
+
     app.register_blueprint(api_bp)
 
 
 def __init_app(app):
+    db.init_app(app)
     redis_client.init_app(app)
+    bcrypt.init_app(app)
+    jwt.init_app(app)
+
+    app.logger.info("Initial app...")
 
 
 def __config_error_handlers(app):

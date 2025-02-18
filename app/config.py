@@ -1,5 +1,6 @@
 # coding: utf8
 import os
+from datetime import timedelta
 
 
 class Config(object):
@@ -7,6 +8,23 @@ class Config(object):
     API_URL = os.environ.get("API_URL") or "<your api url>"
     CHATGPT_API_KEY = os.environ.get("CHATGPT_API_KEY") or "<your chatgpt api key>"
     MAXIMUM_USER_API = 3
+
+    REDIS_URL = os.environ.get("REDIS_URL") or "redis://localhost:6379/0"
+
+    SQLALCHEMY_DATABASE_URI = "{engine}://{user}:{password}@{host}:{port}/{db}".format(
+        engine=os.environ.get("SQLALCHEMY_ENGINE") or "mysql+pymysql",
+        user=os.environ.get("SQLALCHEMY_USER") or "<your sql username>",
+        password=os.environ.get("SQLALCHEMY_PASSWORD") or "<your sql password>",
+        host=os.environ.get("SQLALCHEMY_HOST") or "<your sql host",
+        port=os.environ.get("SQLALCHEMY_PORT") or "<your sql port>",
+        db=os.environ.get("SQLALCHEMY_DATABASE") or "<your sql database>",
+    )
+
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or "secret"
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=2)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
 
 
 class TestingConfig(Config):

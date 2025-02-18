@@ -6,11 +6,16 @@ from .exceptions import ApiException
 
 
 def api_error_handler(error):
+    print(error)
     if isinstance(error, ApiException):
         current_app.logger.warning(
-            f'HTTP_STATUS_CODE: {error.status_code} - {error.to_dict}')
+            f"HTTP_STATUS_CODE: {error.status_code} - {error.to_dict}"
+        )
         return jsonify(error.to_dict), error.status_code
     if isinstance(error, HTTPException):
-        return jsonify({'error': {'code': error.code, 'message': error.description}}), error.code
+        return (
+            jsonify({"error": {"code": error.code, "message": error.description}}),
+            error.code,
+        )
     current_app.logger.error(error)
-    return jsonify({'error': {'code': 500, 'message': 'Internal Server Error'}}), 500
+    return jsonify({"error": {"code": 500, "message": "Internal Server Error"}}), 500
