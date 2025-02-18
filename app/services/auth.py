@@ -30,8 +30,9 @@ class AuthService:
 
     @staticmethod
     def generate_token(user):
-        access_token = create_access_token(identity=user.id)
-        refresh_token = create_refresh_token(identity=user.id)
+        subject = str(user.id)
+        access_token = create_access_token(identity=subject)
+        refresh_token = create_refresh_token(identity=subject)
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -45,6 +46,7 @@ class AuthService:
 
     @staticmethod
     def get_current_identity():
-        user_id = get_jwt_identity()
+        subject = get_jwt_identity()
+        user_id = int(subject)
         user = User.query.get(user_id)
         return user

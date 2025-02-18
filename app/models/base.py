@@ -1,16 +1,16 @@
 # coding: utf8
 from datetime import datetime
-from weakref import WeakValueDictionary
 
 from sqlalchemy import inspect
-from sqlalchemy.orm import aliased
 
 from app.extensions import db
 
 
 class BaseModel:
-    """Generalize __init__, __repr__ and to_json
-    Based on the models columns"""
+    __abstract__ = True
+
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     print_filter = ()
     to_json_filter = ()
