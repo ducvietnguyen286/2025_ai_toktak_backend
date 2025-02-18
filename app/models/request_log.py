@@ -2,10 +2,11 @@ from app.extensions import db
 from app.models.base import BaseModel
 
 
-class Video(db.Model, BaseModel):
-    __tablename__ = "videos"
+class RequestLog(db.Model, BaseModel):
+    __tablename__ = "request_logs"
 
     id = db.Column(db.Integer, primary_key=True)
-    url = db.Column(db.String(100), nullable=False)
-    type = db.Column(db.Integer, default=1)
+    ai_type = db.Column(db.String(10), nullable=False, index=True)
+    request = db.Column(db.Text, nullable=False)
+    response = db.Column(db.Text, nullable=False)
     status = db.Column(db.Integer, default=1)
