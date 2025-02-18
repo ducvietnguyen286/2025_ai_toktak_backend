@@ -4,8 +4,8 @@ from app.models.link import Link
 class LinkService:
 
     @staticmethod
-    def create_link(*args):
-        link = Link(*args)
+    def create_link(*args, **kwargs):
+        link = Link(*args, **kwargs)
         link.save()
         return link
 
