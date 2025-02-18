@@ -107,6 +107,9 @@ class APIMakePost(Resource):
         data = json.loads(batch.content)
         images = data.get("images", [])
         type = post.type
+
+        response = None
+
         if type == "video":
             response = call_chatgpt_create_caption(images)
         elif type == "social":
