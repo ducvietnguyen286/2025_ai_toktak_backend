@@ -1,6 +1,7 @@
 import requests
 import json
 import os
+import random
 
 # Lấy API Key từ môi trường hoặc .env
 SHOTSTACK_API_KEY = os.getenv("SHOTSTACK_API_KEY")
@@ -11,6 +12,23 @@ SHOTSTACK_URL = os.getenv("SHOTSTACK_URL")
 
 
 def create_video_from_images(product_name, images_url):
+    # Danh sách các prompt
+    prompts = [
+        "Slowly zoom in and out for a dramatic effect.",
+        "Add a soft fade transition between images.",
+        "Use a pan effect to make the image feel dynamic.",
+        "Apply a sepia filter for a vintage look.",
+        "Zoom in on the center of the image for emphasis.",
+    ]
+
+    # Kiểm tra nếu danh sách prompts ít hơn số lượng hình ảnh
+    if len(prompts) < len(images_url):
+        # Lặp lại prompts để đủ số lượng ảnh
+        prompts = (
+            prompts * (len(images_url) // len(prompts))
+            + prompts[: len(images_url) % len(prompts)]
+        )
+
     payload = {
         "timeline": {
             "background": "#FFFFFF",
@@ -21,14 +39,28 @@ def create_video_from_images(product_name, images_url):
                             "asset": {
                                 "type": "image-to-video",
                                 "src": url,
-                                "prompt": "Slowly zoom in and out for a dramatic effect.",
+                                "prompt": random.choice(prompts) if prompts else "",
                             },
                             "start": i * 2,  # Đặt thời gian xuất hiện của mỗi ảnh
                             "length": 2,
                         }
                         for i, url in enumerate(images_url)
                     ]
-                }
+                },
+                {
+                    "clips": [
+                        {
+                            "asset": {
+                                "type": "audio",
+                                "src": "https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/freepd/motions.mp3",
+                                "effect": "fadeOut",
+                                "volume": 1,
+                            },
+                            "start": 0,
+                            "length": "end",
+                        }
+                    ]
+                },
             ],
         },
         "output": {"format": "mp4", "size": {"width": 720, "height": 1280}},
@@ -47,7 +79,7 @@ def create_video_from_images(product_name, images_url):
         # A new resource was created successfully.
         if response.status_code == 201:
             result = response.json()
-            result['status_code'] = 200
+            result["status_code"] = 200
             return result
         else:
             return {
