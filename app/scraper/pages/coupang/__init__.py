@@ -124,7 +124,11 @@ class CoupangScraper:
 
                 contents = ""
                 for vendor_item_content_description in vendor_item_content_descriptions:
-                    if "contents" in vendor_item_content_description:
+                    if (
+                        "contents" in vendor_item_content_description
+                        and "detailType" in vendor_item_content_description
+                        and vendor_item_content_description["detailType"] == "TEXT"
+                    ):
                         contents = vendor_item_content_description.get("contents")
                         break
 
