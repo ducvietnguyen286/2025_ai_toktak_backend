@@ -84,10 +84,14 @@ class CoupangScraper:
             r_data = btf_content.get("rData")
             if r_data is None:
                 return {}
-            first_page_list = r_data.get("pageList")[0]
-            if first_page_list is None:
+            page_list = r_data.get("pageList")
+            if page_list is None:
                 return {}
-            widget_list = first_page_list.get("widgetList")
+            widget_list = None
+            for page in page_list:
+                if "widgetList" in page:
+                    widget_list = page.get("widgetList")
+                    break
             if widget_list is None:
                 return {}
             images = []
@@ -98,19 +102,26 @@ class CoupangScraper:
                 data = widget.get("data")
                 if "vendorItemContent" not in data:
                     continue
-                vendor_item_content = data.get("vendorItemContent")[0]
-                if (
-                    vendor_item_content is None
-                    or "vendorItemContentDescriptions" not in vendor_item_content
-                ):
+                vendor_item_contents = data.get("vendorItemContent")
+                if vendor_item_contents is None:
                     continue
-                vendor_item_content_descriptions = vendor_item_content.get(
-                    "vendorItemContentDescriptions"
-                )[0]
 
-                data = self.extract_images_and_text(
-                    vendor_item_content_descriptions.get("contents")
-                )
+                vendor_item_content_descriptions = []
+                for vendor_item_content in vendor_item_contents:
+                    if (
+                        "contentType" in vendor_item_content
+                        and vendor_item_content["contentType"] == "HTML"
+                    ):
+                        vendor_item_content_descriptions = vendor_item_content.get(
+                            "vendorItemContentDescriptions"
+                        )
+                        break
+
+                vendor_item_content_description = vendor_item_content_descriptions[0]
+
+                contents = vendor_item_content_description.get("contents")
+
+                data = self.extract_images_and_text(contents)
                 images.extend(data[0])
                 text += data[1]
             return {"images": images, "text": text}
