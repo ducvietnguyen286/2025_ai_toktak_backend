@@ -137,13 +137,13 @@ class APIMakePost(Resource):
         response = None
 
         if type == "video":
-            response = call_chatgpt_create_caption(images)
+            response = call_chatgpt_create_caption(images, data, post.id)
         elif type == "social":
-            response = call_chatgpt_create_social(images, data)
+            response = call_chatgpt_create_social(images, data, post.id)
         elif type == "image":
             pass
         elif type == "blog":
-            response = call_chatgpt_create_blog(images, data)
+            response = call_chatgpt_create_blog(images, data, post.id)
 
         thumbnail = batch.thumbnail
         title = ""
@@ -183,8 +183,10 @@ class APIMakePost(Resource):
             hashtag=hashtag,
             status=1,
         )
+        current_done_post = batch.done_post
 
-        batch = BatchService.update_batch(batch.id, done_post=batch.done_post + 1)
+        batch = BatchService.update_batch(batch.id, done_post=current_done_post + 1)
+
         if batch.done_post == batch.count_post:
             BatchService.update_batch(batch.id, status=1)
             path_images = []

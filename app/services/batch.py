@@ -18,9 +18,9 @@ class BatchService:
         return Batch.query.where(Batch.status == 1).all()
 
     @staticmethod
-    def update_batch(id, *args):
+    def update_batch(id, *args, **kwargs):
         batch = Batch.query.get(id)
-        batch.update(*args)
+        batch.update(*kwargs)
         return batch
 
     @staticmethod
