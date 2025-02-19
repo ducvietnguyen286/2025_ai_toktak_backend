@@ -1,6 +1,8 @@
 # coding: utf8
-from datetime import datetime
+from datetime import datetime, timezone
+import os
 
+import pytz
 from sqlalchemy import inspect
 
 from app.extensions import db
@@ -30,9 +32,13 @@ class BaseModel:
     def _to_json(self):
         """Define a base way to jsonify models
         Columns inside `to_json_filter` are excluded"""
+        timezone = os.environ.get("TZ", "UTC")
+        tz = pytz.timezone(timezone)
         return {
             column: (
-                value if not isinstance(value, datetime) else value.strftime("%Y-%m-%d")
+                value.astimezone(tz).strftime("%Y-%m-%d %H:%M:%S")
+                if isinstance(value, datetime)
+                else value
             )
             for column, value in self._to_dict().items()
             if column not in self.to_json_filter
