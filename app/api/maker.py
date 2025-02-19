@@ -11,7 +11,7 @@ from app.ais.chatgpt import (
     call_chatgpt_create_social,
 )
 from app.decorators import parameters
-from app.lib import logger
+from app.lib.logger import logger
 from app.lib.response import Response
 from app.scraper import Scraper
 import traceback
@@ -99,19 +99,21 @@ class APICreateBatch(Resource):
                 post = PostService.create_post(
                     user_id=1, batch_id=batch.id, type=post_type, status=0
                 )
-                
+
                 # FAKE TO TEST
-                # 
+                #
                 if len(image_paths) == 0 and post_type == "video":
                     image_paths = [
                         "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
-                        "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg"
+                        "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
                     ]
-                
+
                 if len(image_paths) > 0 and post_type == "video":
-                    product_name = data['name']
-                    result = VideoService.create_video_from_images(product_name, image_paths)
-                    
+                    product_name = data["name"]
+                    result = VideoService.create_video_from_images(
+                        product_name, image_paths
+                    )
+
                     render_id = ""
                     if result["status_code"] == 200:
                         render_id = result["response"]["id"]
@@ -125,25 +127,25 @@ class APICreateBatch(Resource):
                             post_id=post.id,
                         )
                         # update post with render_id
-                        post = PostService.update_post(
-                            post.id,
-                            render_id=render_id 
-                        )
-                
+                        post = PostService.update_post(post.id, render_id=render_id)
+
                 post_res = post._to_json()
                 post_res["url_run"] = (
                     f"{current_domain}/api/v1/maker/make-post/{post.id}"
                 )
-                posts.append(post_res)     
+                posts.append(post_res)
 
             return Response(
-                data={"posts": posts, "images": image_paths},
+                data={
+                    "product_name": data.get("name"),
+                    "posts": posts,
+                    "images": image_paths,
+                },
                 message="Tạo batch thành công",
             ).to_dict()
         except Exception as e:
             traceback.print_exc()
-            logger.error("Error processing webhook: %s", e)
-
+            logger.error("Exception: {0}".format(str(e)))
             return Response(
                 message="Tạo batch that bai",
                 status=400,
