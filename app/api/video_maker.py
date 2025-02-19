@@ -3,7 +3,8 @@ import json
 from flask_restx import Namespace, Resource
 from flask import request
 from app.services.video_service import VideoService
-
+from datetime import datetime
+from app.lib.logger import logger
 from app.models.video_create import VideoCreate, db
 
 ns = Namespace(name="video_maker", description="Video Maker API")
@@ -13,7 +14,7 @@ ns = Namespace(name="video_maker", description="Video Maker API")
 class VideoStatus(Resource):
     def get(self, render_id):
         # Giả lập trả về JSON cho render_id
-        
+
         result = VideoService.get_video_status(render_id)
         return result
         return {
@@ -68,7 +69,7 @@ class CreateVideo(Resource):
             "message": message,
             "render_id": render_id,
         }
- 
+
     @ns.route("/video_list")
     class VideoList(Resource):
         def get(self):
@@ -86,5 +87,45 @@ class CreateVideo(Resource):
                 "page": videos.page,
                 "per_page": videos.per_page,
                 "total_pages": videos.pages,
-                "data":  [video.to_dict() for video in videos.items],
+                "data": [video.to_dict() for video in videos.items],
             }, 200
+
+    @ns.route("/shotstack_webhook")
+    class ShortstackWebhook(Resource):
+        def post(self):
+            try:
+                # Lấy payload JSON từ request
+                payload = request.get_json()
+                if not payload:
+                    return {"message": "No JSON payload provided"}, 400
+
+                # Lấy thông tin từ payload
+                render_id = payload.get("id")
+                status = payload.get("status")
+                video_url = payload.get("url")
+
+                # Ghi log thông tin nhận được
+                logger.info("Received Shotstack webhook: %s", payload)
+                data_update_video = {
+                    "status": status,
+                    "updated_at": datetime.now(),
+                }
+
+                if status == "done":
+                    data_update_video["video_url"] = video_url
+
+                VideoService.update_video_create(render_id, status=status , video_url = video_url)
+                
+
+                # Trả về phản hồi JSON
+                return {
+                    "message": "Webhook received successfully",
+                    "render_id": render_id,
+                    "status": status,
+                    "video_url": video_url,
+                }, 200
+
+            except Exception as e:
+                # Ghi log lỗi kèm stack trace
+                logger.exception("Error processing webhook: %s", e)
+                return {"message": "Internal Server Error"}, 500
