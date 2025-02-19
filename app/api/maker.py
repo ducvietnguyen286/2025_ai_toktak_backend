@@ -48,6 +48,7 @@ class APICreateBatch(Resource):
 
             images = data.get("images", [])
             thumbnail = data.get("image", "")
+
             timestamp = int(time.time())
             unique_id = uuid.uuid4().hex
 
@@ -56,7 +57,7 @@ class APICreateBatch(Resource):
 
             thumbnail_path = f"{UPLOAD_FOLDER}/{thumbnail_name}"
             with open(thumbnail_path, "wb") as thumbnail_file:
-                thumbnail_file.write(requests.get(image_url).content)
+                thumbnail_file.write(requests.get(thumbnail).content)
             thumbnail_url = f"{current_domain}/files/{thumbnail_name}"
 
             if images and len(images) > max_count_image:
