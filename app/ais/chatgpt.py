@@ -104,14 +104,14 @@ def call_chatgpt_create_blog(images=[], data={}):
                         },
                         "summarize": {
                             "type": "string",
-                            "description": "The summarize of the response.",
+                            "description": "A summary or brief overview of the content.",
                         },
                         "content": {
                             "type": "string",
-                            "description": "The content of the response.",
+                            "description": "The main content of the response.",
                         },
                     },
-                    "required": ["title", "content"],
+                    "required": ["title", "summarize", "content"],
                     "additionalProperties": False,
                 }
             },
