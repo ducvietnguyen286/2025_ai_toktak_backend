@@ -11,7 +11,7 @@ from app.ais.chatgpt import (
     call_chatgpt_create_social,
 )
 from app.decorators import parameters
-from app.lib import logger
+from app.lib.logger import logger
 from app.lib.response import Response
 from app.scraper import Scraper
 import traceback
