@@ -11,6 +11,7 @@ from app.ais.chatgpt import (
     call_chatgpt_create_social,
 )
 from app.decorators import parameters
+from app.lib import logger
 from app.lib.response import Response
 from app.scraper import Scraper
 import traceback
@@ -40,6 +41,8 @@ class APICreateBatch(Resource):
             max_count_image = int(max_count_image)
 
             data = Scraper().scraper({"url": url})
+
+            logger.info("data: {0}".format(data))
 
             if not data:
                 return Response(

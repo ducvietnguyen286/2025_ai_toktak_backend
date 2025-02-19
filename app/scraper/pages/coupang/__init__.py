@@ -45,6 +45,8 @@ class CoupangScraper:
             }
             coupang_data = self.get_page_html(real_url, 0, added_headers)
 
+            logger.info("Get Page HTML: {0}".format(coupang_data))
+
             if not coupang_data:
                 return {}
             html = coupang_data["html"]
