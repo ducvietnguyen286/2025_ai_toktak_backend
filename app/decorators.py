@@ -12,38 +12,43 @@ def parameters(**schema):
         @wraps(func)
         def wrapper(*args, **kwargs):
             req_args = request.args.to_dict()
-            if request.method in ('POST', 'PUT', 'PATCH', 'DELETE') \
-                    and request.mimetype == 'application/json':
+            if (
+                request.method in ("POST", "PUT", "PATCH", "DELETE")
+                and request.mimetype == "application/json"
+            ):
                 req_args.update(request.get_json())
             req_args = {
-                k: v for k, v in req_args.items()
-                if k in schema['properties'].keys()
+                k: v for k, v in req_args.items() if k in schema["properties"].keys()
             }
-            if 'required' in schema:
-                for field in schema['required']:
+
+            if "required" in schema:
+                for field in schema["required"]:
                     if field not in req_args or not req_args[field]:
                         field_name = field
-                        if field in schema['properties']:
-                            if 'name' in schema['properties'][field]:
-                                field_name = schema['properties'][field]['name']
-                        raise BadRequest(message='{} is required'.format(field_name))
+                        if field in schema["properties"]:
+                            if "name" in schema["properties"][field]:
+                                field_name = schema["properties"][field]["name"]
+                        raise BadRequest(message="{} is required".format(field_name))
             try:
-                validate(instance=req_args, schema=schema,
-                         format_checker=FormatChecker())
+                validate(
+                    instance=req_args, schema=schema, format_checker=FormatChecker()
+                )
             except ValidationError as exp:
                 exp_info = list(exp.schema_path)
-                error_type = ('type', 'format', 'pattern',
-                              'maxLength', 'minLength')
+                error_type = ("type", "format", "pattern", "maxLength", "minLength")
                 if set(exp_info).intersection(set(error_type)):
                     field = exp_info[1]
                     field_name = field
-                    if field_name in schema['properties']:
-                        if 'name' in schema['properties'][field]:
-                            field_name = schema['properties'][field]['name']
-                    message = '{} is not valid'.format(field_name)
+                    if field_name in schema["properties"]:
+                        if "name" in schema["properties"][field]:
+                            field_name = schema["properties"][field]["name"]
+                    message = "{} is not valid".format(field_name)
                 else:
                     message = exp.message  # pragma: no cover
                 raise BadRequest(message=message)
+
+            if request.endpoint == "api.user_api_new_link":
+                req_args = request.get_json()
             new_args = args + (req_args,)
             return func(*new_args, **kwargs)
 

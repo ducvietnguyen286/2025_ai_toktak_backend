@@ -10,3 +10,5 @@ class UserLink(db.Model, BaseModel):
     link_id = db.Column(db.Integer, db.ForeignKey("links.id"), nullable=False)
     meta = db.Column(db.Text, nullable=False)
     status = db.Column(db.Integer, default=1)
+
+    to_json_parse = ("meta",)

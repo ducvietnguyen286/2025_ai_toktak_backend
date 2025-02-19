@@ -15,7 +15,8 @@ class BatchService:
 
     @staticmethod
     def get_batchs():
-        return Batch.query.where(Batch.status == 1).all()
+        batchs = Batch.query.where(Batch.status == 1).all()
+        return [batch._to_json() for batch in batchs]
 
     @staticmethod
     def update_batch(id, *args, **kwargs):

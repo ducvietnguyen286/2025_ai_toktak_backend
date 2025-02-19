@@ -15,7 +15,8 @@ class PostService:
 
     @staticmethod
     def get_posts():
-        return Post.query.where(Post.status == 1).all()
+        posts = Post.query.where(Post.status == 1).all()
+        return [post._to_json() for post in posts]
 
     @staticmethod
     def update_post(id, *args, **kwargs):

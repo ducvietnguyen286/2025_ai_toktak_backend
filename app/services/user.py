@@ -2,7 +2,7 @@ from app.models.user import User
 from app.models.user_link import UserLink
 
 
-class Service:
+class UserService:
 
     @staticmethod
     def find_user(id):
@@ -10,7 +10,8 @@ class Service:
 
     @staticmethod
     def get_users():
-        return User.query.where(User.status == 1).all()
+        users = User.query.where(User.status == 1).all()
+        return [user._to_json() for user in users]
 
     @staticmethod
     def update_user(id, *args):
@@ -23,7 +24,26 @@ class Service:
         return User.query.get(id).delete()
 
     @staticmethod
-    def create_user_link(*args):
-        user_link = UserLink(*args)
+    def create_user_link(*args, **kwargs):
+        user_link = UserLink(**kwargs)
         user_link.save()
         return user_link
+
+    @staticmethod
+    def find_user_link(link_id=0, user_id=0):
+        user_link = (
+            UserLink.query.where(UserLink.user_id == user_id)
+            .where(UserLink.link_id == link_id)
+            .where(UserLink.status == 1)
+            .get()
+        )
+        return user_link
+
+    @staticmethod
+    def get_user_links(user_id=0):
+        user_links = (
+            UserLink.query.where(UserLink.status == 1)
+            .where(UserLink.user_id == user_id)
+            .all()
+        )
+        return [user_link._to_json() for user_link in user_links]

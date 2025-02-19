@@ -1,5 +1,6 @@
 # coding: utf8
 from datetime import datetime, timezone
+import json
 import os
 
 import pytz
@@ -11,11 +12,14 @@ from app.extensions import db
 class BaseModel:
     __abstract__ = True
 
-    created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     print_filter = ()
     to_json_filter = ()
+    to_json_parse = ()
 
     def __repr__(self):
         """Define a base way to print models
@@ -34,15 +38,19 @@ class BaseModel:
         Columns inside `to_json_filter` are excluded"""
         timezone = os.environ.get("TZ", "UTC")
         tz = pytz.timezone(timezone)
-        return {
-            column: (
-                value.astimezone(tz).strftime("%Y-%m-%d %H:%M:%S")
-                if isinstance(value, datetime)
-                else value
-            )
-            for column, value in self._to_dict().items()
-            if column not in self.to_json_filter
-        }
+
+        response = {}
+        for column, value in self._to_dict().items():
+            if column in self.to_json_filter:
+                continue
+            if column in self.to_json_parse:
+                response[column] = json.loads(value)
+            elif isinstance(value, datetime):
+                response[column] = value.astimezone(tz).strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                response[column] = value
+
+        return response
 
     def _to_dict(self):
         """This would more or less be the same as a `to_json`
