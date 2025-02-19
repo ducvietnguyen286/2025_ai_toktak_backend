@@ -47,7 +47,7 @@ class APICreateBatch(Resource):
 
             if not data:
                 return Response(
-                    message="Tạo batch that bai",
+                    message="Can't get data from url",
                     status=400,
                 ).to_dict()
 
