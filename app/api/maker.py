@@ -100,35 +100,6 @@ class APICreateBatch(Resource):
                     user_id=1, batch_id=batch.id, type=post_type, status=0
                 )
 
-                # FAKE TO TEST
-                #
-                if len(image_paths) == 0 and post_type == "video":
-                    image_paths = [
-                        "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
-                        "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
-                    ]
-
-                if len(image_paths) > 0 and post_type == "video":
-                    product_name = data["name"]
-                    result = VideoService.create_video_from_images(
-                        product_name, image_paths
-                    )
-
-                    render_id = ""
-                    if result["status_code"] == 200:
-                        render_id = result["response"]["id"]
-                        # Tạo mới vào bảng video_create với user_id = 1
-                        VideoService.create_create_video(
-                            render_id=render_id,
-                            user_id=1,
-                            product_name=product_name,
-                            images_url=json.dumps(image_paths),
-                            description="",
-                            post_id=post.id,
-                        )
-                        # update post with render_id
-                        post = PostService.update_post(post.id, render_id=render_id)
-
                 post_res = post._to_json()
                 post_res["url_run"] = (
                     f"{current_domain}/api/v1/maker/make-post/{post.id}"
@@ -180,9 +151,37 @@ class APIMakePost(Resource):
         type = post.type
 
         response = None
+        render_id = ""
 
         if type == "video":
             response = call_chatgpt_create_caption(images, data, post.id)
+
+            image_paths = []
+            if len(images) == 0:
+                image_paths = [
+                    "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
+                    "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
+                ]
+
+            if len(image_paths) > 0:
+                product_name = data["name"]
+
+                result = VideoService.create_video_from_images(
+                    product_name, image_paths
+                )
+
+                if result["status_code"] == 200:
+                    render_id = result["response"]["id"]
+
+                    VideoService.create_create_video(
+                        render_id=render_id,
+                        user_id=1,
+                        product_name=product_name,
+                        images_url=json.dumps(image_paths),
+                        description="",
+                        post_id=post.id,
+                    )
+
         elif type == "social":
             response = call_chatgpt_create_social(images, data, post.id)
         elif type == "image":
@@ -228,6 +227,7 @@ class APIMakePost(Resource):
             content=content,
             video_path=video_path,
             hashtag=hashtag,
+            render_id=render_id,
             status=1,
         )
         current_done_post = batch.done_post
