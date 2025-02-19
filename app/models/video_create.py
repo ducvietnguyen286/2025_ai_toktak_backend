@@ -9,6 +9,7 @@ class VideoCreate(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=False)  # ID người dùng
+    post_id = db.Column(db.Integer, nullable=False)  # ID Port
     product_name = db.Column(db.String(500), nullable=False)  # Tên sản phẩm
     hash_tags = db.Column(db.String(500), nullable=False)  # Tên sản phẩm
     images_url = db.Column(db.JSON, nullable=False)  # Danh sách URL ảnh

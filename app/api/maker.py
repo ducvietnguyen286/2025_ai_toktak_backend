@@ -17,6 +17,7 @@ import traceback
 
 from app.services.batch import BatchService
 from app.services.post import PostService
+from app.services.video_service import VideoService
 
 ns = Namespace(name="maker", description="Maker API")
 
@@ -95,11 +96,42 @@ class APICreateBatch(Resource):
                 post = PostService.create_post(
                     user_id=1, batch_id=batch.id, type=post_type, status=0
                 )
+                
+                # FAKE TO TEST
+                # 
+                if len(image_paths) == 0 and post_type == "video":
+                    image_paths = [
+                        "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
+                        "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg"
+                    ]
+                
+                if len(image_paths) > 0 and post_type == "video":
+                    product_name = data['name']
+                    result = VideoService.create_video_from_images(product_name, image_paths)
+                    
+                    render_id = ""
+                    if result["status_code"] == 200:
+                        render_id = result["response"]["id"]
+                        # Tạo mới vào bảng video_create với user_id = 1
+                        VideoService.create_create_video(
+                            render_id=render_id,
+                            user_id=1,
+                            product_name=product_name,
+                            images_url=json.dumps(image_paths),
+                            description="",
+                            post_id=post.id,
+                        )
+                        # update post with render_id
+                        post = PostService.update_post(
+                            post.id,
+                            render_id=render_id 
+                        )
+                
                 post_res = post._to_json()
                 post_res["url_run"] = (
                     f"{current_domain}/api/v1/maker/make-post/{post.id}"
                 )
-                posts.append(post_res)
+                posts.append(post_res)     
 
             return Response(
                 data={"posts": posts, "images": image_paths},
