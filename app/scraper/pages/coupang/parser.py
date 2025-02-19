@@ -22,13 +22,15 @@ def format_currency(amount):
     return "{:,.0f}".format(amount)
 
 
-def parse_mobile_response(html, url):
+def parse_mobile_response(html, url, base_url):
     try:
         ld_json = html.find("script", {"type": "application/ld+json"})
         if ld_json is None:
             return {}
         data = json.loads(ld_json.text)
+
         name = data.get("name")
+        description = data.get("description")
         images = data.get("image")
         image_url = images[0] if images else ""
         domain = get_domain(url)
@@ -43,13 +45,15 @@ def parse_mobile_response(html, url):
 
         return {
             "name": name,
+            "description": description,
             "stock": in_stock,
             "domain": domain,
             "brand": "",
             "image": image_url,
-            "price": "{0}원".format(price_show) if price_show != "" else 0,
+            "price": "{0}원".format(price_show) if price_show != "" else "0",
             "url": url,
             "url_crawl": url,
+            "base_url": base_url,
             "store_name": store_name,
             "show_free_shipping": 0,
             "meta_url": meta_url["content"] if meta_url else "",
@@ -81,6 +85,6 @@ class Parser:
         self.html = html
         self.url = url
 
-    def parse(self):
-        response = parse_mobile_response(self.html, self.url)
+    def parse(self, base_url):
+        response = parse_mobile_response(self.html, self.url, base_url)
         return response

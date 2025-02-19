@@ -26,6 +26,8 @@ class Config(object):
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=2)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
 
+    MAX_COUNT_IMAGE = os.environ.get("MAX_COUNT_IMAGE") or 8
+
 
 class TestingConfig(Config):
     TESTING = True

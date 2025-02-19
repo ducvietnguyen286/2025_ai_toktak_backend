@@ -16,6 +16,7 @@ class CoupangScraper:
 
     def run(self):
         try:
+            base_url = self.url
             real_url = self.url
 
             parsed_url = urlparse(real_url)
@@ -49,7 +50,7 @@ class CoupangScraper:
             html = coupang_data["html"]
             url = coupang_data["url"]
             headers = coupang_data["headers"]
-            response = Parser(html, url).parse()
+            response = Parser(html, url).parse(base_url)
 
             if response:
                 meta_url = response.get("meta_url")

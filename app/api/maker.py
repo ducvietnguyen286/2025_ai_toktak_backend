@@ -36,6 +36,7 @@ class APICreateBatch(Resource):
             url = args.get("url", "")
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+            max_count_image = os.environ.get("MAX_COUNT_IMAGE") or 8
 
             data = Scraper().scraper({"url": url})
             if not data:
@@ -45,6 +46,9 @@ class APICreateBatch(Resource):
                 ).to_dict()
 
             images = data.get("images", [])
+
+            if images and len(images) > max_count_image:
+                images = images[:max_count_image]
             image_paths = []
             for index, image_url in enumerate(images):
                 timestamp = int(time.time())
@@ -113,11 +117,11 @@ class APIMakePost(Resource):
         if type == "video":
             response = call_chatgpt_create_caption(images)
         elif type == "social":
-            response = call_chatgpt_create_social(images)
+            response = call_chatgpt_create_social(images, data)
         elif type == "image":
             pass
         elif type == "blog":
-            response = call_chatgpt_create_blog(images)
+            response = call_chatgpt_create_blog(images, data)
 
         thumbnail = data.get("image", "")
         title = ""
@@ -143,7 +147,7 @@ class APIMakePost(Resource):
 
         else:
             return Response(
-                message="Tạo post that bai 2222",
+                message="Tạo post that bai",
                 status=400,
             ).to_dict()
 
