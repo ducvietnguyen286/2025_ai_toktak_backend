@@ -3,6 +3,7 @@ import json
 from flask_restx import Namespace, Resource
 from flask import request
 from app.services.video_service import VideoService
+from app.services.post import PostService
 from datetime import datetime
 from app.lib.logger import logger
 from app.models.video_create import VideoCreate, db
@@ -106,16 +107,12 @@ class CreateVideo(Resource):
 
                 # Ghi log thông tin nhận được
                 logger.info("Received Shotstack webhook: %s", payload)
-                data_update_video = {
-                    "status": status,
-                    "updated_at": datetime.now(),
-                }
-
-                if status == "done":
-                    data_update_video["video_url"] = video_url
-
-                VideoService.update_video_create(render_id, status=status , video_url = video_url)
-                
+                create_video_detail = VideoService.update_video_create(
+                    render_id, status=status, video_url=video_url
+                )
+                if create_video_detail:
+                    post_id = create_video_detail.post_id
+                    post_detail = PostService.update_post(post_id, video_url=video_url)
 
                 # Trả về phản hồi JSON
                 return {
@@ -123,6 +120,8 @@ class CreateVideo(Resource):
                     "render_id": render_id,
                     "status": status,
                     "video_url": video_url,
+                    "post_detail" : post_detail.to_dict(),
+                    "create_video_detail" : create_video_detail.to_dict(),
                 }, 200
 
             except Exception as e:
