@@ -98,8 +98,14 @@ class CoupangScraper:
                 return {}
             images = []
             text = ""
+
             for widget in widget_list:
                 if "data" not in widget:
+                    continue
+                if (
+                    "widgetBeanName" not in widget
+                    and widget.get("widgetBeanName") != "MwebContentDetailWidget"
+                ):
                     continue
                 data = widget.get("data")
                 if "vendorItemContent" not in data:
@@ -109,6 +115,8 @@ class CoupangScraper:
                     continue
 
                 vendor_item_content_descriptions = []
+                is_html = False
+                no_space_images = []
                 for vendor_item_content in vendor_item_contents:
                     if (
                         "contentType" in vendor_item_content
@@ -117,27 +125,53 @@ class CoupangScraper:
                         vendor_item_content_descriptions = vendor_item_content.get(
                             "vendorItemContentDescriptions"
                         )
+                        is_html = True
                         break
-
-                if len(vendor_item_content_descriptions) == 0:
-                    continue
-
-                contents = ""
-                for vendor_item_content_description in vendor_item_content_descriptions:
-                    if (
-                        "contents" in vendor_item_content_description
-                        and "detailType" in vendor_item_content_description
-                        and vendor_item_content_description["detailType"] == "TEXT"
+                    elif (
+                        "contentType" in vendor_item_content
+                        and vendor_item_content["contentType"] == "IMAGE_NO_SPACE"
                     ):
-                        contents = vendor_item_content_description.get("contents")
-                        break
+                        vendor_item_content_descriptions = vendor_item_content.get(
+                            "vendorItemContentDescriptions"
+                        )
+                        for (
+                            vendor_item_content_description
+                        ) in vendor_item_content_descriptions:
+                            if (
+                                "contents" in vendor_item_content_description
+                                and "detailType" in vendor_item_content_description
+                                and vendor_item_content_description["detailType"]
+                                == "IMAGE"
+                            ):
+                                no_space_images.append(
+                                    vendor_item_content_description.get("contents")
+                                )
+                if is_html:
 
-                if contents == "":
-                    continue
+                    if len(vendor_item_content_descriptions) == 0:
+                        continue
 
-                data = self.extract_images_and_text(contents)
-                images.extend(data[0])
-                text += data[1]
+                    contents = ""
+                    for (
+                        vendor_item_content_description
+                    ) in vendor_item_content_descriptions:
+                        if (
+                            "contents" in vendor_item_content_description
+                            and "detailType" in vendor_item_content_description
+                            and vendor_item_content_description["detailType"] == "TEXT"
+                        ):
+                            contents = vendor_item_content_description.get("contents")
+                            break
+
+                    if contents == "":
+                        continue
+
+                    data = self.extract_images_and_text(contents)
+                    images.extend(data[0])
+                    text += data[1]
+                else:
+                    images.extend(no_space_images)
+
             logger.info("Get Images: {0}".format(images))
             return {"images": images, "text": text}
         except Exception as e:
