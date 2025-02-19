@@ -120,7 +120,7 @@ class APICreateBatch(Resource):
                             render_id=render_id,
                             user_id=1,
                             product_name=product_name,
-                            images_url=json.dumps(image_paths),
+                            images_url=json.encoder(image_paths),
                             description="",
                             post_id=post.id,
                         )
