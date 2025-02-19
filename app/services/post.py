@@ -27,3 +27,8 @@ class PostService:
     @staticmethod
     def delete_post(id):
         return Post.query.get(id).delete()
+
+    @staticmethod
+    def get_posts_by_batch_id(batch_id):
+        posts = Post.query.where(Post.batch_id == batch_id).all()
+        return [post._to_json() for post in posts]

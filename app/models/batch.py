@@ -14,3 +14,5 @@ class Batch(db.Model, BaseModel):
     count_post = db.Column(db.Integer, default=0)
     done_post = db.Column(db.Integer, default=0)
     status = db.Column(db.Integer, default=1)
+
+    to_json_filter = "content"
