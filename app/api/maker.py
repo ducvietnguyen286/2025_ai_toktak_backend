@@ -234,3 +234,25 @@ class APIMakePost(Resource):
             data=post._to_json(),
             message="Tạo post thành công",
         ).to_dict()
+
+
+@ns.route("/get-batch/<int:id>")
+class APIGetBatch(Resource):
+
+    def get(self, id):
+        batch = BatchService.find_batch(id)
+        if not batch:
+            return Response(
+                message="Batch không tồn tại",
+                status=404,
+            ).to_dict()
+
+        posts = PostService.get_posts_by_batch_id(batch.id)
+
+        batch_res = batch._to_json()
+        batch_res["posts"] = posts
+
+        return Response(
+            data=batch_res,
+            message="Lấy batch thành công",
+        ).to_dict()
