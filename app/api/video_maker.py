@@ -74,28 +74,14 @@ class CreateVideo(Resource):
             print("page", page)
             print("per_page", per_page)
 
-            pagination = VideoService.get_videos(page, per_page)
-            
-            videos = [
-                {
-                    "id": video.id,
-                    "user_id": video.user_id,
-                    "product_name": video.product_name,
-                    "images_url": video.images_url,
-                    "status": video.status,
-                    "description": video.description,
-                    "created_at": video.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                    "updated_at": video.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
-                }
-                for video in pagination.items
-            ]
+            videos = VideoService.get_videos(page, per_page)
 
             return {
                 "status": True,
                 "message": "Success",
-                "total": pagination.total,
-                "page": pagination.page,
-                "per_page": pagination.per_page,
-                "total_pages": pagination.pages,
-                "data": videos,
+                "total": videos.total,
+                "page": videos.page,
+                "per_page": videos.per_page,
+                "total_pages": videos.pages,
+                "data":  [video.to_dict() for video in videos.items],
             }, 200
