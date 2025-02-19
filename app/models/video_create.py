@@ -23,6 +23,7 @@ class VideoCreate(db.Model, BaseModel):
     def to_dict(self):
         return {
             "id": self.id,
+            "render_id": self.render_id,
             "user_id": self.user_id,
             "product_name": self.product_name,
             "hash_tags": self.hash_tags,
