@@ -45,7 +45,7 @@ class CoupangScraper:
             }
             coupang_data = self.get_page_html(real_url, 0, added_headers)
 
-            logger.info("Get Page HTML: {0}".format(coupang_data))
+            logger.info("Get Page HTML: OK")
 
             if not coupang_data:
                 return {}
@@ -126,6 +126,7 @@ class CoupangScraper:
                 data = self.extract_images_and_text(contents)
                 images.extend(data[0])
                 text += data[1]
+            logger.info("Get Images: {0}".format(images))
             return {"images": images, "text": text}
         except Exception as e:
             logger.error("Exception: {0}".format(str(e)))
@@ -162,9 +163,9 @@ class CoupangScraper:
             response = session.get(url, headers=headers, timeout=5)
             info = response.content
             html = BeautifulSoup(info, "html.parser")
-            # file_html = open("demo.html", "w", encoding="utf-8")
-            # file_html.write(info.decode("utf-8"))
-            # file_html.close()
+            file_html = open("demo.html", "w", encoding="utf-8")
+            file_html.write(info.decode("utf-8"))
+            file_html.close()
             ld_json = html.find("script", {"type": "application/ld+json"})
             if ld_json is None:
                 count = count + 1
