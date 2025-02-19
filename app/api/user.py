@@ -90,3 +90,55 @@ class APINewLink(Resource):
             data=user_link._to_json(),
             message="Thêm link thành công",
         ).to_dict()
+
+
+@ns.route("/post-to-links")
+class APIPostToLinks(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "is_all": {"type": "integer"},
+            "link_ids": {"type": "array"},
+            "post_id": {"type": "integer"},
+            "content": {"type": "string"},
+        },
+        required=["post_id"],
+    )
+    def post(self, args):
+        current_user = AuthService.get_current_identity()
+        is_all = args.get("is_all", 0)
+        post_id = args.get("is_all", 0)
+        link_ids = args.get("link_ids", [])
+        content = args.get("content", "")
+
+        if not link_ids:
+            return Response(
+                message="Không tìm thấy link",
+                status=400,
+            ).to_dict()
+
+        if not content:
+            return Response(
+                message="Không tìm thấy nội dung",
+                status=400,
+            ).to_dict()
+
+        for link_id in link_ids:
+            user_link = UserService.find_user_link(link_id, current_user.id)
+            if not user_link:
+                return Response(
+                    message="Không tìm thấy link",
+                    status=400,
+                ).to_dict()
+
+            if user_link.status == 0:
+                return Response(
+                    message="Link chưa được kích hoạt",
+                    status=400,
+                ).to_dict()
+
+        return Response(
+            message="Tạo bài viết thành công",
+        ).to_dict()
