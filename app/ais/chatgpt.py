@@ -6,7 +6,7 @@ import os
 chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
 
 
-def call_chatgpt_create_caption(images=[], data={}):
+def call_chatgpt_create_caption(images=[], data={}, post_id=0):
 
     prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 동영상에 어울리는 **제목(title)**과 **캡션(caption)**을 만들어주세요.
 제품 관련 정보:
@@ -63,10 +63,10 @@ def call_chatgpt_create_caption(images=[], data={}):
         "strict": True,
     }
 
-    return call_chatgpt(content, response_schema)
+    return call_chatgpt(content, response_schema, post_id)
 
 
-def call_chatgpt_create_blog(images=[], data={}):
+def call_chatgpt_create_blog(images=[], data={}, post_id=0):
     prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 **블로그 게시글**을 작성해 주세요.
 제품 관련 정보:
 - 제품명: {name}
@@ -121,10 +121,10 @@ def call_chatgpt_create_blog(images=[], data={}):
         "strict": True,
     }
 
-    return call_chatgpt(content, response_schema)
+    return call_chatgpt(content, response_schema, post_id)
 
 
-def call_chatgpt_create_social(images=[], data={}):
+def call_chatgpt_create_social(images=[], data={}, post_id=0):
     prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 **소셜 미디어 콘텐츠**를 작성해 주세요.
 제품 관련 정보:
 - 제품명: {name}
@@ -172,7 +172,7 @@ def call_chatgpt_create_social(images=[], data={}):
         "strict": True,
     }
 
-    return call_chatgpt(content, response_schema)
+    return call_chatgpt(content, response_schema, post_id)
 
 
 def replace_prompt_with_data(prompt, data):
@@ -180,7 +180,7 @@ def replace_prompt_with_data(prompt, data):
     return prompt
 
 
-def call_chatgpt(content, response_schema):
+def call_chatgpt(content, response_schema, post_id=0):
     client = OpenAI(api_key=chatgpt_api_key)
     model = "gpt-4o-mini"
 
@@ -238,6 +238,7 @@ def call_chatgpt(content, response_schema):
             if not content:
                 status = 0
             RequestLogService.create_request_log(
+                post_id=post_id,
                 ai_type="chatgpt",
                 request=request_log,
                 response=response_log,
@@ -257,6 +258,10 @@ def call_chatgpt(content, response_schema):
     except Exception as e:
         response_log = json.dumps({"error": str(e)})
         RequestLogService.create_request_log(
-            ai_type="chatgpt", request=request_log, response=response_log, status=0
+            post_id=post_id,
+            ai_type="chatgpt",
+            request=request_log,
+            response=response_log,
+            status=0,
         )
         return None
