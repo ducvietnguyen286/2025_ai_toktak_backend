@@ -155,32 +155,37 @@ class APIMakePost(Resource):
 
         if type == "video":
             response = call_chatgpt_create_caption(images, data, post.id)
+            if response:
+                parse_caption = json.loads(response)
+                parse_response = parse_caption.get("response", {})
 
-            image_paths = []
-            if len(images) == 0:
-                image_paths = [
-                    "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
-                    "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
-                ]
+                captions = parse_response.get("captions", [])
 
-            if len(image_paths) > 0:
-                product_name = data["name"]
+                image_paths = []
+                if len(images) == 0:
+                    image_paths = [
+                        "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
+                        "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
+                    ]
 
-                result = VideoService.create_video_from_images(
-                    product_name, image_paths
-                )
+                if len(image_paths) > 0:
+                    product_name = data["name"]
 
-                if result["status_code"] == 200:
-                    render_id = result["response"]["id"]
-
-                    VideoService.create_create_video(
-                        render_id=render_id,
-                        user_id=1,
-                        product_name=product_name,
-                        images_url=json.dumps(image_paths),
-                        description="",
-                        post_id=post.id,
+                    result = VideoService.create_video_from_images(
+                        product_name, image_paths
                     )
+
+                    if result["status_code"] == 200:
+                        render_id = result["response"]["id"]
+
+                        VideoService.create_create_video(
+                            render_id=render_id,
+                            user_id=1,
+                            product_name=product_name,
+                            images_url=json.dumps(image_paths),
+                            description="",
+                            post_id=post.id,
+                        )
 
         elif type == "social":
             response = call_chatgpt_create_social(images, data, post.id)
@@ -212,6 +217,7 @@ class APIMakePost(Resource):
                     content = content.replace(f"IMAGE_URL_{index}", image_url)
             if parse_response and "caption" in parse_response:
                 content = parse_response.get("caption", "")
+                content = json.dumps(content)
 
         else:
             return Response(
