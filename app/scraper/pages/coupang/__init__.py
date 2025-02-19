@@ -119,9 +119,17 @@ class CoupangScraper:
                         )
                         break
 
-                vendor_item_content_description = vendor_item_content_descriptions[0]
+                if len(vendor_item_content_descriptions) == 0:
+                    continue
 
-                contents = vendor_item_content_description.get("contents")
+                contents = ""
+                for vendor_item_content_description in vendor_item_content_descriptions:
+                    if "contents" in vendor_item_content_description:
+                        contents = vendor_item_content_description.get("contents")
+                        break
+
+                if contents == "":
+                    continue
 
                 data = self.extract_images_and_text(contents)
                 images.extend(data[0])
