@@ -213,8 +213,10 @@ class APIMakePost(Resource):
                 subtitle = parse_response.get("summarize", "")
             if parse_response and "content" in parse_response:
                 content = parse_response.get("content", "")
+                logger.info("CONTENT BEFORE REPLACE: {0}".format(content))
                 for index, image_url in enumerate(images):
                     content = content.replace(f"IMAGE_URL_{index}", image_url)
+                logger.info("CONTENT AFTER REPLACE: {0}".format(content))
             if parse_response and "caption" in parse_response:
                 content = parse_response.get("caption", "")
                 content = json.dumps(content)
