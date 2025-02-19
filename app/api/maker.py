@@ -142,6 +142,8 @@ class APICreateBatch(Resource):
             ).to_dict()
         except Exception as e:
             traceback.print_exc()
+            logger.error("Error processing webhook: %s", e)
+
             return Response(
                 message="Tạo batch that bai",
                 status=400,
