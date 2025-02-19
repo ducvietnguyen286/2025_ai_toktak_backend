@@ -8,7 +8,7 @@ chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
 
 def call_chatgpt_create_caption(images=[], data={}, post_id=0):
 
-    prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 동영상에 어울리는 **제목(title)**과 **캡션(caption)**을 만들어주세요.
+    prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 동영상에 어울리는 **제목(title)**과 **CAPTION_COUNT개의 캡션 목록**을 만들어주세요.
 제품 관련 정보:
 - 제품명: {name}
 - 가격: {price}
@@ -23,10 +23,11 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
 - 캡션에는 적절한 해시태그를 추가해 주세요.
 - 반드시 결과는 순수한 문자열로만 반환되어야 하며, Markdown 형식은 사용하지 말아 주세요.
 - 제목과 캡션의 내용은 반드시 한국어로 작성되어야 합니다.
+- **생성할 캡션의 수는 제가 제공한 숫자(CAPTION_COUNT)와 정확히 일치해야 합니다.**
 """
     prompt = replace_prompt_with_data(prompt, data)
 
-    print("prompt", prompt)
+    prompt = prompt.replace("CAPTION_COUNT", str(len(images)))
 
     content = [{"type": "text", "text": prompt}]
     for image in images:
@@ -45,8 +46,12 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
                             "description": "The title of the response.",
                         },
                         "caption": {
-                            "type": "string",
-                            "description": "A caption or description related to the response.",
+                            "type": "array",
+                            "description": "A list of captions associated with the response.",
+                            "items": {
+                                "type": "string",
+                                "description": "A caption string.",
+                            },
                         },
                         "hashtag": {
                             "type": "string",
