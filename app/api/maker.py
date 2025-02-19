@@ -36,7 +36,8 @@ class APICreateBatch(Resource):
             url = args.get("url", "")
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
-            max_count_image = os.environ.get("MAX_COUNT_IMAGE") or 8
+            max_count_image = os.environ.get("MAX_COUNT_IMAGE") or "8"
+            max_count_image = int(max_count_image)
 
             data = Scraper().scraper({"url": url})
             if not data:
@@ -46,6 +47,17 @@ class APICreateBatch(Resource):
                 ).to_dict()
 
             images = data.get("images", [])
+            thumbnail = data.get("image", "")
+            timestamp = int(time.time())
+            unique_id = uuid.uuid4().hex
+
+            thumbnail_ext = thumbnail.split(".")[-1]
+            thumbnail_name = f"{timestamp}_{unique_id}.{thumbnail_ext}"
+
+            thumbnail_path = f"{UPLOAD_FOLDER}/{thumbnail_name}"
+            with open(thumbnail_path, "wb") as thumbnail_file:
+                thumbnail_file.write(requests.get(image_url).content)
+            thumbnail_url = f"{current_domain}/files/{thumbnail_name}"
 
             if images and len(images) > max_count_image:
                 images = images[:max_count_image]
@@ -63,11 +75,18 @@ class APICreateBatch(Resource):
                 image_paths.append(f"{current_domain}/files/{file_name}")
             data["images"] = image_paths
 
+            post_types = ["video", "social", "blog"]
+
             batch = BatchService.create_batch(
-                user_id=1, url=url, content=json.dumps(data), type=1, status=0
+                user_id=1,
+                url=url,
+                thumbnail=thumbnail_url,
+                content=json.dumps(data),
+                type=1,
+                count_post=len(post_types),
+                status=0,
             )
 
-            post_types = ["video", "social", "blog"]
             posts = []
             for post_type in post_types:
                 post = PostService.create_post(
@@ -95,6 +114,8 @@ class APICreateBatch(Resource):
 class APIMakePost(Resource):
 
     def post(self, id):
+        UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+
         post = PostService.find_post(id)
         if not post:
             return Response(
@@ -123,7 +144,7 @@ class APIMakePost(Resource):
         elif type == "blog":
             response = call_chatgpt_create_blog(images, data)
 
-        thumbnail = data.get("image", "")
+        thumbnail = batch.thumbnail
         title = ""
         subtitle = ""
         content = ""
@@ -161,6 +182,18 @@ class APIMakePost(Resource):
             hashtag=hashtag,
             status=1,
         )
+
+        batch = BatchService.update_batch(batch.id, done_post=batch.done_post + 1)
+        if batch.done_post == batch.count_post:
+            BatchService.update_batch(batch.id, status=1)
+            path_images = []
+            for image_url in images:
+                image_name = image_url.split("/")[-1]
+                path_images.append(f"{UPLOAD_FOLDER}/{image_name}")
+
+            for image_path in path_images:
+                if os.path.exists(image_path):
+                    os.remove(image_path)
 
         return Response(
             data=post._to_json(),
