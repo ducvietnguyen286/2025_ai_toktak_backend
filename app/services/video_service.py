@@ -69,6 +69,7 @@ class VideoService:
                 ],
             },
             "output": {"format": "mp4", "size": {"width": 720, "height": 1280}},
+            "callback": "https://apitoktak.voda-play.com//api/v1/video_maker/shotstack_webhook",
         }
 
         # Header với API Key
@@ -121,11 +122,19 @@ class VideoService:
 
         except requests.exceptions.RequestException as e:
             # logger.error(f"Request failed: {str(e)}")
-            return {"status": False, "message": "Request failed, please try again.", "data": []}
+            return {
+                "status": False,
+                "message": "Request failed, please try again.",
+                "data": [],
+            }
 
         except Exception as e:
             # logger.error(f"Unexpected error: {str(e)}")
-            return {"status": False, "message": "An unexpected error occurred.", "data": []}
+            return {
+                "status": False,
+                "message": "An unexpected error occurred.",
+                "data": [],
+            }
 
     @staticmethod
     def create_create_video(*args, **kwargs):
@@ -139,3 +148,12 @@ class VideoService:
             page=page, per_page=per_page, error_out=False
         )
         return pagination
+
+    @staticmethod
+    def update_video_create(render_id, *args , **kwargs ):
+        
+        create_video = VideoCreate.query.filter_by(render_id=render_id).first()
+        if not create_video:
+            return None
+        create_video.update(**kwargs)
+        return create_video
