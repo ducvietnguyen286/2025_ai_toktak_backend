@@ -167,19 +167,18 @@ class APIMakePost(Resource):
 
                 captions = parse_response.get("captions", [])
 
-                image_paths = []
                 if len(images) == 0:
-                    image_paths = [
+                    images = [
                         "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
                         "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
                     ]
 
-                if len(image_paths) > 0:
+                if len(images) > 0:
                     product_name = data["name"]
 
-                    result = VideoService.create_video_from_images(
-                        product_name, image_paths
-                    )
+                    result = VideoService.create_video_from_images(product_name, images)
+
+                    logger.info("result: {0}".format(result))
 
                     if result["status_code"] == 200:
                         render_id = result["response"]["id"]
@@ -188,7 +187,7 @@ class APIMakePost(Resource):
                             render_id=render_id,
                             user_id=1,
                             product_name=product_name,
-                            images_url=json.dumps(image_paths),
+                            images_url=json.dumps(images),
                             description="",
                             post_id=post.id,
                         )
