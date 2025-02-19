@@ -130,6 +130,12 @@ class APIMakePost(Resource):
                 status=404,
             ).to_dict()
 
+        if batch.status == 1 or post.status == 1:
+            return Response(
+                message="Post đã được tạo",
+                status=400,
+            ).to_dict()
+
         data = json.loads(batch.content)
         images = data.get("images", [])
         type = post.type
