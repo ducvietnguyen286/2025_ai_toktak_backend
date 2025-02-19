@@ -84,10 +84,14 @@ class CoupangScraper:
             r_data = btf_content.get("rData")
             if r_data is None:
                 return {}
-            first_page_list = r_data.get("pageList")[0]
-            if first_page_list is None:
+            page_list = r_data.get("pageList")
+            if page_list is None:
                 return {}
-            widget_list = first_page_list.get("widgetList")
+            widget_list = None
+            for page in page_list:
+                if "widgetList" in page:
+                    widget_list = page.get("widgetList")
+                    break
             if widget_list is None:
                 return {}
             images = []
