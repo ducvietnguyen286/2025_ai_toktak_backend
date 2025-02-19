@@ -40,6 +40,7 @@ class APICreateBatch(Resource):
             max_count_image = int(max_count_image)
 
             data = Scraper().scraper({"url": url})
+
             if not data:
                 return Response(
                     message="Tạo batch that bai",
@@ -62,6 +63,7 @@ class APICreateBatch(Resource):
 
             if images and len(images) > max_count_image:
                 images = images[:max_count_image]
+
             image_paths = []
             for index, image_url in enumerate(images):
                 timestamp = int(time.time())
@@ -195,14 +197,6 @@ class APIMakePost(Resource):
 
         if batch.done_post == batch.count_post:
             BatchService.update_batch(batch.id, status=1)
-            path_images = []
-            for image_url in images:
-                image_name = image_url.split("/")[-1]
-                path_images.append(f"{UPLOAD_FOLDER}/{image_name}")
-
-            for image_path in path_images:
-                if os.path.exists(image_path):
-                    os.remove(image_path)
 
         return Response(
             data=post._to_json(),

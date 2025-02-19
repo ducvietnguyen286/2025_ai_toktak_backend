@@ -54,6 +54,7 @@ class CoupangScraper:
 
             if response:
                 meta_url = response.get("meta_url")
+                logger.info("meta_url: {0}".format(meta_url))
                 coupang_btf_content = self.get_coupang_btf_content(meta_url, headers)
                 response.update(coupang_btf_content)
             return response
