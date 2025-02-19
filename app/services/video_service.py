@@ -12,8 +12,9 @@ SHOTSTACK_API_KEY = os.getenv("SHOTSTACK_API_KEY")
 
 SHOTSTACK_URL = os.getenv("SHOTSTACK_URL")
 
+
 class VideoService:
-    
+
     @staticmethod
     def create_video_from_images(product_name, images_url):
         # Danh sách các prompt
@@ -96,14 +97,45 @@ class VideoService:
                 "message": str(e),
                 "status_code": 500,
             }
+
+    # Hàm lấy trạng thái video từ Shotstack API
+    @staticmethod
+    def get_video_status(render_id):
+        """
+        Kiểm tra trạng thái render của video từ Shotstack API.
+
+        :param render_id: ID của video đã tạo từ Shotstack.
+        :return: Trạng thái video hoặc thông báo lỗi.
+        """
+        url = f"{SHOTSTACK_URL}/{render_id}"
+        headers = {"x-api-key": SHOTSTACK_API_KEY}
+
+        try:
+            response = requests.get(url, headers=headers)
+
+            if response.status_code == 200:
+                return {"status": True, "message": "Oke", "data": response.json()}
+            else:
+                # logger.error(f"API Error {response.status_code}: {response.text}")
+                return {"status": False, "message": response.text, "data": []}
+
+        except requests.exceptions.RequestException as e:
+            # logger.error(f"Request failed: {str(e)}")
+            return {"status": False, "message": "Request failed, please try again.", "data": []}
+
+        except Exception as e:
+            # logger.error(f"Unexpected error: {str(e)}")
+            return {"status": False, "message": "An unexpected error occurred.", "data": []}
+
     @staticmethod
     def create_create_video(*args, **kwargs):
         create_video = VideoCreate(*args, **kwargs)
         create_video.save()
         return create_video
-    
-    @staticmethod
-    def get_videos(page , per_page):
-        pagination = VideoCreate.query.paginate(page=page, per_page=per_page, error_out=False)
-        return pagination
 
+    @staticmethod
+    def get_videos(page, per_page):
+        pagination = VideoCreate.query.paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        return pagination

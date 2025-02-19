@@ -9,13 +9,16 @@ from app.models.video_create import VideoCreate, db
 ns = Namespace(name="video_maker", description="Video Maker API")
 
 
-@ns.route("/video_status/<string:video_id>")
+@ns.route("/video_status/<string:render_id>")
 class VideoStatus(Resource):
-    def get(self, video_id):
-        # Giả lập trả về JSON cho video_id
+    def get(self, render_id):
+        # Giả lập trả về JSON cho render_id
+        
+        result = VideoService.get_video_status(render_id)
+        return result
         return {
             "status": "success",
-            "video_id": video_id,
+            "render_id": render_id,
             "message": "Video status retrieved successfully XXXX TTTT XXX CCCC  TTT",
         }
 
