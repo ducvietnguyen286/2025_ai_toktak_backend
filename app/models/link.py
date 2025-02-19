@@ -12,3 +12,5 @@ class Link(db.Model, BaseModel):
     need_info = db.Column(db.Text, nullable=False)
     type = db.Column(db.Integer, default=1)
     status = db.Column(db.Integer, default=1)
+
+    to_json_parse = ("need_info",)

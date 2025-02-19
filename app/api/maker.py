@@ -117,8 +117,6 @@ class APICreateBatch(Resource):
 class APIMakePost(Resource):
 
     def post(self, id):
-        UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
-
         post = PostService.find_post(id)
         if not post:
             return Response(
