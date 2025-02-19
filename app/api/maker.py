@@ -40,6 +40,7 @@ class APICreateBatch(Resource):
             max_count_image = int(max_count_image)
 
             data = Scraper().scraper({"url": url})
+
             if not data:
                 return Response(
                     message="Tạo batch that bai",

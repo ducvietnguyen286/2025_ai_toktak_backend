@@ -1,7 +1,7 @@
 import json
 import logging
 import traceback
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 from urllib.parse import urljoin
 
 from app.lib.logger import logger
@@ -41,7 +41,36 @@ def parse_mobile_response(html, url, base_url):
         brand = data.get("brand")
         store_name = brand.get("name") if brand else ""
         in_stock = 1 if "InStock" in availability else 0
-        meta_url = html.find("meta", {"property": "og:url"})
+
+        meta_url_tag = html.find("meta", {"property": "og:url"})
+        meta_url = meta_url_tag["content"] if meta_url_tag else ""
+
+        parsed_url = urlparse(meta_url)
+        meta_base_url = "{0}://{1}".format(parsed_url.scheme, parsed_url.netloc)
+        query_params = parsed_url.query
+        query_params_dict = parse_qs(query_params)
+        item_id = query_params_dict.get("itemId")
+        vendor_item_id = query_params_dict.get("vendorItemId")
+
+        if (
+            not item_id
+            or not vendor_item_id
+            or len(item_id) == 0
+            or len(vendor_item_id) == 0
+        ):
+            next_data_json = html.find("script", {"id": "__NEXT_DATA__"})
+            if next_data_json:
+                next_data = json.loads(next_data_json.text)
+                props = next_data.get("props")
+                page_props = props.get("pageProps")
+                properties = page_props.get("properties")
+                item_detail = properties.get("itemDetail")
+                item_id = item_detail.get("itemId")
+                vendor_item_id = item_detail.get("vendorItemId")
+
+                meta_url = "{0}?itemId={1}&vendorItemId={2}".format(
+                    meta_base_url, item_id, vendor_item_id
+                )
 
         return {
             "name": name,
@@ -56,7 +85,7 @@ def parse_mobile_response(html, url, base_url):
             "base_url": base_url,
             "store_name": store_name,
             "show_free_shipping": 0,
-            "meta_url": meta_url["content"] if meta_url else "",
+            "meta_url": meta_url if meta_url else "",
         }
     except Exception as e:
         logger.log(logging.ERROR, "Exception: {0}".format(str(e)))
