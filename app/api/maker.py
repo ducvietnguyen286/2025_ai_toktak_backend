@@ -205,7 +205,7 @@ class APIMakePost(Resource):
         title = ""
         subtitle = ""
         content = ""
-        video_path = ""
+        video_url = ""
         hashtag = ""
 
         if response:
@@ -240,7 +240,7 @@ class APIMakePost(Resource):
             title=title,
             subtitle=subtitle,
             content=content,
-            video_path=video_path,
+            video_url=video_url,
             hashtag=hashtag,
             render_id=render_id,
             status=1,

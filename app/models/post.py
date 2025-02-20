@@ -13,7 +13,7 @@ class Post(db.Model, BaseModel):
     subtitle = db.Column(db.String(500), nullable=False, default="")
     content = db.Column(db.Text, nullable=False, default="")
     hashtag = db.Column(db.String(500), nullable=False, default="")
-    video_path = db.Column(db.String(255), nullable=False, default="")
+    video_url = db.Column(db.String(255), nullable=False, default="")
     type = db.Column(db.String(10), default="video", index=True)
     status = db.Column(db.Integer, default=1)
     render_id = db.Column(db.String(500), nullable=False, default="")
