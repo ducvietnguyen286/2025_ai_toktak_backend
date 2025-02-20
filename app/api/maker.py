@@ -169,10 +169,13 @@ class APIMakePost(Resource):
                     ]
 
                 if len(image_paths) > 0:
+                    
+                    image_renders = image_paths[:3] # Lấy tối đa 3 Ảnh đầu tiên
+
                     product_name = data["name"]
 
                     result = VideoService.create_video_from_images(
-                        product_name, image_paths
+                        product_name, image_renders
                     )
 
                     if result["status_code"] == 200:
@@ -182,7 +185,7 @@ class APIMakePost(Resource):
                             render_id=render_id,
                             user_id=1,
                             product_name=product_name,
-                            images_url=json.dumps(image_paths),
+                            images_url=json.dumps(image_renders),
                             description="",
                             post_id=post.id,
                         )
