@@ -1,27 +1,6 @@
-import base64
-import hashlib
-import os
-import re
 import time
 
 import requests
-
-
-class YoutubeService:
-    def __init__(self, api_key):
-        self.api_key = api_key
-
-    def send_post(self, post):
-        pass
-
-
-class FacebookService:
-    def __init__(self, access_token):
-        self.access_token = access_token
-
-    def send_post(self, post):
-        pass
-
 
 X_MEDIA_ENDPOINT_URL = "https://api.x.com/2/media/upload"
 X_POST_TO_X_URL = "https://api.x.com/2/tweets"
@@ -153,35 +132,3 @@ class TwitterService:
         self.upload_finalize()
         self.send_post_to_twitter(post)
         return True
-
-
-class InstagramService:
-    def __init__(self, access_token):
-        self.access_token = access_token
-
-    def send_post(self, post):
-        pass
-
-
-class TiktokService:
-    def __init__(self, access_token):
-        self.access_token = access_token
-
-    def send_post(self, post):
-        pass
-
-
-class ThreadService:
-    def __init__(self, access_token):
-        self.access_token = access_token
-
-    def send_post(self, post):
-        pass
-
-
-class TelegramService:
-    def __init__(self, access_token):
-        self.access_token = access_token
-
-    def send_post(self, post):
-        pass

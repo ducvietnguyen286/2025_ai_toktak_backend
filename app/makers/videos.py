@@ -5,12 +5,12 @@ import os
 
 
 class MakerVideo:
-    def generate_video_moovly(images):
-        access_token = os.environ.get("MOOVLY_ACCESS_TOKEN")
-        template_id = os.environ.get("MOOVLY_TEMPLATE_ID")
-        create_url = "https://api.moovly.com/generator/v1/jobs"
-        body = {
-            "quality": "1080p",
-            "create_render": True,
-            "create_project": False,
-        }
+    def make_video(images=[], captions=[], audio=None):
+        pass
+
+    def make_image(image_url, text, font_size, font_color, background_color):
+        pass
+
+    def make_video_from_images(images):
+        UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+        pass

@@ -14,14 +14,13 @@ from app.extensions import redis_client, db
 from app.config import configs as config
 from app.services.link import LinkService
 from app.services.post import PostService
-from app.services.third_party import (
-    FacebookService,
-    InstagramService,
-    ThreadService,
-    TiktokService,
-    TwitterService,
-    YoutubeService,
-)  # noqa
+from app.third_parties.facebook import FacebookService
+from app.third_parties.instagram import InstagramService
+from app.third_parties.thread import ThreadService
+from app.third_parties.tiktok import TiktokService
+from app.third_parties.twitter import TwitterService
+from app.third_parties.youtube import YoutubeService
+
 
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST") or "localhost"
 RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT") or 5672
@@ -52,26 +51,28 @@ def action_send_post_to_link(message):
     if not link or not post:
         return
 
-    if link.type == "FACEBOOK":
-        FacebookService.send_post(post)
+    if link.social_type == "social_type":
 
-    if link.type == "TELEGRAM":
-        pass
+        if link.type == "FACEBOOK":
+            FacebookService.send_post(post)
 
-    if link.type == "X":
-        TwitterService.send_post(post)
+        if link.type == "TELEGRAM":
+            pass
 
-    if link.type == "INSTAGRAM":
-        InstagramService.send_post(post)
+        if link.type == "X":
+            TwitterService.send_post(post)
 
-    if link.type == "YOUTUBE":
-        YoutubeService.send_post(post)
+        if link.type == "INSTAGRAM":
+            InstagramService.send_post(post)
 
-    if link.type == "TIKTOK":
-        TiktokService.send_post(post)
+        if link.type == "YOUTUBE":
+            YoutubeService.send_post(post)
 
-    if link.type == "THREAD":
-        ThreadService.send_post(post)
+        if link.type == "TIKTOK":
+            TiktokService.send_post(post)
+
+        if link.type == "THREAD":
+            ThreadService.send_post(post)
 
 
 def start_consumer():
