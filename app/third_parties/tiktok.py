@@ -1,0 +1,6 @@
+class TiktokService:
+    def __init__(self, access_token):
+        self.access_token = access_token
+
+    def send_post(self, post):
+        pass

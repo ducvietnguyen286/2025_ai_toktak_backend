@@ -112,13 +112,11 @@ class APICreateBatch(Resource):
                 )
                 posts.append(post_res)
 
+            batch_res = batch._to_json()
+            batch_res["posts"] = posts
+
             return Response(
-                data={
-                    "batch_id": batch.id,
-                    "product_name": data.get("name"),
-                    "posts": posts,
-                    "images": images,
-                },
+                data=batch_res,
                 message="Tạo batch thành công",
             ).to_dict()
         except Exception as e:
