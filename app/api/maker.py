@@ -52,35 +52,41 @@ class APICreateBatch(Resource):
                 ).to_dict()
 
             images = data.get("images", [])
-            thumbnail = data.get("image", "")
 
-            timestamp = int(time.time())
-            unique_id = uuid.uuid4().hex
+            thumbnail_url = data.get("thumbnail", "")
 
-            thumbnail_ext = thumbnail.split(".")[-1]
-            thumbnail_name = f"{timestamp}_{unique_id}.{thumbnail_ext}"
+            # TODO: Save thumbnail
+            # thumbnail = data.get("image", "")
 
-            thumbnail_path = f"{UPLOAD_FOLDER}/{thumbnail_name}"
-            with open(thumbnail_path, "wb") as thumbnail_file:
-                thumbnail_file.write(requests.get(thumbnail).content)
-            thumbnail_url = f"{current_domain}/files/{thumbnail_name}"
+            # timestamp = int(time.time())
+            # unique_id = uuid.uuid4().hex
+
+            # thumbnail_ext = thumbnail.split(".")[-1]
+            # thumbnail_name = f"{timestamp}_{unique_id}.{thumbnail_ext}"
+
+            # thumbnail_path = f"{UPLOAD_FOLDER}/{thumbnail_name}"
+            # with open(thumbnail_path, "wb") as thumbnail_file:
+            #     thumbnail_file.write(requests.get(thumbnail).content)
+            # thumbnail_url = f"{current_domain}/files/{thumbnail_name}"
 
             if images and len(images) > max_count_image:
                 images = images[:max_count_image]
+            data["images"] = images
 
-            image_paths = []
-            for index, image_url in enumerate(images):
-                timestamp = int(time.time())
-                unique_id = uuid.uuid4().hex
-                image_ext = image_url.split(".")[-1]
+            # TODO: Save images
+            # image_paths = []
+            # for index, image_url in enumerate(images):
+            #     timestamp = int(time.time())
+            #     unique_id = uuid.uuid4().hex
+            #     image_ext = image_url.split(".")[-1]
 
-                file_name = f"{timestamp}_{unique_id}.{image_ext}"
+            #     file_name = f"{timestamp}_{unique_id}.{image_ext}"
 
-                image_path = f"{UPLOAD_FOLDER}/{file_name}"
-                with open(image_path, "wb") as image_file:
-                    image_file.write(requests.get(image_url).content)
-                image_paths.append(f"{current_domain}/files/{file_name}")
-            data["images"] = image_paths
+            #     image_path = f"{UPLOAD_FOLDER}/{file_name}"
+            #     with open(image_path, "wb") as image_file:
+            #         image_file.write(requests.get(image_url).content)
+            #     image_paths.append(f"{current_domain}/files/{file_name}")
+            # data["images"] = image_paths
 
             post_types = ["video", "social", "blog"]
 
@@ -110,7 +116,7 @@ class APICreateBatch(Resource):
                 data={
                     "product_name": data.get("name"),
                     "posts": posts,
-                    "images": image_paths,
+                    "images": images,
                 },
                 message="Tạo batch thành công",
             ).to_dict()
@@ -161,22 +167,20 @@ class APIMakePost(Resource):
 
                 captions = parse_response.get("captions", [])
 
-                image_paths = []
                 if len(images) == 0:
-                    image_paths = [
+                    images = [
                         "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
                         "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
                     ]
 
-                if len(image_paths) > 0:
+                if len(images) > 0:
+                    image_renders = images[:3] # Lấy tối đa 3 Ảnh đầu tiên
                     
-                    image_renders = image_paths[:3] # Lấy tối đa 3 Ảnh đầu tiên
-
                     product_name = data["name"]
 
-                    result = VideoService.create_video_from_images(
-                        product_name, image_renders
-                    )
+                    result = VideoService.create_video_from_images(product_name, image_renders)
+
+                    logger.info("result: {0}".format(result))
 
                     if result["status_code"] == 200:
                         render_id = result["response"]["id"]
@@ -216,8 +220,10 @@ class APIMakePost(Resource):
                 subtitle = parse_response.get("summarize", "")
             if parse_response and "content" in parse_response:
                 content = parse_response.get("content", "")
+
                 for index, image_url in enumerate(images):
                     content = content.replace(f"IMAGE_URL_{index}", image_url)
+
             if parse_response and "caption" in parse_response:
                 content = parse_response.get("caption", "")
                 content = json.dumps(content)
