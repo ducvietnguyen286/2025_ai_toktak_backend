@@ -1,7 +1,9 @@
 import json
+import time
 import requests
 
-from app.services.batch import BatchService
+from app.lib.logger import logger
+from app.services.social_post import SocialPostService
 
 
 class FacebookService:
@@ -12,14 +14,88 @@ class FacebookService:
         self.video_id = ""
         self.url_to_video = ""
 
-    def send_post(self, post):
+    def send_post(self, post, link):
         if post.type == "social":
-            self.send_post_social(post)
+            self.send_post_social(post, link)
         if post.type == "video":
-            self.send_post_video(post)
+            self.send_post_video(post, link)
 
-    def send_post_video(self, post):
+    def send_post_video(self, post, link):
         self.start_session_upload_reel()
+        self.upload_video(post.video_url)
+        while True:
+            status = self.get_upload_status()
+            processing_phase = status.get("processing_progress")
+            publishing_phase = status.get("publishing_phase")
+            uploading_phase = status.get("uploading_phase")
+            video_status = status.get("video_status", "uploading")
+
+            status_processing_phase = processing_phase.get("status")
+            status_publishing_phase = publishing_phase.get("status")
+            status_uploading_phase = uploading_phase.get("status")
+
+            if (
+                video_status == "ready"
+                and status_processing_phase == "completed"
+                and status_publishing_phase == "published"
+                and status_uploading_phase == "complete"
+            ):
+                self.publish_the_reel(post)
+                reels = self.get_reel_uploaded()
+                #: TODO: Get the reel id and permalink to reel. Save to database with status PUBLISHED
+                break
+
+            if (
+                video_status == "error"
+                or status_processing_phase == "error"
+                or status_publishing_phase == "error"
+                or status_uploading_phase == "error"
+            ):
+                logger.error("Error upload video")
+                if video_status == "error":
+                    logger.error("Tình trạng video lỗi. Không thể upload video")
+                    SocialPostService.create_social_post(
+                        link_id=link.id,
+                        user_id=post.user_id,
+                        post_id=post.id,
+                        status="ERRORED",
+                        error_message="Video is error. Can't upload video",
+                    )
+                if status_processing_phase == "error":
+                    error_message = processing_phase.get("error").get("message")
+                    logger.error(error_message)
+                    SocialPostService.create_social_post(
+                        link_id=link.id,
+                        user_id=post.user_id,
+                        post_id=post.id,
+                        status="ERRORED",
+                        error_message=error_message,
+                    )
+
+                if status_publishing_phase == "error":
+                    error_message = publishing_phase.get("error").get("message")
+                    logger.error(error_message)
+                    SocialPostService.create_social_post(
+                        link_id=link.id,
+                        user_id=post.user_id,
+                        post_id=post.id,
+                        status="ERRORED",
+                        error_message=error_message,
+                    )
+                if status_uploading_phase == "error":
+                    error_message = uploading_phase.get("error").get("message")
+                    logger.error(error_message)
+                    SocialPostService.create_social_post(
+                        link_id=link.id,
+                        user_id=post.user_id,
+                        post_id=post.id,
+                        status="ERRORED",
+                        error_message=error_message,
+                    )
+                break
+
+            time.sleep(1)
+        return True
 
     def start_session_upload_reel(self):
         page_id = self.page_id
@@ -70,12 +146,16 @@ class FacebookService:
 
         post_response = requests.post(final_url)
         result = post_response.json()
-        if "success" in result:
-            print("Upload video thành công")
+        return result
 
-        return
+    def get_reel_uploaded(self):
+        URL_REEL = f"https://graph.facebook.com/v22.0/{self.page_id}/video_reels?access_token={self.access_token}"
+        get_response = requests.get(URL_REEL)
+        result = get_response.json()
+        print("Get reel:", result)
+        return result
 
-    def send_post_social(self, post):
+    def send_post_social(self, post, link):
         page_id = self.page_id
         FEED_URL = f"https://graph.facebook.com/{page_id}/feed"
 
@@ -92,7 +172,34 @@ class FacebookService:
         }
         post_response = requests.post(FEED_URL, data=post_data)
         result = post_response.json()
-        print(result)
+        if "id" not in result:
+            error = result.get("error", {})
+            error_message = error.get("message", "Error")
+            SocialPostService.create_social_post(
+                link_id=link.id,
+                user_id=post.user_id,
+                post_id=post.id,
+                status="ERRORED",
+                error_message=error_message,
+            )
+            return False
+        post_id = result["id"]
+
+        PERMALINK_URL = f"https://graph.facebook.com/{post_id}"
+        params = {"fields": "permalink_url", "access_token": self.access_token}
+
+        response_permalink = requests.get(PERMALINK_URL, params=params)
+        result_permalink = response_permalink.json()
+
+        permalink = result_permalink["permalink_url"]
+        SocialPostService.create_social_post(
+            link_id=link.id,
+            user_id=post.user_id,
+            post_id=post.id,
+            status="PUBLISHED",
+            social_link=permalink,
+        )
+        return True
 
     def unpublish_images(self, images):
         page_id = self.page_id
