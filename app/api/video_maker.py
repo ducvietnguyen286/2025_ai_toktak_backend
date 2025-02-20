@@ -120,8 +120,8 @@ class CreateVideo(Resource):
                     "render_id": render_id,
                     "status": status,
                     "video_url": video_url,
-                    "post_detail" : post_detail.to_dict(),
-                    "create_video_detail" : create_video_detail.to_dict(),
+                    # "post_detail" : post_detail.to_dict(),
+                    # "create_video_detail" : create_video_detail.to_dict(),
                 }, 200
 
             except Exception as e:
