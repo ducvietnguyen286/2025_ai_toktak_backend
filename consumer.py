@@ -33,7 +33,7 @@ RABBITMQ_QUEUE = os.environ.get("RABBITMQ_QUEUE") or "hello"
 connection = pika.BlockingConnection(
     pika.ConnectionParameters(
         host=RABBITMQ_HOST,
-        port=RABBITMQ_PORT,
+        port=int(RABBITMQ_PORT),
         credentials=pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD),
     )
 )
