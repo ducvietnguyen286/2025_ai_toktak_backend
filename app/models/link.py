@@ -10,7 +10,7 @@ class Link(db.Model, BaseModel):
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
     need_info = db.Column(db.Text, nullable=False)
-    type = db.Column(db.Integer, default=1)
+    type = db.Column(db.String(100), default="FACEBOOK")
     status = db.Column(db.Integer, default=1)
 
     to_json_parse = ("need_info",)
