@@ -114,6 +114,7 @@ class APICreateBatch(Resource):
 
             return Response(
                 data={
+                    "batch_id": batch.id,
                     "product_name": data.get("name"),
                     "posts": posts,
                     "images": images,
