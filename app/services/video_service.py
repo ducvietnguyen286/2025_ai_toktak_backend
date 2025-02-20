@@ -4,24 +4,44 @@ import os
 import random
 from app.models.video_create import VideoCreate
 from app.models.setting import Setting
+from app.lib.logger import logger
+
+  
+from gtts import gTTS 
+import uuid
 
 
 class VideoService:
 
     @staticmethod
     def create_video_from_images(product_name, images_url):
-        
+
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
-        
+
         print("SHOTSTACK_API_KEY", SHOTSTACK_API_KEY)
         print("SHOTSTACK_URL", SHOTSTACK_URL)
-        
-        
+
         print("config", config)
         
-        # Danh sách các prompt
+        voice_dir = "static/voice"
+        os.makedirs(voice_dir, exist_ok=True)
+        
+        # create voice Google TTS
+        text_to_speech = f"{product_name} 출시되었습니다. 지금 만나보세요!"
+        tts = gTTS(text=text_to_speech, lang="ko")
+        file_name = f"voice_{uuid.uuid4().hex}.mp3"
+        file_path = f"{voice_dir}/{file_name}"
+
+        tts.save(file_path)
+        
+        
+        voice_url = "https://apitoktak.voda-play.com/voice/" + file_name  # Thay bằng URL thật của file sau khi upload
+        # voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
+
+
+        # prompt fake 
         prompts = [
             "Slowly zoom in and out for a dramatic effect.",
             "Add a soft fade transition between images.",
@@ -40,7 +60,12 @@ class VideoService:
 
         payload = {
             "timeline": {
+                
                 "background": "#FFFFFF",
+                "soundtrack": {
+                    "src": voice_url, 
+                    "effect": "fadeInFadeOut"
+                },
                 "tracks": [
                     {
                         "clips": [
@@ -60,6 +85,18 @@ class VideoService:
                         "clips": [
                             {
                                 "asset": {
+                                    "type": "text",
+                                    "text": f"{product_name} 출시되었습니다!",
+                                },
+                                "start": 1,
+                                "length": 4,
+                            }
+                        ]
+                    },
+                    {
+                        "clips": [
+                            {
+                                "asset": {
                                     "type": "audio",
                                     "src": "https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/freepd/motions.mp3",
                                     "effect": "fadeOut",
@@ -73,7 +110,8 @@ class VideoService:
                 ],
             },
             "output": {"format": "mp4", "size": {"width": 720, "height": 1280}},
-            "callback": "https://apitoktak.voda-play.com//api/v1/video_maker/shotstack_webhook",
+            "callback": "https://apitoktak.voda-play.com/api/v1/video_maker/shotstack_webhook",
+             
         }
 
         # Header với API Key
@@ -92,12 +130,15 @@ class VideoService:
                 result["status_code"] = 200
                 return result
             else:
+                result = response.json()
+                logger.error("create video Failed :{0}".format(str(result)))
                 return {
                     "message": "Failed to create video",
                     "status_code": response.status_code,
                 }
 
         except Exception as e:
+            logger.error("create_video_from_images : Exception: {0}".format(str(e)))
             return {
                 "message": str(e),
                 "status_code": 500,

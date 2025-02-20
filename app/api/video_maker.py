@@ -18,11 +18,6 @@ class VideoStatus(Resource):
 
         result = VideoService.get_video_status(render_id)
         return result
-        return {
-            "status": "success",
-            "render_id": render_id,
-            "message": "Video status retrieved successfully XXXX TTTT XXX CCCC  TTT",
-        }
 
 
 @ns.route("/create_video")
