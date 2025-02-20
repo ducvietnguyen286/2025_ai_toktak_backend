@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from flask import Flask
 from werkzeug.exceptions import default_exceptions
 
+load_dotenv(override=False)
+
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db
 from app.config import configs as config
@@ -20,8 +22,6 @@ from app.services.third_party import (
     TwitterService,
     YoutubeService,
 )  # noqa
-
-load_dotenv(override=False)
 
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST") or "localhost"
 RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT") or 5672
