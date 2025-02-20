@@ -4,6 +4,7 @@ import os
 import random
 from app.models.video_create import VideoCreate
 from app.models.setting import Setting
+from app.lib.logger import logger
 
 
 class VideoService:
@@ -92,12 +93,15 @@ class VideoService:
                 result["status_code"] = 200
                 return result
             else:
+                result = response.json()
+                logger.error("create video Failed :{0}".format(str(result)))
                 return {
                     "message": "Failed to create video",
                     "status_code": response.status_code,
                 }
 
         except Exception as e:
+            logger.error("create_video_from_images : Exception: {0}".format(str(e)))
             return {
                 "message": str(e),
                 "status_code": 500,
