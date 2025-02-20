@@ -53,7 +53,7 @@ class APICreateBatch(Resource):
 
             images = data.get("images", [])
 
-            thumbnail_url = data.get("thumbnail", "")
+            thumbnail_url = data.get("image", "")
 
             # TODO: Save thumbnail
             # thumbnail = data.get("image", "")
@@ -175,11 +175,13 @@ class APIMakePost(Resource):
                     ]
 
                 if len(images) > 0:
-                    image_renders = images[:3] # Lấy tối đa 3 Ảnh đầu tiên
-                    
+                    image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
+
                     product_name = data["name"]
 
-                    result = VideoService.create_video_from_images(product_name, image_renders)
+                    result = VideoService.create_video_from_images(
+                        product_name, image_renders
+                    )
 
                     logger.info("result: {0}".format(result))
 
