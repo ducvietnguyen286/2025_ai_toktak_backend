@@ -5,6 +5,9 @@ from logging import DEBUG
 
 from dotenv import load_dotenv
 from flask import Flask
+
+load_dotenv(override=False)
+
 from werkzeug.exceptions import default_exceptions
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -12,8 +15,6 @@ from apscheduler.triggers.cron import CronTrigger
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db
 from app.config import configs as config  # noqa
-
-load_dotenv(override=False)
 
 
 def schedule_task():

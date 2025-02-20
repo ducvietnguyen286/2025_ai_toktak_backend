@@ -53,7 +53,7 @@ class APICreateBatch(Resource):
 
             images = data.get("images", [])
 
-            thumbnail_url = data.get("thumbnail", "")
+            thumbnail_url = data.get("image", "")
 
             # TODO: Save thumbnail
             # thumbnail = data.get("image", "")
