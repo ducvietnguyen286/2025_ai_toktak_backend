@@ -12,7 +12,8 @@ from .extensions import redis_client, db, bcrypt, jwt
 
 def create_app(config_app):
     app = Flask(__name__)
-    CORS(app)
+    #CORS(app)
+    CORS(app, resources={r"/*": {"origins": "*"}})
     app.config.from_object(config_app)
     __init_app(app)
     __config_logging(app)
