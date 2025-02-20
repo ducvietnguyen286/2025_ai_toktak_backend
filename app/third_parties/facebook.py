@@ -42,6 +42,7 @@ class FacebookService:
             ):
                 self.publish_the_reel(post)
                 reels = self.get_reel_uploaded()
+                #: TODO: Get the reel id and permalink to reel. Save to database with status PUBLISHED
                 break
 
             if (
@@ -94,6 +95,7 @@ class FacebookService:
                 break
 
             time.sleep(1)
+        return True
 
     def start_session_upload_reel(self):
         page_id = self.page_id
