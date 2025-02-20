@@ -3,20 +3,24 @@ import json
 import os
 import random
 from app.models.video_create import VideoCreate
-
-
-# Lấy API Key từ môi trường hoặc .env
-SHOTSTACK_API_KEY = os.getenv("SHOTSTACK_API_KEY")
-
-# URL của Shotstack API
-
-SHOTSTACK_URL = os.getenv("SHOTSTACK_URL")
+from app.models.setting import Setting
 
 
 class VideoService:
 
     @staticmethod
     def create_video_from_images(product_name, images_url):
+        
+        config = VideoService.get_settings()
+        SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
+        SHOTSTACK_URL = config["SHOTSTACK_URL"]
+        
+        print("SHOTSTACK_API_KEY", SHOTSTACK_API_KEY)
+        print("SHOTSTACK_URL", SHOTSTACK_URL)
+        
+        
+        print("config", config)
+        
         # Danh sách các prompt
         prompts = [
             "Slowly zoom in and out for a dramatic effect.",
@@ -150,10 +154,18 @@ class VideoService:
         return pagination
 
     @staticmethod
-    def update_video_create(render_id, *args , **kwargs ):
-        
+    def update_video_create(render_id, *args, **kwargs):
+
         create_video = VideoCreate.query.filter_by(render_id=render_id).first()
         if not create_video:
             return None
         create_video.update(**kwargs)
         return create_video
+
+    @staticmethod
+    def get_settings():
+        settings = Setting.query.all()
+        settings_dict = {
+            setting.setting_name: setting.setting_value for setting in settings
+        }
+        return settings_dict
