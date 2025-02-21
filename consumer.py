@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from flask import Flask
 from werkzeug.exceptions import default_exceptions
 
+from app.lib.logger import logger
+
 load_dotenv(override=False)
 
 from app.errors.handler import api_error_handler
@@ -42,37 +44,48 @@ channel.queue_declare(queue=RABBITMQ_QUEUE)
 
 
 def action_send_post_to_link(message):
-    link_id = message.get("link_id")
-    post_id = message.get("post_id")
+    try:
+        link_id = message.get("link_id")
+        post_id = message.get("post_id")
 
-    link = LinkService.find_link(link_id)
-    post = PostService.find_post(post_id)
+        link = LinkService.find_link(link_id)
+        post = PostService.find_post(post_id)
 
-    if not link or not post:
-        return
+        print(f"Send post {post_id} to link {link_id}")
 
-    if link.social_type == "social_type":
+        print(f"Send post to {link.type} of {link.social_type}")
 
-        if link.type == "FACEBOOK":
-            FacebookService.send_post(post)
+        if not link or not post:
+            print("Link or post not found")
+            return
 
-        if link.type == "TELEGRAM":
-            pass
+        if link.social_type == "SOCIAL":
 
-        if link.type == "X":
-            TwitterService.send_post(post)
+            if link.type == "FACEBOOK":
+                FacebookService().send_post(post, link)
 
-        if link.type == "INSTAGRAM":
-            InstagramService.send_post(post)
+            if link.type == "TELEGRAM":
+                pass
 
-        if link.type == "YOUTUBE":
-            YoutubeService.send_post(post)
+            if link.type == "X":
+                TwitterService().send_post(post, link)
 
-        if link.type == "TIKTOK":
-            TiktokService.send_post(post)
+            if link.type == "INSTAGRAM":
+                InstagramService().send_post(post, link)
 
-        if link.type == "THREAD":
-            ThreadService.send_post(post)
+            if link.type == "YOUTUBE":
+                YoutubeService().send_post(post, link)
+
+            if link.type == "TIKTOK":
+                TiktokService().send_post(post, link)
+
+            if link.type == "THREAD":
+                ThreadService().send_post(post, link)
+
+        return True
+    except Exception as e:
+        print(f"Error send post to link: {str(e)}")
+        return False
 
 
 def start_consumer():
