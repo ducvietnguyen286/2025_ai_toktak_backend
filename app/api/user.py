@@ -211,38 +211,44 @@ TIKTOK_REDIRECT_URL = (
 )
 TIKTOK_AUTHORIZATION_URL = "https://www.tiktok.com/v2/auth/authorize/"
 TIKTOK_CLIENT_KEY = os.environ.get("TIKTOK_CLIENT_KEY") or ""
-TIKTOK_CLIENT_SECRET_KEY = os.environ.get("TIKTOK_CLIENT_SECRET_KEY")
+TIKTOK_CLIENT_SECRET_KEY = os.environ.get("TIKTOK_CLIENT_SECRET")
 
 
 @ns.route("/oauth/tiktok-login")
 class APITiktokLogin(Resource):
 
     def get(self, *args, **kwargs):
+        try:
+            state_token = self.generate_state_token()
+            scope = "video.publish,video.upload"
 
-        state_token = self.generate_state_token()
-
-        scope = "video.publish,video.upload"
-
-        params = {
-            "client_key": TIKTOK_CLIENT_KEY,
-            "response_type": "code",
-            "scope": scope,
-            "redirect_uri": TIKTOK_REDIRECT_URL,
-            "state": state_token,
-        }
-        url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
-        return redirect(url)
+            params = {
+                "client_key": TIKTOK_CLIENT_KEY,
+                "response_type": "code",
+                "scope": scope,
+                "redirect_uri": TIKTOK_REDIRECT_URL,
+                "state": state_token,
+            }
+            url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
+            return redirect(url)
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            print(f"Error send post to link: {str(e)}")
+            return False
 
     def generate_state_token(self):
 
         nonce = secrets.token_urlsafe(16)
         payload = {
             "nonce": nonce,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=5),
+            "exp": (
+                datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
+            ).isoformat(),
         }
-        token = jwt.encode(
-            json.dumps(payload), TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256"
-        )
+        if not TIKTOK_CLIENT_SECRET_KEY:
+            raise ValueError("TIKTOK_CLIENT_SECRET_KEY is not set")
+        token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
         return token
 
 
@@ -308,7 +314,6 @@ class APIGetCallbackTiktok(Resource):
     def verify_state_token(self, token):
         try:
             payload = jwt.decode(token, TIKTOK_CLIENT_SECRET_KEY, algorithms=["HS256"])
-            payload_parsed = json.loads(payload)
-            return payload_parsed["nonce"]
+            return payload["nonce"]
         except Exception:
             return None
