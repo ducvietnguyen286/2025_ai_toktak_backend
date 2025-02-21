@@ -6,6 +6,7 @@ import traceback
 import requests
 
 from app.lib.logger import logger
+from app.services.request_x_log import RequestXLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
 
@@ -43,6 +44,13 @@ class TwitterTokenService:
             response = requests.post(TOKEN_URL, headers=headers, data=data)
             data = response.json()
 
+            RequestXLogService.create_request_x_log(
+                user_id=user_link.user_id,
+                type="authorization_code",
+                request=json.dumps(data),
+                response=json.dumps(data),
+            )
+
             meta = user_link.meta
             meta = json.loads(meta)
             meta.update(
@@ -79,6 +87,13 @@ class TwitterTokenService:
             }
             response = requests.post(TOKEN_URL, headers=headers, data=data)
             data = response.json()
+
+            RequestXLogService.create_request_x_log(
+                user_id=user_link.user_id,
+                type="refresh_token",
+                request=json.dumps(data),
+                response=json.dumps(data),
+            )
 
             user_link = UserService.find_user_link(link_id=link.id, user_id=user.id)
 
