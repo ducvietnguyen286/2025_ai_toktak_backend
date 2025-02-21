@@ -236,9 +236,19 @@ TIKTOK_CLIENT_SECRET_KEY = os.environ.get("TIKTOK_CLIENT_SECRET") or ""
 @ns.route("/oauth/tiktok-login")
 class APITiktokLogin(Resource):
 
+    @parameters(
+        type="object",
+        properties={
+            "user_id": {"type": "string"},
+            "link_id": {"type": "string"},
+        },
+        required=["user_id", "link_id"],
+    )
     def get(self, *args, **kwargs):
         try:
-            state_token = self.generate_state_token()
+            user_id = args.get("user_id")
+            link_id = args.get("link_id")
+            state_token = self.generate_state_token(user_id, link_id)
             scope = "video.publish,video.upload"
 
             params = {
@@ -259,11 +269,13 @@ class APITiktokLogin(Resource):
             print(f"Error send post to link: {str(e)}")
             return False
 
-    def generate_state_token(self):
+    def generate_state_token(self, user_id, link_id):
 
         nonce = secrets.token_urlsafe(16)
         payload = {
             "nonce": nonce,
+            "user_id": user_id,
+            "link_id": link_id,
             "exp": (datetime.datetime.now() + datetime.timedelta(days=30)).timestamp(),
         }
         token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
@@ -334,6 +346,13 @@ class APIGetCallbackTiktok(Resource):
                 error_data = token_data.get("data")
                 error = error_data.get("error_code")
                 error_description = error_data.get("description")
+                return redirect(
+                    PAGE_PROFILE
+                    + "?error="
+                    + error
+                    + "&error_description="
+                    + error_description
+                )
 
             TiktokCallbackService().create_tiktok_callback(
                 code=code,
@@ -343,7 +362,22 @@ class APIGetCallbackTiktok(Resource):
                 error_description=error_description,
             )
 
-            return redirect(PAGE_PROFILE)
+            user_id = payload.get("user_id")
+            link_id = payload.get("link_id")
+            int_user_id = int(user_id)
+            int_link_id = int(link_id)
+            user_link = UserService.find_user_link(int_link_id, int_user_id)
+            if not user_link:
+                UserService.create_user_link(
+                    user_id=int_user_id,
+                    link_id=int_link_id,
+                    status=1,
+                    meta=json.dumps(token_data),
+                )
+            else:
+                user_link.meta = json.dumps(token_data)
+
+            return redirect(PAGE_PROFILE + "?success=1")
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
