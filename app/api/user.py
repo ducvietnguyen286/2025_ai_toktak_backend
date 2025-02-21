@@ -33,19 +33,10 @@ class APIUserLinks(Resource):
     @jwt_required()
     @parameters(
         type="object",
-        properties={
-            "code": {"type": "string"},
-            "state": {"type": "string"},
-            "error": {"type": "string"},
-            "error_description": {"type": "string"},
-        },
-        required=["code", "state"],
+        properties={},
+        required=[],
     )
     def get(self, args):
-        code = args.get("code")
-        state = args.get("state")
-        error = args.get("error")
-        error_description = args.get("error_description")
         current_user = AuthService.get_current_identity()
         links = UserService.get_user_links(current_user.id)
         return Response(
