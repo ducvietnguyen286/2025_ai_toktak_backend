@@ -98,23 +98,28 @@ class APINewLink(Resource):
                 status=400,
             ).to_dict()
 
-        exist_user_link = UserService.find_user_link(link_id, current_user.id)
-        if exist_user_link:
-            return Response(
-                message="Link đã tồn tại",
-                status=400,
-            ).to_dict()
+        user_link = UserService.find_user_link(link_id, current_user.id)
+        if not user_link:
+            user_link = UserService.create_user_link(
+                user_id=current_user.id,
+                link_id=link_id,
+                meta=json.dumps(info),
+                status=1,
+            )
 
-        user_link = UserService.create_user_link(
-            user_id=current_user.id, link_id=link_id, meta=json.dumps(info), status=1
-        )
+            if link.type == "X":
+                user_link.status = 0
+                user_link.save()
 
-        if link.type == "X":
-            user_link.status = 0
+                code = args.get("Code")
+                TwitterTokenService().fetch_token(code, current_user, link, user_link)
+        else:
+            if link.type == "X":
+                code = args.get("Code")
+                TwitterTokenService().fetch_token(code, current_user, link, user_link)
+            user_link.meta = json.dumps(info)
+            user_link.status = 1
             user_link.save()
-
-            code = args.get("Code")
-            TwitterTokenService().fetch_token(code, current_user, link, user_link)
 
         return Response(
             data=user_link._to_json(),
