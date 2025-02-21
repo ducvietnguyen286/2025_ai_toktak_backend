@@ -244,7 +244,7 @@ class APITiktokLogin(Resource):
         },
         required=["user_id", "link_id"],
     )
-    def get(self, *args, **kwargs):
+    def get(self, args):
         try:
             user_id = args.get("user_id")
             link_id = args.get("link_id")
