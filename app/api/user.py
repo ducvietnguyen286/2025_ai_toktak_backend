@@ -221,7 +221,7 @@ class APITiktokLogin(Resource):
 
         state_token = self.generate_state_token()
 
-        scope = "user.info.basic, video.publish, video.upload"
+        scope = "user.info.basic,video.publish,video.upload"
 
         params = {
             "client_key": TIKTOK_CLIENT_KEY,
@@ -291,7 +291,11 @@ class APIGetCallbackTiktok(Resource):
             return f"Error parsing response: {e}", 500
 
         TiktokCallbackService().create(
-            code=code, state=state, content=json.dumps(token_data)
+            code=code,
+            state=state,
+            content=json.dumps(token_data),
+            error=error,
+            error_description=error_description,
         )
 
         return Response(
