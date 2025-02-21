@@ -248,7 +248,6 @@ class APITiktokLogin(Resource):
                 "redirect_uri": TIKTOK_REDIRECT_URL,
                 "state": state_token,
                 "code_challenge": code_challenge,
-                "code_challenge_method": "S256",
             }
             url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
             return redirect(url)
@@ -341,6 +340,13 @@ class APIGetCallbackTiktok(Resource):
                 token_data = response.json()
             except Exception as e:
                 return f"Error parsing response: {e}", 500
+
+            message = token_data.get("message")
+
+            if message and message == "error":
+                error_data = token_data.get("data")
+                error = error_data.get("error_code")
+                error_description = error_data.get("description")
 
             TiktokCallbackService().create_tiktok_callback(
                 code=code,
