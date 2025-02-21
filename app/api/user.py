@@ -1,5 +1,7 @@
 # coding: utf8
+import base64
 import datetime
+import hashlib
 import json
 import os
 import traceback
@@ -219,7 +221,7 @@ class APITiktokLogin(Resource):
 
     def get(self, *args, **kwargs):
         try:
-            state_token = self.generate_state_token()
+            state_token, code_challenge = self.generate_state_token()
             scope = "video.publish,video.upload"
 
             params = {
@@ -228,6 +230,8 @@ class APITiktokLogin(Resource):
                 "scope": scope,
                 "redirect_uri": TIKTOK_REDIRECT_URL,
                 "state": state_token,
+                "code_challenge": code_challenge,
+                "code_challenge_method": "S256",
             }
             url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
             return redirect(url)
@@ -240,16 +244,21 @@ class APITiktokLogin(Resource):
     def generate_state_token(self):
 
         nonce = secrets.token_urlsafe(16)
+        code_verifier = secrets.token_urlsafe(64)
+        m = hashlib.sha256()
+        m.update(code_verifier.encode("ascii"))
+        code_challenge = (
+            base64.urlsafe_b64encode(m.digest()).rstrip(b"=").decode("ascii")
+        )
         payload = {
             "nonce": nonce,
+            "code_verifier": code_verifier,
             "exp": (
                 datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
             ).isoformat(),
         }
-        if not TIKTOK_CLIENT_SECRET_KEY:
-            raise ValueError("TIKTOK_CLIENT_SECRET_KEY is not set")
         token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
-        return token
+        return token, code_challenge
 
 
 @ns.route("/oauth/tiktok-callback")
@@ -267,9 +276,16 @@ class APIGetCallbackTiktok(Resource):
                 status=400,
             ).to_dict()
 
-        nonce = self.verify_state_token(state)
+        payload = self.verify_state_token(state)
 
-        if not nonce:
+        if not payload:
+            return Response(
+                message="Invalid or expired state token",
+                status=400,
+            ).to_dict()
+
+        code_verifier = payload.get("code_verifier")
+        if not code_verifier:
             return Response(
                 message="Invalid or expired state token",
                 status=400,
@@ -288,6 +304,7 @@ class APIGetCallbackTiktok(Resource):
             "code": code,
             "grant_type": "authorization_code",
             "redirect_uri": TIKTOK_REDIRECT_URL,
+            "code_verifier": code_verifier,
         }
 
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -314,6 +331,6 @@ class APIGetCallbackTiktok(Resource):
     def verify_state_token(self, token):
         try:
             payload = jwt.decode(token, TIKTOK_CLIENT_SECRET_KEY, algorithms=["HS256"])
-            return payload["nonce"]
+            return payload
         except Exception:
             return None
