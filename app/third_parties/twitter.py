@@ -38,7 +38,7 @@ class TwitterTokenService:
                 "code": code,
                 "grant_type": "authorization_code",
                 "client_id": self.client_id,
-                "redirect_uri": "https://voda-play.com/profile",
+                "redirect_uri": os.environ.get("X_REDIRECT_URI"),
                 "code_verifier": "challenge",
             }
             response = requests.post(TOKEN_URL, headers=headers, data=r_data)
