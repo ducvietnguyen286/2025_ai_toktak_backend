@@ -280,7 +280,7 @@ class APITiktokLogin(Resource):
             "nonce": nonce,
             "code_verifier": code_verifier,
             "exp": (
-                datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
+                datetime.datetime.now() + datetime.timedelta(minutes=30)
             ).timestamp(),
         }
         token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
@@ -375,5 +375,4 @@ class APIGetCallbackTiktok(Resource):
             return payload
         except Exception as e:
             print(f"Error verify state token: {str(e)}")
-
             return None
