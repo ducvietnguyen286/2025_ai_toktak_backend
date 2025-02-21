@@ -1,15 +1,23 @@
 # coding: utf8
+import datetime
 import json
+import os
 import traceback
+from urllib.parse import urlencode
+from flask import redirect
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
+import jwt
+import requests
 from app.decorators import parameters
 from app.lib.logger import logger
 from app.lib.response import Response
+import secrets
 
 from app.rabbitmq.producer import send_message
 from app.services.auth import AuthService
 from app.services.post import PostService
+from app.services.tiktok_callback import TiktokCallbackService
 from app.services.user import UserService
 from app.services.link import LinkService
 from app.third_parties.twitter import TwitterTokenService
@@ -196,3 +204,104 @@ class APIPostToLinks(Resource):
                 message="Tạo bài viết that bai",
                 status=400,
             ).to_dict()
+
+
+TIKTOK_REDIRECT_URL = (
+    os.environ.get("CURRENT_DOMAIN") + "/api/v1/user/oauth/tiktok-callback"
+)
+TIKTOK_AUTHORIZATION_URL = "https://www.tiktok.com/v2/auth/authorize/"
+TIKTOK_CLIENT_KEY = os.environ.get("TIKTOK_CLIENT_KEY") or ""
+TIKTOK_CLIENT_SECRET_KEY = os.environ.get("TIKTOK_CLIENT_SECRET_KEY")
+
+
+@ns.route("/oauth/tiktok-login")
+class APITiktokLogin(Resource):
+
+    def get(self, *args, **kwargs):
+
+        state_token = self.generate_state_token()
+
+        scope = "user.info.basic, video.publish, video.upload"
+
+        params = {
+            "client_key": TIKTOK_CLIENT_KEY,
+            "response_type": "code",
+            "scope": scope,
+            "redirect_uri": TIKTOK_REDIRECT_URL,
+            "state": state_token,
+        }
+        url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
+        return redirect(url)
+
+    def generate_state_token():
+
+        nonce = secrets.token_urlsafe(16)
+        payload = {
+            "nonce": nonce,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=5),
+        }
+        token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
+        return token
+
+
+@ns.route("/oauth/tiktok-callback")
+class APIGetCallbackTiktok(Resource):
+
+    def get(self, *args, **kwargs):
+        code = kwargs.get("code")
+        state = kwargs.get("state")
+        error = kwargs.get("error")
+        error_description = kwargs.get("error_description")
+
+        if not state:
+            return Response(
+                message="Invalid or expired state token",
+                status=400,
+            ).to_dict()
+
+        nonce = self.verify_state_token(state)
+
+        if not nonce:
+            return Response(
+                message="Invalid or expired state token",
+                status=400,
+            ).to_dict()
+
+        if error:
+            return Response(
+                message=error_description,
+                status=400,
+            ).to_dict()
+        TOKEN_URL = "https://open-api.tiktok.com/oauth/access_token/"
+
+        data = {
+            "client_key": TIKTOK_CLIENT_KEY,
+            "client_secret": TIKTOK_CLIENT_SECRET_KEY,
+            "code": code,
+            "grant_type": "authorization_code",
+            "redirect_uri": TIKTOK_REDIRECT_URL,
+        }
+
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        response = requests.post(TOKEN_URL, data=data, headers=headers)
+
+        try:
+            token_data = response.json()
+        except Exception as e:
+            return f"Error parsing response: {e}", 500
+
+        TiktokCallbackService().create(
+            code=code, state=state, content=json.dumps(token_data)
+        )
+
+        return Response(
+            data=token_data,
+            message="Đăng nhập thành công",
+        ).to_dict()
+
+    def verify_state_token(token):
+        try:
+            payload = jwt.decode(token, TIKTOK_CLIENT_SECRET_KEY, algorithms=["HS256"])
+            return payload["nonce"]
+        except Exception:
+            return None
