@@ -230,7 +230,7 @@ TIKTOK_REDIRECT_URL = (
 )
 TIKTOK_AUTHORIZATION_URL = "https://www.tiktok.com/v2/auth/authorize/"
 TIKTOK_CLIENT_KEY = os.environ.get("TIKTOK_CLIENT_KEY") or ""
-TIKTOK_CLIENT_SECRET_KEY = os.environ.get("TIKTOK_CLIENT_SECRET")
+TIKTOK_CLIENT_SECRET_KEY = os.environ.get("TIKTOK_CLIENT_SECRET") or ""
 
 
 @ns.route("/oauth/tiktok-login")
@@ -251,6 +251,7 @@ class APITiktokLogin(Resource):
             url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
 
             logger.info(f"Redirect to Tiktok: {url}")
+
             return redirect(url)
         except Exception as e:
             traceback.print_exc()
@@ -261,15 +262,8 @@ class APITiktokLogin(Resource):
     def generate_state_token(self):
 
         nonce = secrets.token_urlsafe(16)
-        code_verifier = secrets.token_urlsafe(64)
-        m = hashlib.sha256()
-        m.update(code_verifier.encode("ascii"))
-        # code_challenge = (
-        #     base64.urlsafe_b64encode(m.digest()).rstrip(b"=").decode("ascii")
-        # )
         payload = {
             "nonce": nonce,
-            "code_verifier": code_verifier,
             "exp": (datetime.datetime.now() + datetime.timedelta(days=30)).timestamp(),
         }
         token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
@@ -311,19 +305,12 @@ class APIGetCallbackTiktok(Resource):
                     status=400,
                 ).to_dict()
 
-            code_verifier = payload.get("code_verifier")
-            if not code_verifier:
-                return Response(
-                    message="Invalid or expired state token 3",
-                    status=400,
-                ).to_dict()
-
             if error:
                 return Response(
                     message=error_description,
                     status=400,
                 ).to_dict()
-            TOKEN_URL = "https://open-api.tiktok.com/oauth/access_token/"
+            TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 
             data = {
                 "client_key": TIKTOK_CLIENT_KEY,
@@ -331,7 +318,6 @@ class APIGetCallbackTiktok(Resource):
                 "code": code,
                 "grant_type": "authorization_code",
                 "redirect_uri": TIKTOK_REDIRECT_URL,
-                "code_verifier": code_verifier,
             }
 
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
