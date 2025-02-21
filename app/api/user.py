@@ -221,7 +221,7 @@ class APITiktokLogin(Resource):
 
         state_token = self.generate_state_token()
 
-        scope = "user.info.basic, video.publish, video.upload"
+        scope = "user.info.basic,video.publish,video.upload"
 
         params = {
             "client_key": TIKTOK_CLIENT_KEY,
