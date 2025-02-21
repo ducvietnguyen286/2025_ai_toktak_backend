@@ -16,3 +16,18 @@ class Batch(db.Model, BaseModel):
     status = db.Column(db.Integer, default=1)
 
     to_json_filter = "content"
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "url": self.url,
+            "thumbnail": self.thumbnail,
+            "content": self.content,
+            "type": self.type,
+            "count_post": self.count_post,
+            "done_post": self.done_post,
+            "status": self.status,
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+        }

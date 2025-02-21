@@ -19,7 +19,7 @@ import traceback
 from app.services.batch import BatchService
 from app.services.post import PostService
 from app.services.video_service import VideoService
-
+from flask import request
 ns = Namespace(name="maker", description="Maker API")
 
 
@@ -165,6 +165,9 @@ class APIMakePost(Resource):
                 parse_response = parse_caption.get("response", {})
 
                 captions = parse_response.get("captions", [])
+                logger.info("+++++++++++++++++++++++++++")
+                logger.info(json.dumps(captions))
+                logger.info("+++++++++++++++++++++++++++")
 
                 # if len(images) == 0:
                 #     images = [
@@ -279,3 +282,23 @@ class APIGetBatch(Resource):
             data=batch_res,
             message="Lấy batch thành công",
         ).to_dict()
+
+@ns.route("/batchs")
+class APIBatchs(Resource):
+    def get(self):
+            page = request.args.get("page", 1, type=int)
+            per_page = request.args.get("per_page", 10, type=int)
+            print("page", page)
+            print("per_page", per_page)
+
+            batches = BatchService.get_all_batches(page, per_page)
+
+            return {
+                "status": True,
+                "message": "Success",
+                "total": batches.total,
+                "page": batches.page,
+                "per_page": batches.per_page,
+                "total_pages": batches.pages,
+                "data": [batch_detail.to_dict() for batch_detail in batches.items],
+            }, 200
