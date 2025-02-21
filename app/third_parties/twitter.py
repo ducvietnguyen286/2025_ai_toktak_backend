@@ -34,20 +34,20 @@ class TwitterTokenService:
             }
 
             # Các thông số yêu cầu trong body để trao đổi code lấy access token
-            data = {
+            r_data = {
                 "code": code,
                 "grant_type": "authorization_code",
                 "client_id": self.client_id,
                 "redirect_uri": "https://voda-play.com/profile",
                 "code_verifier": "challenge",
             }
-            response = requests.post(TOKEN_URL, headers=headers, data=data)
+            response = requests.post(TOKEN_URL, headers=headers, data=r_data)
             data = response.json()
 
             RequestXLogService.create_request_x_log(
                 user_id=user_link.user_id,
                 type="authorization_code",
-                request=json.dumps(data),
+                request=json.dumps(r_data),
                 response=json.dumps(data),
             )
 
@@ -80,18 +80,18 @@ class TwitterTokenService:
             }
 
             # Các thông số yêu cầu trong body để trao đổi code lấy access token
-            data = {
+            r_data = {
                 "refresh_token": refresh_token,
                 "grant_type": "refresh_token",
                 "client_id": self.client_id,
             }
-            response = requests.post(TOKEN_URL, headers=headers, data=data)
+            response = requests.post(TOKEN_URL, headers=headers, data=r_data)
             data = response.json()
 
             RequestXLogService.create_request_x_log(
                 user_id=user_link.user_id,
                 type="refresh_token",
-                request=json.dumps(data),
+                request=json.dumps(r_data),
                 response=json.dumps(data),
             )
 
