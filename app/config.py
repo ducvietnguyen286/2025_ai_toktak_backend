@@ -23,7 +23,7 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or "secret"
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=2)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=90)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
 
     MAX_COUNT_IMAGE = os.environ.get("MAX_COUNT_IMAGE") or 8
