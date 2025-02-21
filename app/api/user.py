@@ -12,6 +12,7 @@ from app.services.auth import AuthService
 from app.services.post import PostService
 from app.services.user import UserService
 from app.services.link import LinkService
+from app.third_parties.twitter import TwitterTokenService
 
 ns = Namespace(name="user", description="User API")
 
@@ -87,9 +88,24 @@ class APINewLink(Resource):
                 status=400,
             ).to_dict()
 
+        exist_user_link = UserService.find_user_link(link_id, current_user.id)
+        if exist_user_link:
+            return Response(
+                message="Link đã tồn tại",
+                status=400,
+            ).to_dict()
+
         user_link = UserService.create_user_link(
             user_id=current_user.id, link_id=link_id, meta=json.dumps(info), status=1
         )
+
+        if link.type == "X":
+            user_link.status = 0
+            user_link.save()
+
+            code = args.get("Code")
+            TwitterTokenService().fetch_token(code, current_user, link, user_link)
+
         return Response(
             data=user_link._to_json(),
             message="Thêm link thành công",
@@ -134,11 +150,11 @@ class APIPostToLinks(Resource):
                         continue
                     if user_link.status == 0:
                         continue
-                    active_links.append(user_link)
+                    active_links.append(link_id)
 
             if is_all == 1:
                 links = UserService.get_user_links(current_user.id)
-                active_links = [link for link in links if link.status == 1]
+                active_links = [link.link_id for link in links if link.status == 1]
 
             if not active_links:
                 return Response(
@@ -163,7 +179,7 @@ class APIPostToLinks(Resource):
                 message = {
                     "action": "SEND_POST_TO_LINK",
                     "message": {
-                        "link_id": link.id,
+                        "link_id": link,
                         "post_id": post.id,
                         "user_id": current_user.id,
                     },

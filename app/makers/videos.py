@@ -5,6 +5,14 @@ import os
 
 
 class MakerVideo:
+    def __init__(self):
+        # Cấu hình
+        self.video_size = (1080, 1920)  # (width, height)
+        self.duration_per_image = 5  # giây
+        self.fps = 25
+        self.total_frames = self.duration_per_image * self.fps
+        pass
+
     def make_video(images=[], captions=[], audio=None):
         pass
 

@@ -11,4 +11,4 @@ class UserLink(db.Model, BaseModel):
     meta = db.Column(db.Text, nullable=False)
     status = db.Column(db.Integer, default=1)
 
-    to_json_parse = ("meta",)
+    to_json_filter = ("meta",)

@@ -40,6 +40,16 @@ class UserService:
         return user_link[0] if user_link else None
 
     @staticmethod
+    def get_by_link_user_links(link_id=0, user_id=0):
+        user_links = (
+            UserLink.query.where(UserLink.status == 1)
+            .where(UserLink.user_id == user_id)
+            .where(UserLink.link_id == link_id)
+            .all()
+        )
+        return [user_link._to_json() for user_link in user_links]
+
+    @staticmethod
     def get_user_links(user_id=0):
         user_links = (
             UserLink.query.where(UserLink.status == 1)
