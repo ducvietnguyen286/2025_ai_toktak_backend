@@ -18,7 +18,7 @@ class TwitterTokenService:
         self.client_id = os.environ.get("X_CLIENT_KEY")
         self.client_secret = os.environ.get("X_CLIENT_SECRET")
 
-    def fetch_token(self, code, user, link, user_link):
+    def fetch_token(self, code, user_link):
         try:
             TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
@@ -57,10 +57,11 @@ class TwitterTokenService:
             user_link.status = 1
             user_link.save()
 
-            return data
+            return True
         except Exception as e:
             traceback.print_exc()
             print(e)
+            return False
 
     def refresh_token(self, refresh_token, link, user):
         try:

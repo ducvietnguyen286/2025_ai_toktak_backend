@@ -99,6 +99,7 @@ class APINewLink(Resource):
             ).to_dict()
 
         user_link = UserService.find_user_link(link_id, current_user.id)
+        is_active = True
         if not user_link:
             user_link = UserService.create_user_link(
                 user_id=current_user.id,
@@ -112,14 +113,20 @@ class APINewLink(Resource):
                 user_link.save()
 
                 code = args.get("Code")
-                TwitterTokenService().fetch_token(code, current_user, link, user_link)
+                is_active = TwitterTokenService().fetch_token(code, user_link)
         else:
             if link.type == "X":
                 code = args.get("Code")
-                TwitterTokenService().fetch_token(code, current_user, link, user_link)
+                is_active = TwitterTokenService().fetch_token(code, user_link)
             user_link.meta = json.dumps(info)
             user_link.status = 1
             user_link.save()
+
+        if not is_active:
+            return Response(
+                message="Không thể kích hoạt link",
+                status=400,
+            ).to_dict()
 
         return Response(
             data=user_link._to_json(),
