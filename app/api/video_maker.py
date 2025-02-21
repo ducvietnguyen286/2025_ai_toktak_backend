@@ -26,10 +26,11 @@ class CreateVideo(Resource):
         # Lấy dữ liệu từ request
         data = request.get_json()
         images_url = data["images_url"]  # Đây là một list các URL của hình ảnh
+        images_slider_url = data["images_slider_url"]  # Đây là một list các URL của hình ảnh
 
-        if "product_name" not in data or "images_url" not in data:
+        if "product_name" not in data or "images_url" not in data or "images_slider_url" not in data:
             return {
-                "message": "Missing required fields (product_name or images_url)"
+                "message": "Missing required fields (product_name or images_url or images_slider_url)"
             }, 400
 
         product_name = data["product_name"]
@@ -41,7 +42,7 @@ class CreateVideo(Resource):
             if not isinstance(url, str):
                 return {"message": "Each URL must be a string"}, 400
 
-        result = VideoService.create_video_from_images(product_name, images_url)
+        result = VideoService.create_video_from_images(product_name, images_url , images_slider_url)
 
         render_id = ""
         status = True
