@@ -40,6 +40,7 @@ class APIUpdateSetting(Resource):
                 "SHOTSTACK_URL",
                 "SHOTSTACK_EMAIL",
                 "SHOTSTACK_OWNER_ID",
+                "SHOTSTACK_AI_IMAGE",
             ]
 
             # Kiểm tra dữ liệu gửi lên

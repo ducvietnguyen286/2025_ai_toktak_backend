@@ -19,6 +19,9 @@ class VideoService:
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
+        is_ai_image = config["SHOTSTACK_AI_IMAGE"]
+        
+        
 
         voice_dir = "static/voice"
         os.makedirs(voice_dir, exist_ok=True)
@@ -31,10 +34,13 @@ class VideoService:
 
         tts.save(file_path)
 
-        voice_url = "https://apitoktak.voda-play.com/voice/" + file_name
-        # # Thay bằng URL thật của file sau khi upload
-        # voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
+        check_live_version = os.environ.get("APP_STAGE") or "localhost"
 
+        voice_url = "https://apitoktak.voda-play.com/voice/" + file_name
+        
+        if check_live_version == "localhost":
+            voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
+        
         # prompt fake
         prompts = [
             "Slowly zoom in and out for a dramatic effect.",
@@ -53,13 +59,12 @@ class VideoService:
             )
 
         clips_data = VideoService.create_combined_clips(
-            images_url, images_slider_url, prompts
+            images_url, images_slider_url, prompts , is_ai_image
         )
 
         payload = {
             "timeline": {
                 "background": "#FFFFFF",
-                # "soundtrack": {"src": voice_url, "effect": "fadeInFadeOut" ,"offset": 5, },
                 "tracks": [
                     clips_data,
                     {
@@ -208,7 +213,7 @@ class VideoService:
         }
         return settings_dict
 
-    def create_combined_clips(ai_images, images_slider_url, prompts=None):
+    def create_combined_clips(ai_images, images_slider_url, prompts=None , is_ai_image = "0"):
 
         video_urls = [
             "https://apitoktak.voda-play.com/voice/video/1.mp4",
@@ -235,22 +240,26 @@ class VideoService:
             }
         )
         current_start += intro_length
-
-        time_run_ai = 5
-        for i, url in enumerate(ai_images):
-            clips.append(
-                {
-                    "asset": {
-                        # "type": "image",
-                        "src": url,
-                        "type": "image-to-video",
-                        "prompt": random.choice(prompts) if prompts else "",
-                    },
-                    "start": current_start + i * time_run_ai,
-                    "length": time_run_ai,
-                }
-            )
-        current_start += len(ai_images) * time_run_ai
+        
+        
+        
+        if is_ai_image == "1":
+            
+            time_run_ai = 5
+            for i, url in enumerate(ai_images):
+                clips.append(
+                    {
+                        "asset": {
+                            # "type": "image",
+                            "src": url,
+                            "type": "image-to-video",
+                            "prompt": random.choice(prompts) if prompts else "",
+                        },
+                        "start": current_start + i * time_run_ai,
+                        "length": time_run_ai,
+                    }
+                )
+            current_start += len(ai_images) * time_run_ai
 
         start_time_caption = current_start
         time_show_image = 5
@@ -289,13 +298,7 @@ class VideoService:
                         "size": 72,
                         "weight": 700,
                         "lineHeight": 0.85,
-                    },
-                    "background": {
-                        "color": "#000000",
-                        "opacity": 0.4,
-                        "padding": 30,
-                        "borderRadius": 18,
-                    },
+                    } 
                 },
                 "start": start_time_caption + text_index * time_show_caption,
                 "length": time_show_caption,
