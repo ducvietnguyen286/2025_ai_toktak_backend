@@ -240,7 +240,9 @@ class APITiktokLogin(Resource):
             "nonce": nonce,
             "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=5),
         }
-        token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
+        token = jwt.encode(
+            json.dumps(payload), TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256"
+        )
         return token
 
 
@@ -306,6 +308,7 @@ class APIGetCallbackTiktok(Resource):
     def verify_state_token(self, token):
         try:
             payload = jwt.decode(token, TIKTOK_CLIENT_SECRET_KEY, algorithms=["HS256"])
-            return payload["nonce"]
+            payload_parsed = json.loads(payload)
+            return payload_parsed["nonce"]
         except Exception:
             return None
