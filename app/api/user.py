@@ -281,7 +281,7 @@ class APITiktokLogin(Resource):
             "code_verifier": code_verifier,
             "exp": (
                 datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
-            ).isoformat(),
+            ).timestamp(),
         }
         token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
         return token, code_challenge
@@ -366,6 +366,7 @@ class APIGetCallbackTiktok(Resource):
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
+            print(f"Error send post to link: {str(e)}")
             return "Can't connect to Tiktok", 500
 
     def verify_state_token(self, token):
@@ -374,4 +375,5 @@ class APIGetCallbackTiktok(Resource):
             return payload
         except Exception as e:
             print(f"Error verify state token: {str(e)}")
+
             return None
