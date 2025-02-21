@@ -291,7 +291,11 @@ class APIGetCallbackTiktok(Resource):
             return f"Error parsing response: {e}", 500
 
         TiktokCallbackService().create(
-            code=code, state=state, content=json.dumps(token_data)
+            code=code,
+            state=state,
+            content=json.dumps(token_data),
+            error=error,
+            error_description=error_description,
         )
 
         return Response(
