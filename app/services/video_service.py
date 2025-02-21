@@ -31,11 +31,9 @@ class VideoService:
 
         tts.save(file_path)
 
-        # voice_url = (
-        #     "https://apitoktak.voda-play.com/voice/" + file_name
-        # )
+        voice_url = "https://apitoktak.voda-play.com/voice/" + file_name
         # # Thay bằng URL thật của file sau khi upload
-        voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
+        # voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
 
         # prompt fake
         prompts = [
@@ -212,7 +210,6 @@ class VideoService:
 
     def create_combined_clips(ai_images, images_slider_url, prompts=None):
 
-
         video_urls = [
             "https://apitoktak.voda-play.com/voice/video/1.mp4",
             "https://apitoktak.voda-play.com/voice/video/2.mp4",
@@ -220,12 +217,11 @@ class VideoService:
             "https://apitoktak.voda-play.com/voice/video/4.mp4",
             "https://apitoktak.voda-play.com/voice/video/5.mp4",
             "https://apitoktak.voda-play.com/voice/video/6.mp4",
-            "https://apitoktak.voda-play.com/voice/video/7.mp4"
+            "https://apitoktak.voda-play.com/voice/video/7.mp4",
         ]
 
         # Chọn 2 URL khác nhau một cách ngẫu nhiên
         intro_url, outro_url = random.sample(video_urls, 2)
-
 
         clips = []
         current_start = 0
@@ -240,22 +236,22 @@ class VideoService:
         )
         current_start += intro_length
 
-        #for i, url in enumerate(ai_images):
-            # print("url", url)
-            # clips.append(
-            #     {
-            #         "asset": {
-            #             "type": "image-to-video",
-            #             "src": url,
-            #             "prompt": random.choice(prompts) if prompts else "",
-            #         },
-            #         "start": current_start + i * 2,
-            #         "length": 2,
-            #     }
-            # )
+        # for i, url in enumerate(ai_images):
+        # print("url", url)
+        # clips.append(
+        #     {
+        #         "asset": {
+        #             "type": "image-to-video",
+        #             "src": url,
+        #             "prompt": random.choice(prompts) if prompts else "",
+        #         },
+        #         "start": current_start + i * 2,
+        #         "length": 2,
+        #     }
+        # )
 
         # current_start += len(ai_images) * 2
-        
+
         start_time_caption = current_start
         time_show_image = 5
 
@@ -278,7 +274,7 @@ class VideoService:
             }
         )
         current_start += outro_length
-        
+
         time_show_caption = 5
         clips_caption = [
             {
@@ -292,25 +288,19 @@ class VideoService:
             }
             for text_index, caption in enumerate(images_slider_url)
         ]
-        
+
         clips_shape = [
             {
                 "asset": {
                     "type": "shape",
                     "shape": "rectangle",
-                    "rectangle": {
-                        "width": 250,
-                        "height": 250
-                    },
-                    "fill": {
-                        "color": "#000000"
-                    }
+                    "rectangle": {"width": 250, "height": 250},
+                    "fill": {"color": "#000000"},
                 },
                 "start": 0,
-                "length": "auto"
+                "length": "auto",
             }
         ]
-        
 
         # Kết hợp hai danh sách clip lại
         combined_clips = clips + clips_caption + clips_shape
