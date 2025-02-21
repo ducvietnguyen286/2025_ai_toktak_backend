@@ -270,9 +270,7 @@ class APITiktokLogin(Resource):
         payload = {
             "nonce": nonce,
             "code_verifier": code_verifier,
-            "exp": (
-                datetime.datetime.now() + datetime.timedelta(minutes=30)
-            ).timestamp(),
+            "exp": (datetime.datetime.now() + datetime.timedelta(days=30)).timestamp(),
         }
         token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
         return token, code_challenge
@@ -293,7 +291,6 @@ class APIGetCallbackTiktok(Resource):
     )
     def get(self, args):
         try:
-
             code = args.get("code")
             state = args.get("state")
             error = args.get("error") or ""
