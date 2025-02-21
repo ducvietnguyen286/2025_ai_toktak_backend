@@ -229,6 +229,21 @@ class TwitterService:
         req = requests.post(
             url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
         )
+
+        status_code = req.status_code
+        if status_code == 401:
+            refresh_token = self.meta.get("refresh_token")
+            TwitterTokenService().refresh_token(
+                refresh_token=refresh_token, link=self.link, user=self.user
+            )
+            self.user_link = UserService.find_user_link(
+                link_id=self.link.id, user_id=self.user.id
+            )
+            self.meta = json.loads(self.user_link.meta)
+            return self.upload_media_init(
+                media_type=media_type, total_bytes=total_bytes, is_video=is_video
+            )
+
         print(req.status_code)
         print(req.text)
         media_id = req.json()["data"]["id"]
@@ -262,6 +277,20 @@ class TwitterService:
                 url=MEDIA_ENDPOINT_URL, data=data, files=files, headers=headers
             )
 
+            status_code = req.status_code
+            if status_code == 401:
+                refresh_token = self.meta.get("refresh_token")
+                TwitterTokenService().refresh_token(
+                    refresh_token=refresh_token, link=self.link, user=self.user
+                )
+                self.user_link = UserService.find_user_link(
+                    link_id=self.link.id, user_id=self.user.id
+                )
+                self.meta = json.loads(self.user_link.meta)
+                return self.upload_append(
+                    media_id=media_id, content=content, total_bytes=total_bytes
+                )
+
             if req.status_code < 200 or req.status_code > 299:
                 print(req.status_code)
                 print(req.text)
@@ -291,6 +320,18 @@ class TwitterService:
         req = requests.post(
             url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
         )
+
+        status_code = req.status_code
+        if status_code == 401:
+            refresh_token = self.meta.get("refresh_token")
+            TwitterTokenService().refresh_token(
+                refresh_token=refresh_token, link=self.link, user=self.user
+            )
+            self.user_link = UserService.find_user_link(
+                link_id=self.link.id, user_id=self.user.id
+            )
+            self.meta = json.loads(self.user_link.meta)
+            return self.upload_finalize(media_id=media_id)
 
         self.processing_info = req.json()["data"].get("processing_info", None)
         self.check_status(media_id=media_id)
@@ -329,6 +370,18 @@ class TwitterService:
         req = requests.get(
             url=MEDIA_ENDPOINT_URL, params=request_params, headers=headers
         )
+
+        status_code = req.status_code
+        if status_code == 401:
+            refresh_token = self.meta.get("refresh_token")
+            TwitterTokenService().refresh_token(
+                refresh_token=refresh_token, link=self.link, user=self.user
+            )
+            self.user_link = UserService.find_user_link(
+                link_id=self.link.id, user_id=self.user.id
+            )
+            self.meta = json.loads(self.user_link.meta)
+            return self.check_status(media_id=media_id)
 
         self.processing_info = req.json()["data"].get("processing_info", None)
         self.check_status(media_id=media_id)
