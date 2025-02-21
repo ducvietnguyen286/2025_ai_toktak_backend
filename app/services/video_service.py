@@ -93,11 +93,11 @@ class VideoService:
                             {
                                 "asset": {
                                     "type": "audio",
-                                    "src": "https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/freepd/motions.mp3",
+                                    "src": "https://shotstack-assets.s3.ap-southeast-2.amazonaws.com/music/unminus/ambisax.mp3",
                                     "effect": "fadeOut",
                                     "volume": 1,
                                 },
-                                "start": 0,
+                                "start": 5,
                                 "length": "end",
                             }
                         ]
@@ -236,21 +236,21 @@ class VideoService:
         )
         current_start += intro_length
 
-        # for i, url in enumerate(ai_images):
-        # print("url", url)
-        # clips.append(
-        #     {
-        #         "asset": {
-        #             "type": "image-to-video",
-        #             "src": url,
-        #             "prompt": random.choice(prompts) if prompts else "",
-        #         },
-        #         "start": current_start + i * 2,
-        #         "length": 2,
-        #     }
-        # )
-
-        # current_start += len(ai_images) * 2
+        time_run_ai = 5
+        for i, url in enumerate(ai_images):
+            clips.append(
+                {
+                    "asset": {
+                        # "type": "image",
+                        "src": url,
+                        "type": "image-to-video",
+                        "prompt": random.choice(prompts) if prompts else "",
+                    },
+                    "start": current_start + i * time_run_ai,
+                    "length": time_run_ai,
+                }
+            )
+        current_start += len(ai_images) * time_run_ai
 
         start_time_caption = current_start
         time_show_image = 5
@@ -261,6 +261,7 @@ class VideoService:
                     "asset": {"type": "image", "src": url},
                     "start": current_start + j * time_show_image,
                     "length": time_show_image,
+                    "effect": "zoomIn",
                 }
             )
 
@@ -281,7 +282,20 @@ class VideoService:
                 "asset": {
                     "type": "text",
                     "text": "Image Number  " + str(text_index + 1),
-                    "font": {"family": "Clear Sans", "size": 72, "color": "#ff0000"},
+                    "font": {
+                        "family": "Open Sans",
+                        "color": "#ff0000",
+                        "opacity": 1,
+                        "size": 72,
+                        "weight": 700,
+                        "lineHeight": 0.85,
+                    },
+                    "background": {
+                        "color": "#000000",
+                        "opacity": 0.4,
+                        "padding": 30,
+                        "borderRadius": 18,
+                    },
                 },
                 "start": start_time_caption + text_index * time_show_caption,
                 "length": time_show_caption,
@@ -290,16 +304,16 @@ class VideoService:
         ]
 
         clips_shape = [
-            {
-                "asset": {
-                    "type": "shape",
-                    "shape": "rectangle",
-                    "rectangle": {"width": 250, "height": 250},
-                    "fill": {"color": "#000000"},
-                },
-                "start": 0,
-                "length": "auto",
-            }
+            # {
+            #     "asset": {
+            #         "type": "shape",
+            #         "shape": "rectangle",
+            #         "rectangle": {"width": 250, "height": 250},
+            #         "fill": {"color": "#000000"},
+            #     },
+            #     "start": 0,
+            #     "length": "auto",
+            # }
         ]
 
         # Kết hợp hai danh sách clip lại
