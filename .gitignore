@@ -38,3 +38,4 @@ messages.pot
 Pipfile.lock
 
 uploads/*
+static/voice/
