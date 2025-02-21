@@ -238,7 +238,7 @@ class APITiktokLogin(Resource):
 
     def get(self, *args, **kwargs):
         try:
-            state_token, code_challenge = self.generate_state_token()
+            state_token = self.generate_state_token()
             scope = "video.publish,video.upload"
 
             params = {
@@ -247,7 +247,6 @@ class APITiktokLogin(Resource):
                 "scope": scope,
                 "redirect_uri": TIKTOK_REDIRECT_URL,
                 "state": state_token,
-                "code_challenge": code_challenge,
             }
             url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
             return redirect(url)
@@ -263,16 +262,16 @@ class APITiktokLogin(Resource):
         code_verifier = secrets.token_urlsafe(64)
         m = hashlib.sha256()
         m.update(code_verifier.encode("ascii"))
-        code_challenge = (
-            base64.urlsafe_b64encode(m.digest()).rstrip(b"=").decode("ascii")
-        )
+        # code_challenge = (
+        #     base64.urlsafe_b64encode(m.digest()).rstrip(b"=").decode("ascii")
+        # )
         payload = {
             "nonce": nonce,
             "code_verifier": code_verifier,
             "exp": (datetime.datetime.now() + datetime.timedelta(days=30)).timestamp(),
         }
         token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
-        return token, code_challenge
+        return token
 
 
 @ns.route("/oauth/tiktok-callback")
