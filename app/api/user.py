@@ -342,7 +342,7 @@ class APIGetCallbackTiktok(Resource):
             except Exception as e:
                 return f"Error parsing response: {e}", 500
 
-            TiktokCallbackService().create(
+            TiktokCallbackService().create_tiktok_callback(
                 code=code,
                 state=state,
                 content=json.dumps(token_data),
