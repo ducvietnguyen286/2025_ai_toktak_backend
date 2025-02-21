@@ -31,7 +31,21 @@ ns = Namespace(name="user", description="User API")
 class APIUserLinks(Resource):
 
     @jwt_required()
-    def get(self):
+    @parameters(
+        type="object",
+        properties={
+            "code": {"type": "string"},
+            "state": {"type": "string"},
+            "error": {"type": "string"},
+            "error_description": {"type": "string"},
+        },
+        required=["code", "state"],
+    )
+    def get(self, args):
+        code = args.get("code")
+        state = args.get("state")
+        error = args.get("error")
+        error_description = args.get("error_description")
         current_user = AuthService.get_current_identity()
         links = UserService.get_user_links(current_user.id)
         return Response(
@@ -276,73 +290,88 @@ class APITiktokLogin(Resource):
 @ns.route("/oauth/tiktok-callback")
 class APIGetCallbackTiktok(Resource):
 
-    def get(self, *args, **kwargs):
-        code = kwargs.get("code")
-        state = kwargs.get("state")
-        error = kwargs.get("error")
-        error_description = kwargs.get("error_description")
-
-        if not state:
-            return Response(
-                message="Invalid or expired state token",
-                status=400,
-            ).to_dict()
-
-        payload = self.verify_state_token(state)
-
-        if not payload:
-            return Response(
-                message="Invalid or expired state token",
-                status=400,
-            ).to_dict()
-
-        code_verifier = payload.get("code_verifier")
-        if not code_verifier:
-            return Response(
-                message="Invalid or expired state token",
-                status=400,
-            ).to_dict()
-
-        if error:
-            return Response(
-                message=error_description,
-                status=400,
-            ).to_dict()
-        TOKEN_URL = "https://open-api.tiktok.com/oauth/access_token/"
-
-        data = {
-            "client_key": TIKTOK_CLIENT_KEY,
-            "client_secret": TIKTOK_CLIENT_SECRET_KEY,
-            "code": code,
-            "grant_type": "authorization_code",
-            "redirect_uri": TIKTOK_REDIRECT_URL,
-            "code_verifier": code_verifier,
-        }
-
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        response = requests.post(TOKEN_URL, data=data, headers=headers)
-
+    @parameters(
+        type="object",
+        properties={
+            "code": {"type": "string"},
+            "state": {"type": "string"},
+            "error": {"type": "string"},
+            "error_description": {"type": "string"},
+        },
+        required=["code", "state"],
+    )
+    def get(self, args):
         try:
-            token_data = response.json()
+
+            code = args.get("code")
+            state = args.get("state")
+            error = args.get("error") or ""
+            error_description = args.get("error_description") or ""
+            PAGE_PROFILE = "https://voda-play.com/profile"
+
+            if not state:
+                return Response(
+                    message="Invalid or expired state token 1",
+                    status=400,
+                ).to_dict()
+
+            payload = self.verify_state_token(state)
+
+            if not payload:
+                return Response(
+                    message="Invalid or expired state token 2",
+                    status=400,
+                ).to_dict()
+
+            code_verifier = payload.get("code_verifier")
+            if not code_verifier:
+                return Response(
+                    message="Invalid or expired state token 3",
+                    status=400,
+                ).to_dict()
+
+            if error:
+                return Response(
+                    message=error_description,
+                    status=400,
+                ).to_dict()
+            TOKEN_URL = "https://open-api.tiktok.com/oauth/access_token/"
+
+            data = {
+                "client_key": TIKTOK_CLIENT_KEY,
+                "client_secret": TIKTOK_CLIENT_SECRET_KEY,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": TIKTOK_REDIRECT_URL,
+                "code_verifier": code_verifier,
+            }
+
+            headers = {"Content-Type": "application/x-www-form-urlencoded"}
+            response = requests.post(TOKEN_URL, data=data, headers=headers)
+
+            try:
+                token_data = response.json()
+            except Exception as e:
+                return f"Error parsing response: {e}", 500
+
+            TiktokCallbackService().create(
+                code=code,
+                state=state,
+                content=json.dumps(token_data),
+                error=error,
+                error_description=error_description,
+            )
+
+            return redirect(PAGE_PROFILE)
         except Exception as e:
-            return f"Error parsing response: {e}", 500
-
-        TiktokCallbackService().create(
-            code=code,
-            state=state,
-            content=json.dumps(token_data),
-            error=error,
-            error_description=error_description,
-        )
-
-        return Response(
-            data=token_data,
-            message="Đăng nhập thành công",
-        ).to_dict()
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return "Can't connect to Tiktok", 500
 
     def verify_state_token(self, token):
         try:
             payload = jwt.decode(token, TIKTOK_CLIENT_SECRET_KEY, algorithms=["HS256"])
             return payload
-        except Exception:
+        except Exception as e:
+            print(f"Error verify state token: {str(e)}")
             return None
