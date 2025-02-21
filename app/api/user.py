@@ -243,12 +243,14 @@ class APITiktokLogin(Resource):
 
             params = {
                 "client_key": TIKTOK_CLIENT_KEY,
-                "response_type": "code",
                 "scope": scope,
                 "redirect_uri": TIKTOK_REDIRECT_URL,
                 "state": state_token,
+                "response_type": "code",
             }
             url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
+
+            logger.info(f"Redirect to Tiktok: {url}")
             return redirect(url)
         except Exception as e:
             traceback.print_exc()
