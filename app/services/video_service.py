@@ -6,28 +6,23 @@ from app.models.video_create import VideoCreate
 from app.models.setting import Setting
 from app.lib.logger import logger
 
-  
-from gtts import gTTS 
+
+from gtts import gTTS
 import uuid
 
 
 class VideoService:
 
     @staticmethod
-    def create_video_from_images(product_name, images_url):
+    def create_video_from_images(product_name, images_url, images_slider_url):
 
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
 
-        print("SHOTSTACK_API_KEY", SHOTSTACK_API_KEY)
-        print("SHOTSTACK_URL", SHOTSTACK_URL)
-
-        print("config", config)
-        
         voice_dir = "static/voice"
         os.makedirs(voice_dir, exist_ok=True)
-        
+
         # create voice Google TTS
         text_to_speech = f"{product_name} 출시되었습니다. 지금 만나보세요!"
         tts = gTTS(text=text_to_speech, lang="ko")
@@ -35,13 +30,12 @@ class VideoService:
         file_path = f"{voice_dir}/{file_name}"
 
         tts.save(file_path)
-        
-        
-        voice_url = "https://apitoktak.voda-play.com/voice/" + file_name  # Thay bằng URL thật của file sau khi upload
+
+        voice_url = "https://apitoktak.voda-play.com/voice/" + file_name
+        # # Thay bằng URL thật của file sau khi upload
         # voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
 
-
-        # prompt fake 
+        # prompt fake
         prompts = [
             "Slowly zoom in and out for a dramatic effect.",
             "Add a soft fade transition between images.",
@@ -58,29 +52,16 @@ class VideoService:
                 + prompts[: len(images_url) % len(prompts)]
             )
 
+        clips_data = VideoService.create_combined_clips(
+            images_url, images_slider_url, prompts
+        )
+
         payload = {
             "timeline": {
-                
                 "background": "#FFFFFF",
-                "soundtrack": {
-                    "src": voice_url, 
-                    "effect": "fadeInFadeOut"
-                },
+                # "soundtrack": {"src": voice_url, "effect": "fadeInFadeOut" ,"offset": 5, },
                 "tracks": [
-                    {
-                        "clips": [
-                            {
-                                "asset": {
-                                    "type": "image-to-video",
-                                    "src": url,
-                                    "prompt": random.choice(prompts) if prompts else "",
-                                },
-                                "start": i * 2,  # Đặt thời gian xuất hiện của mỗi ảnh
-                                "length": 2,
-                            }
-                            for i, url in enumerate(images_url)
-                        ]
-                    },
+                    clips_data,
                     {
                         "clips": [
                             {
@@ -89,7 +70,21 @@ class VideoService:
                                     "text": f"{product_name} 출시되었습니다!",
                                 },
                                 "start": 1,
-                                "length": 4,
+                                "length": "end",
+                            }
+                        ]
+                    },
+                    {
+                        "clips": [
+                            {
+                                "asset": {
+                                    "type": "audio",
+                                    "src": voice_url,
+                                    "effect": "fadeIn",
+                                    "volume": 1,
+                                },
+                                "start": 5,
+                                "length": "end",
                             }
                         ]
                     },
@@ -111,8 +106,10 @@ class VideoService:
             },
             "output": {"format": "mp4", "size": {"width": 720, "height": 1280}},
             "callback": "https://apitoktak.voda-play.com/api/v1/video_maker/shotstack_webhook",
-             
         }
+
+        logger.info(f"payload: {payload}")
+        logger.info(f"payload_dumps: {json.dumps(payload)}")
 
         # Header với API Key
         headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
@@ -210,3 +207,101 @@ class VideoService:
             setting.setting_name: setting.setting_value for setting in settings
         }
         return settings_dict
+
+    def create_combined_clips(ai_images, images_slider_url, prompts=None):
+
+        video_urls = [
+            "https://apitoktak.voda-play.com/voice/video/1.mp4",
+            "https://apitoktak.voda-play.com/voice/video/2.mp4",
+            "https://apitoktak.voda-play.com/voice/video/3.mp4",
+            "https://apitoktak.voda-play.com/voice/video/4.mp4",
+            "https://apitoktak.voda-play.com/voice/video/5.mp4",
+            "https://apitoktak.voda-play.com/voice/video/6.mp4",
+            "https://apitoktak.voda-play.com/voice/video/7.mp4",
+        ]
+
+        # Chọn 2 URL khác nhau một cách ngẫu nhiên
+        intro_url, outro_url = random.sample(video_urls, 2)
+
+        clips = []
+        current_start = 0
+        intro_length = 5
+
+        clips.append(
+            {
+                "asset": {"type": "video", "src": intro_url},
+                "start": current_start,
+                "length": intro_length,
+            }
+        )
+        current_start += intro_length
+
+        # for i, url in enumerate(ai_images):
+        # print("url", url)
+        # clips.append(
+        #     {
+        #         "asset": {
+        #             "type": "image-to-video",
+        #             "src": url,
+        #             "prompt": random.choice(prompts) if prompts else "",
+        #         },
+        #         "start": current_start + i * 2,
+        #         "length": 2,
+        #     }
+        # )
+
+        # current_start += len(ai_images) * 2
+
+        start_time_caption = current_start
+        time_show_image = 5
+
+        for j, url in enumerate(images_slider_url):
+            clips.append(
+                {
+                    "asset": {"type": "image", "src": url},
+                    "start": current_start + j * time_show_image,
+                    "length": time_show_image,
+                }
+            )
+
+        current_start += len(images_slider_url) * time_show_image
+        outro_length = 5
+        clips.append(
+            {
+                "asset": {"type": "video", "src": outro_url},
+                "start": current_start,
+                "length": outro_length,
+            }
+        )
+        current_start += outro_length
+
+        time_show_caption = 5
+        clips_caption = [
+            {
+                "asset": {
+                    "type": "text",
+                    "text": "Image Number  " + str(text_index + 1),
+                    "font": {"family": "Clear Sans", "size": 72, "color": "#ff0000"},
+                },
+                "start": start_time_caption + text_index * time_show_caption,
+                "length": time_show_caption,
+            }
+            for text_index, caption in enumerate(images_slider_url)
+        ]
+
+        clips_shape = [
+            {
+                "asset": {
+                    "type": "shape",
+                    "shape": "rectangle",
+                    "rectangle": {"width": 250, "height": 250},
+                    "fill": {"color": "#000000"},
+                },
+                "start": 0,
+                "length": "auto",
+            }
+        ]
+
+        # Kết hợp hai danh sách clip lại
+        combined_clips = clips + clips_caption + clips_shape
+        return {"clips": combined_clips}
