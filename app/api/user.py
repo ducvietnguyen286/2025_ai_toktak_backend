@@ -345,7 +345,7 @@ class APIGetCallbackTiktok(Resource):
             TiktokCallbackService().create_tiktok_callback(
                 code=code,
                 state=state,
-                content=json.dumps(token_data),
+                response=json.dumps(token_data),
                 error=error,
                 error_description=error_description,
             )
