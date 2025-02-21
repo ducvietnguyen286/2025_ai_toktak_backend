@@ -233,7 +233,7 @@ class APITiktokLogin(Resource):
         url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
         return redirect(url)
 
-    def generate_state_token():
+    def generate_state_token(self):
 
         nonce = secrets.token_urlsafe(16)
         payload = {
@@ -303,7 +303,7 @@ class APIGetCallbackTiktok(Resource):
             message="Đăng nhập thành công",
         ).to_dict()
 
-    def verify_state_token(token):
+    def verify_state_token(self, token):
         try:
             payload = jwt.decode(token, TIKTOK_CLIENT_SECRET_KEY, algorithms=["HS256"])
             return payload["nonce"]
