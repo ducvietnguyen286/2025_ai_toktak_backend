@@ -74,9 +74,13 @@ class TwitterTokenService:
     def refresh_token(self, refresh_token, link, user):
         try:
             TOKEN_URL = "https://api.x.com/2/oauth2/token"
+            
+            credentials_str = f"{self.client_id}:{self.client_secret}"
+            credentials = base64.b64encode(credentials_str.encode("utf-8")).decode("utf-8")
 
             headers = {
                 "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": f"Basic {credentials}",
             }
 
             # Các thông số yêu cầu trong body để trao đổi code lấy access token
@@ -87,6 +91,10 @@ class TwitterTokenService:
             }
             response = requests.post(TOKEN_URL, headers=headers, data=r_data)
             data = response.json()
+            
+            print(data)
+            
+            user_link = UserService.find_user_link(link_id=link.id, user_id=user.id)
 
             RequestXLogService.create_request_x_log(
                 user_id=user_link.user_id,
@@ -94,8 +102,6 @@ class TwitterTokenService:
                 request=json.dumps(r_data),
                 response=json.dumps(data),
             )
-
-            user_link = UserService.find_user_link(link_id=link.id, user_id=user.id)
 
             meta = user_link.meta
             meta = json.loads(meta)
@@ -213,6 +219,9 @@ class TwitterService:
         response = requests.get(media)
         total_bytes = int(response.headers.get("content-length", 0))
         media_type = response.headers.get("content-type")
+        
+        print(f"media_type: {media_type}")
+        print(f"total_bytes: {total_bytes}")
 
         media_id = self.upload_media_init(media_type, total_bytes, is_video)
         uploaded = self.upload_append(
@@ -348,9 +357,17 @@ class TwitterService:
             )
             self.meta = json.loads(self.user_link.meta)
             return self.upload_finalize(media_id=media_id)
-
-        self.processing_info = req.json()["data"].get("processing_info", None)
-        self.check_status(media_id=media_id)
+        else:
+            try:
+                response_json = req.json()
+                print(f"FINALIZE Res: {response_json}")
+                self.processing_info = response_json["data"].get("processing_info", None)
+                self.check_status(media_id=media_id)
+            except requests.exceptions.JSONDecodeError as e:
+                print(f"FINALIZE Res: {req}")
+                print(f"FINALIZE Res: {req.text}")
+                print("JSONDecodeError:", e)
+                return None
 
     def check_status(self, media_id):
         access_token = self.meta.get("access_token")
