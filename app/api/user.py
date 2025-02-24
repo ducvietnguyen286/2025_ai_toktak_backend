@@ -19,6 +19,7 @@ import secrets
 from app.rabbitmq.producer import send_message
 from app.services.auth import AuthService
 from app.services.post import PostService
+from app.services.request_social_log import RequestSocialLogService
 from app.services.tiktok_callback import TiktokCallbackService
 from app.services.user import UserService
 from app.services.link import LinkService
@@ -322,9 +323,18 @@ class APIGetCallbackTiktok(Resource):
                     message=error_description,
                     status=400,
                 ).to_dict()
+
+            TiktokCallbackService().create_tiktok_callback(
+                code=code,
+                state=state,
+                response={},
+                error=error,
+                error_description=error_description,
+            )
+
             TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 
-            data = {
+            r_data = {
                 "client_key": TIKTOK_CLIENT_KEY,
                 "client_secret": TIKTOK_CLIENT_SECRET_KEY,
                 "code": code,
@@ -333,12 +343,20 @@ class APIGetCallbackTiktok(Resource):
             }
 
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
-            response = requests.post(TOKEN_URL, data=data, headers=headers)
+            response = requests.post(TOKEN_URL, data=r_data, headers=headers)
 
             try:
                 token_data = response.json()
             except Exception as e:
                 return f"Error parsing response: {e}", 500
+
+            RequestSocialLogService.create_request_social_log(
+                social="TIKTOK",
+                user_id=user_link.user_id,
+                type="authorization_code",
+                request=json.dumps(r_data),
+                response=json.dumps(token_data),
+            )
 
             message = token_data.get("message")
 
@@ -353,14 +371,6 @@ class APIGetCallbackTiktok(Resource):
                     + "&error_description="
                     + error_description
                 )
-
-            TiktokCallbackService().create_tiktok_callback(
-                code=code,
-                state=state,
-                response=json.dumps(token_data),
-                error=error,
-                error_description=error_description,
-            )
 
             user_id = payload.get("user_id")
             link_id = payload.get("link_id")

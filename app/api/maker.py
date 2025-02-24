@@ -20,6 +20,7 @@ from app.services.batch import BatchService
 from app.services.post import PostService
 from app.services.video_service import VideoService
 from flask import request
+
 ns = Namespace(name="maker", description="Maker API")
 
 
@@ -88,7 +89,7 @@ class APICreateBatch(Resource):
             #     image_paths.append(f"{current_domain}/files/{file_name}")
             # data["images"] = image_paths
 
-            post_types = ["video", "social", "blog"]
+            post_types = ["video", "image", "blog"]
 
             batch = BatchService.create_batch(
                 user_id=1,
@@ -181,7 +182,7 @@ class APIMakePost(Resource):
                     product_name = data["name"]
 
                     result = VideoService.create_video_from_images(
-                        product_name, image_renders , images
+                        product_name, image_renders, images
                     )
 
                     logger.info("result: {0}".format(result))
@@ -198,10 +199,8 @@ class APIMakePost(Resource):
                             post_id=post.id,
                         )
 
-        elif type == "social":
-            response = call_chatgpt_create_social(images, data, post.id)
         elif type == "image":
-            pass
+            response = call_chatgpt_create_social(images, data, post.id)
         elif type == "blog":
             response = call_chatgpt_create_blog(images, data, post.id)
 
@@ -283,22 +282,23 @@ class APIGetBatch(Resource):
             message="Lấy batch thành công",
         ).to_dict()
 
+
 @ns.route("/batchs")
 class APIBatchs(Resource):
     def get(self):
-            page = request.args.get("page", 1, type=int)
-            per_page = request.args.get("per_page", 10, type=int)
-            print("page", page)
-            print("per_page", per_page)
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 10, type=int)
+        print("page", page)
+        print("per_page", per_page)
 
-            batches = BatchService.get_all_batches(page, per_page)
+        batches = BatchService.get_all_batches(page, per_page)
 
-            return {
-                "status": True,
-                "message": "Success",
-                "total": batches.total,
-                "page": batches.page,
-                "per_page": batches.per_page,
-                "total_pages": batches.pages,
-                "data": [batch_detail.to_dict() for batch_detail in batches.items],
-            }, 200
+        return {
+            "status": True,
+            "message": "Success",
+            "total": batches.total,
+            "page": batches.page,
+            "per_page": batches.per_page,
+            "total_pages": batches.pages,
+            "data": [batch_detail.to_dict() for batch_detail in batches.items],
+        }, 200
