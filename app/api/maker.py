@@ -13,6 +13,7 @@ from app.ais.chatgpt import (
 from app.decorators import parameters
 from app.lib.logger import logger
 from app.lib.response import Response
+from app.makers.images import ImageMaker
 from app.scraper import Scraper
 import traceback
 
@@ -55,20 +56,6 @@ class APICreateBatch(Resource):
             images = data.get("images", [])
 
             thumbnail_url = data.get("image", "")
-
-            # TODO: Save thumbnail
-            # thumbnail = data.get("image", "")
-
-            # timestamp = int(time.time())
-            # unique_id = uuid.uuid4().hex
-
-            # thumbnail_ext = thumbnail.split(".")[-1]
-            # thumbnail_name = f"{timestamp}_{unique_id}.{thumbnail_ext}"
-
-            # thumbnail_path = f"{UPLOAD_FOLDER}/{thumbnail_name}"
-            # with open(thumbnail_path, "wb") as thumbnail_file:
-            #     thumbnail_file.write(requests.get(thumbnail).content)
-            # thumbnail_url = f"{current_domain}/files/{thumbnail_name}"
 
             if images and len(images) > max_count_image:
                 images = images[:max_count_image]
@@ -133,132 +120,158 @@ class APICreateBatch(Resource):
 class APIMakePost(Resource):
 
     def post(self, id):
-        post = PostService.find_post(id)
-        if not post:
-            return Response(
-                message="Post không tồn tại",
-                status=404,
-            ).to_dict()
-        batch = BatchService.find_batch(post.batch_id)
-        if not batch:
-            return Response(
-                message="Batch không tồn tại",
-                status=404,
-            ).to_dict()
+        try:
+            post = PostService.find_post(id)
+            if not post:
+                return Response(
+                    message="Post không tồn tại",
+                    status=404,
+                ).to_dict()
+            batch = BatchService.find_batch(post.batch_id)
+            if not batch:
+                return Response(
+                    message="Batch không tồn tại",
+                    status=404,
+                ).to_dict()
 
-        if batch.status == 1 or post.status == 1:
-            return Response(
-                message="Post đã được tạo",
-                status=400,
-            ).to_dict()
+            if batch.status == 1 or post.status == 1:
+                return Response(
+                    message="Post đã được tạo",
+                    status=400,
+                ).to_dict()
 
-        data = json.loads(batch.content)
-        images = data.get("images", [])
-        type = post.type
+            data = json.loads(batch.content)
+            images = data.get("images", [])
+            type = post.type
 
-        response = None
-        render_id = ""
+            response = None
+            render_id = ""
+            maker_images = []
 
-        if type == "video":
-            response = call_chatgpt_create_caption(images, data, post.id)
+            if type == "video":
+                response = call_chatgpt_create_caption(images, data, post.id)
+                if response:
+                    parse_caption = json.loads(response)
+                    parse_response = parse_caption.get("response", {})
+
+                    captions = parse_response.get("captions", [])
+                    logger.info("+++++++++++++++++++++++++++")
+                    logger.info(json.dumps(captions))
+                    logger.info("+++++++++++++++++++++++++++")
+
+                    # if len(images) == 0:
+                    #     images = [
+                    #         "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
+                    #         "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
+                    #     ]
+
+                    if len(images) > 0:
+                        image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
+
+                        product_name = data["name"]
+
+                        result = VideoService.create_video_from_images(
+                            product_name, image_renders, images
+                        )
+
+                        logger.info("result: {0}".format(result))
+
+                        if result["status_code"] == 200:
+                            render_id = result["response"]["id"]
+
+                            VideoService.create_create_video(
+                                render_id=render_id,
+                                user_id=1,
+                                product_name=product_name,
+                                images_url=json.dumps(image_renders),
+                                description="",
+                                post_id=post.id,
+                            )
+
+            elif type == "image":
+                thumbnail = batch.thumbnail
+                images = [thumbnail] + images
+                response = call_chatgpt_create_social(images, data, post.id)
+                if response:
+                    parse_caption = json.loads(response)
+                    parse_response = parse_caption.get("response", {})
+                    captions = parse_response.get("captions", [])
+
+                    for index, image_url in enumerate(images):
+                        caption = captions[index] or ""
+                        image_url = ImageMaker.save_image_and_write_text(
+                            image_url, caption, font_size=80
+                        )
+                        maker_images.append(image_url)
+
+            elif type == "blog":
+                response = call_chatgpt_create_blog(images, data, post.id)
+
+            thumbnail = batch.thumbnail
+            title = ""
+            subtitle = ""
+            content = ""
+            video_url = ""
+            hashtag = ""
+
             if response:
                 parse_caption = json.loads(response)
                 parse_response = parse_caption.get("response", {})
 
-                captions = parse_response.get("captions", [])
-                logger.info("+++++++++++++++++++++++++++")
-                logger.info(json.dumps(captions))
-                logger.info("+++++++++++++++++++++++++++")
+                if parse_response and "post" in parse_response:
+                    content = parse_response.get("post", "")
+                if parse_response and "title" in parse_response:
+                    title = parse_response.get("title", "")
+                if parse_response and "summarize" in parse_response:
+                    subtitle = parse_response.get("summarize", "")
+                if parse_response and "hashtag" in parse_response:
+                    hashtag = parse_response.get("hashtag", "")
+                if parse_response and "content" in parse_response:
+                    content = parse_response.get("content", "")
 
-                # if len(images) == 0:
-                #     images = [
-                #         "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
-                #         "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
-                #     ]
+                    for index, image_url in enumerate(images):
+                        content = content.replace(f"IMAGE_URL_{index}", image_url)
 
-                if len(images) > 0:
-                    image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
+                if parse_response and "caption" in parse_response:
+                    content = parse_response.get("caption", "")
+                    content = json.dumps(content)
 
-                    product_name = data["name"]
+            else:
+                return Response(
+                    message="Tạo post that bai",
+                    status=400,
+                ).to_dict()
 
-                    result = VideoService.create_video_from_images(
-                        product_name, image_renders, images
-                    )
+            post = PostService.update_post(
+                post.id,
+                thumbnail=thumbnail,
+                images=json.dumps(maker_images),
+                title=title,
+                subtitle=subtitle,
+                content=content,
+                video_url=video_url,
+                hashtag=hashtag,
+                render_id=render_id,
+                status=1,
+            )
+            current_done_post = batch.done_post
 
-                    logger.info("result: {0}".format(result))
+            batch = BatchService.update_batch(batch.id, done_post=current_done_post + 1)
 
-                    if result["status_code"] == 200:
-                        render_id = result["response"]["id"]
+            if batch.done_post == batch.count_post:
+                BatchService.update_batch(batch.id, status=1)
 
-                        VideoService.create_create_video(
-                            render_id=render_id,
-                            user_id=1,
-                            product_name=product_name,
-                            images_url=json.dumps(image_renders),
-                            description="",
-                            post_id=post.id,
-                        )
-
-        elif type == "image":
-            response = call_chatgpt_create_social(images, data, post.id)
-        elif type == "blog":
-            response = call_chatgpt_create_blog(images, data, post.id)
-
-        thumbnail = batch.thumbnail
-        title = ""
-        subtitle = ""
-        content = ""
-        video_url = ""
-        hashtag = ""
-
-        if response:
-            parse_caption = json.loads(response)
-            parse_response = parse_caption.get("response", {})
-
-            if parse_response and "post" in parse_response:
-                content = parse_response.get("post", "")
-            if parse_response and "title" in parse_response:
-                title = parse_response.get("title", "")
-            if parse_response and "summarize" in parse_response:
-                subtitle = parse_response.get("summarize", "")
-            if parse_response and "content" in parse_response:
-                content = parse_response.get("content", "")
-
-                for index, image_url in enumerate(images):
-                    content = content.replace(f"IMAGE_URL_{index}", image_url)
-
-            if parse_response and "caption" in parse_response:
-                content = parse_response.get("caption", "")
-                content = json.dumps(content)
-
-        else:
             return Response(
-                message="Tạo post that bai",
+                data=post._to_json(),
+                message="Tạo post thành công",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Tạo post that bai ex",
                 status=400,
             ).to_dict()
-
-        post = PostService.update_post(
-            post.id,
-            thumbnail=thumbnail,
-            title=title,
-            subtitle=subtitle,
-            content=content,
-            video_url=video_url,
-            hashtag=hashtag,
-            render_id=render_id,
-            status=1,
-        )
-        current_done_post = batch.done_post
-
-        batch = BatchService.update_batch(batch.id, done_post=current_done_post + 1)
-
-        if batch.done_post == batch.count_post:
-            BatchService.update_batch(batch.id, status=1)
-
-        return Response(
-            data=post._to_json(),
-            message="Tạo post thành công",
-        ).to_dict()
 
 
 @ns.route("/get-batch/<int:id>")
