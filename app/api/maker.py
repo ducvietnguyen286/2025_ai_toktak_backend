@@ -190,6 +190,9 @@ class APIMakePost(Resource):
 
             elif type == "image":
                 thumbnail = batch.thumbnail
+                logger.info(
+                    "-------------------- PROCESSING CREATE IMAGES -------------------"
+                )
                 images = [thumbnail] + images
                 response = call_chatgpt_create_social(images, data, post.id)
                 if response:
@@ -203,6 +206,9 @@ class APIMakePost(Resource):
                             image_url, caption, font_size=80
                         )
                         maker_images.append(image_url)
+                logger.info(
+                    "-------------------- PROCESSED CREATE IMAGES -------------------"
+                )
 
             elif type == "blog":
                 response = call_chatgpt_create_blog(images, data, post.id)
