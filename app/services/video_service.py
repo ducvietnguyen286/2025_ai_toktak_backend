@@ -3,9 +3,11 @@ import json
 import os
 import random
 from app.models.video_create import VideoCreate
+from app.models.video_viral import VideoViral
 from app.models.setting import Setting
 from app.lib.logger import logger
-
+from sqlalchemy.sql.expression import func
+from flask import Flask, request
 
 from gtts import gTTS
 import uuid
@@ -16,12 +18,18 @@ class VideoService:
     @staticmethod
     def create_video_from_images(product_name, images_url, images_slider_url):
 
+        domain = request.host
+
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
         is_ai_image = config["SHOTSTACK_AI_IMAGE"]
-        
-        
+
+        # FAKE để cho local host không tạo AI
+        if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
+            is_ai_image = "0"
+        else:
+            is_ai_image = "1"
 
         voice_dir = "static/voice"
         os.makedirs(voice_dir, exist_ok=True)
@@ -29,7 +37,7 @@ class VideoService:
         # create voice Google TTS
         text_to_speech = f"{product_name} 출시되었습니다. 지금 만나보세요!"
         tts = gTTS(text=text_to_speech, lang="ko")
-        file_name = f"voice_{uuid.uuid4().hex}.mp3"
+        file_name = f"template_voice_{uuid.uuid4().hex}.mp3"
         file_path = f"{voice_dir}/{file_name}"
 
         tts.save(file_path)
@@ -37,10 +45,10 @@ class VideoService:
         check_live_version = os.environ.get("APP_STAGE") or "localhost"
 
         voice_url = "https://apitoktak.voda-play.com/voice/" + file_name
-        
+
         if check_live_version == "localhost":
             voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
-        
+
         # prompt fake
         prompts = [
             "Slowly zoom in and out for a dramatic effect.",
@@ -59,7 +67,7 @@ class VideoService:
             )
 
         clips_data = VideoService.create_combined_clips(
-            images_url, images_slider_url, prompts , is_ai_image
+            images_url, images_slider_url, prompts, is_ai_image
         )
 
         payload = {
@@ -109,11 +117,17 @@ class VideoService:
                     },
                 ],
             },
-            "output": {"format": "mp4", "size": {"width": 720, "height": 1280}},
+            "output": {
+                "format": "mp4",
+                # "resolution": "hd",
+                # "aspectRatio": "16:9",
+                # "size": {"width": 1200, "height": 800},
+                "size": {"width": 720, "height": 1280},
+            },
             "callback": "https://apitoktak.voda-play.com/api/v1/video_maker/shotstack_webhook",
         }
 
-        logger.info(f"payload: {payload}")
+        # logger.info(f"payload: {payload}")
         logger.info(f"payload_dumps: {json.dumps(payload)}")
 
         # Header với API Key
@@ -213,18 +227,10 @@ class VideoService:
         }
         return settings_dict
 
-    def create_combined_clips(ai_images, images_slider_url, prompts=None , is_ai_image = "0"):
-
-        video_urls = [
-            "https://apitoktak.voda-play.com/voice/video/1.mp4",
-            "https://apitoktak.voda-play.com/voice/video/2.mp4",
-            "https://apitoktak.voda-play.com/voice/video/3.mp4",
-            "https://apitoktak.voda-play.com/voice/video/4.mp4",
-            "https://apitoktak.voda-play.com/voice/video/5.mp4",
-            "https://apitoktak.voda-play.com/voice/video/6.mp4",
-            "https://apitoktak.voda-play.com/voice/video/7.mp4",
-        ]
-
+    def create_combined_clips(
+        ai_images, images_slider_url, prompts=None, is_ai_image="0"
+    ):
+        video_urls = get_random_videos(2)
         # Chọn 2 URL khác nhau một cách ngẫu nhiên
         intro_url, outro_url = random.sample(video_urls, 2)
 
@@ -240,17 +246,14 @@ class VideoService:
             }
         )
         current_start += intro_length
-        
-        
-        
+
         if is_ai_image == "1":
-            
+
             time_run_ai = 5
             for i, url in enumerate(ai_images):
                 clips.append(
                     {
                         "asset": {
-                            # "type": "image",
                             "src": url,
                             "type": "image-to-video",
                             "prompt": random.choice(prompts) if prompts else "",
@@ -298,10 +301,16 @@ class VideoService:
                         "size": 72,
                         "weight": 700,
                         "lineHeight": 0.85,
-                    } 
+                    },
+                    "alignment": {
+                        "horizontal": "center",
+                        "vertical": "bottom",
+                    },
                 },
                 "start": start_time_caption + text_index * time_show_caption,
                 "length": time_show_caption,
+                # "transition": {"in": "fade", "out": "fade"},
+                "effect": "zoomIn",
             }
             for text_index, caption in enumerate(images_slider_url)
         ]
@@ -317,8 +326,77 @@ class VideoService:
             #     "start": 0,
             #     "length": "auto",
             # }
+            {
+                "asset": {
+                    "type": "image",
+                    "src": "https://apitoktak.voda-play.com/voice/logo.png",
+                },
+                "start": 0,
+                "length": "end",
+                "scale": 0.15,
+                "position": "topRight",
+            },
+            # {
+            #     "asset": {
+            #         "type": "title",
+            #         "text": "Xin chào! Đây là caption của tôi.",
+            #         "style": "minimal",
+            #         "size": "medium",
+            #         "color": "#FFFFFF",
+            #         "background": "#000000",
+            #     },
+            #     "start": 1,
+            #     "length": 10,
+            #     "position": "bottom",
+            # },
+            # {
+            #     "asset": {
+            #         "type": "title",
+            #         "text": "Phụ đề sẽ tự động xuất hiện tại đây.",
+            #         "style": "minimal",
+            #         "size": "medium",
+            #         "color": "#FFFFFF",
+            #         "background": "#000000",
+            #     },
+            #     "start": 10,
+            #     "length": 100,
+            #     "position": "bottom",
+            # },
+            # {
+            #     "asset": {
+            #         "type": "caption",
+            #         "src": "https://shotstack-assets.s3.amazonaws.com/captions/transcript.srt",
+            #     },
+            #     "start": 0,
+            #     "length": "end",
+            # },
+            # {
+            #     "asset": {
+            #         "type": "html",
+            #         "html": "<p>Style text in video using <b>HTML</b> and <u>CSS</u></p>",
+            #         "css": "p { font-family: 'Open Sans'; color: #ffffff; font-size: 42px; text-align: center; } b { color: #21bcb9; font-weight: normal; } u { color: #e784ff; text-decoration: none; }",
+            #         "width": 500,
+            #         "height": 300,
+            #     },
+            #     "start": 0,
+            #     "length": "end",
+            # },
         ]
 
         # Kết hợp hai danh sách clip lại
         combined_clips = clips + clips_caption + clips_shape
         return {"clips": combined_clips}
+
+
+def get_random_videos(limit=2):
+    try:
+        videos = (
+            VideoViral.query.with_entities(VideoViral.video_url)
+            .order_by(func.rand())
+            .limit(limit)
+            .all()
+        )
+        return [video.video_url for video in videos]
+
+    except Exception as e:
+        return []

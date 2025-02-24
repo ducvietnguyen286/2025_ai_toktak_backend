@@ -104,7 +104,7 @@ class APINewLink(Resource):
                 status=400,
             ).to_dict()
 
-        user_link = UserService.find_user_link(link_id, current_user.id)
+        user_link = UserService.find_user_link_exist(link_id, current_user.id)
         is_active = True
         if not user_link:
             user_link = UserService.create_user_link(

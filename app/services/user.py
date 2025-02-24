@@ -38,6 +38,15 @@ class UserService:
             .all()
         )
         return user_link[0] if user_link else None
+    
+    @staticmethod
+    def find_user_link_exist(link_id=0, user_id=0):
+        user_link = (
+            UserLink.query.where(UserLink.user_id == user_id)
+            .where(UserLink.link_id == link_id)
+            .all()
+        )
+        return user_link[0] if user_link else None
 
     @staticmethod
     def get_by_link_user_links(link_id=0, user_id=0):
