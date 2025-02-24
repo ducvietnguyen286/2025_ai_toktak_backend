@@ -130,20 +130,68 @@ def call_chatgpt_create_blog(images=[], data={}, post_id=0):
 
 
 def call_chatgpt_create_social(images=[], data={}, post_id=0):
-    prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 **소셜 미디어 콘텐츠**를 작성해 주세요.
-제품 관련 정보:
-- 제품명: {name}
-- 가격: {price}
-- 제품 설명: {description}
-- 판매처: {store_name}
-- 제품 링크: {base_url}
+    prompt = """[역할]
+당신은 20~30대 커뮤니티에서 유행하는 언어를 활용하는 바이럴 마케터입니다. 제품을 직접 설명하지 않고 자연스럽게 관심을 유도하는 방식으로 SNS 콘텐츠를 생성하세요. 특히 "DC인사이드" 커뮤니티의 말투를 반영하여 작성하세요.
 
-조건:
-- **Facebook**: 사람들의 관심을 끌고 참여를 유도하는 글을 작성해 주세요 (최소 160자 이상).
-- **Instagram**: 짧고 강렬한 메시지와 해시태그를 포함한 글을 작성해 주세요 (최소 160자 이상).
-- 각 소셜 미디어 게시글에 적절한 해시태그를 추가해 주세요.
-- 작성된 내용은 반드시 한국어로 작성되어야 하며, 결과는 순수한 문자열로만 반환되어야 합니다.
-"""
+[입력 정보]
+
+제품명: {name}
+가격: {price}
+제품 설명: {description}
+판매처: {store_name}
+제품 링크: {base_url}
+이미지 개수: {image_count}
+[요구 사항]
+
+SNS 게시글 작성
+Facebook: 사람들이 관심을 가지게 하고, 댓글과 공유를 유도하는 전체 게시글을 작성 (최소 160자).
+Instagram: 짧고 강렬한 메시지와 해시태그를 포함한 전체 게시글을 작성 (최소 160자).
+이미지별 캡션 작성
+첫 번째 이미지: 제품을 직접 언급하지 않고, 궁금증을 유발하는 한 줄짜리 바이럴 문구 작성.
+두 번째부터 {image_count}번째 이미지:
+유행하는 커뮤니티 말투를 활용하여, 가상의 상황을 설정한 후 제품의 매력을 자연스럽게 연결하는 트렌디한 내용을 작성.
+직설적인 광고 문구를 배제하고, 구매 욕구를 자극하는 공감형 콘텐츠로 구성.
+해시태그:
+각 소셜 미디어 게시글과 이미지 캡션에 SNS에서 유행하는 해시태그를 적절히 추가.
+[출력 형식]
+
+전체 게시글 내용: Facebook 및 Instagram용 게시글을 각각 별도로 작성 (각각 순수한 텍스트로 반환).
+이미지별 캡션:
+첫 번째 이미지: 호기심을 유발하는 한 줄짜리 바이럴 문구.
+두 번째부터 {image_count}번째 이미지: 가상의 상황을 바탕으로 한 바이럴 스타일의 설명.
+결과는 순수한 텍스트로만 반환 (코드나 별도의 포맷 없음).
+[예시 출력]
+
+■ Social Network 게시글:
+"요즘 이거 없으면 허전하다! 친구들이 다 사용한다고 하는 꿀템, 나도 써보고 완전 반했어. 자세한 정보는 여기에서 확인해봐~ {base_url} 
+
+■ Hashtags:
+#핫템 #요즘대세 #추천템"
+
+■ 이미지별 캡션:
+[첫 번째 이미지 - 바이럴 문구]:
+"이거 없으면 다리 길이 -5cm 효과임"
+
+[두 번째 이미지 - 바이럴 설명]:
+"친구가 이거 쓰고 다니길래 뭔지 물어봤더니, 써보니까 ㄹㅇ 인정. 요즘 대세임 ㅇㅇ"
+
+[세 번째 이미지 - 바이럴 설명]:
+"처음에는 그냥 호기심으로 시작했는데, 한 번 써보고 나니 인생템 확정"
+
+[네 번째 이미지 - 바이럴 설명]:
+"DC인사이드 갤러리에서도 벌써 입소문난 꿀템, 사놓고 후회 없는 선택!"
+
+[다섯 번째 이미지 - 바이럴 설명]:
+"나만 알고 싶었던 비밀템, 이젠 모두가 알아야 할 꿀조합…"
+
+[노트]
+
+전체 게시글과 이미지 캡션은 별개로 작성되어야 합니다.
+제품 직접 설명을 피하고, 자연스러운 스토리텔링과 공감을 유도하는 내용으로 작성하세요.
+20~30대 커뮤니티에서 유행하는 언어와 스타일을 적극 활용하세요."""
+
+    data["image_count"] = len(images)
+
     prompt = replace_prompt_with_data(prompt, data)
 
     content = [{"type": "text", "text": prompt}]
@@ -162,12 +210,20 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
                             "type": "string",
                             "description": "The content of the post.",
                         },
+                        "captions": {
+                            "type": "array",
+                            "description": "A list of captions associated with the response.",
+                            "items": {
+                                "type": "string",
+                                "description": "A caption string.",
+                            },
+                        },
                         "hashtag": {
                             "type": "string",
                             "description": "The associated hashtag.",
                         },
                     },
-                    "required": ["post", "hashtag"],
+                    "required": ["post", "captions", "hashtag"],
                     "additionalProperties": False,
                 }
             },
