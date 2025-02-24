@@ -298,20 +298,21 @@ class APIGetCallbackTiktok(Resource):
     )
     def get(self, args):
         try:
+            print("000000000000000000")
             code = args.get("code")
             state = args.get("state")
             error = args.get("error") or ""
             error_description = args.get("error_description") or ""
             PAGE_PROFILE = "https://voda-play.com/profile"
-
+            print("11111111111111111111111111")
             if not state:
                 return Response(
                     message="Invalid or expired state token 1",
                     status=400,
                 ).to_dict()
-
+            print("VERITY STATE TOKEN")
             payload = self.verify_state_token(state)
-
+            print("DONE VERITY STATE TOKEN")
             if not payload:
                 return Response(
                     message="Invalid or expired state token 2",
