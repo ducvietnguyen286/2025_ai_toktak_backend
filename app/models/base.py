@@ -44,7 +44,8 @@ class BaseModel:
             if column in self.to_json_filter:
                 continue
             if column in self.to_json_parse:
-                response[column] = json.loads(value)
+                if value and isinstance(value, str):
+                    response[column] = json.loads(value)
             elif isinstance(value, datetime):
                 response[column] = value.astimezone(tz).strftime("%Y-%m-%d %H:%M:%S")
             else:
