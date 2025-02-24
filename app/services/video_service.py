@@ -18,15 +18,18 @@ class VideoService:
     @staticmethod
     def create_video_from_images(product_name, images_url, images_slider_url):
 
+        domain = request.host
 
-        domain = request.headers.get('Origin')  # Lấy domain của FE
-        logger.info(f"domain: {domain}")
-        
-        
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
         is_ai_image = config["SHOTSTACK_AI_IMAGE"]
+
+        # FAKE để cho local host không tạo AI
+        if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
+            is_ai_image = "0"
+        else:
+            is_ai_image = "1"
 
         voice_dir = "static/voice"
         os.makedirs(voice_dir, exist_ok=True)
@@ -302,7 +305,7 @@ class VideoService:
                     "alignment": {
                         "horizontal": "center",
                         "vertical": "bottom",
-                        },
+                    },
                 },
                 "start": start_time_caption + text_index * time_show_caption,
                 "length": time_show_caption,
