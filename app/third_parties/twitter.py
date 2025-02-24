@@ -6,7 +6,7 @@ import traceback
 import requests
 
 from app.lib.logger import logger
-from app.services.request_x_log import RequestXLogService
+from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
 
@@ -44,7 +44,8 @@ class TwitterTokenService:
             response = requests.post(TOKEN_URL, headers=headers, data=r_data)
             data = response.json()
 
-            RequestXLogService.create_request_x_log(
+            RequestSocialLogService.create_request_social_log(
+                social="X",
                 user_id=user_link.user_id,
                 type="authorization_code",
                 request=json.dumps(r_data),
@@ -71,24 +72,33 @@ class TwitterTokenService:
             print(e)
             return False
 
-    def refresh_token(self, refresh_token, link, user):
+    def refresh_token(self, link, user):
         try:
             TOKEN_URL = "https://api.x.com/2/oauth2/token"
             
             credentials_str = f"{self.client_id}:{self.client_secret}"
             credentials = base64.b64encode(credentials_str.encode("utf-8")).decode("utf-8")
 
+            credentials_str = f"{self.client_id}:{self.client_secret}"
+            credentials = base64.b64encode(credentials_str.encode("utf-8")).decode(
+                "utf-8"
+            )
+
+            user_link = UserService.find_user_link(link_id=link.id, user_id=user.id)
+            user_link_meta = json.loads(user_link.meta)
+            refresh_token = user_link_meta.get("refresh_token")
+
             headers = {
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": f"Basic {credentials}",
             }
 
-            # Các thông số yêu cầu trong body để trao đổi code lấy access token
             r_data = {
                 "refresh_token": refresh_token,
                 "grant_type": "refresh_token",
                 "client_id": self.client_id,
             }
+
             response = requests.post(TOKEN_URL, headers=headers, data=r_data)
             data = response.json()
             
@@ -96,7 +106,8 @@ class TwitterTokenService:
             
             user_link = UserService.find_user_link(link_id=link.id, user_id=user.id)
 
-            RequestXLogService.create_request_x_log(
+            RequestSocialLogService.create_request_social_log(
+                social="X",
                 user_id=user_link.user_id,
                 type="refresh_token",
                 request=json.dumps(r_data),
@@ -179,15 +190,12 @@ class TwitterService:
             print(parsed_response)
             status = parsed_response.get("status")
             if status == 401:
-                refresh_token = self.meta.get("refresh_token")
-                TwitterTokenService().refresh_token(
-                    refresh_token=refresh_token, link=self.link, user=self.user
-                )
+                TwitterTokenService().refresh_token(link=self.link, user=self.user)
                 self.user_link = UserService.find_user_link(
                     link_id=self.link.id, user_id=self.user.id
                 )
                 self.meta = json.loads(self.user_link.meta)
-                self.send_post_to_x(media, post, link, is_video, media_id)
+                return self.send_post_to_x(media, post, link, is_video, media_id)
             errors = parsed_response.get("errors")
             if errors:
                 SocialPostService.create_social_post(
@@ -257,10 +265,7 @@ class TwitterService:
 
         status_code = req.status_code
         if status_code == 401:
-            refresh_token = self.meta.get("refresh_token")
-            TwitterTokenService().refresh_token(
-                refresh_token=refresh_token, link=self.link, user=self.user
-            )
+            TwitterTokenService().refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
                 link_id=self.link.id, user_id=self.user.id
             )
@@ -304,10 +309,7 @@ class TwitterService:
 
             status_code = req.status_code
             if status_code == 401:
-                refresh_token = self.meta.get("refresh_token")
-                TwitterTokenService().refresh_token(
-                    refresh_token=refresh_token, link=self.link, user=self.user
-                )
+                TwitterTokenService().refresh_token(link=self.link, user=self.user)
                 self.user_link = UserService.find_user_link(
                     link_id=self.link.id, user_id=self.user.id
                 )
@@ -348,10 +350,7 @@ class TwitterService:
 
         status_code = req.status_code
         if status_code == 401:
-            refresh_token = self.meta.get("refresh_token")
-            TwitterTokenService().refresh_token(
-                refresh_token=refresh_token, link=self.link, user=self.user
-            )
+            TwitterTokenService().refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
                 link_id=self.link.id, user_id=self.user.id
             )
@@ -406,10 +405,7 @@ class TwitterService:
 
         status_code = req.status_code
         if status_code == 401:
-            refresh_token = self.meta.get("refresh_token")
-            TwitterTokenService().refresh_token(
-                refresh_token=refresh_token, link=self.link, user=self.user
-            )
+            TwitterTokenService().refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
                 link_id=self.link.id, user_id=self.user.id
             )
