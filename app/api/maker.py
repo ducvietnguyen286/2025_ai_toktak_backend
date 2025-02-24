@@ -147,6 +147,7 @@ class APIMakePost(Resource):
             response = None
             render_id = ""
             maker_images = []
+            captions = []
 
             if type == "video":
                 response = call_chatgpt_create_caption(images, data, post.id)
@@ -154,16 +155,18 @@ class APIMakePost(Resource):
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
 
+                    print("parse_response", parse_response)
+
                     captions = parse_response.get("captions", [])
                     logger.info("+++++++++++++++++++++++++++")
                     logger.info(json.dumps(captions))
                     logger.info("+++++++++++++++++++++++++++")
 
-                    # if len(images) == 0:
-                    #     images = [
-                    #         "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
-                    #         "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
-                    #     ]
+                    if len(images) == 0:
+                        images = [
+                            "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
+                            "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
+                        ]
 
                     if len(images) > 0:
                         image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
@@ -238,10 +241,6 @@ class APIMakePost(Resource):
                     for index, image_url in enumerate(images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
 
-                if parse_response and "caption" in parse_response:
-                    content = parse_response.get("caption", "")
-                    content = json.dumps(content)
-
             else:
                 return Response(
                     message="Tạo post that bai",
@@ -252,6 +251,7 @@ class APIMakePost(Resource):
                 post.id,
                 thumbnail=thumbnail,
                 images=json.dumps(maker_images),
+                captions=json.dumps(captions),
                 title=title,
                 subtitle=subtitle,
                 content=content,

@@ -8,22 +8,57 @@ chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
 
 def call_chatgpt_create_caption(images=[], data={}, post_id=0):
 
-    prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 동영상에 어울리는 **제목(title)**과 **CAPTION_COUNT개의 캡션 목록**을 만들어주세요.
-제품 관련 정보:
-- 제품명: {name}
-- 가격: {price}
-- 제품 설명: {description}
-- 판매처: {store_name}
-- 제품 링크: {base_url}
+    prompt = """📌 요청 사항:
+업로드된 이미지를 참고하여 제품을 홍보하는 숏폼(Shorts, TikTok) 스타일의 영상 콘텐츠를 제작할 수 있도록 아래 요소들을 생성해 주세요.
 
-조건:
-- 제목은 동영상의 핵심 메시지를 전달할 수 있도록 강렬하고 매력적으로 작성해 주세요.
-- 캡션은 동영상 내에서 30초 동안 자연스럽게 진행될 수 있도록 흐름을 고려하여 작성해 주세요.
-- TikTok과 Shorts 스타일에 맞게 경쾌하고 흥미로운 문구를 사용하고, 시청자들의 관심을 끌 수 있도록 해 주세요.
-- 캡션에는 적절한 해시태그를 추가해 주세요.
-- 반드시 결과는 순수한 문자열로만 반환되어야 하며, Markdown 형식은 사용하지 말아 주세요.
-- 제목과 캡션의 내용은 반드시 한국어로 작성되어야 합니다.
-- **생성할 캡션의 수는 제가 제공한 숫자(CAPTION_COUNT)와 정확히 일치해야 합니다.**
+제목 (Title):
+
+짧고 강렬하며 제품의 핵심 가치를 강조하는 문구
+클릭을 유도하는 흥미로운 표현 포함
+캡션 목록 (CAPTION_COUNT개):
+
+영상이 30초 동안 자연스럽게 흘러가도록 구성
+임팩트 있는 문장으로 시청자의 관심을 끌어야 함
+마지막에는 행동 유도를 위한 Call-to-Action(CTA) 포함
+해시태그 목록:
+
+제품 및 타겟 고객층에 맞는 인기 해시태그 선정
+개별 해시태그로 제공하며, 캡션과 분리할 것
+DC인사이드 스타일 게시글 (200자 이내):
+
+유머러스하고 도발적인 문체 사용
+커뮤니티 특유의 밈(meme)과 유행어 활용
+댓글 반응을 유도할 수 있도록 구성
+📌 제품 정보:
+제품명: {name}
+가격: {price}
+제품 설명: {description}
+판매처: {store_name}
+제품 링크: {base_url}
+📌 생성 조건:
+✅ 제목:
+
+짧고 강렬하게! (예: “이걸 안 사면 후회각!”)
+영상 스타일에 맞는 톤 & 텐션 유지
+✅ 캡션:
+
+총 CAPTION_COUNT개의 문장을 30초 타임라인에 맞게 배치
+트렌디한 표현, 감탄사, 감성적인 요소 포함
+마지막에 강력한 CTA 포함 (예: “지금 구매하러 가기!”)
+✅ 해시태그:
+
+제품군과 관련된 해시태그 선정
+캡션과 분리된 개별 목록으로 제공
+✅ DC인사이드 스타일 게시글:
+
+250자 이내, 핵심 메시지가 바로 전달되도록 작성
+강한 어조, 밈(meme) 요소, 유머 코드 반영
+마치 커뮤니티에서 실제로 작성된 글처럼 자연스럽게 구성
+📌 출력 형식:
+❌ Markdown 사용 금지 (순수 텍스트만 반환)
+❌ 기타 특수 문자 사용 금지
+
+이 프롬프트를 활용하면 더욱 강렬하고 효과적인 SNS 콘텐츠를 제작할 수 있습니다! 🚀
 """
     prompt = replace_prompt_with_data(prompt, data)
 
@@ -45,7 +80,11 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
                             "type": "string",
                             "description": "The title of the response.",
                         },
-                        "caption": {
+                        "content": {
+                            "type": "string",
+                            "description": "The content of the response.",
+                        },
+                        "captions": {
                             "type": "array",
                             "description": "A list of captions associated with the response.",
                             "items": {
@@ -58,7 +97,7 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
                             "description": "A hashtag associated with the response.",
                         },
                     },
-                    "required": ["title", "caption", "hashtag"],
+                    "required": ["title", "content", "captions", "hashtag"],
                     "additionalProperties": False,
                 }
             },
