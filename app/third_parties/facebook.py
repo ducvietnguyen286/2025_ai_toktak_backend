@@ -15,8 +15,8 @@ class FacebookService:
         self.url_to_video = ""
 
     def send_post(self, post, link):
-        if post.type == "social":
-            self.send_post_social(post, link)
+        if post.type == "image":
+            self.send_post_image(post, link)
         if post.type == "video":
             self.send_post_video(post, link)
 
@@ -155,11 +155,11 @@ class FacebookService:
         print("Get reel:", result)
         return result
 
-    def send_post_social(self, post, link):
+    def send_post_image(self, post, link):
         page_id = self.page_id
         FEED_URL = f"https://graph.facebook.com/{page_id}/feed"
 
-        images = [post.thumbnail]
+        images = [post.images]
 
         self.unpublish_images(images)
 
