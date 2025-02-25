@@ -139,8 +139,10 @@ class FacebookService:
         if not token_pages:
             log_social_message("Token not found")
 
+        log_social_message(f"Token pages: {token_pages}")
+
         for page in token_pages:
-            tasks = tasks.get("tasks", [])
+            tasks = page.get("tasks", [])
             if "CREATE_CONTENT" not in tasks:
                 continue
 
