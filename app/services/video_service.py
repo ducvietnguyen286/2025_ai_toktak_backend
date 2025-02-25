@@ -321,7 +321,7 @@ class VideoService:
 
         for k, url_srt in enumerate(file_path_srts):
             check_live_version = os.environ.get("APP_STAGE") or "localhost"
-            url_path_srt = "https://apitoktak.voda-play.com/" + url_srt
+            url_path_srt = "https://apitoktak.voda-play.com" + url_srt
             if check_live_version == "localhost":
                 url_path_srt = (
                     "https://apitoktak.voda-play.com/voice/caption/transcript.srt"
