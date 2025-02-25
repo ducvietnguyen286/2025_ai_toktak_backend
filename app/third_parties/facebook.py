@@ -20,6 +20,11 @@ class FacebookTokenService:
             )
             meta = json.loads(user_link.meta)
             access_token = meta.get("AccessToken")
+            if not access_token:
+                access_token = meta.get("access_token")
+                if not access_token:
+                    log_social_message("Token not found")
+                    return None
 
             EXCHANGE_URL = f"https://graph.facebook.com/v14.0/oauth/access_token"
 
