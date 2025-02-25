@@ -30,7 +30,7 @@ class FacebookTokenService:
                     log_social_message("Token not found")
                     return None
 
-            PAGE_URL = f"https://graph.facebook.com/v22.0/me/accounts?access_token=${access_token}&fields=id,name,picture,access_token,tasks"
+            PAGE_URL = f"https://graph.facebook.com/v22.0/me/accounts?access_token={access_token}&fields=id,name,picture,access_token,tasks"
 
             response = requests.get(PAGE_URL)
             data = response.json()
