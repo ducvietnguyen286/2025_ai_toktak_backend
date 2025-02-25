@@ -308,15 +308,15 @@ class FacebookService:
             images = post.images
             images = json.loads(images)
 
-            self.unpublish_images(images)
+            photo_ids = self.unpublish_images(images)
 
-            attached_media = [pid for pid in self.photo_ids]
+            attached_media = [{"media_fbid": pid} for pid in photo_ids]
 
             log_social_message(f"Attached media: {attached_media}")
 
             post_data = {
                 "message": post.content + " " + post.hashtag,
-                "attached_media": attached_media,
+                "attached_media": json.dumps(attached_media),
                 "access_token": page_access_token,
             }
 
@@ -356,22 +356,20 @@ class FacebookService:
             )
         return True
 
-    def unpublish_images(self, images):
-        for page in self.pages:
-            page_id = page["id"]
-            page_access_token = page["access_token"]
+    def unpublish_images(self, images, page_id, page_access_token):
+        UNPUBLISH_URL = f"https://graph.facebook.com/v22.0/{page_id}/photos"
+        photo_ids = []
+        for url in images:
+            data = {
+                "url": url,
+                "published": "false",
+                "access_token": page_access_token,
+            }
+            response = requests.post(UNPUBLISH_URL, data=data)
+            result = response.json()
 
-            UNPUBLISH_URL = f"https://graph.facebook.com/v22.0/{page_id}/photos"
-
-            for url in images:
-                data = {
-                    "url": url,
-                    "published": "false",
-                    "access_token": page_access_token,
-                }
-                response = requests.post(UNPUBLISH_URL, data=data)
-                result = response.json()
-                if "id" in result:
-                    self.photo_ids.append(result["id"])
-                else:
-                    log_social_message(f"Lỗi upload ảnh: {result}")
+            if "id" in result:
+                photo_ids.append(result["id"])
+            else:
+                log_social_message(f"Lỗi upload ảnh: {result}")
+        return photo_ids
