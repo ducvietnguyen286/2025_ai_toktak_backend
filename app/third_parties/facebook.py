@@ -227,7 +227,8 @@ class FacebookService:
         page_id = self.page_id
         FEED_URL = f"https://graph.facebook.com/{page_id}/feed"
 
-        images = [post.images]
+        images = post.images
+        images = json.loads(images)
 
         self.unpublish_images(images)
 
@@ -273,19 +274,15 @@ class FacebookService:
         page_id = self.page_id
         UNPUBLISH_URL = f"https://graph.facebook.com/{page_id}/photos"
 
-        for path in images:
-            response = requests.get(path)
-            if response.status_code == 200:
-                files = {"source": response.content}
-                data = {
-                    "published": "false",
-                    "access_token": self.access_token,
-                }
-                response = requests.post(UNPUBLISH_URL, data=data, files=files)
-                result = response.json()
-                if "id" in result:
-                    self.photo_ids.append(result["id"])
-                else:
-                    log_social_message("Lỗi upload ảnh:", result)
+        for url in images:
+            data = {
+                "url": url,
+                "published": "false",
+                "access_token": self.access_token,
+            }
+            response = requests.post(UNPUBLISH_URL, data=data)
+            result = response.json()
+            if "id" in result:
+                self.photo_ids.append(result["id"])
             else:
-                log_social_message("Lỗi tải ảnh:", response.status_code)
+                log_social_message("Lỗi upload ảnh:", result)
