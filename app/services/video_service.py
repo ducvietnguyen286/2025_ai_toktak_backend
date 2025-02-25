@@ -83,18 +83,6 @@ class VideoService:
                         "clips": [
                             {
                                 "asset": {
-                                    "type": "text",
-                                    "text": f"{product_name} 출시되었습니다!",
-                                },
-                                "start": 5,
-                                "length": "end",
-                            }
-                        ]
-                    },
-                    {
-                        "clips": [
-                            {
-                                "asset": {
                                     "type": "audio",
                                     "src": voice_url,
                                     "effect": "fadeIn",
