@@ -48,7 +48,7 @@ class VideoService:
 
         check_live_version = os.environ.get("APP_STAGE") or "localhost"
 
-        voice_url = "https://apitoktak.voda-play.com/voice/" + file_name
+        voice_url = f"https://apitoktak.voda-play.com/voice/{post_id}/{file_name}"
 
         if check_live_version == "localhost":
             voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
@@ -124,7 +124,6 @@ class VideoService:
             "output": {
                 "format": "mp4",
                 "quality": "veryhigh",
-                
                 # "resolution": "hd",
                 # "aspectRatio": "16:9",
                 # "size": {"width": 1200, "height": 800},
@@ -392,7 +391,6 @@ def get_random_videos(limit=2):
         logger.error(f"get_random_videos: {str(e)}")
         return []
 
- 
 
 def generate_srt(post_id, captions):
     """
