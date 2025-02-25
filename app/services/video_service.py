@@ -150,7 +150,7 @@ class VideoService:
                 result = response.json()
                 result["status_code"] = 200
                 
-                logger.info(f"render_id  : {result["response"]["id"]}")
+                logger.info(f"render_id : : {result}")
                 return result
             else:
                 result = response.json()
