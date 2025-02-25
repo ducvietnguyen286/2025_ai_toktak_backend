@@ -78,6 +78,10 @@ class FacebookService:
         self.link = link
         self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
         self.meta = json.loads(self.user_link.meta)
+        access_token = self.meta.get("AccessToken")
+        if not access_token:
+            access_token = self.meta.get("access_token")
+        self.access_token = access_token
 
         if post.type == "image":
             self.send_post_image(post, link)
