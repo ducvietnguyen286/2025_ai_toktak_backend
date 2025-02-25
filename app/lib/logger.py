@@ -39,7 +39,7 @@ def log_social_message(message):
     custom_handler.setLevel(logging.INFO)
     custom_handler.setFormatter(formatter)
 
-    custom_logger = logging.getLogger("customLogger")
+    custom_logger = logging.getLogger("SocialLogger")
     custom_logger.setLevel(logging.INFO)
     custom_logger.addHandler(custom_handler)
 
