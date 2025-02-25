@@ -169,7 +169,6 @@ class APIPostToLinks(Resource):
             is_all = args.get("is_all", 0)
             post_id = args.get("post_id", 0)
             link_ids = args.get("link_ids", [])
-            page_id = args.get("page_id", "")
 
             if not link_ids and is_all == 0:
                 return Response(
