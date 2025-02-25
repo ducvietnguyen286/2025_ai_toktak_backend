@@ -29,6 +29,7 @@ class VideoService:
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
         is_ai_image = config["SHOTSTACK_AI_IMAGE"]
 
+        logger.info(f"is_ai_image: {is_ai_image}")
         # FAKE để cho local host không tạo AI
         if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
             is_ai_image = "0"
