@@ -9,23 +9,23 @@ RABBITMQ_PASSWORD = os.environ.get("RABBITMQ_PASSWORD") or "guest"
 RABBITMQ_QUEUE = os.environ.get("RABBITMQ_QUEUE") or "hello"
 
 
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters(
-        host=RABBITMQ_HOST,
-        port=int(RABBITMQ_PORT),
-        credentials=pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD),
+def create_connection():
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(
+            host=RABBITMQ_HOST,
+            port=int(RABBITMQ_PORT),
+            credentials=pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD),
+        )
     )
-)
-channel = connection.channel()
-
-channel.queue_declare(queue=RABBITMQ_QUEUE)
+    channel = connection.channel()
+    channel.queue_declare(queue=RABBITMQ_QUEUE)
+    return connection, channel
 
 
 def send_message(message):
-
+    connection, channel = create_connection()
     channel.basic_publish(
         exchange="", routing_key=RABBITMQ_QUEUE, body=json.dumps(message)
     )
     print(f" [x] Sent '{message}'")
-
     connection.close()
