@@ -141,7 +141,7 @@ class TwitterService:
         self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
         self.meta = json.loads(self.user_link.meta)
 
-        if post.type == "social":
+        if post.type == "image":
             self.send_post_social(post, link)
         if post.type == "video":
             self.send_post_video(post, link)
@@ -150,7 +150,14 @@ class TwitterService:
         log_social_message(f"Send post Social to Twitter {post.id}")
         if post.status != 1 or post.thumbnail == "" or post.thumbnail is None:
             return
-        self.send_post_to_x(post.thumbnail, post, link)
+        images = post.images
+        image = ""
+        if images:
+            images = json.loads(images)
+            image = images[0]
+        else:
+            image = post.thumbnail
+        self.send_post_to_x(image, post, link)
         log_social_message(f"Send post Social to Twitter {post.id} successfully")
 
     def send_post_video(self, post, link):
