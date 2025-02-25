@@ -52,15 +52,13 @@ class TwitterTokenService:
                 response=json.dumps(data),
             )
 
+            has_token = data.get("access_token")
+            if not has_token:
+                return False
+
             meta = user_link.meta
             meta = json.loads(meta)
-            meta.update(
-                {
-                    "access_token": data["access_token"],
-                    "refresh_token": data["refresh_token"],
-                    "scope": data["scope"],
-                }
-            )
+            meta.update(data)
 
             user_link.meta = json.dumps(meta)
             user_link.status = 1
@@ -75,11 +73,6 @@ class TwitterTokenService:
     def refresh_token(self, link, user):
         try:
             TOKEN_URL = "https://api.x.com/2/oauth2/token"
-
-            credentials_str = f"{self.client_id}:{self.client_secret}"
-            credentials = base64.b64encode(credentials_str.encode("utf-8")).decode(
-                "utf-8"
-            )
 
             credentials_str = f"{self.client_id}:{self.client_secret}"
             credentials = base64.b64encode(credentials_str.encode("utf-8")).decode(
@@ -106,8 +99,6 @@ class TwitterTokenService:
 
             log_social_message(data)
 
-            user_link = UserService.find_user_link(link_id=link.id, user_id=user.id)
-
             RequestSocialLogService.create_request_social_log(
                 social="X",
                 user_id=user_link.user_id,
@@ -116,15 +107,13 @@ class TwitterTokenService:
                 response=json.dumps(data),
             )
 
+            has_token = data.get("access_token")
+            if not has_token:
+                return False
+
             meta = user_link.meta
             meta = json.loads(meta)
-            meta.update(
-                {
-                    "access_token": data["access_token"],
-                    "refresh_token": data["refresh_token"],
-                    "scope": data["scope"],
-                }
-            )
+            meta.update(data)
 
             user_link.meta = json.dumps(meta)
             user_link.save()
