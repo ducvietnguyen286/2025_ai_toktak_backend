@@ -20,12 +20,8 @@ from app.services.request_social_log import RequestSocialLogService
 from app.services.tiktok_callback import TiktokCallbackService
 from app.services.user import UserService
 from app.services.link import LinkService
-from app.third_parties.facebook import FacebookService
-from app.third_parties.instagram import InstagramService
-from app.third_parties.thread import ThreadService
-from app.third_parties.tiktok import TiktokService
-from app.third_parties.twitter import TwitterService, TwitterTokenService
-from app.third_parties.youtube import YoutubeService
+from app.third_parties.twitter import TwitterTokenService
+from app.rabbitmq.producer import send_message
 
 ns = Namespace(name="user", description="User API")
 
@@ -213,38 +209,18 @@ class APIPostToLinks(Resource):
                     status=400,
                 ).to_dict()
 
-            links = LinkService.get_not_json_links()
-            link_dict = {link.id: link for link in links}
             post = PostService.find_post(post_id)
 
             for link in active_links:
-                current_link = link_dict.get(link)
-                if not current_link:
-                    continue
-                social_type = current_link.social_type
-                type = current_link.type
-                if social_type == "SOCIAL":
-
-                    if type == "FACEBOOK":
-                        FacebookService().send_post(post, current_link)
-
-                    if type == "TELEGRAM":
-                        pass
-
-                    if type == "X":
-                        TwitterService().send_post(post, current_link)
-
-                    if type == "INSTAGRAM":
-                        InstagramService().send_post(post, current_link)
-
-                    if type == "YOUTUBE":
-                        YoutubeService().send_post(post, current_link)
-
-                    if type == "TIKTOK":
-                        TiktokService().send_post(post, current_link)
-
-                    if type == "THREAD":
-                        ThreadService().send_post(post, current_link)
+                message = {
+                    "action": "SEND_POST_TO_LINK",
+                    "message": {
+                        "link_id": link,
+                        "post_id": post.id,
+                        "user_id": current_user.id,
+                    },
+                }
+                send_message(message)
 
             return Response(
                 message="Tạo bài viết thành công. Vui lòng đợi trong giây lát",

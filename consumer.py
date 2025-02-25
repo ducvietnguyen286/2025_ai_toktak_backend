@@ -117,7 +117,7 @@ def start_consumer():
 
 def __config_logging(app):
     app.logger.setLevel(DEBUG)
-    app.logger.info("Start schedule...")
+    app.logger.info("Start Consumer...")
 
 
 def __init_app(app):
