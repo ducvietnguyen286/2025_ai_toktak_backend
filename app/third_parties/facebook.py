@@ -4,6 +4,7 @@ import time
 import requests
 
 from app.lib.logger import log_social_message
+from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
 
@@ -11,6 +12,45 @@ from app.services.user import UserService
 class FacebookTokenService:
     def __init__(self):
         pass
+
+    @staticmethod
+    def fetch_page_token(user_link):
+        try:
+            log_social_message(
+                "------------------  FETCH FACEBOOK PAGE TOKEN  ------------------"
+            )
+
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("AccessToken")
+            if not access_token:
+                access_token = meta.get("access_token")
+                if not access_token:
+                    log_social_message("Token not found")
+                    return None
+
+            PAGE_URL = f"https://graph.facebook.com/v22.0/me/accounts?access_token=${access_token}&fields=id,name,picture,access_token,tasks"
+
+            response = requests.get(PAGE_URL)
+            data = response.json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="FACEBOOK",
+                user_id=user_link.user_id,
+                type="fetch_page_token",
+                request=json.dumps({"access_token": access_token}),
+                response=json.dumps(data),
+            )
+
+            if "data" not in data:
+                user_link.status = 0
+                user_link.save()
+                return None
+
+            return data.get("data")
+
+        except Exception as e:
+            log_social_message(e)
+            return None
 
     @staticmethod
     def exchange_token(user_link):
@@ -41,6 +81,14 @@ class FacebookTokenService:
             response = requests.get(EXCHANGE_URL, params=params)
             data = response.json()
 
+            RequestSocialLogService.create_request_social_log(
+                social="FACEBOOK",
+                user_id=user_link.user_id,
+                type="refresh_token",
+                request=json.dumps(params),
+                response=json.dumps(data),
+            )
+
             log_social_message("Exchange token response:", data)
 
             if "access_token" in data:
@@ -63,8 +111,8 @@ class FacebookTokenService:
 
 
 class FacebookService:
-    def __init__(self, page_id):
-        self.page_id = page_id
+    def __init__(self):
+        self.pages = []
         self.photo_ids = []
         self.video_id = ""
         self.url_to_video = ""
@@ -82,6 +130,21 @@ class FacebookService:
         if not access_token:
             access_token = self.meta.get("access_token")
         self.access_token = access_token
+
+        token_pages = FacebookTokenService.fetch_page_token(self.user_link)
+        if not token_pages:
+            log_social_message("Token not found")
+
+        for page in token_pages:
+            tasks = tasks.get("tasks", [])
+            if "CREATE_CONTENT" not in tasks:
+                continue
+
+            page_access = {
+                "id": page.get("id"),
+                "access_token": page.get("access_token"),
+            }
+            self.pages.append(page_access)
 
         if post.type == "image":
             self.send_post_image(post, link)
@@ -224,65 +287,70 @@ class FacebookService:
         return result
 
     def send_post_image(self, post, link):
-        page_id = self.page_id
-        FEED_URL = f"https://graph.facebook.com/{page_id}/feed"
+        for page in self.pages:
+            page_id = page["id"]
+            page_access_token = page["access_token"]
+            FEED_URL = f"https://graph.facebook.com/v18.0/{page_id}/feed"
 
-        images = post.images
-        images = json.loads(images)
+            images = post.images
+            images = json.loads(images)
 
-        self.unpublish_images(images)
+            self.unpublish_images(images)
 
-        attached_media = [{"media_fbid": pid} for pid in self.photo_ids]
+            attached_media = [{"media_fbid": pid} for pid in self.photo_ids]
 
-        post_data = {
-            "message": post.content + " " + post.hashtag,
-            "attached_media": json.dumps(attached_media),
-            "access_token": self.access_token,
-        }
-        post_response = requests.post(FEED_URL, data=post_data)
-        result = post_response.json()
-        if "id" not in result:
-            error = result.get("error", {})
-            error_message = error.get("message", "Error")
+            post_data = {
+                "message": post.content + " " + post.hashtag,
+                "attached_media": attached_media,
+                "access_token": page_access_token,
+            }
+            post_response = requests.post(FEED_URL, data=post_data)
+            result = post_response.json()
+            if "id" not in result:
+                error = result.get("error", {})
+                error_message = error.get("message", "Error")
+                SocialPostService.create_social_post(
+                    link_id=link.id,
+                    user_id=post.user_id,
+                    post_id=post.id,
+                    status="ERRORED",
+                    error_message=error_message,
+                )
+                return False
+            post_id = result["id"]
+
+            PERMALINK_URL = f"https://graph.facebook.com/{post_id}"
+            params = {"fields": "permalink_url", "access_token": self.access_token}
+
+            response_permalink = requests.get(PERMALINK_URL, params=params)
+            result_permalink = response_permalink.json()
+
+            permalink = result_permalink["permalink_url"]
             SocialPostService.create_social_post(
                 link_id=link.id,
                 user_id=post.user_id,
                 post_id=post.id,
-                status="ERRORED",
-                error_message=error_message,
+                status="PUBLISHED",
+                social_link=permalink,
             )
-            return False
-        post_id = result["id"]
-
-        PERMALINK_URL = f"https://graph.facebook.com/{post_id}"
-        params = {"fields": "permalink_url", "access_token": self.access_token}
-
-        response_permalink = requests.get(PERMALINK_URL, params=params)
-        result_permalink = response_permalink.json()
-
-        permalink = result_permalink["permalink_url"]
-        SocialPostService.create_social_post(
-            link_id=link.id,
-            user_id=post.user_id,
-            post_id=post.id,
-            status="PUBLISHED",
-            social_link=permalink,
-        )
         return True
 
     def unpublish_images(self, images):
-        page_id = self.page_id
-        UNPUBLISH_URL = f"https://graph.facebook.com/{page_id}/photos"
+        for page in self.pages:
+            page_id = page["id"]
+            page_access_token = page["access_token"]
 
-        for url in images:
-            data = {
-                "url": url,
-                "published": "false",
-                "access_token": self.access_token,
-            }
-            response = requests.post(UNPUBLISH_URL, data=data)
-            result = response.json()
-            if "id" in result:
-                self.photo_ids.append(result["id"])
-            else:
-                log_social_message(f"Lỗi upload ảnh: {result}")
+            UNPUBLISH_URL = f"`https://graph.facebook.com/v22.0/${page_id}/photos"
+
+            for url in images:
+                data = {
+                    "url": url,
+                    "published": "false",
+                    "access_token": page_access_token,
+                }
+                response = requests.post(UNPUBLISH_URL, data=data)
+                result = response.json()
+                if "id" in result:
+                    self.photo_ids.append(result["id"])
+                else:
+                    log_social_message(f"Lỗi upload ảnh: {result}")
