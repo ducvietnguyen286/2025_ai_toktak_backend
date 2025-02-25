@@ -123,6 +123,9 @@ class APINewLink(Resource):
                 code = args.get("Code")
                 is_active = TwitterTokenService().fetch_token(code, user_link)
         else:
+            user_link.meta = json.dumps(info)
+            user_link.save()
+
             if link.type == "X":
                 code = args.get("Code")
                 is_active = TwitterTokenService().fetch_token(code, user_link)
