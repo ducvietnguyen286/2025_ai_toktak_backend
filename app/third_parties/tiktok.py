@@ -5,6 +5,7 @@ import traceback
 import requests
 from app.services.request_social_log import RequestSocialLogService
 from app.services.user import UserService
+from app.lib.logger import log_social_message
 
 
 class TiktokTokenService:
@@ -12,7 +13,9 @@ class TiktokTokenService:
     @staticmethod
     def refresh_token(link, user):
         try:
-            print("------------------  REFRESH TIKTOK TOKEN  ------------------")
+            log_social_message(
+                "------------------  REFRESH TIKTOK TOKEN  ------------------"
+            )
             user_link = UserService.find_user_link(link_id=link.id, user_id=user.id)
             meta = json.loads(user_link.meta)
             refresh_token = meta.get("refresh_token")
@@ -34,7 +37,7 @@ class TiktokTokenService:
             except Exception as e:
                 return f"Error parsing response: {e}", 500
 
-            print("Refresh token response:", token_data)
+            log_social_message("Refresh token response:", token_data)
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
@@ -55,7 +58,7 @@ class TiktokTokenService:
             return token_data
         except Exception as e:
             traceback.print_exc()
-            print(e)
+            log_social_message(e)
 
 
 class TiktokService:
@@ -82,13 +85,13 @@ class TiktokService:
 
     def upload_video(self, media):
         try:
-            print("Upload video to Tiktok")
+            log_social_message("Upload video to Tiktok")
             # FILE INFO
             response = requests.get(media)
 
             upload_info = self.upload_video_init(response)
-            print("Upload video info:", upload_info)
-            print("Upload video to Tiktok: " + media)
+            log_social_message("Upload video info:", upload_info)
+            log_social_message("Upload video to Tiktok: " + media)
             info_data = upload_info.get("data")
 
             upload_url = info_data.get("upload_url")
@@ -97,10 +100,10 @@ class TiktokService:
             self.upload_video_append(upload_url, response)
 
             self.check_status(publish_id)
-            print("Upload video success")
+            log_social_message("Upload video success")
             return True
         except Exception as e:
-            print(f"Error upload video to Tiktok: {str(e)}")
+            log_social_message(f"Error upload video to Tiktok: {str(e)}")
             return False
 
     def check_status(self, publish_id):
@@ -129,7 +132,7 @@ class TiktokService:
 
     def upload_video_append(upload_url, response):
         try:
-            print("Upload video to Tiktok APPEND")
+            log_social_message("Upload video to Tiktok APPEND")
             media_type = response.headers.get("content-type")
             media_size = float(response.headers.get("content-length"))
 
@@ -139,13 +142,13 @@ class TiktokService:
                 "Content-Type": media_type,
             }
             response = requests.put(upload_url, headers=headers, data=video_file)
-            print("Upload video")
+            log_social_message("Upload video")
             return response.json()
         except Exception as e:
-            print(f"Error upload video to Tiktok: {str(e)}")
+            log_social_message(f"Error upload video to Tiktok: {str(e)}")
 
     def upload_video_init(self, media):
-        print("Upload video to Tiktok INIT")
+        log_social_message("Upload video to Tiktok INIT")
         access_token = self.meta.get("access_token")
         media_size = int(media.headers.get("content-length"))
 
@@ -158,7 +161,7 @@ class TiktokService:
             "Content-Type": "application/json; charset=UTF-8",
         }
 
-        print(headers)
+        log_social_message(headers)
 
         chunk_size = 10000000
 
@@ -171,12 +174,12 @@ class TiktokService:
             }
         }
 
-        print("Payload:", payload)
+        log_social_message("Payload:", payload)
 
         upload_response = requests.post(URL_VIDEO_UPLOAD, headers=headers, data=payload)
         parsed_response = upload_response.json()
 
-        print("Upload video to Tiktok INIT response:", parsed_response)
+        log_social_message("Upload video to Tiktok INIT response:", parsed_response)
 
         error = parsed_response.get("error")
         error_code = error.get("code")
