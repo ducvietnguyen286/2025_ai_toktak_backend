@@ -305,13 +305,21 @@ class FacebookService:
 
             attached_media = [{"media_fbid": pid} for pid in self.photo_ids]
 
+            log_social_message(f"Attached media: {attached_media}")
+
             post_data = {
                 "message": post.content + " " + post.hashtag,
                 "attached_media": attached_media,
                 "access_token": page_access_token,
             }
+
+            log_social_message(f"post_data: {post_data}")
+
             post_response = requests.post(FEED_URL, data=post_data)
             result = post_response.json()
+
+            log_social_message(f"result: {result}")
+
             if "id" not in result:
                 error = result.get("error", {})
                 error_message = error.get("message", "Error")
