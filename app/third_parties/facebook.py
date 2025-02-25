@@ -310,7 +310,7 @@ class FacebookService:
 
             self.unpublish_images(images)
 
-            attached_media = [{"media_fbid": pid} for pid in self.photo_ids]
+            attached_media = [pid for pid in self.photo_ids]
 
             log_social_message(f"Attached media: {attached_media}")
 
