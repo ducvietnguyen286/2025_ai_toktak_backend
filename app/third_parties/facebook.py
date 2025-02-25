@@ -121,8 +121,6 @@ class FacebookService:
         self.user = None
         self.link = None
         self.meta = None
-        self.page_id = None
-        self.access_token = None
 
     def send_post(self, post, link):
         user_id = post.user_id
@@ -158,37 +156,39 @@ class FacebookService:
             self.send_post_video(post, link)
 
     def send_post_video(self, post, link):
-        self.start_session_upload_reel()
-        self.upload_video(post.video_url)
-        while True:
-            status = self.get_upload_status()
-            processing_phase = status.get("processing_progress")
-            publishing_phase = status.get("publishing_phase")
-            uploading_phase = status.get("uploading_phase")
-            video_status = status.get("video_status", "uploading")
+        for page in self.pages:
+            page_id = page.get("id")
+            page_access_token = page.get("access_token")
 
-            status_processing_phase = processing_phase.get("status")
-            status_publishing_phase = publishing_phase.get("status")
-            status_uploading_phase = uploading_phase.get("status")
+            result = self.start_session_upload_reel(
+                page_id=page_id, page_access_token=page_access_token
+            )
+            video_id = result["video_id"]
 
-            if (
-                video_status == "ready"
-                and status_processing_phase == "completed"
-                and status_publishing_phase == "published"
-                and status_uploading_phase == "complete"
-            ):
-                self.publish_the_reel(post)
-                reels = self.get_reel_uploaded()
+            self.upload_video(
+                video_id=video_id,
+                video_url=post.video_url,
+                access_token=page_access_token,
+            )
+            status = self.get_upload_status(video_id, page_access_token)
+            if status.get("status") == "ready":
+                self.publish_the_reel(
+                    post=post,
+                    video_id=video_id,
+                    page_id=page_id,
+                    access_token=page_access_token,
+                )
+                reels = self.get_reel_uploaded(
+                    page_id=page_id, access_token=page_access_token
+                )
                 #: TODO: Get the reel id and permalink to reel. Save to database with status PUBLISHED
                 break
+            else:
+                video_status = status.get("video_status")
+                processing_phase = status.get("processing_progress")
+                publishing_phase = status.get("publishing_phase")
+                uploading_phase = status.get("uploading_phase")
 
-            if (
-                video_status == "error"
-                or status_processing_phase == "error"
-                or status_publishing_phase == "error"
-                or status_uploading_phase == "error"
-            ):
-                log_social_message("Error upload video")
                 if video_status == "error":
                     log_social_message("Tình trạng video lỗi. Không thể upload video")
                     SocialPostService.create_social_post(
@@ -198,7 +198,7 @@ class FacebookService:
                         status="ERRORED",
                         error_message="Video is error. Can't upload video",
                     )
-                if status_processing_phase == "error":
+                if processing_phase == "error":
                     error_message = processing_phase.get("error").get("message")
                     log_social_message(error_message)
                     SocialPostService.create_social_post(
@@ -209,7 +209,7 @@ class FacebookService:
                         error_message=error_message,
                     )
 
-                if status_publishing_phase == "error":
+                if publishing_phase == "error":
                     error_message = publishing_phase.get("error").get("message")
                     log_social_message(error_message)
                     SocialPostService.create_social_post(
@@ -219,7 +219,7 @@ class FacebookService:
                         status="ERRORED",
                         error_message=error_message,
                     )
-                if status_uploading_phase == "error":
+                if uploading_phase == "error":
                     error_message = uploading_phase.get("error").get("message")
                     log_social_message(error_message)
                     SocialPostService.create_social_post(
@@ -229,50 +229,84 @@ class FacebookService:
                         status="ERRORED",
                         error_message=error_message,
                     )
-                break
-
-            time.sleep(1)
         return True
 
-    def start_session_upload_reel(self):
-        page_id = self.page_id
+    def start_session_upload_reel(self, page_id, page_access_token):
         URL_UPLOAD = f"https://graph.facebook.com/v22.0/{page_id}/video_reels"
 
-        post_data = {"upload_phase": "start", "access_token": self.access_token}
+        post_data = {"upload_phase": "start", "access_token": page_access_token}
         headers = {"Content-Type": "application/json"}
 
         post_response = requests.post(URL_UPLOAD, data=post_data, headers=headers)
         result = post_response.json()
-        self.video_id = result["video_id"]
-        self.url_to_video = result["upload_url"]
+        return result
 
-    def upload_video(self, video_url):
-        UPLOAD_VIDEO_URL = (
-            f"https://rupload.facebook.com/video-upload/v22.0/{self.video_id}"
-        )
-        headers = {
-            "Authorization": f"OAuth {self.access_token}",
-            "file_url": video_url,
-        }
-        post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers)
-        result = post_response.json()
-        log_social_message("Upload video:", result)
+    def upload_video(self, video_id, video_url, access_token):
+        for page in self.pages:
+            UPLOAD_VIDEO_URL = (
+                f"https://rupload.facebook.com/video-upload/v22.0/{video_id}"
+            )
+            headers = {
+                "Authorization": f"OAuth {access_token}",
+                "file_url": video_url,
+            }
+            post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers)
+            result = post_response.json()
+            log_social_message("Upload video:", result)
 
-    def get_upload_status(self):
-        URL_CHECK_STATUS = f"https://graph.facebook.com/v22.0/{self.video_id}?fields=status&access_token={self.access_token}"
-        get_response = requests.get(URL_CHECK_STATUS)
-        result = get_response.json()
-        log_social_message("Check status:", result)
-        return result["status"]
+    def get_upload_status(self, video_id, access_token):
+        status = None
+        try:
+            URL_CHECK_STATUS = f"https://graph.facebook.com/v22.0/{video_id}?fields=status&access_token={access_token}"
+            get_response = requests.get(URL_CHECK_STATUS)
+            result = get_response.json()
 
-    def publish_the_reel(self, post):
-        page_id = self.page_id
+            status = result["status"]
+        except Exception as e:
+            log_social_message(f"Error get upload status: {str(e)}")
+            return False
+
+        processing_phase = status.get("processing_progress")
+        publishing_phase = status.get("publishing_phase")
+        uploading_phase = status.get("uploading_phase")
+        video_status = status.get("video_status", "uploading")
+
+        status_processing_phase = processing_phase.get("status")
+        status_publishing_phase = publishing_phase.get("status")
+        status_uploading_phase = uploading_phase.get("status")
+
+        if (
+            video_status == "ready"
+            and status_processing_phase == "completed"
+            and status_publishing_phase == "published"
+            and status_uploading_phase == "complete"
+        ):
+            return {
+                status: "ready",
+            }
+        elif (
+            video_status == "error"
+            or status_processing_phase == "error"
+            or status_publishing_phase == "error"
+            or status_uploading_phase == "error"
+        ):
+            return {
+                status: "error",
+                video_status: video_status,
+                processing_phase: processing_phase,
+                publishing_phase: publishing_phase,
+                uploading_phase: uploading_phase,
+            }
+        else:
+            return self.get_upload_status()
+
+    def publish_the_reel(self, post, video_id, page_id, access_token):
         URL_PUBLISH = f"https://graph.facebook.com/v22.0/{page_id}/video_reels"
 
         post_data = {
             "upload_phase": "finish",
-            "video_id": self.video_id,
-            "access_token": self.access_token,
+            "video_id": video_id,
+            "access_token": access_token,
             "video_state": "PUBLISHED",
             "description": post.title + " " + post.hashtag,
         }
@@ -285,8 +319,8 @@ class FacebookService:
         result = post_response.json()
         return result
 
-    def get_reel_uploaded(self):
-        URL_REEL = f"https://graph.facebook.com/v22.0/{self.page_id}/video_reels?access_token={self.access_token}"
+    def get_reel_uploaded(self, page_id, access_token):
+        URL_REEL = f"https://graph.facebook.com/v22.0/{page_id}/video_reels?access_token={access_token}"
         get_response = requests.get(URL_REEL)
         result = get_response.json()
         log_social_message("Get reel:", result)
