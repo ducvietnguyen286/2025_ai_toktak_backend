@@ -160,7 +160,6 @@ class APIPostToLinks(Resource):
                 "uniqueItems": True,
             },
             "post_id": {"type": "integer"},
-            "page_id": {"type": "string"},
         },
         required=["post_id"],
     )
@@ -220,7 +219,6 @@ class APIPostToLinks(Resource):
                         "link_id": link,
                         "post_id": post.id,
                         "user_id": current_user.id,
-                        "page_id": page_id,
                     },
                 }
                 send_message(message)
