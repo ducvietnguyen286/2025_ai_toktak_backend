@@ -33,7 +33,6 @@ class VideoService:
         # FAKE để cho local host không tạo AI
         if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
             is_ai_image = "0"
-        
 
         voice_dir = f"static/voice/{post_id}"
         os.makedirs(voice_dir, exist_ok=True)
@@ -137,7 +136,7 @@ class VideoService:
             if response.status_code == 201:
                 result = response.json()
                 result["status_code"] = 200
-                
+
                 logger.info(f"render_id : : {result}")
                 return result
             else:
@@ -254,7 +253,7 @@ class VideoService:
                     "type": "caption",
                     "src": "https://apitoktak.voda-play.com/voice/caption/first_video_transcript.srt",
                     "font": {
-                        "family": "Open Sans",
+                        "fontFamily": "Noto Sans KR",
                         "color": "#ffffff",
                         "opacity": 0.8,
                         "size": 50,
