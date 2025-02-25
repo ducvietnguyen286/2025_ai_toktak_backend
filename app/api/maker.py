@@ -44,7 +44,6 @@ class APICreateBatch(Resource):
             max_count_image = int(max_count_image)
 
             data = Scraper().scraper({"url": url})
-            return data
 
             logger.info("data: {0}".format(data))
 
