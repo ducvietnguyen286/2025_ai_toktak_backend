@@ -182,16 +182,17 @@ class FacebookService:
                 reels = self.get_reel_uploaded(
                     page_id=page_id, access_token=page_access_token
                 )
+                reel_data = reels.get("data")
+                reel_id = reel_data[0].get("id")
+                permalink = f"https://www.facebook.com/reel/{reel_id}"
 
-                # SocialPostService.create_social_post(
-                #     link_id=link.id,
-                #     user_id=post.user_id,
-                #     post_id=post.id,
-                #     status="ERRORED",
-                #     error_message="Video is error. Can't upload video",
-                # )
-                #: TODO: Get the reel id and permalink to reel. Save to database with status PUBLISHED
-                break
+                SocialPostService.create_social_post(
+                    link_id=link.id,
+                    user_id=post.user_id,
+                    post_id=post.id,
+                    status="PUBLISHED",
+                    social_link=permalink,
+                )
             else:
                 log_social_message(f"Upload video error: {result_status}")
                 video_status = result_status.get("video_status")
@@ -280,7 +281,7 @@ class FacebookService:
             "video_id": video_id,
             "access_token": access_token,
             "video_state": "PUBLISHED",
-            "description": post.title + " " + post.hashtag,
+            "description": post.content + " " + post.hashtag,
         }
 
         final_url = (
