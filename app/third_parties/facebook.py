@@ -170,8 +170,9 @@ class FacebookService:
                 video_url=post.video_url,
                 access_token=page_access_token,
             )
-            status = self.get_upload_status(video_id, page_access_token)
-            if status.get("status") == "ready":
+            result_status = self.get_upload_status(video_id, page_access_token)
+            status = result_status.get("status")
+            if status == "ready":
                 self.publish_the_reel(
                     post=post,
                     video_id=video_id,
@@ -192,10 +193,9 @@ class FacebookService:
                 #: TODO: Get the reel id and permalink to reel. Save to database with status PUBLISHED
                 break
             else:
-                video_status = status.get("video_status")
-                processing_phase = status.get("processing_progress")
-                publishing_phase = status.get("publishing_phase")
-                uploading_phase = status.get("uploading_phase")
+                log_social_message(f"Upload video error: {result_status}")
+                video_status = result_status.get("video_status")
+                uploading_phase = result_status.get("uploading_phase")
 
                 if video_status == "error":
                     log_social_message("Tình trạng video lỗi. Không thể upload video")
@@ -205,27 +205,6 @@ class FacebookService:
                         post_id=post.id,
                         status="ERRORED",
                         error_message="Video is error. Can't upload video",
-                    )
-                if processing_phase == "error":
-                    error_message = processing_phase.get("error").get("message")
-                    log_social_message(error_message)
-                    SocialPostService.create_social_post(
-                        link_id=link.id,
-                        user_id=post.user_id,
-                        post_id=post.id,
-                        status="ERRORED",
-                        error_message=error_message,
-                    )
-
-                if publishing_phase == "error":
-                    error_message = publishing_phase.get("error").get("message")
-                    log_social_message(error_message)
-                    SocialPostService.create_social_post(
-                        link_id=link.id,
-                        user_id=post.user_id,
-                        post_id=post.id,
-                        status="ERRORED",
-                        error_message=error_message,
                     )
                 if uploading_phase == "error":
                     error_message = uploading_phase.get("error").get("message")
@@ -276,35 +255,18 @@ class FacebookService:
                 "error": str(e),
             }
 
-        processing_phase = status.get("processing_progress")
-        publishing_phase = status.get("publishing_phase")
         uploading_phase = status.get("uploading_phase")
         video_status = status.get("video_status", "uploading")
-
-        status_processing_phase = processing_phase.get("status")
-        status_publishing_phase = publishing_phase.get("status")
         status_uploading_phase = uploading_phase.get("status")
 
-        if (
-            video_status == "ready"
-            and status_processing_phase == "completed"
-            and status_publishing_phase == "published"
-            and status_uploading_phase == "complete"
-        ):
+        if video_status == "upload_complete" and status_uploading_phase == "complete":
             return {
                 "status": "ready",
             }
-        elif (
-            video_status == "error"
-            or status_processing_phase == "error"
-            or status_publishing_phase == "error"
-            or status_uploading_phase == "error"
-        ):
+        elif video_status == "error":
             return {
                 "status": "error",
                 "video_status": video_status,
-                "processing_phase": processing_phase,
-                "publishing_phase": publishing_phase,
                 "uploading_phase": uploading_phase,
             }
         else:
