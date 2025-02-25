@@ -148,7 +148,8 @@ class APIMakePost(Resource):
             render_id = ""
             maker_images = []
             captions = []
-
+            
+            thumbnail = batch.thumbnail
             if type == "video":
                 response = call_chatgpt_create_caption(images, data, post.id)
                 if response:
@@ -159,8 +160,10 @@ class APIMakePost(Resource):
 
                     captions = parse_response.get("captions", [])
                     logger.info("captionscaptions+++++++++++++++++++++++++++")
+                    logger.info(response)
                     logger.info(json.dumps(captions))
                     logger.info("captionscaptions+++++++++++++++++++++++++++")
+                    images = [thumbnail] + images
 
                     if len(images) > 0:
                         image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
