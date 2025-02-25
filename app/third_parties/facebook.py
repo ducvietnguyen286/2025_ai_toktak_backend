@@ -21,7 +21,9 @@ class FacebookTokenService:
             )
 
             meta = json.loads(user_link.meta)
+            log_social_message(f"Meta: {meta}")
             access_token = meta.get("AccessToken")
+            log_social_message(f"AccessToken: {access_token}")
             if not access_token:
                 access_token = meta.get("access_token")
                 if not access_token:
