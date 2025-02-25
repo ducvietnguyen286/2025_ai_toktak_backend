@@ -123,6 +123,8 @@ class VideoService:
             },
             "output": {
                 "format": "mp4",
+                "quality": "veryhigh",
+                
                 # "resolution": "hd",
                 # "aspectRatio": "16:9",
                 # "size": {"width": 1200, "height": 800},
@@ -390,33 +392,7 @@ def get_random_videos(limit=2):
         logger.error(f"get_random_videos: {str(e)}")
         return []
 
-
-# def generate_srt(post_id, captions):
-#     """
-#     Tạo file transcript.srt từ danh sách captions, mỗi đoạn có thời gian cách nhau 5 giây.
-#     Lưu vào thư mục static/voice/caption/
-#     """
-#     file_path = f"voice/{post_id}"
-#     os.makedirs(f"static/{file_path}", exist_ok=True)  # Tạo thư mục nếu chưa có
-
-#     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-#     file_name = f"transcript_{timestamp}.srt"
-
-#     file_path_srt = f"static/{file_path}/{file_name}"
-
-#     start_time = 5
-
-#     with open(file_path_srt, "w", encoding="utf-8") as f:
-#         for i, text in enumerate(captions, start=1):
-#             start = format_time(start_time)
-#             end = format_time(start_time + 5)
-#             f.write(f"{i}\n")
-#             f.write(f"{start} --> {end}\n")
-#             f.write(f"{text}\n\n")
-#             start_time += 5  # Cộng thêm 5 giây cho mỗi đoạn
-
-#     return f"/{file_path}/{file_name}"
-
+ 
 
 def generate_srt(post_id, captions):
     """
