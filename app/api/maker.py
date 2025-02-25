@@ -151,6 +151,7 @@ class APIMakePost(Resource):
             
             thumbnail = batch.thumbnail
             if type == "video":
+                images = [thumbnail] + images
                 response = call_chatgpt_create_caption(images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
