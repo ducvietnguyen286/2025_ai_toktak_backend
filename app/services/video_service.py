@@ -10,6 +10,7 @@ from sqlalchemy.sql.expression import func
 from flask import Flask, request
 import time
 import datetime
+from app.lib.logger import log_make_video_message
 
 from gtts import gTTS
 import uuid
@@ -29,11 +30,16 @@ class VideoService:
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
         is_ai_image = config["SHOTSTACK_AI_IMAGE"]
 
+        log_make_video_message(f"is_ai_image: {is_ai_image}")
         # FAKE để cho local host không tạo AI
         if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
             is_ai_image = "0"
         else:
             is_ai_image = "1"
+        
+        log_make_video_message(f"domain: {domain}")
+        log_make_video_message(f"is_ai_image: {is_ai_image}")
+        is_ai_image == 0
 
         voice_dir = f"static/voice/{post_id}"
         os.makedirs(voice_dir, exist_ok=True)
