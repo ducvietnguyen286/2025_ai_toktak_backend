@@ -59,6 +59,7 @@ DC인사이드 스타일 게시글 (200자 이내):
 ❌ 기타 특수 문자 사용 금지
 
 이 프롬프트를 활용하면 더욱 강렬하고 효과적인 SNS 콘텐츠를 제작할 수 있습니다! 🚀
+Please return English language only.
 """
     prompt = replace_prompt_with_data(prompt, data)
 
