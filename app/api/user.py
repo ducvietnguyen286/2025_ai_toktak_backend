@@ -205,35 +205,37 @@ class APIPostToLinks(Resource):
                     status=400,
                 ).to_dict()
 
-            links = LinkService.get_links()
-            link_dict = {link.get("id"): link for link in links}
+            links = LinkService.get_not_json_links()
+            link_dict = {link.id: link for link in links}
             post = PostService.find_post(post_id)
 
             for link in active_links:
                 current_link = link_dict.get(link)
                 if not current_link:
                     continue
-                if current_link.social_type == "SOCIAL":
+                social_type = current_link.social_type
+                type = current_link.type
+                if social_type == "SOCIAL":
 
-                    if current_link.type == "FACEBOOK":
+                    if type == "FACEBOOK":
                         FacebookService().send_post(post, current_link)
 
-                    if current_link.type == "TELEGRAM":
+                    if type == "TELEGRAM":
                         pass
 
-                    if current_link.type == "X":
+                    if type == "X":
                         TwitterService().send_post(post, current_link)
 
-                    if current_link.type == "INSTAGRAM":
+                    if type == "INSTAGRAM":
                         InstagramService().send_post(post, current_link)
 
-                    if current_link.type == "YOUTUBE":
+                    if type == "YOUTUBE":
                         YoutubeService().send_post(post, current_link)
 
-                    if current_link.type == "TIKTOK":
+                    if type == "TIKTOK":
                         TiktokService().send_post(post, current_link)
 
-                    if current_link.type == "THREAD":
+                    if type == "THREAD":
                         ThreadService().send_post(post, current_link)
 
             return Response(

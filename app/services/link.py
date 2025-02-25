@@ -19,6 +19,11 @@ class LinkService:
         return [link._to_json() for link in links]
 
     @staticmethod
+    def get_not_json_links():
+        links = Link.query.where(Link.status == 1).all()
+        return links
+
+    @staticmethod
     def update_link(id, *args):
         link = Link.query.get(id)
         link.update(*args)
