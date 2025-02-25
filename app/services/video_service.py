@@ -405,7 +405,7 @@ def generate_srt(post_id, captions):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     file_paths = []
 
-    for i, text in enumerate(captions, start=1):
+    for i, text in enumerate(captions):
         file_name = f"transcript_{timestamp}_{i}.srt"
         file_path_srt = f"static/{file_path}/{file_name}"
 
