@@ -8,6 +8,8 @@ from app.models.setting import Setting
 from app.lib.logger import logger
 from sqlalchemy.sql.expression import func
 from flask import Flask, request
+import time
+import datetime
 
 from gtts import gTTS
 import uuid
@@ -16,7 +18,9 @@ import uuid
 class VideoService:
 
     @staticmethod
-    def create_video_from_images(product_name, images_url, images_slider_url):
+    def create_video_from_images(
+        post_id, product_name, images_url, images_slider_url, captions
+    ):
 
         domain = request.host
 
@@ -31,7 +35,7 @@ class VideoService:
         else:
             is_ai_image = "1"
 
-        voice_dir = "static/voice"
+        voice_dir = f"static/voice/{post_id}"
         os.makedirs(voice_dir, exist_ok=True)
 
         # create voice Google TTS
@@ -67,7 +71,7 @@ class VideoService:
             )
 
         clips_data = VideoService.create_combined_clips(
-            images_url, images_slider_url, prompts, is_ai_image
+            post_id, images_url, images_slider_url, prompts, is_ai_image, captions
         )
 
         payload = {
@@ -82,7 +86,7 @@ class VideoService:
                                     "type": "text",
                                     "text": f"{product_name} 출시되었습니다!",
                                 },
-                                "start": 1,
+                                "start": 5,
                                 "length": "end",
                             }
                         ]
@@ -228,7 +232,12 @@ class VideoService:
         return settings_dict
 
     def create_combined_clips(
-        ai_images, images_slider_url, prompts=None, is_ai_image="0"
+        post_id,
+        ai_images,
+        images_slider_url,
+        prompts=None,
+        is_ai_image="0",
+        captions=None,
     ):
         video_urls = get_random_videos(2)
         # Chọn 2 URL khác nhau một cách ngẫu nhiên
@@ -238,12 +247,42 @@ class VideoService:
         current_start = 0
         intro_length = 5
 
+        file_path_srts = generate_srt(post_id, captions)
+
         clips.append(
             {
                 "asset": {"type": "video", "src": intro_url},
                 "start": current_start,
                 "length": intro_length,
             }
+        )
+
+        clips.append(
+            {
+                "asset": {
+                    "type": "caption",
+                    "src": "https://apitoktak.voda-play.com/voice/caption/first_video_transcript.srt",
+                    "font": {
+                        "family": "Open Sans",
+                        "color": "#ffffff",
+                        "opacity": 0.8,
+                        "size": 50,
+                        "lineHeight": 0.8,
+                        "stroke": "#ff6600",
+                        "strokeWidth": 0.8,
+                    },
+                    "background": {
+                        "color": "#000000",
+                        "opacity": 0.4,
+                        "padding": 80,
+                        "borderRadius": 30,
+                    },
+                    "margin": {"top": 0.05, "left": 0.25, "right": 0.25},
+                    "speed": 1,
+                },
+                "start": 0,
+                "length": 5,
+            },
         )
         current_start += intro_length
 
@@ -274,7 +313,25 @@ class VideoService:
                     "start": current_start + j * time_show_image,
                     "length": time_show_image,
                     "effect": "zoomIn",
-                }
+                },
+            )
+
+        for k, url_srt in enumerate(file_path_srts):
+            check_live_version = os.environ.get("APP_STAGE") or "localhost"
+            url_path_srt = "https://apitoktak.voda-play.com/" + url_srt
+            if check_live_version == "localhost":
+                url_path_srt = (
+                    "https://apitoktak.voda-play.com/voice/caption/transcript.srt"
+                )
+            clips.append(
+                {
+                    "asset": {
+                        "type": "caption",
+                        "src": url_path_srt,
+                    },
+                    "start": current_start + k * time_show_image,
+                    "length": time_show_image,
+                },
             )
 
         current_start += len(images_slider_url) * time_show_image
@@ -289,43 +346,8 @@ class VideoService:
         current_start += outro_length
 
         time_show_caption = 5
-        clips_caption = [
-            {
-                "asset": {
-                    "type": "text",
-                    "text": "Image Number  " + str(text_index + 1),
-                    "font": {
-                        "family": "Open Sans",
-                        "color": "#ff0000",
-                        "opacity": 1,
-                        "size": 72,
-                        "weight": 700,
-                        "lineHeight": 0.85,
-                    },
-                    "alignment": {
-                        "horizontal": "center",
-                        "vertical": "bottom",
-                    },
-                },
-                "start": start_time_caption + text_index * time_show_caption,
-                "length": time_show_caption,
-                # "transition": {"in": "fade", "out": "fade"},
-                "effect": "zoomIn",
-            }
-            for text_index, caption in enumerate(images_slider_url)
-        ]
 
         clips_shape = [
-            # {
-            #     "asset": {
-            #         "type": "shape",
-            #         "shape": "rectangle",
-            #         "rectangle": {"width": 250, "height": 250},
-            #         "fill": {"color": "#000000"},
-            #     },
-            #     "start": 0,
-            #     "length": "auto",
-            # }
             {
                 "asset": {
                     "type": "image",
@@ -335,41 +357,7 @@ class VideoService:
                 "length": "end",
                 "scale": 0.15,
                 "position": "topRight",
-            },
-            # {
-            #     "asset": {
-            #         "type": "title",
-            #         "text": "Xin chào! Đây là caption của tôi.",
-            #         "style": "minimal",
-            #         "size": "medium",
-            #         "color": "#FFFFFF",
-            #         "background": "#000000",
-            #     },
-            #     "start": 1,
-            #     "length": 10,
-            #     "position": "bottom",
-            # },
-            # {
-            #     "asset": {
-            #         "type": "title",
-            #         "text": "Phụ đề sẽ tự động xuất hiện tại đây.",
-            #         "style": "minimal",
-            #         "size": "medium",
-            #         "color": "#FFFFFF",
-            #         "background": "#000000",
-            #     },
-            #     "start": 10,
-            #     "length": 100,
-            #     "position": "bottom",
-            # },
-            # {
-            #     "asset": {
-            #         "type": "caption",
-            #         "src": "https://shotstack-assets.s3.amazonaws.com/captions/transcript.srt",
-            #     },
-            #     "start": 0,
-            #     "length": "end",
-            # },
+            }
             # {
             #     "asset": {
             #         "type": "html",
@@ -384,7 +372,7 @@ class VideoService:
         ]
 
         # Kết hợp hai danh sách clip lại
-        combined_clips = clips + clips_caption + clips_shape
+        combined_clips = clips_shape + clips
         return {"clips": combined_clips}
 
 
@@ -399,4 +387,71 @@ def get_random_videos(limit=2):
         return [video.video_url for video in videos]
 
     except Exception as e:
+        logger.error(f"get_random_videos: {str(e)}")
         return []
+
+
+# def generate_srt(post_id, captions):
+#     """
+#     Tạo file transcript.srt từ danh sách captions, mỗi đoạn có thời gian cách nhau 5 giây.
+#     Lưu vào thư mục static/voice/caption/
+#     """
+#     file_path = f"voice/{post_id}"
+#     os.makedirs(f"static/{file_path}", exist_ok=True)  # Tạo thư mục nếu chưa có
+
+#     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+#     file_name = f"transcript_{timestamp}.srt"
+
+#     file_path_srt = f"static/{file_path}/{file_name}"
+
+#     start_time = 5
+
+#     with open(file_path_srt, "w", encoding="utf-8") as f:
+#         for i, text in enumerate(captions, start=1):
+#             start = format_time(start_time)
+#             end = format_time(start_time + 5)
+#             f.write(f"{i}\n")
+#             f.write(f"{start} --> {end}\n")
+#             f.write(f"{text}\n\n")
+#             start_time += 5  # Cộng thêm 5 giây cho mỗi đoạn
+
+#     return f"/{file_path}/{file_name}"
+
+
+def generate_srt(post_id, captions):
+    """
+    Tạo các file transcript.srt riêng biệt cho từng caption.
+    Lưu vào thư mục static/voice/caption/
+    """
+    file_path = f"voice/{post_id}"
+    os.makedirs(f"static/{file_path}", exist_ok=True)
+
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    file_paths = []
+
+    for i, text in enumerate(captions, start=1):
+        file_name = f"transcript_{timestamp}_{i}.srt"
+        file_path_srt = f"static/{file_path}/{file_name}"
+
+        start_time = 0
+        start = format_time(start_time)
+        end = format_time(start_time + 5)
+
+        with open(file_path_srt, "w", encoding="utf-8") as f:
+            f.write(f"{1}\n")
+            f.write(f"{start} --> {end}\n")
+            f.write(f"{text}\n\n")
+
+        file_paths.append(f"/{file_path}/{file_name}")
+
+    return file_paths  # Trả về danh sách các file đã tạo
+
+
+def format_time(seconds):
+    """
+    Chuyển đổi giây thành định dạng thời gian SRT (hh:mm:ss,ms).
+    """
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    sec = seconds % 60
+    return f"{hours:02}:{minutes:02}:{sec:02},000"

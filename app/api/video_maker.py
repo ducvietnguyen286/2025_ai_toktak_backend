@@ -4,9 +4,8 @@ from flask_restx import Namespace, Resource
 from flask import request
 from app.services.video_service import VideoService
 from app.services.post import PostService
-from datetime import datetime
+import random
 from app.lib.logger import logger
-from app.models.video_create import VideoCreate, db
 
 ns = Namespace(name="video_maker", description="Video Maker API")
 
@@ -26,9 +25,16 @@ class CreateVideo(Resource):
         # Lấy dữ liệu từ request
         data = request.get_json()
         images_url = data["images_url"]  # Đây là một list các URL của hình ảnh
-        images_slider_url = data["images_slider_url"]  # Đây là một list các URL của hình ảnh
+        images_slider_url = data[
+            "images_slider_url"
+        ]  # Đây là một list các URL của hình ảnh
+        captions = data["captions"]  # Đây là một list các URL của hình ảnh
 
-        if "product_name" not in data or "images_url" not in data or "images_slider_url" not in data:
+        if (
+            "product_name" not in data
+            or "images_url" not in data
+            or "images_slider_url" not in data
+        ):
             return {
                 "message": "Missing required fields (product_name or images_url or images_slider_url)"
             }, 400
@@ -41,12 +47,14 @@ class CreateVideo(Resource):
         for url in images_url:
             if not isinstance(url, str):
                 return {"message": "Each URL must be a string"}, 400
-
-        result = VideoService.create_video_from_images(product_name, images_url , images_slider_url)
+        post_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
+        result = VideoService.create_video_from_images(
+            post_id, product_name, images_url, images_slider_url, captions
+        )
 
         render_id = ""
         status = True
-        message = f"Video  created successfully"
+        message = "Video  created successfully"
         if result["status_code"] == 200:
             render_id = result["response"]["id"]
             # Chèn vào bảng video_create với user_id = 0

@@ -158,15 +158,9 @@ class APIMakePost(Resource):
                     print("parse_response", parse_response)
 
                     captions = parse_response.get("captions", [])
-                    logger.info("+++++++++++++++++++++++++++")
+                    logger.info("captionscaptions+++++++++++++++++++++++++++")
                     logger.info(json.dumps(captions))
-                    logger.info("+++++++++++++++++++++++++++")
-
-                    if len(images) == 0:
-                        images = [
-                            "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
-                            "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
-                        ]
+                    logger.info("captionscaptions+++++++++++++++++++++++++++")
 
                     if len(images) > 0:
                         image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
@@ -174,7 +168,7 @@ class APIMakePost(Resource):
                         product_name = data["name"]
 
                         result = VideoService.create_video_from_images(
-                            product_name, image_renders, images
+                            post.id, product_name, image_renders, images, captions
                         )
 
                         logger.info("result: {0}".format(result))
