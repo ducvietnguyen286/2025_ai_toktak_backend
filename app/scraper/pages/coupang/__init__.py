@@ -82,7 +82,6 @@ class CoupangScraper:
             session = requests.Session()
             response = session.get(btf_url, headers=headers, timeout=5)
             btf_content = response.json()
-
             r_data = btf_content.get("rData")
             if r_data is None:
                 return {}
@@ -96,7 +95,9 @@ class CoupangScraper:
                     break
             if widget_list is None:
                 return {}
+
             images = []
+            iframes = []
             text = ""
 
             for widget in widget_list:
@@ -115,6 +116,7 @@ class CoupangScraper:
                     continue
 
                 vendor_item_content_descriptions = []
+                vendor_html_item_content_descriptions = []
                 is_html = False
                 no_space_images = []
                 for vendor_item_content in vendor_item_contents:
@@ -122,11 +124,11 @@ class CoupangScraper:
                         "contentType" in vendor_item_content
                         and vendor_item_content["contentType"] == "HTML"
                     ):
-                        vendor_item_content_descriptions = vendor_item_content.get(
+                        html_item = vendor_item_content.get(
                             "vendorItemContentDescriptions"
                         )
+                        vendor_html_item_content_descriptions.append(html_item[0])
                         is_html = True
-                        break
                     elif (
                         "contentType" in vendor_item_content
                         and vendor_item_content["contentType"] == "IMAGE_NO_SPACE"
@@ -146,15 +148,12 @@ class CoupangScraper:
                                 no_space_images.append(
                                     vendor_item_content_description.get("contents")
                                 )
+                images.extend(no_space_images)
                 if is_html:
-
-                    if len(vendor_item_content_descriptions) == 0:
-                        continue
-
                     contents = ""
                     for (
                         vendor_item_content_description
-                    ) in vendor_item_content_descriptions:
+                    ) in vendor_html_item_content_descriptions:
                         if (
                             "contents" in vendor_item_content_description
                             and "detailType" in vendor_item_content_description
@@ -168,12 +167,11 @@ class CoupangScraper:
 
                     data = self.extract_images_and_text(contents)
                     images.extend(data[0])
-                    text += data[1]
-                else:
-                    images.extend(no_space_images)
+                    iframes.extend(data[1])
+                    text += data[2]
 
             logger.info("Get Images: {0}".format(images))
-            return {"images": images, "text": text}
+            return {"images": images, "text": text, "iframes": iframes}
         except Exception as e:
             logger.error("Exception: {0}".format(str(e)))
             traceback.print_exc()
@@ -183,14 +181,20 @@ class CoupangScraper:
         soup = BeautifulSoup(html, "html.parser")
 
         images = []
+        iframs = []
         for img in soup.find_all("img"):
             src = img.get("src")
             if src:
                 images.append(src)
 
+        for iframe in soup.find_all("iframe"):
+            src = iframe.get("src")
+            if src:
+                iframs.append(src)
+
         text = soup.get_text(separator=" ", strip=True)
 
-        return images, text
+        return images, iframs, text
 
     def get_page_html(self, url, count=0, added_headers=None):
         try:
