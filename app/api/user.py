@@ -183,8 +183,8 @@ class APIPostToLinks(Resource):
                     active_links.append(link_id)
 
             if is_all == 1:
-                links = UserService.get_user_links(current_user.id)
-                active_links = [link.link_id for link in links if link.status == 1]
+                user_links = UserService.get_user_links(current_user.id)
+                active_links = [link.link_id for link in user_links if link.status == 1]
 
             if not active_links:
                 return Response(
@@ -206,7 +206,7 @@ class APIPostToLinks(Resource):
                 ).to_dict()
 
             links = LinkService.get_links()
-            link_dict = {link.id: link for link in links}
+            link_dict = {link.get("id"): link for link in links}
             post = PostService.find_post(post_id)
 
             for link in active_links:
