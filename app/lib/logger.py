@@ -30,3 +30,19 @@ errorLogHandler.setFormatter(formatter)
 
 logger.addHandler(handler)
 logger.addHandler(errorLogHandler)
+
+
+def log_social_message(message):
+    custom_handler = handlers.RotatingFileHandler(
+        "logs/social-{0}.log".format(filename), backupCount=14
+    )
+    custom_handler.setLevel(logging.INFO)
+    custom_handler.setFormatter(formatter)
+
+    custom_logger = logging.getLogger("customLogger")
+    custom_logger.setLevel(logging.INFO)
+    custom_logger.addHandler(custom_handler)
+
+    custom_logger.info(message)
+    custom_logger.removeHandler(custom_handler)
+    custom_handler.close()

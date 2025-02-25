@@ -2,7 +2,7 @@ import json
 import time
 import requests
 
-from app.lib.logger import logger
+from app.lib.logger import log_social_message
 from app.services.social_post import SocialPostService
 
 
@@ -51,9 +51,9 @@ class FacebookService:
                 or status_publishing_phase == "error"
                 or status_uploading_phase == "error"
             ):
-                logger.error("Error upload video")
+                log_social_message("Error upload video")
                 if video_status == "error":
-                    logger.error("Tình trạng video lỗi. Không thể upload video")
+                    log_social_message("Tình trạng video lỗi. Không thể upload video")
                     SocialPostService.create_social_post(
                         link_id=link.id,
                         user_id=post.user_id,
@@ -63,7 +63,7 @@ class FacebookService:
                     )
                 if status_processing_phase == "error":
                     error_message = processing_phase.get("error").get("message")
-                    logger.error(error_message)
+                    log_social_message(error_message)
                     SocialPostService.create_social_post(
                         link_id=link.id,
                         user_id=post.user_id,
@@ -74,7 +74,7 @@ class FacebookService:
 
                 if status_publishing_phase == "error":
                     error_message = publishing_phase.get("error").get("message")
-                    logger.error(error_message)
+                    log_social_message(error_message)
                     SocialPostService.create_social_post(
                         link_id=link.id,
                         user_id=post.user_id,
@@ -84,7 +84,7 @@ class FacebookService:
                     )
                 if status_uploading_phase == "error":
                     error_message = uploading_phase.get("error").get("message")
-                    logger.error(error_message)
+                    log_social_message(error_message)
                     SocialPostService.create_social_post(
                         link_id=link.id,
                         user_id=post.user_id,
@@ -119,13 +119,13 @@ class FacebookService:
         }
         post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers)
         result = post_response.json()
-        print("Upload video:", result)
+        log_social_message("Upload video:", result)
 
     def get_upload_status(self):
         URL_CHECK_STATUS = f"https://graph.facebook.com/v22.0/{self.video_id}?fields=status&access_token={self.access_token}"
         get_response = requests.get(URL_CHECK_STATUS)
         result = get_response.json()
-        print("Check status:", result)
+        log_social_message("Check status:", result)
         return result["status"]
 
     def publish_the_reel(self, post):
@@ -152,7 +152,7 @@ class FacebookService:
         URL_REEL = f"https://graph.facebook.com/v22.0/{self.page_id}/video_reels?access_token={self.access_token}"
         get_response = requests.get(URL_REEL)
         result = get_response.json()
-        print("Get reel:", result)
+        log_social_message("Get reel:", result)
         return result
 
     def send_post_image(self, post, link):
@@ -218,6 +218,6 @@ class FacebookService:
                 if "id" in result:
                     self.photo_ids.append(result["id"])
                 else:
-                    print("Lỗi upload ảnh:", result)
+                    log_social_message("Lỗi upload ảnh:", result)
             else:
-                print("Lỗi tải ảnh:", response.status_code)
+                log_social_message("Lỗi tải ảnh:", response.status_code)
