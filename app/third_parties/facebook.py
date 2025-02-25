@@ -1,20 +1,79 @@
 import json
+import os
 import time
 import requests
 
 from app.lib.logger import log_social_message
 from app.services.social_post import SocialPostService
+from app.services.user import UserService
+
+
+class FacebookTokenService:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def exchange_token(user_link):
+        try:
+            log_social_message(
+                "------------------  EXCHANGE FACEBOOK TOKEN  ------------------"
+            )
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("AccessToken")
+
+            EXCHANGE_URL = f"https://graph.facebook.com/v14.0/oauth/access_token"
+
+            CLIENT_ID = os.environ.get("FACEBOOK_APP_ID") or ""
+            CLIENT_SECRET = os.environ.get("FACEBOOK_APP_SECRET") or ""
+
+            params = {
+                "grant_type": "fb_exchange_token",
+                "client_id": CLIENT_ID,
+                "client_secret": CLIENT_SECRET,
+                "fb_exchange_token": access_token,
+            }
+
+            response = requests.get(EXCHANGE_URL, params=params)
+            data = response.json()
+
+            log_social_message("Exchange token response:", data)
+
+            if "access_token" in data:
+                meta = user_link.meta
+                meta = json.loads(meta)
+                meta.update(data)
+
+                user_link.meta = json.dumps(meta)
+                user_link.save()
+                return data
+            else:
+                user_link.status = 0
+                user_link.save()
+
+                log_social_message("Error exchanging token:", data)
+                return None
+
+        except Exception as e:
+            log_social_message(e)
 
 
 class FacebookService:
-    def __init__(self, page_id, access_token):
+    def __init__(self, page_id):
         self.page_id = page_id
-        self.access_token = access_token
         self.photo_ids = []
         self.video_id = ""
         self.url_to_video = ""
+        self.user = None
+        self.link = None
+        self.meta = None
 
     def send_post(self, post, link):
+        user_id = post.user_id
+        self.user = UserService.find_user(user_id)
+        self.link = link
+        self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
+        self.meta = json.loads(self.user_link.meta)
+
         if post.type == "image":
             self.send_post_image(post, link)
         if post.type == "video":
