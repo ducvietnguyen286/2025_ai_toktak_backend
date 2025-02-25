@@ -1,7 +1,5 @@
 # coding: utf8
-import base64
 import datetime
-import hashlib
 import json
 import os
 import traceback
@@ -16,7 +14,6 @@ from app.lib.logger import logger
 from app.lib.response import Response
 import secrets
 
-from app.rabbitmq.producer import send_message
 from app.services.auth import AuthService
 from app.services.post import PostService
 from app.services.request_social_log import RequestSocialLogService
