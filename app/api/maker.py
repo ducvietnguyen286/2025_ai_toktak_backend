@@ -168,11 +168,13 @@ class APIMakePost(Resource):
 
                     if len(images) > 0:
                         image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
+                        image_renders_sliders = images[:5]  # Lấy tối đa 5 Ảnh đầu tiên
+                        caption_sliders = captions[:5]  # Lấy tối đa 5 Ảnh đầu tiên
 
                         product_name = data["name"]
 
                         result = VideoService.create_video_from_images(
-                            post.id, product_name, image_renders, images, captions
+                            post.id, product_name, image_renders, image_renders_sliders, caption_sliders
                         )
 
                         logger.info("result: {0}".format(result))
