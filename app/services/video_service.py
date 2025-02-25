@@ -120,8 +120,8 @@ class VideoService:
             "callback": "https://apitoktak.voda-play.com/api/v1/video_maker/shotstack_webhook",
         }
 
-        # logger.info(f"payload: {payload}")
-        logger.info(f"payload_dumps: {json.dumps(payload)}")
+        # log_make_video_message(f"payload: {payload}")
+        log_make_video_message(f"payload_dumps: {json.dumps(payload)}")
 
         # Header với API Key
         headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
@@ -138,18 +138,18 @@ class VideoService:
                 result = response.json()
                 result["status_code"] = 200
                 
-                logger.info(f"render_id : : {result}")
+                log_make_video_message(f"render_id : : {result}")
                 return result
             else:
                 result = response.json()
-                logger.error("create video Failed :{0}".format(str(result)))
+                log_make_video_message("create video Failed :{0}".format(str(result)))
                 return {
                     "message": "Failed to create video",
                     "status_code": response.status_code,
                 }
 
         except Exception as e:
-            logger.error("create_video_from_images : Exception: {0}".format(str(e)))
+            log_make_video_message("create_video_from_images : Exception: {0}".format(str(e)))
             return {
                 "message": str(e),
                 "status_code": 500,
@@ -164,6 +164,11 @@ class VideoService:
         :param render_id: ID của video đã tạo từ Shotstack.
         :return: Trạng thái video hoặc thông báo lỗi.
         """
+        
+        config = VideoService.get_settings()
+        SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
+        SHOTSTACK_URL = config["SHOTSTACK_URL"]
+        
         url = f"{SHOTSTACK_URL}/{render_id}"
         headers = {"x-api-key": SHOTSTACK_API_KEY}
 
@@ -173,11 +178,11 @@ class VideoService:
             if response.status_code == 200:
                 return {"status": True, "message": "Oke", "data": response.json()}
             else:
-                # logger.error(f"API Error {response.status_code}: {response.text}")
+                # log_make_video_message(f"API Error {response.status_code}: {response.text}")
                 return {"status": False, "message": response.text, "data": []}
 
         except requests.exceptions.RequestException as e:
-            # logger.error(f"Request failed: {str(e)}")
+            # log_make_video_message(f"Request failed: {str(e)}")
             return {
                 "status": False,
                 "message": "Request failed, please try again.",
@@ -185,7 +190,7 @@ class VideoService:
             }
 
         except Exception as e:
-            # logger.error(f"Unexpected error: {str(e)}")
+            # log_make_video_message(f"Unexpected error: {str(e)}")
             return {
                 "status": False,
                 "message": "An unexpected error occurred.",
@@ -378,7 +383,7 @@ def get_random_videos(limit=2):
         return [video.video_url for video in videos]
 
     except Exception as e:
-        logger.error(f"get_random_videos: {str(e)}")
+        log_make_video_message(f"get_random_videos: {str(e)}")
         return []
 
 
