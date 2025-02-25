@@ -160,6 +160,7 @@ class APIPostToLinks(Resource):
                 "uniqueItems": True,
             },
             "post_id": {"type": "integer"},
+            "page_id": {"type": "string"},
         },
         required=["post_id"],
     )
@@ -169,6 +170,7 @@ class APIPostToLinks(Resource):
             is_all = args.get("is_all", 0)
             post_id = args.get("post_id", 0)
             link_ids = args.get("link_ids", [])
+            page_id = args.get("page_id", "")
 
             if not link_ids and is_all == 0:
                 return Response(
@@ -218,6 +220,7 @@ class APIPostToLinks(Resource):
                         "link_id": link,
                         "post_id": post.id,
                         "user_id": current_user.id,
+                        "page_id": page_id,
                     },
                 }
                 send_message(message)

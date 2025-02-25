@@ -46,6 +46,7 @@ def action_send_post_to_link(message):
     try:
         link_id = message.get("link_id")
         post_id = message.get("post_id")
+        page_id = message.get("page_id")
 
         link = LinkService.find_link(link_id)
         post = PostService.find_post(post_id)
@@ -61,7 +62,7 @@ def action_send_post_to_link(message):
         if link.social_type == "SOCIAL":
 
             if link.type == "FACEBOOK":
-                FacebookService().send_post(post, link)
+                FacebookService(page_id=page_id).send_post(post, link)
 
             if link.type == "TELEGRAM":
                 pass
