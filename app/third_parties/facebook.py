@@ -285,4 +285,4 @@ class FacebookService:
             if "id" in result:
                 self.photo_ids.append(result["id"])
             else:
-                log_social_message("Lỗi upload ảnh:", result)
+                log_social_message(f"Lỗi upload ảnh: {result}")
