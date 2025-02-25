@@ -249,17 +249,14 @@ class FacebookService:
         return result
 
     def upload_video(self, video_id, video_url, access_token):
-        for page in self.pages:
-            UPLOAD_VIDEO_URL = (
-                f"https://rupload.facebook.com/video-upload/v22.0/{video_id}"
-            )
-            headers = {
-                "Authorization": f"OAuth {access_token}",
-                "file_url": video_url,
-            }
-            post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers)
-            result = post_response.json()
-            log_social_message(f"Upload video: {result}")
+        UPLOAD_VIDEO_URL = f"https://rupload.facebook.com/video-upload/v22.0/{video_id}"
+        headers = {
+            "Authorization": f"OAuth {access_token}",
+            "file_url": video_url,
+        }
+        post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers)
+        result = post_response.json()
+        log_social_message(f"Upload video: {result}")
 
     def get_upload_status(self, video_id, access_token):
         status = None
