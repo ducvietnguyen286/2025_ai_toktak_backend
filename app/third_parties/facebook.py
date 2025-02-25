@@ -181,6 +181,7 @@ class FacebookService:
                 reels = self.get_reel_uploaded(
                     page_id=page_id, access_token=page_access_token
                 )
+
                 # SocialPostService.create_social_post(
                 #     link_id=link.id,
                 #     user_id=post.user_id,
@@ -265,10 +266,15 @@ class FacebookService:
             get_response = requests.get(URL_CHECK_STATUS)
             result = get_response.json()
 
+            log_social_message(f"get upload status: {result}")
+
             status = result["status"]
         except Exception as e:
             log_social_message(f"Error get upload status: {str(e)}")
-            return False
+            return {
+                "status": "error",
+                "error": str(e),
+            }
 
         processing_phase = status.get("processing_progress")
         publishing_phase = status.get("publishing_phase")
@@ -286,7 +292,7 @@ class FacebookService:
             and status_uploading_phase == "complete"
         ):
             return {
-                status: "ready",
+                "status": "ready",
             }
         elif (
             video_status == "error"
@@ -295,11 +301,11 @@ class FacebookService:
             or status_uploading_phase == "error"
         ):
             return {
-                status: "error",
-                video_status: video_status,
-                processing_phase: processing_phase,
-                publishing_phase: publishing_phase,
-                uploading_phase: uploading_phase,
+                "status": "error",
+                "video_status": video_status,
+                "processing_phase": processing_phase,
+                "publishing_phase": publishing_phase,
+                "uploading_phase": uploading_phase,
             }
         else:
             return self.get_upload_status()
