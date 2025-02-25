@@ -1,6 +1,8 @@
+import datetime
 import json
 import os
 import time
+import traceback
 import requests
 
 from app.lib.logger import log_social_message
@@ -21,14 +23,10 @@ class FacebookTokenService:
             )
 
             meta = json.loads(user_link.meta)
-            log_social_message(f"Meta: {meta}")
-            access_token = meta.get("AccessToken")
-            log_social_message(f"AccessToken: {access_token}")
+            access_token = meta.get("access_token")
             if not access_token:
-                access_token = meta.get("access_token")
-                if not access_token:
-                    log_social_message("Token not found")
-                    return None
+                log_social_message("Token not found")
+                return None
 
             PAGE_URL = f"https://graph.facebook.com/v22.0/me/accounts?access_token={access_token}&fields=id,name,picture,access_token,tasks"
 
@@ -55,20 +53,13 @@ class FacebookTokenService:
             return None
 
     @staticmethod
-    def exchange_token(user_link):
+    def exchange_token(access_token, user_link):
         try:
             log_social_message(
                 "------------------  EXCHANGE FACEBOOK TOKEN  ------------------"
             )
-            meta = json.loads(user_link.meta)
-            access_token = meta.get("AccessToken")
-            if not access_token:
-                access_token = meta.get("access_token")
-                if not access_token:
-                    log_social_message("Token not found")
-                    return None
 
-            EXCHANGE_URL = f"https://graph.facebook.com/v14.0/oauth/access_token"
+            EXCHANGE_URL = f"https://graph.facebook.com/v22.0/oauth/access_token"
 
             CLIENT_ID = os.environ.get("FACEBOOK_APP_ID") or ""
             CLIENT_SECRET = os.environ.get("FACEBOOK_APP_SECRET") or ""
@@ -91,25 +82,33 @@ class FacebookTokenService:
                 response=json.dumps(data),
             )
 
-            log_social_message("Exchange token response:", data)
+            log_social_message(f"Exchange token response: {data}")
 
             if "access_token" in data:
                 meta = user_link.meta
                 meta = json.loads(meta)
                 meta.update(data)
-
                 user_link.meta = json.dumps(meta)
+
+                # expires_in = data.get("expires_in")
+                # expired_at = time.time() + expires_in
+                # user_link.expired_at = datetime.fromtimestamp(expired_at)
+                # user_link.expired_date = datetime.fromtimestamp(expired_at).date()
+
                 user_link.save()
                 return data
             else:
                 user_link.status = 0
                 user_link.save()
 
-                log_social_message("Error exchanging token:", data)
+                log_social_message(f"Error exchanging token: {data}")
                 return None
 
         except Exception as e:
+            traceback.print_exc()
             log_social_message(e)
+            print(e)
+            return None
 
 
 class FacebookService:
@@ -340,15 +339,10 @@ class FacebookService:
                     error_message=error_message,
                 )
                 return False
-            post_id = result["id"]
+            post_id = photo_ids[0]
 
-            PERMALINK_URL = f"https://graph.facebook.com/{post_id}"
-            params = {"fields": "permalink_url", "access_token": self.access_token}
+            permalink = f"https://www.facebook.com/photo/?fbid={post_id}"
 
-            response_permalink = requests.get(PERMALINK_URL, params=params)
-            result_permalink = response_permalink.json()
-
-            permalink = result_permalink["permalink_url"]
             SocialPostService.create_social_post(
                 link_id=link.id,
                 user_id=post.user_id,
