@@ -33,7 +33,6 @@ class VideoService:
         # FAKE để cho local host không tạo AI
         if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
             is_ai_image = "0"
-        
 
         voice_dir = f"static/voice/{post_id}"
         os.makedirs(voice_dir, exist_ok=True)
@@ -137,7 +136,7 @@ class VideoService:
             if response.status_code == 201:
                 result = response.json()
                 result["status_code"] = 200
-                
+
                 log_make_video_message(f"render_id : : {result}")
                 return result
             else:
@@ -149,7 +148,9 @@ class VideoService:
                 }
 
         except Exception as e:
-            log_make_video_message("create_video_from_images : Exception: {0}".format(str(e)))
+            log_make_video_message(
+                "create_video_from_images : Exception: {0}".format(str(e))
+            )
             return {
                 "message": str(e),
                 "status_code": 500,
@@ -164,11 +165,11 @@ class VideoService:
         :param render_id: ID của video đã tạo từ Shotstack.
         :return: Trạng thái video hoặc thông báo lỗi.
         """
-        
+
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
-        
+
         url = f"{SHOTSTACK_URL}/{render_id}"
         headers = {"x-api-key": SHOTSTACK_API_KEY}
 
@@ -302,30 +303,37 @@ class VideoService:
         start_time_caption = current_start
         time_show_image = 5
 
-        for j, url in enumerate(images_slider_url):
+        for j_index, url in enumerate(images_slider_url):
             clips.append(
                 {
                     "asset": {"type": "image", "src": url},
-                    "start": current_start + j * time_show_image,
+                    "start": current_start + j_index * time_show_image,
                     "length": time_show_image,
                     "effect": "zoomIn",
                 },
             )
 
-        for k, url_srt in enumerate(file_path_srts):
+            url_srt = file_path_srts[j_index]
             check_live_version = os.environ.get("APP_STAGE") or "localhost"
             url_path_srt = "https://apitoktak.voda-play.com" + url_srt
             if check_live_version == "localhost":
                 url_path_srt = (
                     "https://apitoktak.voda-play.com/voice/caption/transcript.srt"
                 )
+
             clips.append(
                 {
                     "asset": {
                         "type": "caption",
                         "src": url_path_srt,
+                        "font": {
+                            "family": "Noto Sans KR",
+                            "color": "#fc0303",
+                            "size": 50,
+                            "lineHeight": 0.8,
+                        },
                     },
-                    "start": current_start + k * time_show_image,
+                    "start": current_start + j_index * time_show_image,
                     "length": time_show_image,
                 },
             )
