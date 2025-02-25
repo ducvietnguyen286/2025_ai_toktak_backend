@@ -119,6 +119,8 @@ class FacebookService:
         self.user = None
         self.link = None
         self.meta = None
+        self.page_id = None
+        self.access_token = None
 
     def send_post(self, post, link):
         user_id = post.user_id
