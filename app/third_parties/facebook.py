@@ -308,7 +308,9 @@ class FacebookService:
             images = post.images
             images = json.loads(images)
 
-            photo_ids = self.unpublish_images(images)
+            photo_ids = self.unpublish_images(
+                images=images, page_id=page_id, page_access_token=page_access_token
+            )
 
             attached_media = [{"media_fbid": pid} for pid in photo_ids]
 
