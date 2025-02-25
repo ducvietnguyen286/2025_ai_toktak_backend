@@ -308,7 +308,7 @@ class FacebookService:
                 "uploading_phase": uploading_phase,
             }
         else:
-            return self.get_upload_status()
+            return self.get_upload_status(video_id, access_token)
 
     def publish_the_reel(self, post, video_id, page_id, access_token):
         URL_PUBLISH = f"https://graph.facebook.com/v22.0/{page_id}/video_reels"
