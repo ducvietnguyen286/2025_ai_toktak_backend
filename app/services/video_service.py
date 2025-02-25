@@ -149,6 +149,8 @@ class VideoService:
             if response.status_code == 201:
                 result = response.json()
                 result["status_code"] = 200
+                
+                logger.info(f"render_id  : {result["response"]["id"]}")
                 return result
             else:
                 result = response.json()
