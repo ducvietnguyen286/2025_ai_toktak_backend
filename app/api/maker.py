@@ -163,7 +163,7 @@ class APIMakePost(Resource):
                     logger.info(response)
                     logger.info(json.dumps(captions))
                     logger.info("captionscaptions+++++++++++++++++++++++++++")
-                    images = [thumbnail] + images
+                    # images = [thumbnail] + images
 
                     if len(images) > 0:
                         image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
