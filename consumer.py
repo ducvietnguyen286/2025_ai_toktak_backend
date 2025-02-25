@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import pika
 from logging import DEBUG
 
@@ -31,16 +32,14 @@ RABBITMQ_PASSWORD = os.environ.get("RABBITMQ_PASSWORD") or "guest"
 RABBITMQ_QUEUE = os.environ.get("RABBITMQ_QUEUE") or "hello"
 
 
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters(
-        host=RABBITMQ_HOST,
-        port=int(RABBITMQ_PORT),
-        credentials=pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD),
+def connect_to_rabbitmq():
+    return pika.BlockingConnection(
+        pika.ConnectionParameters(
+            host=RABBITMQ_HOST,
+            port=int(RABBITMQ_PORT),
+            credentials=pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD),
+        )
     )
-)
-channel = connection.channel()
-
-channel.queue_declare(queue=RABBITMQ_QUEUE)
 
 
 def action_send_post_to_link(message):
@@ -84,7 +83,7 @@ def action_send_post_to_link(message):
 
         return True
     except Exception as e:
-        print(f"Error send post to link: {str(e)}")
+        logger.error(f"Error send post to link: {str(e)}")
         return False
 
 
@@ -98,21 +97,35 @@ def start_consumer():
     __config_logging(app)
     __config_error_handlers(app)
 
+    connection = connect_to_rabbitmq()
+    channel = connection.channel()
+    channel.queue_declare(queue=RABBITMQ_QUEUE)
+
     def callback(ch, method, properties, body):
-        print(f" [x] Received {body}")
+        logger.info(f" [x] Received {body}")
         with app.app_context():
-            decoded_body = json.loads(body)
-            action = decoded_body.get("action")
-            message = decoded_body.get("message")
-            if action == "SEND_POST_TO_LINK":
-                action_send_post_to_link(message)
+            try:
+                decoded_body = json.loads(body)
+                action = decoded_body.get("action")
+                message = decoded_body.get("message")
+                if action == "SEND_POST_TO_LINK":
+                    action_send_post_to_link(message)
+            except Exception as e:
+                logger.error(f"Error processing message: {str(e)}")
 
     channel.basic_consume(
         queue=RABBITMQ_QUEUE, on_message_callback=callback, auto_ack=True
     )
 
-    print(" [*] Waiting for messages. To exit press CTRL+C")
-    channel.start_consuming()
+    logger.info(" [*] Waiting for messages. To exit press CTRL+C")
+    try:
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        logger.error("Consumer stopped by user")
+    except Exception as e:
+        logger.error(f"Consumer stopped due to error: {str(e)}")
+    finally:
+        connection.close()
 
 
 def __config_logging(app):
@@ -132,4 +145,9 @@ def __config_error_handlers(app):
 
 
 if __name__ == "__main__":
-    start_consumer()
+    while True:
+        try:
+            start_consumer()
+        except Exception as e:
+            print(f"Error in consumer: {str(e)}")
+            time.sleep(5)  # Wait for 5 seconds before reconnecting
