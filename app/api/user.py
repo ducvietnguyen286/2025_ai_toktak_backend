@@ -20,6 +20,7 @@ from app.services.request_social_log import RequestSocialLogService
 from app.services.tiktok_callback import TiktokCallbackService
 from app.services.user import UserService
 from app.services.link import LinkService
+from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.twitter import TwitterTokenService
 from app.rabbitmq.producer import send_message
 
@@ -118,6 +119,13 @@ class APINewLink(Resource):
 
                 code = args.get("Code")
                 is_active = TwitterTokenService().fetch_token(code, user_link)
+
+            if link.type == "FACEBOOK":
+                user_link.status = 0
+                user_link.save()
+
+                code = args.get("AccessToken")
+                FacebookTokenService().exchange_token(access_token, user_link)
         else:
             user_link.meta = json.dumps(info)
             user_link.status = 1
@@ -129,6 +137,14 @@ class APINewLink(Resource):
 
                 code = args.get("Code")
                 is_active = TwitterTokenService().fetch_token(code, user_link)
+            if link.type == "FACEBOOK":
+                user_link.status = 0
+                user_link.save()
+
+                access_token = args.get("AccessToken")
+                FacebookTokenService().exchange_token(
+                    access_token=access_token, user_link=user_link
+                )
 
         if is_active:
             user_link.status = 1
