@@ -34,6 +34,9 @@ class VideoService:
             is_ai_image = "0"
         else:
             is_ai_image = "1"
+        logger.info(f"domain: {domain}")
+        logger.info(f"is_ai_image: {is_ai_image}")
+        is_ai_image == 0
 
         voice_dir = f"static/voice/{post_id}"
         os.makedirs(voice_dir, exist_ok=True)
