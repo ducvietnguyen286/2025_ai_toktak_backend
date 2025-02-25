@@ -23,7 +23,12 @@ from app.services.request_social_log import RequestSocialLogService
 from app.services.tiktok_callback import TiktokCallbackService
 from app.services.user import UserService
 from app.services.link import LinkService
-from app.third_parties.twitter import TwitterTokenService
+from app.third_parties.facebook import FacebookService
+from app.third_parties.instagram import InstagramService
+from app.third_parties.thread import ThreadService
+from app.third_parties.tiktok import TiktokService
+from app.third_parties.twitter import TwitterService, TwitterTokenService
+from app.third_parties.youtube import YoutubeService
 
 ns = Namespace(name="user", description="User API")
 
@@ -203,16 +208,36 @@ class APIPostToLinks(Resource):
                     status=400,
                 ).to_dict()
 
+            links = LinkService.get_links()
+            link_dict = {link.id: link for link in links}
+            post = PostService.find_post(post_id)
+
             for link in active_links:
-                message = {
-                    "action": "SEND_POST_TO_LINK",
-                    "message": {
-                        "link_id": link,
-                        "post_id": post.id,
-                        "user_id": current_user.id,
-                    },
-                }
-                send_message(message)
+                current_link = link_dict.get(link)
+                if not current_link:
+                    continue
+                if current_link.social_type == "SOCIAL":
+
+                    if current_link.type == "FACEBOOK":
+                        FacebookService().send_post(post, current_link)
+
+                    if current_link.type == "TELEGRAM":
+                        pass
+
+                    if current_link.type == "X":
+                        TwitterService().send_post(post, current_link)
+
+                    if current_link.type == "INSTAGRAM":
+                        InstagramService().send_post(post, current_link)
+
+                    if current_link.type == "YOUTUBE":
+                        YoutubeService().send_post(post, current_link)
+
+                    if current_link.type == "TIKTOK":
+                        TiktokService().send_post(post, current_link)
+
+                    if current_link.type == "THREAD":
+                        ThreadService().send_post(post, current_link)
 
             return Response(
                 message="Tạo bài viết thành công. Vui lòng đợi trong giây lát",
