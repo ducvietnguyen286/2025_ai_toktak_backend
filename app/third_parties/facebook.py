@@ -346,7 +346,7 @@ class FacebookService:
             page_id = page["id"]
             page_access_token = page["access_token"]
 
-            UNPUBLISH_URL = f"`https://graph.facebook.com/v22.0/{page_id}/photos"
+            UNPUBLISH_URL = f"https://graph.facebook.com/v22.0/{page_id}/photos"
 
             for url in images:
                 data = {
