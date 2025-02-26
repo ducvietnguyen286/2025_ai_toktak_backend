@@ -39,6 +39,39 @@ class APILogin(Resource):
         ).to_dict()
 
 
+@ns.route("/social-login")
+class APISocialLogin(Resource):
+
+    @parameters(
+        type="object",
+        properties={
+            "provider": {"type": "string", "enum": ["FACEBOOK", "GOOGLE"]},
+            "access_token": {"type": "string"},
+        },
+        required=["provider", "access_token"],
+    )
+    def post(self, args):
+        provider = args.get("provider", "")
+        access_token = args.get("access_token", "")
+
+        user = AuthService.social_login(
+            provider=provider,
+            access_token=access_token,
+        )
+        tokens = AuthService.generate_token(user)
+        tokens.update(
+            {
+                "type": "Bearer",
+                "expires_in": 7200,
+            }
+        )
+
+        return Response(
+            data=tokens,
+            message="Đăng nhập bằng mạng xã hội thành công",
+        ).to_dict()
+
+
 @ns.route("/register")
 class APIRegister(Resource):
 
