@@ -99,6 +99,8 @@ class ImageMaker:
         video_width, video_height = target_size
         video_ratio = video_width / video_height
 
+        image = Image.open(image_path).convert("RGBA")
+
         if image.height > image.width:
             crop_height = int(image.width / video_ratio)
             top = (image.height - crop_height) // 2
