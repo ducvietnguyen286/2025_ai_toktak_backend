@@ -117,7 +117,7 @@ class APICreateBatch(Resource):
             ).to_dict()
 
 
-@ns.route("/test-create-video")
+@ns.route("/test-create-video/<int:id>")
 class APITestCreateVideo(Resource):
     def post(self, id):
         try:
