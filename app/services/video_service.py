@@ -439,6 +439,19 @@ class VideoService:
                 "length": outro_length,
             }
         )
+        clips.append(
+            {
+                "asset": {
+                    "type": "html",
+                    "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'><span style='font-weight: bold;'>Buy It Now</span></div>",
+                    "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
+                },
+                "start": current_start,
+                "length": "end",
+                "position": "top",
+                "offset": {"x": 0, "y": 0.4},
+            },
+        )
         current_start += outro_length
 
         time_show_caption = 5
