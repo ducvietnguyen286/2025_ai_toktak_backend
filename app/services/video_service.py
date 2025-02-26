@@ -75,6 +75,14 @@ class VideoService:
 
         payload = {
             "timeline": {
+                "fonts": [
+                    {
+                        "src": "http://admin.lang.canvasee.com/fonts/Noto_Sans_KR/NotoSansKR-VariableFont_wght.ttf"
+                    },
+                    {
+                        "src": "http://admin.lang.canvasee.com/fonts/Noto_Sans_KR/static/NotoSansKR-Bold.ttf"
+                    },
+                ],
                 "background": "#FFFFFF",
                 "tracks": [
                     clips_data,
@@ -228,9 +236,7 @@ class VideoService:
         voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
 
         print(SHOTSTACK_API_KEY)
-        clips_data = test_create_combined_clips(
-            post_id, images_url, prompts
-        )
+        clips_data = test_create_combined_clips(post_id, images_url, prompts)
 
         payload = {
             "timeline": {
@@ -296,7 +302,6 @@ class VideoService:
                 "message": str(e),
                 "status_code": 500,
             }
-
 
     @staticmethod
     def get_settings():
@@ -439,7 +444,31 @@ class VideoService:
                 "length": "end",
                 "scale": 0.15,
                 "position": "topRight",
-            }
+            },
+            {
+                "asset": {
+                    "type": "html",
+                    "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'>잠시만요. <span style='font-weight: bold;'>10</span>초 뒤에 더<br> 놀라운 영상이 이어집니다.</div>",
+                    "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
+                },
+                "start": 5.1,
+                "length": "end",
+                "position": "top",
+                "offset": {"x": 0, "y": 0.4},
+            },
+            {
+                "asset": {
+                    "type": "html",
+                    "html": "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Wait a minute.</div>",
+                    "css": "div { font-weight: bold; font-family: 'Noto Sans KR', sans-serif; border-radius: 40px; }",
+                    "width": 500,
+                    "height": 200,
+                    "background": "#FFD600",
+                    "position": "center",
+                },
+                "start": 0.1,
+                "length": 5,
+            },
             # {
             #     "asset": {
             #         "type": "html",
@@ -457,6 +486,7 @@ class VideoService:
         combined_clips = clips_shape + clips
         return {"clips": combined_clips}
 
+
 def get_random_videos(limit=2):
     try:
         videos = (
@@ -470,6 +500,7 @@ def get_random_videos(limit=2):
     except Exception as e:
         log_make_video_message(f"get_random_videos: {str(e)}")
         return []
+
 
 def generate_srt(post_id, captions):
     """
@@ -499,6 +530,7 @@ def generate_srt(post_id, captions):
 
     return file_paths  # Trả về danh sách các file đã tạo
 
+
 def format_time(seconds):
     """
     Chuyển đổi giây thành định dạng thời gian SRT (hh:mm:ss,ms).
@@ -510,34 +542,34 @@ def format_time(seconds):
 
 
 def test_create_combined_clips(
-        post_id,
-        ai_images,
-        prompts=None,
-        is_ai_image="1",
-    ):
+    post_id,
+    ai_images,
+    prompts=None,
+    is_ai_image="1",
+):
 
-        clips = []
-        current_start = 0
+    clips = []
+    current_start = 0
 
-        if is_ai_image == "1":
+    if is_ai_image == "1":
 
-            time_run_ai = 5
-            for i, url in enumerate(ai_images):
-                clips.append(
-                    {
-                        "asset": {
-                            "src": url,
-                            "type": "image-to-video",
-                            "prompt": prompts[i],
-                        },
-                        "start": current_start + i * time_run_ai,
-                        "length": time_run_ai,
-                    }
-                )
-            current_start += len(ai_images) * time_run_ai
+        time_run_ai = 5
+        for i, url in enumerate(ai_images):
+            clips.append(
+                {
+                    "asset": {
+                        "src": url,
+                        "type": "image-to-video",
+                        "prompt": prompts[i],
+                    },
+                    "start": current_start + i * time_run_ai,
+                    "length": time_run_ai,
+                }
+            )
+        current_start += len(ai_images) * time_run_ai
 
-        clips_shape = []
+    clips_shape = []
 
-        # Kết hợp hai danh sách clip lại
-        combined_clips = clips_shape + clips
-        return {"clips": combined_clips}
+    # Kết hợp hai danh sách clip lại
+    combined_clips = clips_shape + clips
+    return {"clips": combined_clips}
