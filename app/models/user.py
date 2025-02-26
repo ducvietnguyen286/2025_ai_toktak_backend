@@ -8,7 +8,7 @@ class User(db.Model, BaseModel):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), nullable=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
+    password = db.Column(db.String(200), nullable=True)
     status = db.Column(db.Integer, default=1)
 
     print_filter = ("password",)
