@@ -67,11 +67,16 @@ class AuthService:
         if social_account:
             user = User.query.get(social_account.user_id)
         else:
-            user = User.query.filter_by(email=email).first()
-            if not user:
-                user = User(email=email, name=name, avatar=avatar)
+            if not email:
+                user = User(name=name, avatar=avatar)
                 user.save()
             else:
+                user = User.query.filter_by(email=email).first()
+
+            if not user and email:
+                user = User(email=email, name=name, avatar=avatar)
+                user.save()
+            elif user and (name or avatar):
                 user.name = name
                 user.avatar = avatar
                 user.save()
