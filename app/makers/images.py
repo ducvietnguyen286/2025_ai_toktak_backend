@@ -83,6 +83,70 @@ class ImageMaker:
         return image_path
 
     @staticmethod
+    def save_image_and_write_text_for_short_video(
+        image_url,
+        text,
+        font_size=50,
+        margin=(50, 50, 50, 50),
+        text_color=(255, 255, 255),  # Trắng
+        stroke_color=(0, 0, 0),  # Màu viền (đen)
+        stroke_width=10,  # Độ dày viền
+        target_size=(1080, 1920),
+    ):
+        image_path = ImageMaker.save_image_url_get_path(image_url)
+        image_name = image_path.split("/")[-1]
+
+        video_width, video_height = target_size
+        video_ratio = video_width / video_height
+
+        if image.height > image.width:
+            crop_height = int(image.width / video_ratio)
+            top = (image.height - crop_height) // 2
+            bottom = top + crop_height
+            image = image.crop((0, top, image.width, bottom))
+            image = image.resize(target_size, Image.LANCZOS)
+        else:
+            new_width = video_width
+            new_height = int(image.height * (video_width / image.width))
+            resized_image = image.resize((new_width, new_height), Image.LANCZOS)
+            background = Image.new("RGBA", target_size, (0, 0, 0, 255))
+            top = (video_height - new_height) // 2
+            background.paste(resized_image, (0, top))
+            image = background
+
+        draw = ImageDraw.Draw(image)
+
+        try:
+            font = ImageFont.truetype(f"{FONT_FOLDER}/dotum.ttc", font_size)
+        except IOError:
+            print(f"Không tìm thấy font dotum.ttc, sử dụng font mặc định.")
+            font = ImageFont.load_default()
+
+        left_margin, top_margin, right_margin, bottom_margin = margin
+        max_width = image.width - left_margin - right_margin
+
+        lines = wrap_text_by_pixel(draw, text, font, max_width)
+        wrapped_text = "\n".join(lines)
+
+        draw.multiline_text(
+            (left_margin, top_margin),
+            wrapped_text,
+            font=font,
+            fill=text_color,
+            stroke_width=stroke_width,
+            stroke_fill=stroke_color,
+        )
+
+        if image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg"):
+            image = image.convert("RGB")
+
+        image.save(image_path)
+
+        image_url = f"{CURRENT_DOMAIN}/files/{image_name}"
+
+        return image_url
+
+    @staticmethod
     def save_image_and_write_text(
         image_url,
         text,

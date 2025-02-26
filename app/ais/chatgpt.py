@@ -29,6 +29,7 @@ DC인사이드 스타일 게시글 (200자 이내): 유머러스하고 도발적
 제품 설명: {description}
 판매처: {store_name}
 제품 링크: {base_url}
+제품 소개: {text}
 
 📌 생성 조건: ✅ 제목: 짧고 강렬하게! (예: “이걸 안 사면 후회각!”)
 영상 스타일에 맞는 톤 & 텐션 유지
@@ -48,7 +49,6 @@ DC인사이드 스타일 게시글 (200자 이내): 유머러스하고 도발적
 ❌ 기타 특수 문자 사용 금지
 
 이 프롬프트를 활용하면 더욱 강렬하고 효과적인 SNS 콘텐츠를 제작할 수 있습니다! 🚀
-Please return English language only.
 """
     prompt = replace_prompt_with_data(prompt, data)
 
