@@ -96,7 +96,7 @@ class ImageMaker:
         image_path = ImageMaker.save_image_url_get_path(image_url)
         image_name = image_path.split("/")[-1]
 
-        image = Image.open(requests.get(image_url, stream=True).raw).convert("RGBA")
+        image = Image.open(image_path).convert("RGBA")
         width, height = image.size
 
         if width != height:

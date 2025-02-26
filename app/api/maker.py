@@ -14,6 +14,7 @@ from app.decorators import parameters
 from app.lib.logger import logger
 from app.lib.response import Response
 from app.makers.images import ImageMaker
+from app.makers.videos import MakerVideo
 from app.scraper import Scraper
 import traceback
 
@@ -116,6 +117,41 @@ class APICreateBatch(Resource):
             ).to_dict()
 
 
+@ns.route("/test-create-video/<int:id>")
+class APITestCreateVideo(Resource):
+    def post(self, id):
+        try:
+            post = PostService.find_post(id)
+            batch = BatchService.find_batch(post.batch_id)
+            data = json.loads(batch.content)
+            images = data.get("images", [])
+
+            response = None
+            captions = []
+            response = call_chatgpt_create_caption(images, data, post.id)
+            if response:
+                parse_caption = json.loads(response)
+                parse_response = parse_caption.get("response", {})
+
+                captions = parse_response.get("captions", [])
+
+                video_url = MakerVideo().make_video(images, captions)
+
+            return Response(
+                data={
+                    "video_url": video_url,
+                },
+                message="Tạo video thành công",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Tạo video that bai",
+                status=400,
+            ).to_dict()
+
+
 @ns.route("/make-post/<int:id>")
 class APIMakePost(Resource):
 
@@ -148,25 +184,12 @@ class APIMakePost(Resource):
             render_id = ""
             maker_images = []
             captions = []
-            
-            thumbnail = batch.thumbnail
+
             if type == "video":
-                images = [thumbnail] + images
                 response = call_chatgpt_create_caption(images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
-
-                    print("parse_response", parse_response)
-
-                    captions = parse_response.get("captions", [])
-                    logger.info("captionscaptions+++++++++++++++++++++++++++")
-                    logger.info(response)
-                    logger.info(json.dumps(captions))
-                    logger.info("captionscaptions+++++++++++++++++++++++++++")
-                    # images = [thumbnail] + images
-
-                    
 
             elif type == "image":
                 thumbnail = batch.thumbnail
