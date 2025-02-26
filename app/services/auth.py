@@ -88,6 +88,7 @@ class AuthService:
         user_info_url = f"https://graph.facebook.com/v22.0/{person_id}"
         params = {"fields": "id,name,email,picture", "access_token": access_token}
         response = requests.get(user_info_url, params=params)
+        print(response.json())
         if response.status_code == 200:
             user_info = response.json()
             return user_info
