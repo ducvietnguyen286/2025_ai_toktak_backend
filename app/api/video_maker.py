@@ -47,9 +47,9 @@ class CreateVideo(Resource):
         for url in images_url:
             if not isinstance(url, str):
                 return {"message": "Each URL must be a string"}, 400
-        post_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
+        batch_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
         result = VideoService.create_video_from_images(
-            post_id, product_name, images_url, images_slider_url, captions
+            batch_id, product_name, images_url, images_slider_url, captions
         )
 
         render_id = ""
@@ -148,9 +148,9 @@ class TestCreateVideo(Resource):
         images_url = data["images_url"]  # Đây là một list các URL của hình ảnh
         prompts = data["prompts"]  # Đây là một list các URL của hình ảnh
 
-        post_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
+        batch_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
         result = VideoService.test_create_video_from_images(
-            post_id, images_url, prompts
+            batch_id, images_url, prompts
         )
 
         render_id = ""

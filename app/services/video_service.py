@@ -20,7 +20,7 @@ class VideoService:
 
     @staticmethod
     def create_video_from_images(
-        post_id, product_name, images_url, images_slider_url, captions
+        batch_id, product_name, images_url, images_slider_url, captions
     ):
 
         domain = request.host
@@ -33,7 +33,7 @@ class VideoService:
         if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
             is_ai_image = "0"
 
-        voice_dir = f"static/voice/{post_id}"
+        voice_dir = f"static/voice/{batch_id}"
         os.makedirs(voice_dir, exist_ok=True)
 
         # create voice Google TTS
@@ -45,7 +45,7 @@ class VideoService:
         tts.save(file_path)
 
         CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
-        voice_url = f"{CURRENT_DOMAIN}/voice/{post_id}/{file_name}"
+        voice_url = f"{CURRENT_DOMAIN}/voice/{batch_id}/{file_name}"
 
         # prompt fake
         prompts = [
@@ -65,7 +65,7 @@ class VideoService:
             )
 
         clips_data = VideoService.create_combined_clips(
-            post_id, images_url, images_slider_url, prompts, is_ai_image, captions
+            batch_id, images_url, images_slider_url, prompts, is_ai_image, captions
         )
         
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -225,14 +225,13 @@ class VideoService:
         return create_video
 
     @staticmethod
-    def test_create_video_from_images(post_id, images_url, prompts):
+    def test_create_video_from_images(batch_id, images_url, prompts):
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
         voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
 
-        print(SHOTSTACK_API_KEY)
-        clips_data = test_create_combined_clips(post_id, images_url, prompts)
+        clips_data = test_create_combined_clips(batch_id, images_url, prompts)
 
         payload = {
             "timeline": {
@@ -308,7 +307,7 @@ class VideoService:
         return settings_dict
 
     def create_combined_clips(
-        post_id,
+        batch_id,
         ai_images,
         images_slider_url,
         prompts=None,
@@ -323,7 +322,7 @@ class VideoService:
         current_start = 0
         intro_length = 5
 
-        file_path_srts = generate_srt(post_id, captions)
+        file_path_srts = generate_srt(batch_id, captions)
 
         clips.append(
             {
@@ -491,12 +490,12 @@ def get_random_videos(limit=2):
         return []
 
 
-def generate_srt(post_id, captions):
+def generate_srt(batch_id, captions):
     """
     Tạo các file transcript.srt riêng biệt cho từng caption.
     Lưu vào thư mục static/voice/caption/
     """
-    file_path = f"voice/{post_id}"
+    file_path = f"voice/{batch_id}"
     os.makedirs(f"static/{file_path}", exist_ok=True)
     CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
 
@@ -548,7 +547,7 @@ def format_time(seconds):
 
 
 def test_create_combined_clips(
-    post_id,
+    batch_id,
     ai_images,
     prompts=None,
     is_ai_image="1",
