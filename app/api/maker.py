@@ -127,8 +127,6 @@ class APITestCreateVideo(Resource):
             images = data.get("images", [])
 
             response = None
-            render_id = ""
-            maker_images = []
             captions = []
             response = call_chatgpt_create_caption(images, data, post.id)
             if response:
