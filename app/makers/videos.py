@@ -1,3 +1,4 @@
+import gc
 import io
 import time
 import uuid
@@ -82,11 +83,19 @@ class MakerVideo:
 
         for image in saved_images:
             self.create_frame(container, stream, image)
+            del image
+            gc.collect()
+
         self.flush_encoder(container, stream)
 
         self.add_audio(container, audio_stream, audio_path)
 
         container.close()
+
+        del saved_images
+        del audio_path
+        os.remove(audio_path)
+        gc.collect()
 
         file_url = f"{os.getenv('CURRENT_DOMAIN')}/files/{file_name}"
         return file_url
