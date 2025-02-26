@@ -8,6 +8,9 @@ from app.models.setting import Setting
 from app.lib.logger import logger
 from sqlalchemy.sql.expression import func
 from flask import Flask, request
+import time
+import datetime
+from app.lib.logger import log_make_video_message
 
 from gtts import gTTS
 import uuid
@@ -16,7 +19,9 @@ import uuid
 class VideoService:
 
     @staticmethod
-    def create_video_from_images(product_name, images_url, images_slider_url):
+    def create_video_from_images(
+        post_id, product_name, images_url, images_slider_url, captions
+    ):
 
         domain = request.host
 
@@ -28,10 +33,8 @@ class VideoService:
         # FAKE để cho local host không tạo AI
         if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
             is_ai_image = "0"
-        else:
-            is_ai_image = "1"
 
-        voice_dir = "static/voice"
+        voice_dir = f"static/voice/{post_id}"
         os.makedirs(voice_dir, exist_ok=True)
 
         # create voice Google TTS
@@ -44,7 +47,7 @@ class VideoService:
 
         check_live_version = os.environ.get("APP_STAGE") or "localhost"
 
-        voice_url = "https://apitoktak.voda-play.com/voice/" + file_name
+        voice_url = f"https://apitoktak.voda-play.com/voice/{post_id}/{file_name}"
 
         if check_live_version == "localhost":
             voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
@@ -67,7 +70,7 @@ class VideoService:
             )
 
         clips_data = VideoService.create_combined_clips(
-            images_url, images_slider_url, prompts, is_ai_image
+            post_id, images_url, images_slider_url, prompts, is_ai_image, captions
         )
 
         payload = {
@@ -75,18 +78,6 @@ class VideoService:
                 "background": "#FFFFFF",
                 "tracks": [
                     clips_data,
-                    {
-                        "clips": [
-                            {
-                                "asset": {
-                                    "type": "text",
-                                    "text": f"{product_name} 출시되었습니다!",
-                                },
-                                "start": 1,
-                                "length": "end",
-                            }
-                        ]
-                    },
                     {
                         "clips": [
                             {
@@ -119,6 +110,7 @@ class VideoService:
             },
             "output": {
                 "format": "mp4",
+                "quality": "veryhigh",
                 # "resolution": "hd",
                 # "aspectRatio": "16:9",
                 # "size": {"width": 1200, "height": 800},
@@ -127,8 +119,8 @@ class VideoService:
             "callback": "https://apitoktak.voda-play.com/api/v1/video_maker/shotstack_webhook",
         }
 
-        # logger.info(f"payload: {payload}")
-        logger.info(f"payload_dumps: {json.dumps(payload)}")
+        # log_make_video_message(f"payload: {payload}")
+        log_make_video_message(f"payload_dumps: {json.dumps(payload)}")
 
         # Header với API Key
         headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
@@ -144,17 +136,21 @@ class VideoService:
             if response.status_code == 201:
                 result = response.json()
                 result["status_code"] = 200
+
+                log_make_video_message(f"render_id : : {result}")
                 return result
             else:
                 result = response.json()
-                logger.error("create video Failed :{0}".format(str(result)))
+                log_make_video_message("create video Failed :{0}".format(str(result)))
                 return {
                     "message": "Failed to create video",
                     "status_code": response.status_code,
                 }
 
         except Exception as e:
-            logger.error("create_video_from_images : Exception: {0}".format(str(e)))
+            log_make_video_message(
+                "create_video_from_images : Exception: {0}".format(str(e))
+            )
             return {
                 "message": str(e),
                 "status_code": 500,
@@ -169,6 +165,11 @@ class VideoService:
         :param render_id: ID của video đã tạo từ Shotstack.
         :return: Trạng thái video hoặc thông báo lỗi.
         """
+
+        config = VideoService.get_settings()
+        SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
+        SHOTSTACK_URL = config["SHOTSTACK_URL"]
+
         url = f"{SHOTSTACK_URL}/{render_id}"
         headers = {"x-api-key": SHOTSTACK_API_KEY}
 
@@ -178,11 +179,11 @@ class VideoService:
             if response.status_code == 200:
                 return {"status": True, "message": "Oke", "data": response.json()}
             else:
-                # logger.error(f"API Error {response.status_code}: {response.text}")
+                # log_make_video_message(f"API Error {response.status_code}: {response.text}")
                 return {"status": False, "message": response.text, "data": []}
 
         except requests.exceptions.RequestException as e:
-            # logger.error(f"Request failed: {str(e)}")
+            # log_make_video_message(f"Request failed: {str(e)}")
             return {
                 "status": False,
                 "message": "Request failed, please try again.",
@@ -190,7 +191,7 @@ class VideoService:
             }
 
         except Exception as e:
-            # logger.error(f"Unexpected error: {str(e)}")
+            # log_make_video_message(f"Unexpected error: {str(e)}")
             return {
                 "status": False,
                 "message": "An unexpected error occurred.",
@@ -228,7 +229,12 @@ class VideoService:
         return settings_dict
 
     def create_combined_clips(
-        ai_images, images_slider_url, prompts=None, is_ai_image="0"
+        post_id,
+        ai_images,
+        images_slider_url,
+        prompts=None,
+        is_ai_image="0",
+        captions=None,
     ):
         video_urls = get_random_videos(2)
         # Chọn 2 URL khác nhau một cách ngẫu nhiên
@@ -238,12 +244,42 @@ class VideoService:
         current_start = 0
         intro_length = 5
 
+        file_path_srts = generate_srt(post_id, captions)
+
         clips.append(
             {
                 "asset": {"type": "video", "src": intro_url},
                 "start": current_start,
                 "length": intro_length,
             }
+        )
+
+        clips.append(
+            {
+                "asset": {
+                    "type": "caption",
+                    "src": "https://apitoktak.voda-play.com/voice/caption/first_video_transcript.srt",
+                    "font": {
+                        "family": "Noto Sans KR",
+                        "color": "#ffffff",
+                        "opacity": 0.8,
+                        "size": 50,
+                        "lineHeight": 0.8,
+                        "stroke": "#ff6600",
+                        "strokeWidth": 0.8,
+                    },
+                    "background": {
+                        "color": "#000000",
+                        "opacity": 0.4,
+                        "padding": 80,
+                        "borderRadius": 30,
+                    },
+                    "margin": {"top": 0.05, "left": 0.25, "right": 0.25},
+                    "speed": 1,
+                },
+                "start": 0,
+                "length": 5,
+            },
         )
         current_start += intro_length
 
@@ -267,14 +303,39 @@ class VideoService:
         start_time_caption = current_start
         time_show_image = 5
 
-        for j, url in enumerate(images_slider_url):
+        for j_index, url in enumerate(images_slider_url):
             clips.append(
                 {
                     "asset": {"type": "image", "src": url},
-                    "start": current_start + j * time_show_image,
+                    "start": current_start + j_index * time_show_image,
                     "length": time_show_image,
                     "effect": "zoomIn",
-                }
+                },
+            )
+
+            url_srt = file_path_srts[j_index]
+            check_live_version = os.environ.get("APP_STAGE") or "localhost"
+            url_path_srt = "https://apitoktak.voda-play.com" + url_srt
+            if check_live_version == "localhost":
+                url_path_srt = (
+                    "https://apitoktak.voda-play.com/voice/caption/transcript.srt"
+                )
+
+            clips.append(
+                {
+                    "asset": {
+                        "type": "caption",
+                        "src": url_path_srt,
+                        "font": {
+                            "family": "Noto Sans KR",
+                            "color": "#fc0303",
+                            "size": 50,
+                            "lineHeight": 0.8,
+                        },
+                    },
+                    "start": current_start + j_index * time_show_image,
+                    "length": time_show_image,
+                },
             )
 
         current_start += len(images_slider_url) * time_show_image
@@ -289,43 +350,8 @@ class VideoService:
         current_start += outro_length
 
         time_show_caption = 5
-        clips_caption = [
-            {
-                "asset": {
-                    "type": "text",
-                    "text": "Image Number  " + str(text_index + 1),
-                    "font": {
-                        "family": "Open Sans",
-                        "color": "#ff0000",
-                        "opacity": 1,
-                        "size": 72,
-                        "weight": 700,
-                        "lineHeight": 0.85,
-                    },
-                    "alignment": {
-                        "horizontal": "center",
-                        "vertical": "bottom",
-                    },
-                },
-                "start": start_time_caption + text_index * time_show_caption,
-                "length": time_show_caption,
-                # "transition": {"in": "fade", "out": "fade"},
-                "effect": "zoomIn",
-            }
-            for text_index, caption in enumerate(images_slider_url)
-        ]
 
         clips_shape = [
-            # {
-            #     "asset": {
-            #         "type": "shape",
-            #         "shape": "rectangle",
-            #         "rectangle": {"width": 250, "height": 250},
-            #         "fill": {"color": "#000000"},
-            #     },
-            #     "start": 0,
-            #     "length": "auto",
-            # }
             {
                 "asset": {
                     "type": "image",
@@ -335,41 +361,7 @@ class VideoService:
                 "length": "end",
                 "scale": 0.15,
                 "position": "topRight",
-            },
-            # {
-            #     "asset": {
-            #         "type": "title",
-            #         "text": "Xin chào! Đây là caption của tôi.",
-            #         "style": "minimal",
-            #         "size": "medium",
-            #         "color": "#FFFFFF",
-            #         "background": "#000000",
-            #     },
-            #     "start": 1,
-            #     "length": 10,
-            #     "position": "bottom",
-            # },
-            # {
-            #     "asset": {
-            #         "type": "title",
-            #         "text": "Phụ đề sẽ tự động xuất hiện tại đây.",
-            #         "style": "minimal",
-            #         "size": "medium",
-            #         "color": "#FFFFFF",
-            #         "background": "#000000",
-            #     },
-            #     "start": 10,
-            #     "length": 100,
-            #     "position": "bottom",
-            # },
-            # {
-            #     "asset": {
-            #         "type": "caption",
-            #         "src": "https://shotstack-assets.s3.amazonaws.com/captions/transcript.srt",
-            #     },
-            #     "start": 0,
-            #     "length": "end",
-            # },
+            }
             # {
             #     "asset": {
             #         "type": "html",
@@ -384,7 +376,7 @@ class VideoService:
         ]
 
         # Kết hợp hai danh sách clip lại
-        combined_clips = clips + clips_caption + clips_shape
+        combined_clips = clips_shape + clips
         return {"clips": combined_clips}
 
 
@@ -399,4 +391,44 @@ def get_random_videos(limit=2):
         return [video.video_url for video in videos]
 
     except Exception as e:
+        log_make_video_message(f"get_random_videos: {str(e)}")
         return []
+
+
+def generate_srt(post_id, captions):
+    """
+    Tạo các file transcript.srt riêng biệt cho từng caption.
+    Lưu vào thư mục static/voice/caption/
+    """
+    file_path = f"voice/{post_id}"
+    os.makedirs(f"static/{file_path}", exist_ok=True)
+
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    file_paths = []
+
+    for i, text in enumerate(captions):
+        file_name = f"transcript_{timestamp}_{i}.srt"
+        file_path_srt = f"static/{file_path}/{file_name}"
+
+        start_time = 0
+        start = format_time(start_time)
+        end = format_time(start_time + 5)
+
+        with open(file_path_srt, "w", encoding="utf-8") as f:
+            f.write(f"{1}\n")
+            f.write(f"{start} --> {end}\n")
+            f.write(f"{text}\n\n")
+
+        file_paths.append(f"/{file_path}/{file_name}")
+
+    return file_paths  # Trả về danh sách các file đã tạo
+
+
+def format_time(seconds):
+    """
+    Chuyển đổi giây thành định dạng thời gian SRT (hh:mm:ss,ms).
+    """
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    sec = seconds % 60
+    return f"{hours:02}:{minutes:02}:{sec:02},000"
