@@ -25,12 +25,12 @@ class TwitterTokenService:
         try:
 
             # Tạo header Authorization kiểu Basic bằng cách mã hóa "client_id:client_secret"
-            # client_credentials = base64.b64encode(
-            #     f"{self.client_id}:{self.client_secret}".encode("utf-8")
-            # ).decode("utf-8")
+            client_credentials = base64.b64encode(
+                f"{self.client_id}:{self.client_secret}".encode("utf-8")
+            ).decode("utf-8")
 
             headers = {
-                # "Authorization": f"Basic {client_credentials}",
+                "Authorization": f"Basic {client_credentials}",
                 "Content-Type": "application/x-www-form-urlencoded",
             }
 
@@ -74,10 +74,10 @@ class TwitterTokenService:
 
     def refresh_token(self, link, user):
         try:
-            # credentials_str = f"{self.client_id}:{self.client_secret}"
-            # credentials = base64.b64encode(credentials_str.encode("utf-8")).decode(
-            #     "utf-8"
-            # )
+            credentials_str = f"{self.client_id}:{self.client_secret}"
+            credentials = base64.b64encode(credentials_str.encode("utf-8")).decode(
+                "utf-8"
+            )
 
             user_link = UserService.find_user_link(link_id=link.id, user_id=user.id)
             user_link_meta = json.loads(user_link.meta)
@@ -85,7 +85,7 @@ class TwitterTokenService:
 
             headers = {
                 "Content-Type": "application/x-www-form-urlencoded",
-                # "Authorization": f"Basic {credentials}",
+                "Authorization": f"Basic {credentials}",
             }
 
             r_data = {
