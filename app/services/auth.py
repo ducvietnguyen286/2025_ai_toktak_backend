@@ -1,3 +1,4 @@
+import os
 import requests
 from app.errors.exceptions import BadRequest
 from app.lib.logger import logger
@@ -8,6 +9,8 @@ from flask_jwt_extended import (
     create_refresh_token,
     get_jwt_identity,
 )
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 
 class AuthService:
@@ -49,8 +52,11 @@ class AuthService:
             raise BadRequest(message="Social login failed")
 
         provider_user_id = user_info.get("id")
+        if not provider_user_id:
+            provider_user_id = user_info.get("sub")
         email = user_info.get("email")
         name = user_info.get("name")
+        avatar = user_info.get("picture")
 
         social_account = SocialAccount.query.filter_by(
             provider=provider, provider_user_id=provider_user_id
@@ -59,8 +65,14 @@ class AuthService:
         if social_account:
             user = User.query.get(social_account.user_id)
         else:
-            user = User(email=email, username=name)
-            user.save()
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                user = User(email=email, name=name, avatar=avatar)
+                user.save()
+            else:
+                user.name = name
+                user.avatar = avatar
+                user.save()
 
             social_account = SocialAccount(
                 user_id=user.id,
@@ -74,9 +86,8 @@ class AuthService:
     @staticmethod
     def get_facebook_user_info(access_token, person_id):
         user_info_url = f"https://graph.facebook.com/v22.0/{person_id}"
-        params = {"fields": "id,name,email", "access_token": access_token}
+        params = {"fields": "id,name,email,picture", "access_token": access_token}
         response = requests.get(user_info_url, params=params)
-        logger.info(response.json())
         if response.status_code == 200:
             user_info = response.json()
             return user_info
@@ -86,15 +97,12 @@ class AuthService:
     def get_google_user_info(
         access_token,
     ):
-
-        response = requests.get(
-            f"https://www.googleapis.com/oauth2/v1/userinfo?alt=json",
-            headers={"Authorization": f"Bearer {access_token}"},
+        WEB_CLIENT_ID = os.environ.get("AUTH_GOOGLE_CLIENT_ID")
+        idinfo = id_token.verify_oauth2_token(
+            access_token, google_requests.Request(), WEB_CLIENT_ID
         )
-        logger.info(response.json())
-        if response.status_code == 200:
-            user_info = response.json()
-            return user_info
+        if idinfo:
+            return idinfo
         return None
 
     @staticmethod
