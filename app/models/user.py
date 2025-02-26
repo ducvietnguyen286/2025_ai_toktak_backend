@@ -6,9 +6,12 @@ class User(db.Model, BaseModel):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), nullable=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
+    name = db.Column(db.String(255), nullable=True, default="")
+    avatar = db.Column(db.String(500), nullable=True, default="")
+    username = db.Column(db.String(100), nullable=True)
     password = db.Column(db.String(200), nullable=True)
+    name = db.Column(db.String(100), nullable=True)
     status = db.Column(db.Integer, default=1)
 
     print_filter = ("password",)
