@@ -168,7 +168,7 @@ class TiktokService:
         payload = {
             "source_info": {
                 "source": "FILE_UPLOAD",
-                "video_url": media_size,
+                "video_size": media_size,
                 "chunk_size": chunk_size,
                 "total_chunk_count": media_size // chunk_size + 1,
             }
