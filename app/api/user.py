@@ -322,21 +322,20 @@ class APIGetCallbackTiktok(Resource):
     )
     def get(self, args):
         try:
-            print("000000000000000000")
             code = args.get("code")
             state = args.get("state")
             error = args.get("error") or ""
             error_description = args.get("error_description") or ""
             PAGE_PROFILE = "https://voda-play.com/profile"
-            print("11111111111111111111111111")
+
             if not state:
                 return Response(
                     message="Invalid or expired state token 1",
                     status=400,
                 ).to_dict()
-            print("VERITY STATE TOKEN")
+
             payload = self.verify_state_token(state)
-            print("DONE VERITY STATE TOKEN")
+
             if not payload:
                 return Response(
                     message="Invalid or expired state token 2",
@@ -349,17 +348,13 @@ class APIGetCallbackTiktok(Resource):
                     status=400,
                 ).to_dict()
 
-            print("11111111111111111111111")
-
             TiktokCallbackService().create_tiktok_callback(
                 code=code,
                 state=state,
-                response={},
+                response="{}",
                 error=error,
                 error_description=error_description,
             )
-
-            print("2222222222222222222222")
 
             TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 
@@ -374,14 +369,10 @@ class APIGetCallbackTiktok(Resource):
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
             response = requests.post(TOKEN_URL, data=r_data, headers=headers)
 
-            print("3333333333333333333333")
-
             try:
                 token_data = response.json()
             except Exception as e:
                 return f"Error parsing response: {e}", 500
-
-            print("4444444444444444444444")
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
@@ -391,12 +382,9 @@ class APIGetCallbackTiktok(Resource):
                 response=json.dumps(token_data),
             )
 
-            print("5555555555555555555555")
-
             message = token_data.get("message")
 
             if message and message == "error":
-                print("666666666666666666666666666")
                 error_data = token_data.get("data")
                 error = error_data.get("error_code")
                 error_description = error_data.get("description")
@@ -410,8 +398,6 @@ class APIGetCallbackTiktok(Resource):
 
             print("Token data:", token_data)
 
-            print("77777777777777777777777777")
-
             token = token_data.get("data")
 
             user_id = payload.get("user_id")
@@ -419,7 +405,7 @@ class APIGetCallbackTiktok(Resource):
             int_user_id = int(user_id)
             int_link_id = int(link_id)
             user_link = UserService.find_user_link(int_link_id, int_user_id)
-            print("888888888888888888888888888888")
+
             if not user_link:
                 UserService.create_user_link(
                     user_id=int_user_id,
@@ -430,8 +416,6 @@ class APIGetCallbackTiktok(Resource):
             else:
                 user_link.meta = json.dumps(token)
                 user_link.save()
-
-            print("9999999999999999999999999999999")
 
             return redirect(PAGE_PROFILE + "?success=1")
         except Exception as e:
