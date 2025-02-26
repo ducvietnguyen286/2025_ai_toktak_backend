@@ -510,11 +510,27 @@ def generate_srt(post_id, captions):
         start_time = 0
         start = format_time(start_time)
         end = format_time(start_time + 5)
-
+        let_step = 1
+        duration_per_caption = 5
         with open(file_path_srt, "w", encoding="utf-8") as f:
-            f.write(f"{1}\n")
-            f.write(f"{start} --> {end}\n")
-            f.write(f"{text}\n\n")
+            text = text.replace('…', '\n')
+            text = text.replace('...', '\n')
+            segments = text.split('\n')
+            
+            if(len(segments) == 1):
+                f.write(f"{1}\n")
+                f.write(f"{start} --> {end}\n")
+                f.write(f"{text}\n\n")
+            else:
+                duration_per_caption = 2
+                for segment in segments:
+                    segment = segment.replace('"', '')
+                    end_time = start_time + duration_per_caption
+                    f.write(f"{let_step}\n")
+                    f.write(f"{format_time(start_time)} --> {format_time(end_time)}\n")
+                    f.write(f"{segment}\n\n")
+                    let_step = let_step  +1
+                    start_time = end_time
 
         file_paths.append(f"{CURRENT_DOMAIN}/{file_path}/{file_name}")
 
