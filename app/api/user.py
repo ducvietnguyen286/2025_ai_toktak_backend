@@ -374,9 +374,15 @@ class APIGetCallbackTiktok(Resource):
             except Exception as e:
                 return f"Error parsing response: {e}", 500
 
+            user_id = payload.get("user_id")
+            link_id = payload.get("link_id")
+            int_user_id = int(user_id)
+            int_link_id = int(link_id)
+            user_link = UserService.find_user_link(int_link_id, int_user_id)
+
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
-                user_id=user_link.user_id,
+                user_id=int_user_id,
                 type="authorization_code",
                 request=json.dumps(r_data),
                 response=json.dumps(token_data),
@@ -399,12 +405,6 @@ class APIGetCallbackTiktok(Resource):
             print("Token data:", token_data)
 
             token = token_data.get("data")
-
-            user_id = payload.get("user_id")
-            link_id = payload.get("link_id")
-            int_user_id = int(user_id)
-            int_link_id = int(link_id)
-            user_link = UserService.find_user_link(int_link_id, int_user_id)
 
             if not user_link:
                 UserService.create_user_link(
