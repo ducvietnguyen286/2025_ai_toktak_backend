@@ -118,7 +118,9 @@ class ShortstackWebhook(Resource):
             )
             if create_video_detail:
                 post_id = create_video_detail.post_id
-                post_detail = PostService.update_post(post_id, video_url=video_url)
+                post_detail = PostService.find_post(post_id)
+                batch_id = post_detail.batch_id
+                post_detail = PostService.update_post_by_batch_id(batch_id, video_url=video_url)
 
             # Trả về phản hồi JSON
             return {
@@ -126,6 +128,7 @@ class ShortstackWebhook(Resource):
                 "render_id": render_id,
                 "status": status,
                 "video_url": video_url,
+                "batch_id": batch_id,
                 # "post_detail" : post_detail.to_dict(),
                 # "create_video_detail" : create_video_detail.to_dict(),
             }, 200

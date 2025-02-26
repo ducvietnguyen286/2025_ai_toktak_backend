@@ -166,30 +166,7 @@ class APIMakePost(Resource):
                     logger.info("captionscaptions+++++++++++++++++++++++++++")
                     # images = [thumbnail] + images
 
-                    if len(images) > 0:
-                        image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
-                        image_renders_sliders = images[:5]  # Lấy tối đa 5 Ảnh đầu tiên
-                        caption_sliders = captions[:5]  # Lấy tối đa 5 Ảnh đầu tiên
-
-                        product_name = data["name"]
-
-                        result = VideoService.create_video_from_images(
-                            post.id, product_name, image_renders, image_renders_sliders, caption_sliders
-                        )
-
-                        logger.info("result: {0}".format(result))
-
-                        if result["status_code"] == 200:
-                            render_id = result["response"]["id"]
-
-                            VideoService.create_create_video(
-                                render_id=render_id,
-                                user_id=1,
-                                product_name=product_name,
-                                images_url=json.dumps(image_renders),
-                                description="",
-                                post_id=post.id,
-                            )
+                    
 
             elif type == "image":
                 thumbnail = batch.thumbnail
@@ -209,6 +186,33 @@ class APIMakePost(Resource):
                             image_url, caption, font_size=80
                         )
                         maker_images.append(image_url)
+                
+                
+                if len(maker_images) > 0:
+                    image_renders = maker_images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
+                    image_renders_sliders = maker_images[:5]  # Lấy tối đa 5 Ảnh đầu tiên
+                    caption_sliders = captions[:5]  # Lấy tối đa 5 Ảnh đầu tiên
+
+                    product_name = data["name"]
+
+                    result = VideoService.create_video_from_images(
+                        post.id, product_name, image_renders, image_renders_sliders, caption_sliders
+                    )
+
+                    logger.info("result: {0}".format(result))
+
+                    if result["status_code"] == 200:
+                        render_id = result["response"]["id"]
+
+                        VideoService.create_create_video(
+                            render_id=render_id,
+                            user_id=1,
+                            product_name=product_name,
+                            images_url=json.dumps(image_renders),
+                            description="",
+                            post_id=post.id,
+                        )
+                
                 logger.info(
                     "-------------------- PROCESSED CREATE IMAGES -------------------"
                 )

@@ -72,7 +72,8 @@ class VideoService:
         clips_data = VideoService.create_combined_clips(
             post_id, images_url, images_slider_url, prompts, is_ai_image, captions
         )
-
+        
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
         payload = {
             "timeline": {
                 "fonts": [
@@ -124,7 +125,7 @@ class VideoService:
                 # "size": {"width": 1200, "height": 800},
                 "size": {"width": 720, "height": 1280},
             },
-            "callback": "https://apitoktak.voda-play.com/api/v1/video_maker/shotstack_webhook",
+            "callback": f"{current_domain}/api/v1/video_maker/shotstack_webhook",
         }
 
         # log_make_video_message(f"payload: {payload}")
