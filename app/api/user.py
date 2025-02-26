@@ -405,6 +405,8 @@ class APIGetCallbackTiktok(Resource):
             print("Token data:", token_data)
 
             token = token_data.get("data")
+            if not token:
+                token = token_data
 
             if not user_link:
                 UserService.create_user_link(
