@@ -4,6 +4,7 @@ from flask_restx import Namespace, Resource
 from flask import request
 from app.services.video_service import VideoService
 from app.services.post import PostService
+from app.services.batch import BatchService
 import random
 from app.lib.logger import logger
 
@@ -47,9 +48,9 @@ class CreateVideo(Resource):
         for url in images_url:
             if not isinstance(url, str):
                 return {"message": "Each URL must be a string"}, 400
-        post_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
+        batch_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
         result = VideoService.create_video_from_images(
-            post_id, product_name, images_url, images_slider_url, captions
+            batch_id, product_name, images_url, images_slider_url, captions
         )
 
         render_id = ""
@@ -121,7 +122,12 @@ class ShortstackWebhook(Resource):
                 post_id = create_video_detail.post_id
                 post_detail = PostService.find_post(post_id)
                 batch_id = post_detail.batch_id
-                post_detail = PostService.update_post_by_batch_id(batch_id, video_url=video_url)
+                post_detail = PostService.update_post_by_batch_id(
+                    batch_id, video_url=video_url
+                )
+
+                if status == "failed":
+                    BatchService.update_batch(batch_id, status="2")
 
             # Trả về phản hồi JSON
             return {
@@ -148,9 +154,9 @@ class TestCreateVideo(Resource):
         images_url = data["images_url"]  # Đây là một list các URL của hình ảnh
         prompts = data["prompts"]  # Đây là một list các URL của hình ảnh
 
-        post_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
+        batch_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
         result = VideoService.test_create_video_from_images(
-            post_id, images_url, prompts
+            batch_id, images_url, prompts
         )
 
         render_id = ""

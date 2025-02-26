@@ -20,7 +20,7 @@ class VideoService:
 
     @staticmethod
     def create_video_from_images(
-        post_id, product_name, images_url, images_slider_url, captions
+        batch_id, product_name, images_url, images_slider_url, captions
     ):
 
         domain = request.host
@@ -33,7 +33,8 @@ class VideoService:
         if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
             is_ai_image = "0"
 
-        voice_dir = f"static/voice/{post_id}"
+        is_ai_image = "1"
+        voice_dir = f"static/voice/{batch_id}"
         os.makedirs(voice_dir, exist_ok=True)
 
         # create voice Google TTS
@@ -45,7 +46,7 @@ class VideoService:
         tts.save(file_path)
 
         CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
-        voice_url = f"{CURRENT_DOMAIN}/voice/{post_id}/{file_name}"
+        voice_url = f"{CURRENT_DOMAIN}/voice/{batch_id}/{file_name}"
 
         # prompt fake
         prompts = [
@@ -65,9 +66,9 @@ class VideoService:
             )
 
         clips_data = VideoService.create_combined_clips(
-            post_id, images_url, images_slider_url, prompts, is_ai_image, captions
+            batch_id, images_url, images_slider_url, prompts, is_ai_image, captions
         )
-        
+
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
         payload = {
             "timeline": {
@@ -124,7 +125,9 @@ class VideoService:
         }
 
         # log_make_video_message(f"payload: {payload}")
-        log_make_video_message(f"payload_dumps: {json.dumps(payload)}")
+        log_make_video_message(
+            f"++++++++++++++++++++++++++++++payload_dumps:\n\n {json.dumps(payload)} \n\n"
+        )
 
         # Header với API Key
         headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
@@ -225,14 +228,13 @@ class VideoService:
         return create_video
 
     @staticmethod
-    def test_create_video_from_images(post_id, images_url, prompts):
+    def test_create_video_from_images(batch_id, images_url, prompts):
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
         voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
 
-        print(SHOTSTACK_API_KEY)
-        clips_data = test_create_combined_clips(post_id, images_url, prompts)
+        clips_data = test_create_combined_clips(batch_id, images_url, prompts)
 
         payload = {
             "timeline": {
@@ -308,7 +310,7 @@ class VideoService:
         return settings_dict
 
     def create_combined_clips(
-        post_id,
+        batch_id,
         ai_images,
         images_slider_url,
         prompts=None,
@@ -323,7 +325,7 @@ class VideoService:
         current_start = 0
         intro_length = 5
 
-        file_path_srts = generate_srt(post_id, captions)
+        file_path_srts = generate_srt(batch_id, captions)
 
         clips.append(
             {
@@ -377,6 +379,25 @@ class VideoService:
                         "length": time_run_ai,
                     }
                 )
+                # Cái này cần phải lấy từ chat GPT
+                # captions form Image to video
+                url_path_srt = file_path_srts[i]
+                clips.append(
+                    {
+                        "asset": {
+                            "type": "caption",
+                            "src": url_path_srt,
+                            "font": {
+                                "family": "Noto Sans KR",
+                                "color": "#fc0303",
+                                "size": 50,
+                                "lineHeight": 0.8,
+                            },
+                        },
+                        "start": current_start + i * time_run_ai,
+                        "length": time_run_ai,
+                    },
+                ) 
             current_start += len(ai_images) * time_run_ai
 
         start_time_caption = current_start
@@ -491,12 +512,12 @@ def get_random_videos(limit=2):
         return []
 
 
-def generate_srt(post_id, captions):
+def generate_srt(batch_id, captions):
     """
     Tạo các file transcript.srt riêng biệt cho từng caption.
     Lưu vào thư mục static/voice/caption/
     """
-    file_path = f"voice/{post_id}"
+    file_path = f"voice/{batch_id}"
     os.makedirs(f"static/{file_path}", exist_ok=True)
     CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
 
@@ -513,23 +534,23 @@ def generate_srt(post_id, captions):
         let_step = 1
         duration_per_caption = 5
         with open(file_path_srt, "w", encoding="utf-8") as f:
-            text = text.replace('…', '\n')
-            text = text.replace('...', '\n')
-            segments = text.split('\n')
-            
-            if(len(segments) == 1):
+            text = text.replace("…", "\n")
+            text = text.replace("...", "\n")
+            segments = text.split("\n")
+
+            if len(segments) == 1:
                 f.write(f"{1}\n")
                 f.write(f"{start} --> {end}\n")
                 f.write(f"{text}\n\n")
             else:
                 duration_per_caption = 2
                 for segment in segments:
-                    segment = segment.replace('"', '')
+                    segment = segment.replace('"', "")
                     end_time = start_time + duration_per_caption
                     f.write(f"{let_step}\n")
                     f.write(f"{format_time(start_time)} --> {format_time(end_time)}\n")
                     f.write(f"{segment}\n\n")
-                    let_step = let_step  +1
+                    let_step = let_step + 1
                     start_time = end_time
 
         file_paths.append(f"{CURRENT_DOMAIN}/{file_path}/{file_name}")
@@ -548,7 +569,7 @@ def format_time(seconds):
 
 
 def test_create_combined_clips(
-    post_id,
+    batch_id,
     ai_images,
     prompts=None,
     is_ai_image="1",
