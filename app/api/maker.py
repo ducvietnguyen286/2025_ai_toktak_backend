@@ -187,7 +187,7 @@ class APIMakePost(Resource):
                         )
                         maker_images.append(image_url)
                 
-                
+                # Tạo video từ ảnh
                 if len(maker_images) > 0:
                     image_renders = maker_images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
                     image_renders_sliders = maker_images[:5]  # Lấy tối đa 5 Ảnh đầu tiên
