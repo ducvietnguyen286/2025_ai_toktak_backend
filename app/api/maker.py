@@ -14,6 +14,7 @@ from app.decorators import parameters
 from app.lib.logger import logger
 from app.lib.response import Response
 from app.makers.images import ImageMaker
+from app.makers.videos import MakerVideo
 from app.scraper import Scraper
 import traceback
 
@@ -155,41 +156,43 @@ class APIMakePost(Resource):
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
 
-                    print("parse_response", parse_response)
-
                     captions = parse_response.get("captions", [])
-                    logger.info("+++++++++++++++++++++++++++")
-                    logger.info(json.dumps(captions))
-                    logger.info("+++++++++++++++++++++++++++")
 
-                    if len(images) == 0:
-                        images = [
-                            "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
-                            "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
-                        ]
+                    video_path = MakerVideo().make_video(images, captions)
+                    print("video_path", video_path)
 
-                    if len(images) > 0:
-                        image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
+                    # logger.info("+++++++++++++++++++++++++++")
+                    # logger.info(json.dumps(captions))
+                    # logger.info("+++++++++++++++++++++++++++")
 
-                        product_name = data["name"]
+                    # if len(images) == 0:
+                    #     images = [
+                    #         "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
+                    #         "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
+                    #     ]
 
-                        result = VideoService.create_video_from_images(
-                            product_name, image_renders, images
-                        )
+                    # if len(images) > 0:
+                    #     image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
 
-                        logger.info("result: {0}".format(result))
+                    #     product_name = data["name"]
 
-                        if result["status_code"] == 200:
-                            render_id = result["response"]["id"]
+                    #     result = VideoService.create_video_from_images(
+                    #         product_name, image_renders, images
+                    #     )
 
-                            VideoService.create_create_video(
-                                render_id=render_id,
-                                user_id=1,
-                                product_name=product_name,
-                                images_url=json.dumps(image_renders),
-                                description="",
-                                post_id=post.id,
-                            )
+                    #     logger.info("result: {0}".format(result))
+
+                    #     if result["status_code"] == 200:
+                    #         render_id = result["response"]["id"]
+
+                    #         VideoService.create_create_video(
+                    #             render_id=render_id,
+                    #             user_id=1,
+                    #             product_name=product_name,
+                    #             images_url=json.dumps(image_renders),
+                    #             description="",
+                    #             post_id=post.id,
+                    #         )
 
             elif type == "image":
                 thumbnail = batch.thumbnail
