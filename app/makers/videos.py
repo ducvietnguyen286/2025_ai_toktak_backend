@@ -10,6 +10,7 @@ from gtts import gTTS
 import concurrent.futures
 
 import requests
+from tqdm import tqdm
 
 from app.makers.images import wrap_text_by_pixel
 
@@ -72,19 +73,29 @@ class MakerVideo:
         audio_stream.codec_context.sample_rate = 44100
         audio_stream.codec_context.channels = 2
 
-        # Chạy make_audio song song với việc xử lý ảnh
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            audio_future = executor.submit(self.make_audio, captions)
-            saved_images = []
-            for image_url, caption in zip(images, captions):
-                processed_img = self.process_image(image_url=image_url, caption=caption)
-                saved_images.append(processed_img)
-            audio_path = audio_future.result()  # đợi audio hoàn thành
+        # Tạo progress bar cho toàn bộ quá trình
+        total_steps = len(images) + 1  # Số lượng ảnh + 1 cho việc tạo audio
+        with tqdm(total=total_steps, desc="Processing video") as pbar:
+            # Chạy make_audio song song với việc xử lý ảnh
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                audio_future = executor.submit(self.make_audio, captions)
+                saved_images = []
+                for image_url, caption in zip(images, captions):
+                    processed_img = self.process_image(
+                        image_url=image_url, caption=caption
+                    )
+                    saved_images.append(processed_img)
+                    pbar.update(1)  # Cập nhật progress bar sau khi xử lý mỗi ảnh
+                audio_path = audio_future.result()  # đợi audio hoàn thành
+                pbar.update(1)  # Cập nhật progress bar sau khi tạo audio
 
-        for image in saved_images:
-            self.create_frame(container, stream, image)
-            del image
-            gc.collect()
+            # Tạo progress bar cho việc tạo frame
+            total_frames = len(saved_images) * self.total_frames
+            with tqdm(total=total_frames, desc="Creating frames") as frame_pbar:
+                for image in saved_images:
+                    self.create_frame(container, stream, image, frame_pbar)
+                    del image
+                    gc.collect()
 
         self.flush_encoder(container, stream)
 
@@ -112,16 +123,8 @@ class MakerVideo:
         return output_file
 
     def get_image_from_url(self, image_url):
-        """
-        Tải ảnh từ URL và trả về đối tượng PIL Image mà không ghi xuống đĩa.
-        """
-        # Gửi yêu cầu và kiểm tra lỗi (raise_for_status nếu có lỗi)
         response = requests.get(image_url)
-        response.raise_for_status()
-        # Sử dụng BytesIO để giữ dữ liệu ảnh trong bộ nhớ
-        image_bytes = io.BytesIO(response.content)
-        # Mở ảnh từ BytesIO
-        image = Image.open(image_bytes).convert("RGBA")
+        image = Image.open(io.BytesIO(response.content))
         return image
 
     def process_image(self, image_url, caption):
@@ -180,7 +183,7 @@ class MakerVideo:
 
         return image
 
-    def create_frame(self, container, stream, image):
+    def create_frame(self, container, stream, image, pbar):
         """
         Tạo các frame cho 1 ảnh bằng cách xử lý song song dữ liệu frame,
         sau đó encode và đưa vào container.
@@ -198,6 +201,7 @@ class MakerVideo:
             video_frame = av.VideoFrame.from_ndarray(final_frame, format="rgb24")
             for packet in stream.encode(video_frame):
                 container.mux(packet)
+            pbar.update(1)  # Cập nhật progress bar
         return image
 
     def compute_frame_data(self, frame_idx, image):

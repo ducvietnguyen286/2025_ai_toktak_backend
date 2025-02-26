@@ -1,5 +1,6 @@
 import requests
 from app.errors.exceptions import BadRequest
+from app.lib.logger import logger
 from app.models.social_account import SocialAccount
 from app.models.user import User
 from flask_jwt_extended import (
@@ -34,10 +35,11 @@ class AuthService:
     def social_login(
         provider,
         access_token,
+        person_id="",
     ):
         user_info = None
         if provider == "FACEBOOK":
-            user_info = AuthService.get_facebook_user_info(access_token)
+            user_info = AuthService.get_facebook_user_info(access_token, person_id)
         elif provider == "GOOGLE":
             user_info = AuthService.get_google_user_info(access_token)
         else:
@@ -70,10 +72,11 @@ class AuthService:
         return user
 
     @staticmethod
-    def get_facebook_user_info(access_token):
-        user_info_url = "https://graph.facebook.com/me"
+    def get_facebook_user_info(access_token, person_id):
+        user_info_url = f"https://graph.facebook.com/v22.0/{person_id}"
         params = {"fields": "id,name,email", "access_token": access_token}
         response = requests.get(user_info_url, params=params)
+        logger.info(response.json())
         if response.status_code == 200:
             user_info = response.json()
             return user_info
@@ -85,8 +88,10 @@ class AuthService:
     ):
 
         response = requests.get(
-            f"https://www.googleapis.com/oauth2/v1/userinfo?access_token={access_token}"
+            f"https://www.googleapis.com/oauth2/v1/userinfo?alt=json",
+            headers={"Authorization": f"Bearer {access_token}"},
         )
+        logger.info(response.json())
         if response.status_code == 200:
             user_info = response.json()
             return user_info
