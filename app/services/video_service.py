@@ -33,7 +33,6 @@ class VideoService:
         if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
             is_ai_image = "0"
 
-        is_ai_image = "1"
         voice_dir = f"static/voice/{batch_id}"
         os.makedirs(voice_dir, exist_ok=True)
 
