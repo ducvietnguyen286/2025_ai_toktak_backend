@@ -221,6 +221,84 @@ class VideoService:
         return create_video
 
     @staticmethod
+    def test_create_video_from_images(post_id, images_url, prompts):
+        config = VideoService.get_settings()
+        SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
+        SHOTSTACK_URL = config["SHOTSTACK_URL"]
+        voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
+
+        print(SHOTSTACK_API_KEY)
+        clips_data = test_create_combined_clips(
+            post_id, images_url, prompts
+        )
+
+        payload = {
+            "timeline": {
+                "background": "#FFFFFF",
+                "tracks": [
+                    clips_data,
+                    {
+                        "clips": [
+                            {
+                                "asset": {
+                                    "type": "audio",
+                                    "src": voice_url,
+                                    "effect": "fadeIn",
+                                    "volume": 1,
+                                },
+                                "start": 5,
+                                "length": "end",
+                            }
+                        ]
+                    },
+                ],
+            },
+            "output": {
+                "format": "mp4",
+                "quality": "veryhigh",
+                "size": {"width": 720, "height": 1280},
+            },
+        }
+
+        # log_make_video_message(f"payload: {payload}")
+        log_make_video_message(f"payload_dumps: {json.dumps(payload)}")
+
+        # Header với API Key
+        headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
+
+        try:
+            # Gửi yêu cầu POST đến Shotstack API
+            response = requests.post(
+                SHOTSTACK_URL, headers=headers, data=json.dumps(payload)
+            )
+
+            # Kiểm tra trạng thái phản hồi
+            # A new resource was created successfully.
+            if response.status_code == 201:
+                result = response.json()
+                result["status_code"] = 200
+
+                log_make_video_message(f"render_id : : {result}")
+                return result
+            else:
+                result = response.json()
+                log_make_video_message("create video Failed :{0}".format(str(result)))
+                return {
+                    "message": "Failed to create video",
+                    "status_code": response.status_code,
+                }
+
+        except Exception as e:
+            log_make_video_message(
+                "create_video_from_images : Exception: {0}".format(str(e))
+            )
+            return {
+                "message": str(e),
+                "status_code": 500,
+            }
+
+
+    @staticmethod
     def get_settings():
         settings = Setting.query.all()
         settings_dict = {
@@ -430,114 +508,36 @@ def format_time(seconds):
     sec = seconds % 60
     return f"{hours:02}:{minutes:02}:{sec:02},000"
 
-@staticmethod
-def test_create_video_from_images(post_id, images_url, prompts):
-
-    config = VideoService.get_settings()
-    SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
-    SHOTSTACK_URL = config["SHOTSTACK_URL"]
-    is_ai_image = config["SHOTSTACK_AI_IMAGE"]
-    voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
-
-    print(images_url)
-    clips_data = VideoService.test_create_combined_clips(
-        post_id, images_url, prompts
-    )
-
-    payload = {
-        "timeline": {
-            "background": "#FFFFFF",
-            "tracks": [
-                clips_data,
-                {
-                    "clips": [
-                        {
-                            "asset": {
-                                "type": "audio",
-                                "src": voice_url,
-                                "effect": "fadeIn",
-                                "volume": 1,
-                            },
-                            "start": 5,
-                            "length": "end",
-                        }
-                    ]
-                },
-            ],
-        },
-        "output": {
-            "format": "mp4",
-            "quality": "veryhigh",
-            "size": {"width": 720, "height": 1280},
-        },
-    }
-
-    # log_make_video_message(f"payload: {payload}")
-    log_make_video_message(f"payload_dumps: {json.dumps(payload)}")
-
-    # Header với API Key
-    headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
-
-    try:
-        # Gửi yêu cầu POST đến Shotstack API
-        response = requests.post(
-            SHOTSTACK_URL, headers=headers, data=json.dumps(payload)
-        )
-
-        # Kiểm tra trạng thái phản hồi
-        # A new resource was created successfully.
-        if response.status_code == 201:
-            result = response.json()
-            result["status_code"] = 200
-
-            log_make_video_message(f"render_id : : {result}")
-            return result
-        else:
-            result = response.json()
-            log_make_video_message("create video Failed :{0}".format(str(result)))
-            return {
-                "message": "Failed to create video",
-                "status_code": response.status_code,
-            }
-
-    except Exception as e:
-        log_make_video_message(
-            "create_video_from_images : Exception: {0}".format(str(e))
-        )
-        return {
-            "message": str(e),
-            "status_code": 500,
-        }
 
 def test_create_combined_clips(
-    post_id,
-    ai_images,
-    prompts=None,
-    is_ai_image="1",
-):
+        post_id,
+        ai_images,
+        prompts=None,
+        is_ai_image="1",
+    ):
 
-    clips = []
-    current_start = 0
+        clips = []
+        current_start = 0
 
-    if is_ai_image == "1":
+        if is_ai_image == "1":
 
-        time_run_ai = 5
-        for i, url in enumerate(ai_images):
-            clips.append(
-                {
-                    "asset": {
-                        "src": url,
-                        "type": "image-to-video",
-                        "prompt": prompts[i],
-                    },
-                    "start": current_start + i * time_run_ai,
-                    "length": time_run_ai,
-                }
-            )
-        current_start += len(ai_images) * time_run_ai
+            time_run_ai = 5
+            for i, url in enumerate(ai_images):
+                clips.append(
+                    {
+                        "asset": {
+                            "src": url,
+                            "type": "image-to-video",
+                            "prompt": prompts[i],
+                        },
+                        "start": current_start + i * time_run_ai,
+                        "length": time_run_ai,
+                    }
+                )
+            current_start += len(ai_images) * time_run_ai
 
-    clips_shape = []
+        clips_shape = []
 
-    # Kết hợp hai danh sách clip lại
-    combined_clips = clips_shape + clips
-    return {"clips": combined_clips}
+        # Kết hợp hai danh sách clip lại
+        combined_clips = clips_shape + clips
+        return {"clips": combined_clips}
