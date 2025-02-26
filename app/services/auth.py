@@ -76,7 +76,7 @@ class AuthService:
             if not user and email:
                 user = User(email=email, name=name, avatar=avatar)
                 user.save()
-            elif user and (name or avatar):
+            elif user and (name or avatar) and (not email):
                 user.name = name
                 user.avatar = avatar
                 user.save()
