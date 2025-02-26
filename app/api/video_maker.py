@@ -75,60 +75,91 @@ class CreateVideo(Resource):
             "render_id": render_id,
         }
 
-    @ns.route("/video_list")
-    class VideoList(Resource):
-        def get(self):
-            page = request.args.get("page", 1, type=int)
-            per_page = request.args.get("per_page", 10, type=int)
-            print("page", page)
-            print("per_page", per_page)
 
-            videos = VideoService.get_videos(page, per_page)
+@ns.route("/video_list")
+class VideoList(Resource):
+    def get(self):
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 10, type=int)
+        print("page", page)
+        print("per_page", per_page)
 
+        videos = VideoService.get_videos(page, per_page)
+
+        return {
+            "status": True,
+            "message": "Success",
+            "total": videos.total,
+            "page": videos.page,
+            "per_page": videos.per_page,
+            "total_pages": videos.pages,
+            "data": [video.to_dict() for video in videos.items],
+        }, 200
+
+
+@ns.route("/shotstack_webhook")
+class ShortstackWebhook(Resource):
+    def post(self):
+        try:
+            # Lấy payload JSON từ request
+            payload = request.get_json()
+            if not payload:
+                return {"message": "No JSON payload provided"}, 400
+
+            # Lấy thông tin từ payload
+            render_id = payload.get("id")
+            status = payload.get("status")
+            video_url = payload.get("url")
+
+            # Ghi log thông tin nhận được
+            logger.info("Received Shotstack webhook: %s", payload)
+            create_video_detail = VideoService.update_video_create(
+                render_id, status=status, video_url=video_url
+            )
+            if create_video_detail:
+                post_id = create_video_detail.post_id
+                post_detail = PostService.update_post(post_id, video_url=video_url)
+
+            # Trả về phản hồi JSON
             return {
-                "status": True,
-                "message": "Success",
-                "total": videos.total,
-                "page": videos.page,
-                "per_page": videos.per_page,
-                "total_pages": videos.pages,
-                "data": [video.to_dict() for video in videos.items],
+                "message": "Webhook received successfully",
+                "render_id": render_id,
+                "status": status,
+                "video_url": video_url,
+                # "post_detail" : post_detail.to_dict(),
+                # "create_video_detail" : create_video_detail.to_dict(),
             }, 200
 
-    @ns.route("/shotstack_webhook")
-    class ShortstackWebhook(Resource):
-        def post(self):
-            try:
-                # Lấy payload JSON từ request
-                payload = request.get_json()
-                if not payload:
-                    return {"message": "No JSON payload provided"}, 400
+        except Exception as e:
+            # Ghi log lỗi kèm stack trace
+            logger.exception("Error processing webhook: %s", e)
+            return {"message": "Internal Server Error"}, 500
 
-                # Lấy thông tin từ payload
-                render_id = payload.get("id")
-                status = payload.get("status")
-                video_url = payload.get("url")
 
-                # Ghi log thông tin nhận được
-                logger.info("Received Shotstack webhook: %s", payload)
-                create_video_detail = VideoService.update_video_create(
-                    render_id, status=status, video_url=video_url
-                )
-                if create_video_detail:
-                    post_id = create_video_detail.post_id
-                    post_detail = PostService.update_post(post_id, video_url=video_url)
+@ns.route("/test_create_video")
+class TestCreateVideo(Resource):
+    def post(self):
+        # Lấy dữ liệu từ request
+        data = request.get_json()
+        images_url = data["images_url"]  # Đây là một list các URL của hình ảnh
+        prompts = data["prompts"]  # Đây là một list các URL của hình ảnh
 
-                # Trả về phản hồi JSON
-                return {
-                    "message": "Webhook received successfully",
-                    "render_id": render_id,
-                    "status": status,
-                    "video_url": video_url,
-                    # "post_detail" : post_detail.to_dict(),
-                    # "create_video_detail" : create_video_detail.to_dict(),
-                }, 200
+        post_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
+        result = VideoService.test_create_video_from_images(
+            post_id, images_url, prompts
+        )
 
-            except Exception as e:
-                # Ghi log lỗi kèm stack trace
-                logger.exception("Error processing webhook: %s", e)
-                return {"message": "Internal Server Error"}, 500
+        render_id = ""
+        status = True
+        message = "Video  created successfully"
+        if result["status_code"] == 200:
+            render_id = result["response"]["id"]
+        else:
+            status = False
+            message = result["message"]
+
+        return {
+            "status": status,
+            "message": message,
+            "render_id": render_id,
+        }
