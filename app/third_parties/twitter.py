@@ -225,7 +225,10 @@ class TwitterService:
     def upload_media(self, media, is_video=False):
         log_social_message(f"Upload media {media}")
 
+        log_social_message(f"Downloading media {media}")
         response = requests.get(media)
+        log_social_message(f"Download media {media} done")
+
         total_bytes = int(response.headers.get("content-length", 0))
         media_type = response.headers.get("content-type")
 
