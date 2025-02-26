@@ -184,15 +184,59 @@ class APIMakePost(Resource):
             render_id = ""
             maker_images = []
             captions = []
+            thumbnail = batch.thumbnail
 
             if type == "video":
+                images = [thumbnail] + images
                 response = call_chatgpt_create_caption(images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
 
+                    captions = parse_response.get("captions", [])
+
+                    for index, image_url in enumerate(images):
+                        caption = captions[index] or ""
+                        image_url = (
+                            ImageMaker.save_image_and_write_text_for_short_video(
+                                image_url, caption, font_size=80
+                            )
+                        )
+                        maker_images.append(image_url)
+
+                    # Tạo video từ ảnh
+                    if len(maker_images) > 0:
+                        image_renders = maker_images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
+                        image_renders_sliders = maker_images[
+                            :5
+                        ]  # Lấy tối đa 5 Ảnh đầu tiên
+                        caption_sliders = captions[:5]  # Lấy tối đa 5 Ảnh đầu tiên
+
+                        product_name = data["name"]
+
+                        result = VideoService.create_video_from_images(
+                            post.id,
+                            product_name,
+                            image_renders,
+                            image_renders_sliders,
+                            caption_sliders,
+                        )
+
+                        logger.info("result: {0}".format(result))
+
+                        if result["status_code"] == 200:
+                            render_id = result["response"]["id"]
+
+                            VideoService.create_create_video(
+                                render_id=render_id,
+                                user_id=1,
+                                product_name=product_name,
+                                images_url=json.dumps(image_renders),
+                                description="",
+                                post_id=post.id,
+                            )
+
             elif type == "image":
-                thumbnail = batch.thumbnail
                 logger.info(
                     "-------------------- PROCESSING CREATE IMAGES -------------------"
                 )
@@ -209,41 +253,13 @@ class APIMakePost(Resource):
                             image_url, caption, font_size=80
                         )
                         maker_images.append(image_url)
-                
-                # Tạo video từ ảnh
-                if len(maker_images) > 0:
-                    image_renders = maker_images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
-                    image_renders_sliders = maker_images[:5]  # Lấy tối đa 5 Ảnh đầu tiên
-                    caption_sliders = captions[:5]  # Lấy tối đa 5 Ảnh đầu tiên
 
-                    product_name = data["name"]
-
-                    result = VideoService.create_video_from_images(
-                        post.id, product_name, image_renders, image_renders_sliders, caption_sliders
-                    )
-
-                    logger.info("result: {0}".format(result))
-
-                    if result["status_code"] == 200:
-                        render_id = result["response"]["id"]
-
-                        VideoService.create_create_video(
-                            render_id=render_id,
-                            user_id=1,
-                            product_name=product_name,
-                            images_url=json.dumps(image_renders),
-                            description="",
-                            post_id=post.id,
-                        )
-                
                 logger.info(
                     "-------------------- PROCESSED CREATE IMAGES -------------------"
                 )
-
             elif type == "blog":
                 response = call_chatgpt_create_blog(images, data, post.id)
 
-            thumbnail = batch.thumbnail
             title = ""
             subtitle = ""
             content = ""
