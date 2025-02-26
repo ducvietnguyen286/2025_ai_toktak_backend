@@ -184,15 +184,18 @@ class APIMakePost(Resource):
             render_id = ""
             maker_images = []
             captions = []
+            thumbnail = batch.thumbnail
 
             if type == "video":
+                images = [thumbnail] + images
                 response = call_chatgpt_create_caption(images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
 
+                    captions = parse_response.get("captions", [])
+
             elif type == "image":
-                thumbnail = batch.thumbnail
                 logger.info(
                     "-------------------- PROCESSING CREATE IMAGES -------------------"
                 )
@@ -236,14 +239,13 @@ class APIMakePost(Resource):
                             post_id=post.id,
                         )
                 
+
                 logger.info(
                     "-------------------- PROCESSED CREATE IMAGES -------------------"
                 )
-
             elif type == "blog":
                 response = call_chatgpt_create_blog(images, data, post.id)
 
-            thumbnail = batch.thumbnail
             title = ""
             subtitle = ""
             content = ""

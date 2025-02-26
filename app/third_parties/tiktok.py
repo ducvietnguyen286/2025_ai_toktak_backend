@@ -37,7 +37,7 @@ class TiktokTokenService:
             except Exception as e:
                 return f"Error parsing response: {e}", 500
 
-            log_social_message("Refresh token response:", token_data)
+            log_social_message(f"Refresh token response: {token_data}")
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
@@ -90,8 +90,8 @@ class TiktokService:
             response = requests.get(media)
 
             upload_info = self.upload_video_init(response)
-            log_social_message("Upload video info:", upload_info)
-            log_social_message("Upload video to Tiktok: " + media)
+            log_social_message(f"Upload video info: {upload_info}")
+            log_social_message(f"Upload video to Tiktok: {media}")
             info_data = upload_info.get("data")
 
             upload_url = info_data.get("upload_url")
@@ -168,18 +168,18 @@ class TiktokService:
         payload = {
             "source_info": {
                 "source": "FILE_UPLOAD",
-                "video_url": media_size,
+                "video_size": media_size,
                 "chunk_size": chunk_size,
                 "total_chunk_count": media_size // chunk_size + 1,
             }
         }
 
-        log_social_message("Payload:", payload)
+        log_social_message(f"Payload: {payload}")
 
         upload_response = requests.post(URL_VIDEO_UPLOAD, headers=headers, data=payload)
         parsed_response = upload_response.json()
 
-        log_social_message("Upload video to Tiktok INIT response:", parsed_response)
+        log_social_message(f"Upload video to Tiktok INIT response: {parsed_response}")
 
         error = parsed_response.get("error")
         error_code = error.get("code")

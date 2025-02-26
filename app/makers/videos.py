@@ -16,6 +16,7 @@ from tqdm import tqdm
 from app.makers.images import wrap_text_by_pixel
 
 FONT_FOLDER = os.path.join(os.getcwd(), "app/makers/fonts")
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 
 
 class MakerVideo:
@@ -26,6 +27,9 @@ class MakerVideo:
         self.fps = 25
         self.total_frames = self.duration_per_image * self.fps
         self.font = None
+        self.container = None
+        self.stream = None
+        self.audio_stream = None
         try:
             self.font = ImageFont.truetype(f"{FONT_FOLDER}/dotum.ttc", 80)
         except IOError:
@@ -37,7 +41,7 @@ class MakerVideo:
             images = []
         if captions is None:
             captions = []
-        UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
@@ -45,7 +49,7 @@ class MakerVideo:
 
         output_file = os.path.join(UPLOAD_FOLDER, file_name)
 
-        container = av.open(output_file, mode="w")
+        self.container = av.open(output_file, mode="w")
 
         # TODO:
         # - libx264 là sử dụng CPU
@@ -55,9 +59,9 @@ class MakerVideo:
         # - NVIDIA : h264_nvenc, hevc_nvenc, av1_nvenc
         # - AMD : h264_amf, hevc_amf, h264_vaapi, hevc_vaapi
         # - Intel : h264_qsv, hevc_qsv
-        stream = container.add_stream("libx264", rate=self.fps)
+        self.stream = self.container.add_stream("libx264", rate=self.fps)
 
-        stream.codec_context.options = {
+        self.stream.codec_context.options = {
             "preset": "fast",
             "tune": "zerolatency",
             "crf": "23",
@@ -66,14 +70,14 @@ class MakerVideo:
             "movflags": "+faststart",
         }
 
-        stream.width, stream.height = self.video_size
-        stream.pix_fmt = "yuv420p"
+        self.stream.width, self.stream.height = self.video_size
+        self.stream.pix_fmt = "yuv420p"
 
-        audio_stream = container.add_stream("aac")
-        audio_stream.codec_context.bit_rate = 32000
-        audio_stream.codec_context.sample_rate = 44100
-        audio_stream.codec_context.channels = 2
-        audio_stream.codec_context.format = "fltp"
+        self.audio_stream = self.container.add_stream("aac")
+        self.audio_stream.codec_context.bit_rate = 32000
+        self.audio_stream.codec_context.sample_rate = 44100
+        self.audio_stream.codec_context.channels = 2
+        self.audio_stream.codec_context.format = "fltp"
 
         # Tạo progress bar cho toàn bộ quá trình
         total_steps = len(images) + 1  # Số lượng ảnh + 1 cho việc tạo audio
@@ -97,19 +101,27 @@ class MakerVideo:
                 total=total_frames, desc="Creating frames", file=sys.stdout
             ) as frame_pbar:
                 for image in saved_images:
-                    self.create_frame(container, stream, image, frame_pbar)
+                    self.create_frame(image, frame_pbar)
                     del image
                     gc.collect()
 
-        self.flush_encoder(container, stream)
+        self.flush_encoder()
 
-        self.add_audio(container, audio_stream, audio_path)
+        video_duration = len(saved_images) * self.duration_per_image
 
-        container.close()
+        print("Đã Audio:", audio_path)
+
+        self.add_audio(audio_path, video_duration)
+
+        try:
+            self.container.close()
+        except Exception as e:
+            print("Error closing self.container:", e)
+
+        os.remove(audio_path)
 
         del saved_images
         del audio_path
-        os.remove(audio_path)
         gc.collect()
 
         file_url = f"{os.getenv('CURRENT_DOMAIN')}/files/{file_name}"
@@ -118,12 +130,13 @@ class MakerVideo:
     def make_audio(self, captions):
         text = " ".join(captions)
         tts = gTTS(text=text, lang="ko")
-        UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
         file_name = f"{timestamp}_{unique_id}.mp3"
         output_file = os.path.join(UPLOAD_FOLDER, file_name)
         tts.save(output_file)
+
         return output_file
 
     def get_image_from_url(self, image_url):
@@ -187,7 +200,7 @@ class MakerVideo:
 
         return image
 
-    def create_frame(self, container, stream, image, pbar):
+    def create_frame(self, image, pbar):
         """
         Tạo các frame cho 1 ảnh bằng cách xử lý song song dữ liệu frame,
         sau đó encode và đưa vào container.
@@ -203,8 +216,8 @@ class MakerVideo:
         # Encode các frame theo thứ tự
         for final_frame in frames_data:
             video_frame = av.VideoFrame.from_ndarray(final_frame, format="rgb24")
-            for packet in stream.encode(video_frame):
-                container.mux(packet)
+            for packet in self.stream.encode(video_frame):
+                self.container.mux(packet)
             pbar.update(1)  # Cập nhật progress bar
         return image
 
@@ -226,26 +239,77 @@ class MakerVideo:
         final_frame = np.array(pil_frame)[..., :3]  # Loại bỏ kênh alpha nếu có
         return final_frame
 
-    def add_audio(self, container, audio_stream, audio_path):
+    def add_audio(self, audio_path, video_duration):
         """
         Thêm audio vào container, ép lại giá trị PTS cho audio frame để đồng bộ thời gian.
         """
         audio_file = av.open(audio_path)
         audio_in_stream = audio_file.streams.audio[0]
-        # Đồng bộ time_base của stream audio container với input
-        audio_stream.time_base = audio_in_stream.time_base
+
+        print(f"Audio file sample rate: {audio_in_stream.rate}")
+        print(f"Audio file channels: {audio_in_stream.channels}")
+        print(
+            f"Audio file format: {audio_in_stream.format.name if audio_in_stream.format else 'unknown'}"
+        )
+
+        self.audio_stream.time_base = audio_in_stream.time_base
+        self.audio_stream.codec_context.sample_rate = audio_in_stream.rate
+        self.audio_stream.codec_context.channels = audio_in_stream.channels
+        self.audio_stream.codec_context.format = audio_in_stream.format
+
+        print(
+            f"Audio stream sample rate: {self.audio_stream.codec_context.sample_rate}"
+        )
+        print(f"Audio stream channels: {self.audio_stream.codec_context.channels}")
+        print(f"Audio stream format: {self.audio_stream.codec_context.format}")
+
+        sample_rate = audio_in_stream.rate  # ví dụ: 44100
+        channels = audio_in_stream.channels  # ví dụ: 2
 
         audio_pts = 0
+        print("Đang xử lý audio gốc...")
+        # Đọc và mã hóa các frame audio từ file gốc
         for frame in audio_file.decode(audio_in_stream):
-            # Ép luôn đặt lại PTS cho frame
+            print(f"Audio frame PTS trước: {frame.pts}, samples: {frame.samples}")
             frame.pts = audio_pts
+            print(f"Audio frame PTS sau gán: {frame.pts}")
             audio_pts += frame.samples
-            for packet in audio_stream.encode(frame):
-                container.mux(packet)
-        # Flush encoder audio
-        for packet in audio_stream.encode(None):
-            container.mux(packet)
+            for packet in self.audio_stream.encode(frame):
+                print(f"Audio packet PTS: {packet.pts}")  # In PTS của audio packet
+                self.container.mux(packet)
 
-    def flush_encoder(self, container, stream):
-        for packet in stream.encode():
-            container.mux(packet)
+        original_duration = audio_pts / sample_rate
+        print("Thời lượng audio gốc:", original_duration, "giây")
+
+        # Tính thời lượng audio hiện tại
+        if video_duration > original_duration:
+            missing_duration = video_duration - original_duration
+            total_missing_samples = int(missing_duration * sample_rate)
+            print(
+                "Pad thêm silence cho",
+                missing_duration,
+                "giây (tương đương",
+                total_missing_samples,
+                "samples)",
+            )
+            chunk_size = 1024  # số mẫu mỗi lần pad
+            while total_missing_samples > 0:
+                current_chunk = min(chunk_size, total_missing_samples)
+                # Tạo mảng numpy chứa âm thanh im lặng (0)
+                silence_data = np.zeros((channels, current_chunk), dtype=np.float32)
+                # Lưu ý: layout phải khớp với số kênh, ví dụ với 2 kênh dùng "stereo"
+                silent_frame = av.AudioFrame.from_ndarray(silence_data, layout="stereo")
+                silent_frame.sample_rate = sample_rate
+                silent_frame.pts = audio_pts
+                audio_pts += current_chunk
+                for packet in self.audio_stream.encode(silent_frame):
+                    self.container.mux(packet)
+                total_missing_samples -= current_chunk
+
+        # Flush encoder audio
+        for packet in self.audio_stream.encode(None):
+            self.container.mux(packet)
+
+    def flush_encoder(self):
+        for packet in self.stream.encode():
+            self.container.mux(packet)

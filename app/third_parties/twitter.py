@@ -12,16 +12,17 @@ from app.services.user import UserService
 
 MEDIA_ENDPOINT_URL = "https://api.x.com/2/media/upload"
 X_POST_TO_X_URL = "https://api.x.com/2/tweets"
+TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
 
 class TwitterTokenService:
     def __init__(self):
         self.client_id = os.environ.get("X_CLIENT_KEY")
         self.client_secret = os.environ.get("X_CLIENT_SECRET")
+        self.redirect_uri = os.environ.get("X_REDIRECT_URI")
 
     def fetch_token(self, code, user_link):
         try:
-            TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
             # Tạo header Authorization kiểu Basic bằng cách mã hóa "client_id:client_secret"
             client_credentials = base64.b64encode(
@@ -38,7 +39,8 @@ class TwitterTokenService:
                 "code": code,
                 "grant_type": "authorization_code",
                 "client_id": self.client_id,
-                "redirect_uri": os.environ.get("X_REDIRECT_URI"),
+                "client_secret": self.client_secret,
+                "redirect_uri": self.redirect_uri,
                 "code_verifier": "challenge",
             }
             response = requests.post(TOKEN_URL, headers=headers, data=r_data)
@@ -72,8 +74,6 @@ class TwitterTokenService:
 
     def refresh_token(self, link, user):
         try:
-            TOKEN_URL = "https://api.x.com/2/oauth2/token"
-
             credentials_str = f"{self.client_id}:{self.client_secret}"
             credentials = base64.b64encode(credentials_str.encode("utf-8")).decode(
                 "utf-8"
@@ -92,6 +92,7 @@ class TwitterTokenService:
                 "refresh_token": refresh_token,
                 "grant_type": "refresh_token",
                 "client_id": self.client_id,
+                "client_secret": self.client_secret,
             }
 
             response = requests.post(TOKEN_URL, headers=headers, data=r_data)
