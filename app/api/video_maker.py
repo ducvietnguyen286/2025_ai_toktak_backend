@@ -4,6 +4,7 @@ from flask_restx import Namespace, Resource
 from flask import request
 from app.services.video_service import VideoService
 from app.services.post import PostService
+from app.services.batch import BatchService
 import random
 from app.lib.logger import logger
 
@@ -121,7 +122,12 @@ class ShortstackWebhook(Resource):
                 post_id = create_video_detail.post_id
                 post_detail = PostService.find_post(post_id)
                 batch_id = post_detail.batch_id
-                post_detail = PostService.update_post_by_batch_id(batch_id, video_url=video_url)
+                post_detail = PostService.update_post_by_batch_id(
+                    batch_id, video_url=video_url
+                )
+
+                if status == "failed":
+                    BatchService.update_batch(batch_id, status="2")
 
             # Trả về phản hồi JSON
             return {
