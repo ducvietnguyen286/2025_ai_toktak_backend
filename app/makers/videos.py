@@ -1,5 +1,6 @@
 import gc
 import io
+import sys
 import time
 import uuid
 import av
@@ -72,10 +73,11 @@ class MakerVideo:
         audio_stream.codec_context.bit_rate = 32000
         audio_stream.codec_context.sample_rate = 44100
         audio_stream.codec_context.channels = 2
+        audio_stream.codec_context.format = "fltp"
 
         # Tạo progress bar cho toàn bộ quá trình
         total_steps = len(images) + 1  # Số lượng ảnh + 1 cho việc tạo audio
-        with tqdm(total=total_steps, desc="Processing video") as pbar:
+        with tqdm(total=total_steps, desc="Processing video", file=sys.stdout) as pbar:
             # Chạy make_audio song song với việc xử lý ảnh
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 audio_future = executor.submit(self.make_audio, captions)
@@ -91,7 +93,9 @@ class MakerVideo:
 
             # Tạo progress bar cho việc tạo frame
             total_frames = len(saved_images) * self.total_frames
-            with tqdm(total=total_frames, desc="Creating frames") as frame_pbar:
+            with tqdm(
+                total=total_frames, desc="Creating frames", file=sys.stdout
+            ) as frame_pbar:
                 for image in saved_images:
                     self.create_frame(container, stream, image, frame_pbar)
                     del image

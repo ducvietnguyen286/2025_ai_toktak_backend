@@ -108,6 +108,7 @@ def call_chatgpt_create_blog(images=[], data={}, post_id=0):
 - 제품 설명: {description}
 - 판매처: {store_name}
 - 제품 링크: {base_url}
+- 제품 소개: {text}
 
 조건:
 - 게시글은 약 1200자 정도로 작성해 주세요.
@@ -170,6 +171,7 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
 판매처: {store_name}
 제품 링크: {base_url}
 이미지 개수: {image_count}
+제품 소개: {text}
 [요구 사항]
 
 SNS 게시글 작성
