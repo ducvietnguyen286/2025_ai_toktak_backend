@@ -116,6 +116,7 @@ class ShortstackWebhook(Resource):
             create_video_detail = VideoService.update_video_create(
                 render_id, status=status, video_url=video_url
             )
+            batch_id = 0
             if create_video_detail:
                 post_id = create_video_detail.post_id
                 post_detail = PostService.find_post(post_id)
