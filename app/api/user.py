@@ -378,7 +378,7 @@ class APIGetCallbackTiktok(Resource):
             link_id = payload.get("link_id")
             int_user_id = int(user_id)
             int_link_id = int(link_id)
-            user_link = UserService.find_user_link(int_link_id, int_user_id)
+            user_link = UserService.find_user_link_exist(int_link_id, int_user_id)
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
@@ -417,6 +417,7 @@ class APIGetCallbackTiktok(Resource):
                 )
             else:
                 user_link.meta = json.dumps(token)
+                user_link.status = 1
                 user_link.save()
 
             return redirect(PAGE_PROFILE + "?success=1")
