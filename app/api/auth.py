@@ -47,16 +47,19 @@ class APISocialLogin(Resource):
         properties={
             "provider": {"type": "string", "enum": ["FACEBOOK", "GOOGLE"]},
             "access_token": {"type": "string"},
+            "person_id": {"type": "string"},
         },
         required=["provider", "access_token"],
     )
     def post(self, args):
         provider = args.get("provider", "")
         access_token = args.get("access_token", "")
+        person_id = args.get("person_id", "")
 
         user = AuthService.social_login(
             provider=provider,
             access_token=access_token,
+            person_id=person_id,
         )
         tokens = AuthService.generate_token(user)
         tokens.update(
