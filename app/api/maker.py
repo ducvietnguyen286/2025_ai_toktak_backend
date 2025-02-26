@@ -191,44 +191,6 @@ class APIMakePost(Resource):
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
 
-                    captions = parse_response.get("captions", [])
-
-                    # video_path = MakerVideo().make_video(images, captions)
-                    # print("video_path", video_path)
-
-                    # logger.info("+++++++++++++++++++++++++++")
-                    # logger.info(json.dumps(captions))
-                    # logger.info("+++++++++++++++++++++++++++")
-
-                    if len(images) == 0:
-                        images = [
-                            "https://admin.lang.canvasee.com/storage/files/3305/ai/1.jpg",
-                            "https://admin.lang.canvasee.com/storage/files/3305/ai/2.jpg",
-                        ]
-
-                    if len(images) > 0:
-                        image_renders = images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
-
-                        product_name = data["name"]
-
-                        result = VideoService.create_video_from_images(
-                            product_name, image_renders, images
-                        )
-
-                        logger.info("result: {0}".format(result))
-
-                        if result["status_code"] == 200:
-                            render_id = result["response"]["id"]
-
-                            VideoService.create_create_video(
-                                render_id=render_id,
-                                user_id=1,
-                                product_name=product_name,
-                                images_url=json.dumps(image_renders),
-                                description="",
-                                post_id=post.id,
-                            )
-
             elif type == "image":
                 thumbnail = batch.thumbnail
                 logger.info(
@@ -247,6 +209,33 @@ class APIMakePost(Resource):
                             image_url, caption, font_size=80
                         )
                         maker_images.append(image_url)
+                
+                # Tạo video từ ảnh
+                if len(maker_images) > 0:
+                    image_renders = maker_images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
+                    image_renders_sliders = maker_images[:5]  # Lấy tối đa 5 Ảnh đầu tiên
+                    caption_sliders = captions[:5]  # Lấy tối đa 5 Ảnh đầu tiên
+
+                    product_name = data["name"]
+
+                    result = VideoService.create_video_from_images(
+                        post.id, product_name, image_renders, image_renders_sliders, caption_sliders
+                    )
+
+                    logger.info("result: {0}".format(result))
+
+                    if result["status_code"] == 200:
+                        render_id = result["response"]["id"]
+
+                        VideoService.create_create_video(
+                            render_id=render_id,
+                            user_id=1,
+                            product_name=product_name,
+                            images_url=json.dumps(image_renders),
+                            description="",
+                            post_id=post.id,
+                        )
+                
                 logger.info(
                     "-------------------- PROCESSED CREATE IMAGES -------------------"
                 )

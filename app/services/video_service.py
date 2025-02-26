@@ -24,7 +24,6 @@ class VideoService:
     ):
 
         domain = request.host
-
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
@@ -45,12 +44,8 @@ class VideoService:
 
         tts.save(file_path)
 
-        check_live_version = os.environ.get("APP_STAGE") or "localhost"
-
-        voice_url = f"https://apitoktak.voda-play.com/voice/{post_id}/{file_name}"
-
-        if check_live_version == "localhost":
-            voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
+        CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
+        voice_url = f"{CURRENT_DOMAIN}/voice/{post_id}/{file_name}"
 
         # prompt fake
         prompts = [
@@ -72,7 +67,8 @@ class VideoService:
         clips_data = VideoService.create_combined_clips(
             post_id, images_url, images_slider_url, prompts, is_ai_image, captions
         )
-
+        
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
         payload = {
             "timeline": {
                 "fonts": [
@@ -124,7 +120,7 @@ class VideoService:
                 # "size": {"width": 1200, "height": 800},
                 "size": {"width": 720, "height": 1280},
             },
-            "callback": "https://apitoktak.voda-play.com/api/v1/video_maker/shotstack_webhook",
+            "callback": f"{current_domain}/api/v1/video_maker/shotstack_webhook",
         }
 
         # log_make_video_message(f"payload: {payload}")
@@ -396,14 +392,7 @@ class VideoService:
                 },
             )
 
-            url_srt = file_path_srts[j_index]
-            check_live_version = os.environ.get("APP_STAGE") or "localhost"
-            url_path_srt = "https://apitoktak.voda-play.com" + url_srt
-            if check_live_version == "localhost":
-                url_path_srt = (
-                    "https://apitoktak.voda-play.com/voice/caption/transcript.srt"
-                )
-
+            url_path_srt = file_path_srts[j_index]
             clips.append(
                 {
                     "asset": {
@@ -509,6 +498,7 @@ def generate_srt(post_id, captions):
     """
     file_path = f"voice/{post_id}"
     os.makedirs(f"static/{file_path}", exist_ok=True)
+    CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     file_paths = []
@@ -526,7 +516,7 @@ def generate_srt(post_id, captions):
             f.write(f"{start} --> {end}\n")
             f.write(f"{text}\n\n")
 
-        file_paths.append(f"/{file_path}/{file_name}")
+        file_paths.append(f"{CURRENT_DOMAIN}/{file_path}/{file_name}")
 
     return file_paths  # Trả về danh sách các file đã tạo
 

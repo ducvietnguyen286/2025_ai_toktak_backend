@@ -1,4 +1,5 @@
 from app.models.post import Post
+from app.extensions import db
 
 
 class PostService:
@@ -32,3 +33,10 @@ class PostService:
     def get_posts_by_batch_id(batch_id):
         posts = Post.query.where(Post.batch_id == batch_id).all()
         return [post._to_json() for post in posts]
+
+    @staticmethod
+    def update_post_by_batch_id(batch_id, *args, **kwargs):
+        print(batch_id)
+        updated_rows = Post.query.filter_by(batch_id=batch_id).update(kwargs)  # Cập nhật trực tiếp
+        db.session.commit()  # Lưu vào database
+        return updated_rows
