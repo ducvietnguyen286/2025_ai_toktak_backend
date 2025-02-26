@@ -57,6 +57,8 @@ class AuthService:
         email = user_info.get("email")
         name = user_info.get("name")
         avatar = user_info.get("picture")
+        if type(avatar) == dict:
+            avatar = avatar.get("data", {}).get("url", "")
 
         social_account = SocialAccount.query.filter_by(
             provider=provider, provider_user_id=provider_user_id
@@ -88,7 +90,6 @@ class AuthService:
         user_info_url = f"https://graph.facebook.com/v22.0/{person_id}"
         params = {"fields": "id,name,email,picture", "access_token": access_token}
         response = requests.get(user_info_url, params=params)
-        print(response.json())
         if response.status_code == 200:
             user_info = response.json()
             return user_info
