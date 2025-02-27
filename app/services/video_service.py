@@ -396,28 +396,29 @@ class VideoService:
                         "start": current_start + i * time_run_ai,
                         "length": time_run_ai,
                     },
-                ) 
+                )
             current_start += len(ai_images) * time_run_ai
 
         start_time_caption = current_start
         time_show_image = 5
-        
+
         effects = [
             "zoomIn",
-            "zoomOut",
-            "slideLeft",
-            "slideRight",
-            "slideUp",
-            "slideDown",
+            # "zoomOut",
+            # "slideLeft",
+            # "slideRight",
+            # "slideUp",
+            # "slideDown",
         ]
-        
+
         for j_index, url in enumerate(images_slider_url):
-            
+
             random_effect = random.choice(effects)
+            start_slider_time = current_start + j_index * time_show_image
             clips.append(
                 {
                     "asset": {"type": "image", "src": url},
-                    "start": current_start + j_index * time_show_image,
+                    "start": start_slider_time,
                     "length": time_show_image,
                     "effect": random_effect,
                 },
@@ -436,9 +437,22 @@ class VideoService:
                             "lineHeight": 0.8,
                         },
                     },
-                    "start": current_start + j_index * time_show_image,
+                    "start": start_slider_time,
                     "length": time_show_image,
                 },
+            )
+            clips.append(
+                {
+                    "asset": {
+                        "type": "html",
+                        "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'>잠시만요. <span style='font-weight: bold;'>10</span>초 뒤에 더<br> 놀라운 영상이 이어집니다.</div>",
+                        "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
+                    },
+                    "start": start_slider_time + 0.01,
+                    "length": time_show_image,
+                    "position": "top",
+                    "offset": {"x": 0, "y": 0.4},
+                }
             )
 
         current_start += len(images_slider_url) * time_show_image
@@ -450,14 +464,15 @@ class VideoService:
                 "length": outro_length,
             }
         )
+        html_content = "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'><span style='font-weight: bold;'>Buy It Now</span></div>"
         clips.append(
             {
                 "asset": {
                     "type": "html",
-                    "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'><span style='font-weight: bold;'>Buy It Now</span></div>",
+                    "html": html_content,
                     "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
                 },
-                "start": current_start,
+                "start": current_start + 0.01,
                 "length": "end",
                 "position": "top",
                 "offset": {"x": 0, "y": 0.4},
@@ -477,17 +492,6 @@ class VideoService:
                 "length": "end",
                 "scale": 0.15,
                 "position": "topRight",
-            },
-            {
-                "asset": {
-                    "type": "html",
-                    "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'>잠시만요. <span style='font-weight: bold;'>10</span>초 뒤에 더<br> 놀라운 영상이 이어집니다.</div>",
-                    "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
-                },
-                "start": 5.1,
-                "length": "end",
-                "position": "top",
-                "offset": {"x": 0, "y": 0.4},
             },
             {
                 "asset": {
