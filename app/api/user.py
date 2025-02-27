@@ -280,6 +280,8 @@ class APIGetFacebookPage(Resource):
         list_pages = []
         for link in facebook_links:
             token_pages = FacebookTokenService().fetch_page_token(link)
+            if not token_pages:
+                continue
             for page in token_pages:
                 list_pages.append(
                     {
