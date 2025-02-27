@@ -27,6 +27,7 @@ gTTS~=2.5.4
 pillow~=10.4.0
 tqdm~=4.67.1
 google-auth~=2.38.0
+pydub~=0.25.1
 
 
 threads-api~=1.2.0
