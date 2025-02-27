@@ -56,7 +56,10 @@ def log_make_video_message(message):
 
     # Tạo file handler xoay vòng với 14 file backup
     custom_handler = handlers.RotatingFileHandler(
-        f"logs/shotstack_make_video-{filename}.log", maxBytes=5*1024*1024, backupCount=14
+        f"logs/shotstack_make_video-{filename}.log",
+        maxBytes=5 * 1024 * 1024,
+        backupCount=14,
+        encoding="utf-8",
     )
     custom_handler.setLevel(logging.INFO)
     custom_handler.setFormatter(formatter)
@@ -70,8 +73,7 @@ def log_make_video_message(message):
         custom_logger.addHandler(custom_handler)
 
     # Ghi log
-    custom_logger.info(f"\n\n{message}\n\n")
+    custom_logger.info(message)
 
     # Đóng handler
     custom_handler.close()
-    

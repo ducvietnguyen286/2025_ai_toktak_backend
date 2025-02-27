@@ -35,9 +35,20 @@ class VideoService:
 
         voice_dir = f"static/voice/{batch_id}"
         os.makedirs(voice_dir, exist_ok=True)
+        
+        #generate_audio_files(captions)
+        processed_captions = []
+        for caption in captions:
+            caption = caption.strip()   
+            if not caption.endswith('.'):
+                caption += '.'
+            processed_captions.append(caption)
+    
+
+        text_to_speech = ' '.join(processed_captions)
 
         # create voice Google TTS
-        text_to_speech = f"{product_name} 출시되었습니다. 지금 만나보세요!"
+        log_make_video_message(text_to_speech)
         tts = gTTS(text=text_to_speech, lang="ko")
         file_name = f"template_voice_{uuid.uuid4().hex}.mp3"
         file_path = f"{voice_dir}/{file_name}"
@@ -464,18 +475,20 @@ class VideoService:
                 "length": outro_length,
             }
         )
-        html_content = "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'><span style='font-weight: bold;'>Buy It Now</span></div>"
+        html_content = "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Buy It Now.</div>"
         clips.append(
             {
                 "asset": {
                     "type": "html",
                     "html": html_content,
-                    "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
+                    "css": "div { font-weight: bold; font-family: 'Noto Sans KR', sans-serif; border-radius: 40px; }",
+                    "width": 500,
+                    "height": 200,
+                    "background": "#FFD600",
+                    "position": "center",
                 },
                 "start": current_start + 0.01,
                 "length": "end",
-                "position": "top",
-                "offset": {"x": 0, "y": 0.4},
             },
         )
         current_start += outro_length
