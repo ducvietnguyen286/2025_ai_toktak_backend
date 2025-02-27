@@ -190,6 +190,7 @@ class APIMakePost(Resource):
                 process_images = process_images[:5]
             else:
                 process_images = images
+                process_images = process_images[:5]
 
             type = post.type
 
