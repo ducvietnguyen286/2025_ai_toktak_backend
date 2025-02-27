@@ -125,7 +125,7 @@ class APINewLink(Resource):
                 user_link.status = 0
                 user_link.save()
 
-                code = args.get("AccessToken")
+                access_token = args.get("AccessToken")
                 is_active = FacebookTokenService().exchange_token(
                     access_token=access_token, user_link=user_link
                 )
