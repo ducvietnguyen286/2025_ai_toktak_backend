@@ -170,7 +170,7 @@ class CoupangScraper:
                     iframes.extend(data[1])
                     text += data[2]
 
-            logger.info("Get Images: {0}".format(images))
+            logger.info("Get Images Successfully")
             return {"images": images, "text": text, "iframes": iframes}
         except Exception as e:
             logger.error("Exception: {0}".format(str(e)))
