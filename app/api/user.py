@@ -292,7 +292,7 @@ class APIGetFacebookPage(Resource):
                 )
         return Response(
             data=list_pages,
-            message="Đăng nhập thành công",
+            message="Lấy link Facebook thành công",
         ).to_dict()
 
 
