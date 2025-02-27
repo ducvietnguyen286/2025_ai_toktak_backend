@@ -75,7 +75,13 @@ class VideoService:
             )
 
         clips_data = VideoService.create_combined_clips(
-            batch_id, images_url, images_slider_url, prompts, is_ai_image, captions
+            batch_id,
+            images_url,
+            images_slider_url,
+            prompts,
+            is_ai_image,
+            captions,
+            config,
         )
 
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -325,6 +331,7 @@ class VideoService:
         prompts=None,
         is_ai_image="0",
         captions=None,
+        config=None,
     ):
         video_urls = get_random_videos(2)
         # Chọn 2 URL khác nhau một cách ngẫu nhiên
@@ -413,27 +420,34 @@ class VideoService:
         start_time_caption = current_start
         time_show_image = 5
 
-        effects = [
-            "zoomIn",
-            # "zoomOut",
-            # "slideLeft",
-            # "slideRight",
-            # "slideUp",
-            # "slideDown",
-        ]
+        SHOTSTACK_IMAGE_EFFECTS = config["SHOTSTACK_IMAGE_EFFECTS"] or ""
+        if SHOTSTACK_IMAGE_EFFECTS == "random":
+            effects = [
+                "zoomIn",
+                "zoomOut",
+                "slideLeft",
+                "slideRight",
+                "slideUp",
+                "slideDown",
+            ]
+        else:
+            effects = [
+                SHOTSTACK_IMAGE_EFFECTS,
+            ]
 
         for j_index, url in enumerate(images_slider_url):
 
             random_effect = random.choice(effects)
             start_slider_time = current_start + j_index * time_show_image
-            clips.append(
-                {
-                    "asset": {"type": "image", "src": url},
-                    "start": start_slider_time,
-                    "length": time_show_image,
-                    "effect": random_effect,
-                },
-            )
+
+            clip_detail = {
+                "asset": {"type": "image", "src": url},
+                "start": start_slider_time,
+                "length": time_show_image,
+            }
+            if random_effect != "":
+                clip_detail["effect"] = random_effect
+            clips.append(clip_detail)
 
             url_path_srt = file_path_srts[j_index]
             clips.append(
