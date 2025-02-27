@@ -35,17 +35,16 @@ class VideoService:
 
         voice_dir = f"static/voice/{batch_id}"
         os.makedirs(voice_dir, exist_ok=True)
-        
-        #generate_audio_files(captions)
+
+        # generate_audio_files(captions)
         processed_captions = []
         for caption in captions:
-            caption = caption.strip()   
-            if not caption.endswith('.'):
-                caption += '.'
+            caption = caption.strip()
+            if not caption.endswith("."):
+                caption += "."
             processed_captions.append(caption)
-    
 
-        text_to_speech = ' '.join(processed_captions)
+        text_to_speech = " ".join(processed_captions)
 
         # create voice Google TTS
         log_make_video_message(text_to_speech)
@@ -398,12 +397,13 @@ class VideoService:
                             "type": "caption",
                             "src": url_path_srt,
                             "font": {
-                                "family": "Noto Sans KR",
-                                "color": "#fc0303",
-                                "size": 50,
                                 "lineHeight": 0.8,
+                                "family": "Noto Sans KR",
+                                "color": "#000000",
+                                "size": 50,
                             },
                         },
+                        "background": {"color": "#ffffff", "opacity": 1},
                         "start": current_start + i * time_run_ai,
                         "length": time_run_ai,
                     },
@@ -442,10 +442,10 @@ class VideoService:
                         "type": "caption",
                         "src": url_path_srt,
                         "font": {
-                            "family": "Noto Sans KR",
-                            "color": "#fc0303",
-                            "size": 50,
                             "lineHeight": 0.8,
+                            "family": "Noto Sans KR",
+                            "color": "#000000",
+                            "size": 50,
                         },
                     },
                     "start": start_slider_time,
