@@ -127,20 +127,45 @@ class APITestCreateVideo(Resource):
             data = json.loads(batch.content)
             images = data.get("images", [])
 
+            thumbnails = batch.thumbnails
+
+            need_count = 5
+
+            process_images = json.loads(thumbnails)
+            if process_images and len(process_images) < need_count:
+                current_length = len(process_images)
+                need_length = need_count - current_length
+                process_images = process_images + images[:need_length]
+            elif process_images and len(process_images) >= need_count:
+                process_images = process_images[:need_count]
+            else:
+                process_images = images
+                process_images = process_images[:need_count]
+
             response = None
             captions = []
-            response = call_chatgpt_create_caption(images, data, post.id)
+            response = call_chatgpt_create_caption(process_images, data, post.id)
             if response:
                 parse_caption = json.loads(response)
                 parse_response = parse_caption.get("response", {})
 
                 captions = parse_response.get("captions", [])
 
-                video_url = MakerVideo().make_video(images, captions)
+                video_path = MakerVideo().make_video_with_moviepy(
+                    process_images, captions
+                )
+
+                visual_path_1 = os.path.join(os.getcwd(), "uploads", "visual_1.mp4")
+                visual_path_2 = os.path.join(os.getcwd(), "uploads", "visual_2.mp4")
+
+                merged_video_path = MakerVideo().merge_videos(
+                    [visual_path_1, video_path, visual_path_2]
+                )
 
             return Response(
                 data={
-                    "video_url": video_url,
+                    "video_path": video_path,
+                    "merged_video_path": merged_video_path,
                 },
                 message="Tạo video thành công",
             ).to_dict()
