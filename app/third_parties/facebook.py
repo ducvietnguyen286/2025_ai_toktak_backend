@@ -88,6 +88,8 @@ class FacebookTokenService:
                 meta = user_link.meta
                 meta = json.loads(meta)
                 meta.update(data)
+
+                user_link.status = 1
                 user_link.meta = json.dumps(meta)
 
                 # expires_in = data.get("expires_in")
