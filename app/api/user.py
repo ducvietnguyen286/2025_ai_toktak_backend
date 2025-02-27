@@ -514,6 +514,7 @@ class APIRefreshTiktokToken(Resource):
                 ).to_dict()
 
             refresh_token = TiktokTokenService().refresh_token(user_link, current_user)
+            print("Refresh token:", refresh_token)
             if not refresh_token:
                 return Response(
                     message="Không tìm thấy refresh token",
