@@ -181,16 +181,18 @@ class APIMakePost(Resource):
             images = data.get("images", [])
             thumbnails = batch.thumbnails
 
+            need_count = 5
+
             process_images = json.loads(thumbnails)
-            if process_images and len(process_images) < 5:
+            if process_images and len(process_images) < need_count:
                 current_length = len(process_images)
-                need_length = 5 - current_length
+                need_length = need_count - current_length
                 process_images = process_images + images[:need_length]
-            elif process_images and len(process_images) >= 5:
-                process_images = process_images[:5]
+            elif process_images and len(process_images) >= need_count:
+                process_images = process_images[:need_count]
             else:
                 process_images = images
-                process_images = process_images[:5]
+                process_images = process_images[:need_count]
 
             type = post.type
 
