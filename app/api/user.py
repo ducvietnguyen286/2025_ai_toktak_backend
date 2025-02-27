@@ -250,6 +250,41 @@ class APIPostToLinks(Resource):
             ).to_dict()
 
 
+@ns.route("/get-facebook-page")
+class APIGetFacebookPage(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={},
+        required=[],
+    )
+    def get(self, args):
+        current_user = AuthService.get_current_identity()
+        user_links = UserService.get_user_links(current_user.id)
+        facebook_links = [link for link in user_links if link.type == "FACEBOOK"]
+        if not facebook_links:
+            return Response(
+                message="Không có link Facebook",
+                status=400,
+            ).to_dict()
+        list_pages = []
+        for link in facebook_links:
+            token_pages = FacebookTokenService().fetch_page_token(link)
+            for page in token_pages:
+                list_pages.append(
+                    {
+                        "id": page.get("id"),
+                        "name": page.get("name"),
+                        "picture": page.get("picture"),
+                    }
+                )
+        return Response(
+            data=list_pages,
+            message="Đăng nhập thành công",
+        ).to_dict()
+
+
 TIKTOK_REDIRECT_URL = (
     os.environ.get("CURRENT_DOMAIN") + "/api/v1/user/oauth/tiktok-callback"
 )
