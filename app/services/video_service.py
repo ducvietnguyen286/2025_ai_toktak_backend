@@ -406,7 +406,7 @@ class VideoService:
                             "font": {
                                 "lineHeight": 0.8,
                                 "family": "Noto Sans KR",
-                                "color": "#000000",
+                                "color": "#ff0505",
                                 "size": 50,
                             },
                         },
