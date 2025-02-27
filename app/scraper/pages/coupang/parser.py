@@ -32,6 +32,7 @@ def parse_mobile_response(html, url, base_url):
         name = data.get("name")
         description = data.get("description")
         images = data.get("image")
+        image_thumbs = data.get("image")
         image_url = images[0] if images else ""
         domain = get_domain(url)
         offers = data.get("offers")
@@ -79,6 +80,7 @@ def parse_mobile_response(html, url, base_url):
             "domain": domain,
             "brand": "",
             "image": image_url,
+            "image_thumbs": image_thumbs,
             "price": "{0}원".format(price_show) if price_show != "" else "0",
             "url": url,
             "url_crawl": url,

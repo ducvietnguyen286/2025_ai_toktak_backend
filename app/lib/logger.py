@@ -70,7 +70,7 @@ def log_make_video_message(message):
         custom_logger.addHandler(custom_handler)
 
     # Ghi log
-    custom_logger.info(message)
+    custom_logger.info(f"\n\n{message}\n\n")
 
     # Đóng handler
     custom_handler.close()

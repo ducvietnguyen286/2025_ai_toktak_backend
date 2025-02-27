@@ -11,7 +11,7 @@ from app.ais.chatgpt import (
     call_chatgpt_create_social,
 )
 from app.decorators import parameters
-from app.lib.logger import logger
+from app.lib.logger import logger, log_make_video_message
 from app.lib.response import Response
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
@@ -22,6 +22,7 @@ from app.services.batch import BatchService
 from app.services.post import PostService
 from app.services.video_service import VideoService
 from flask import request
+
 
 ns = Namespace(name="maker", description="Maker API")
 
@@ -57,6 +58,7 @@ class APICreateBatch(Resource):
             images = data.get("images", [])
 
             thumbnail_url = data.get("image", "")
+            image_thumbs = data.get("image_thumbs", [])
 
             if images and len(images) > max_count_image:
                 images = images[:max_count_image]
@@ -178,6 +180,7 @@ class APIMakePost(Resource):
 
             data = json.loads(batch.content)
             images = data.get("images", [])
+            image_thumbs = data.get("image_thumbs", [])
             type = post.type
 
             response = None
@@ -187,13 +190,58 @@ class APIMakePost(Resource):
             thumbnail = batch.thumbnail
 
             if type == "video":
-                images = [thumbnail] + images
+                log_make_video_message(f"images: {images}")
+                
+                images = image_thumbs + images
+                log_make_video_message(f"images with thumbnail: {images}")
                 response = call_chatgpt_create_caption(images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
 
                     captions = parse_response.get("captions", [])
+                    
+
+                    for index, image_url in enumerate(images):
+                        caption = captions[index] or ""
+                        image_url = (
+                            ImageMaker.save_image_and_write_text_for_short_video(
+                                image_url, caption, font_size=80
+                            )
+                        )
+                        maker_images.append(image_url)
+
+                    # Tạo video từ ảnh
+                    if len(maker_images) > 0:
+                        image_renders = maker_images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
+                        image_renders_sliders = maker_images[
+                            :5
+                        ]  # Lấy tối đa 5 Ảnh đầu tiên
+                        caption_sliders = captions[:5]  # Lấy tối đa 5 Ảnh đầu tiên
+
+                        product_name = data["name"]
+
+                        result = VideoService.create_video_from_images(
+                            post.id,
+                            product_name,
+                            image_renders,
+                            image_renders_sliders,
+                            caption_sliders,
+                        )
+
+                        logger.info("result: {0}".format(result))
+
+                        if result["status_code"] == 200:
+                            render_id = result["response"]["id"]
+
+                            VideoService.create_create_video(
+                                render_id=render_id,
+                                user_id=1,
+                                product_name=product_name,
+                                images_url=json.dumps(image_renders),
+                                description="",
+                                post_id=post.id,
+                            )
 
             elif type == "image":
                 logger.info(
@@ -213,31 +261,6 @@ class APIMakePost(Resource):
                         )
                         maker_images.append(image_url)
                 
-                # Tạo video từ ảnh
-                if len(maker_images) > 0:
-                    image_renders = maker_images[:1]  # Lấy tối đa 3 Ảnh đầu tiên
-                    image_renders_sliders = maker_images[:5]  # Lấy tối đa 5 Ảnh đầu tiên
-                    caption_sliders = captions[:5]  # Lấy tối đa 5 Ảnh đầu tiên
-
-                    product_name = data["name"]
-
-                    result = VideoService.create_video_from_images(
-                        post.batch_id, product_name, image_renders, image_renders_sliders, caption_sliders
-                    )
-
-                    logger.info("result: {0}".format(result))
-
-                    if result["status_code"] == 200:
-                        render_id = result["response"]["id"]
-
-                        VideoService.create_create_video(
-                            render_id=render_id,
-                            user_id=1,
-                            product_name=product_name,
-                            images_url=json.dumps(image_renders),
-                            description="",
-                            post_id=post.id,
-                        )
                 
 
                 logger.info(

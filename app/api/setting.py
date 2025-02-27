@@ -33,31 +33,20 @@ class APIUpdateSetting(Resource):
     def post(self):
         try:
             data = request.get_json()
-            print(data)
-            # Danh sách các setting cần cập nhật
-            setting_keys = [
-                "SHOTSTACK_API_KEY",
-                "SHOTSTACK_URL",
-                "SHOTSTACK_EMAIL",
-                "SHOTSTACK_OWNER_ID",
-                "SHOTSTACK_AI_IMAGE",
-            ]
 
             # Kiểm tra dữ liệu gửi lên
             if not isinstance(data, dict):
                 return {"message": "Dữ liệu phải là dictionary"}, 400
-
-            # Lặp qua từng key để cập nhật
-            for key in setting_keys:
-                if key in data:  # Nếu có giá trị trong request
-                    setting = Setting.query.filter_by(setting_name=key).first()
-                    if setting:
-                        setting.setting_value = data[key]  # Cập nhật giá trị mới
-                    else:
-                        # Nếu chưa có thì tạo mới
-                        new_setting = Setting(setting_name=key, setting_value=data[key])
-                        db.session.add(new_setting)
-
+            for key, value in data.items():
+                print(key)
+                print(value)
+                setting = Setting.query.filter_by(setting_name=key).first()
+                if setting:
+                    setting.setting_value = value  # Cập nhật giá trị mới
+                else:
+                    # Nếu chưa có thì tạo mới
+                    new_setting = Setting(setting_name=key, setting_value=value)
+                    db.session.add(new_setting)
             db.session.commit()  # Lưu thay đổi vào DB
 
             settings = Setting.query.all()
