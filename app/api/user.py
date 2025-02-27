@@ -261,7 +261,7 @@ class APIGetFacebookPage(Resource):
     )
     def get(self, args):
         current_user = AuthService.get_current_identity()
-        user_links = UserService.get_user_links(current_user.id)
+        user_links = UserService.get_original_user_links(current_user.id)
         facebook_links = [link for link in user_links if link.type == "FACEBOOK"]
         if not facebook_links:
             return Response(
