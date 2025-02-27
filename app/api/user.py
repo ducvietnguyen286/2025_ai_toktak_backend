@@ -500,20 +500,14 @@ class APIRefreshTiktokToken(Resource):
         try:
             current_user = AuthService.get_current_identity()
             link_id = args.get("link_id")
-            user_link = UserService.find_user_link(link_id, current_user.id)
-            if not user_link:
+            link = LinkService.find_link(link_id)
+            if not link:
                 return Response(
                     message="Không tìm thấy link",
                     status=400,
                 ).to_dict()
 
-            if user_link.status == 0:
-                return Response(
-                    message="Link chưa được kích hoạt",
-                    status=400,
-                ).to_dict()
-
-            refresh_token = TiktokTokenService().refresh_token(user_link, current_user)
+            refresh_token = TiktokTokenService().refresh_token(link, current_user)
             print("Refresh token:", refresh_token)
             if not refresh_token:
                 return Response(
