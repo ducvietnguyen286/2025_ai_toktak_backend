@@ -79,6 +79,7 @@ def parse_mobile_response(html, url, base_url):
             "domain": domain,
             "brand": "",
             "image": image_url,
+            "thumbnails": images,
             "price": "{0}원".format(price_show) if price_show != "" else "0",
             "url": url,
             "url_crawl": url,

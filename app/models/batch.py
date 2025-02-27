@@ -9,14 +9,15 @@ class Batch(db.Model, BaseModel):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     url = db.Column(db.String(100), nullable=False)
     thumbnail = db.Column(db.String(500), nullable=True, default="")
+    thumbnails = db.Column(db.Text)
     content = db.Column(db.Text, nullable=True)
     type = db.Column(db.Integer, default=1)
     count_post = db.Column(db.Integer, default=0)
     done_post = db.Column(db.Integer, default=0)
     status = db.Column(db.Integer, default=1)
 
-    to_json_filter = "content"
-    
+    to_json_filter = ("content", "thumbnails")
+
     def to_dict(self):
         return {
             "id": self.id,
