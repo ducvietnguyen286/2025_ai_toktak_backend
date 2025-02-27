@@ -186,7 +186,7 @@ class APIMakePost(Resource):
                 current_length = len(process_images)
                 need_length = 5 - current_length
                 process_images = process_images + images[:need_length]
-            elif process_images and len(process_images) > 5:
+            elif process_images and len(process_images) >= 5:
                 process_images = process_images[:5]
             else:
                 process_images = images
