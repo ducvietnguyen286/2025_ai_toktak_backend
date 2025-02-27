@@ -1,8 +1,15 @@
 import gc
 import io
 import sys
+import tempfile
 import time
 import uuid
+from moviepy.editor import (
+    vfx,
+    ImageClip,
+    concatenate_videoclips,
+    AudioFileClip,
+)
 import av
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -14,6 +21,8 @@ import requests
 from tqdm import tqdm
 
 from app.makers.images import wrap_text_by_pixel
+from pydub import AudioSegment
+import subprocess
 
 FONT_FOLDER = os.path.join(os.getcwd(), "app/makers/fonts")
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
@@ -30,11 +39,164 @@ class MakerVideo:
         self.container = None
         self.stream = None
         self.audio_stream = None
+        self.total_times = 0
         try:
             self.font = ImageFont.truetype(f"{FONT_FOLDER}/dotum.ttc", 80)
         except IOError:
             print(f"Không tìm thấy font dotum.ttc, sử dụng font mặc định.")
             self.font = ImageFont.load_default()
+
+    def standardize_video(self, input_file, output_file):
+        """
+        Re-encode video để chuẩn hóa các tham số:
+        - Video: codec H.264, pixel format yuv420p, fps giữ nguyên.
+        - Audio: codec AAC, sample rate 44100, 2 kênh, sample format fltp.
+        """
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            input_file,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            "-ar",
+            "44100",
+            "-ac",
+            "2",
+            output_file,
+        ]
+        print("Standardizing:", " ".join(cmd))
+        subprocess.run(cmd, check=True)
+
+    def merge_videos(self, video_files=[]):
+        """
+        Standardize các file video, sau đó merge chúng lại bằng concat filter
+        với reset timestamp cho video và audio.
+        """
+
+        timestamp = int(time.time())
+        unique_id = uuid.uuid4().hex
+
+        file_name = f"{timestamp}_{unique_id}.mp4"
+        output_file = os.path.join(UPLOAD_FOLDER, file_name)
+
+        # Tạo thư mục tạm để lưu các file đã chuẩn hóa
+        temp_dir = tempfile.gettempdir()
+        std_files = []
+        for file in video_files:
+            std_file = os.path.join(temp_dir, f"std_{os.path.basename(file)}")
+            self.standardize_video(file, std_file)
+            std_files.append(std_file)
+
+        n = len(std_files)
+        # Xây dựng lệnh FFmpeg cho merge
+        cmd = ["ffmpeg"]
+        for f in std_files:
+            cmd.extend(["-i", f])
+
+        # Với concat filter, thứ tự của các stream phải theo cặp: [v0][a0][v1][a1]...
+        filter_parts = []
+        for i in range(n):
+            filter_parts.append(f"[{i}:v]setpts=PTS-STARTPTS[v{i}]")
+            filter_parts.append(f"[{i}:a]asetpts=PTS-STARTPTS[a{i}]")
+
+        concat_inputs = "".join(f"[v{i}][a{i}]" for i in range(n))
+        filter_parts.append(f"{concat_inputs}concat=n={n}:v=1:a=1[outv][outa]")
+
+        filter_complex = " ; ".join(filter_parts)
+
+        cmd.extend(
+            [
+                "-filter_complex",
+                filter_complex,
+                "-map",
+                "[outv]",
+                "-map",
+                "[outa]",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+                output_file,
+            ]
+        )
+
+        print("Merging with command:")
+
+        print(" ".join(cmd))
+        subprocess.run(cmd, check=True)
+
+        # Xóa các file tạm sau khi merge
+        for f in std_files:
+            try:
+                os.remove(f)
+            except Exception as e:
+                print(f"Không xóa được {f}: {e}")
+
+        return output_file
+
+    def make_video_with_moviepy(self, images=[], captions=[]):
+        if images is None:
+            images = []
+        if captions is None:
+            captions = []
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+        self.total_times = self.duration_per_image * len(images)
+
+        timestamp = int(time.time())
+        unique_id = uuid.uuid4().hex
+        file_name = f"{timestamp}_{unique_id}.mp4"
+
+        output_file = os.path.join(UPLOAD_FOLDER, file_name)
+
+        # Tạo progress bar cho toàn bộ quá trình
+        total_steps = len(images) + 1  # Số lượng ảnh + 1 cho việc tạo audio
+        with tqdm(total=total_steps, desc="Processing video", file=sys.stdout) as pbar:
+            # Chạy make_audio song song với việc xử lý ảnh
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                audio_future = executor.submit(self.make_audio, captions)
+                saved_images = []
+                for image_url, caption in zip(images, captions):
+                    processed_img = self.process_image(
+                        image_url=image_url, caption=caption, is_get_path=True
+                    )
+                    saved_images.append(processed_img)
+                    pbar.update(1)  # Cập nhật progress bar sau khi xử lý mỗi ảnh
+                audio_path, temp_audio_path = (
+                    audio_future.result()
+                )  # đợi audio hoàn thành
+                pbar.update(1)  # Cập nhật progress bar sau khi tạo audio
+
+        image_clips = []
+        for image_path in saved_images:
+            clip = ImageClip(
+                image_path, duration=self.duration_per_image
+            )  # Mỗi ảnh hiển thị 5 giây
+            clip = clip.fx(vfx.fadein, duration=1).fx(vfx.fadeout, duration=1)
+            image_clips.append(clip)
+        video_clips = image_clips
+        final_video_clip = concatenate_videoclips(video_clips, method="compose")
+        audio_clip = AudioFileClip(audio_path)
+        final_video_clip = final_video_clip.set_audio(audio_clip)
+        final_video_clip.write_videofile(output_file, fps=24, codec="libx264")
+
+        os.remove(audio_path)
+        os.remove(temp_audio_path)
+        for image_path in saved_images:
+            os.remove(image_path)
+
+        return output_file
 
     def make_video(self, images=[], captions=[]):
         if images is None:
@@ -43,13 +205,15 @@ class MakerVideo:
             captions = []
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+        self.total_times = self.duration_per_image * len(images)
+
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
         file_name = f"{timestamp}_{unique_id}.mp4"
 
         output_file = os.path.join(UPLOAD_FOLDER, file_name)
 
-        self.container = av.open(output_file, mode="w")
+        self.container = av.open(output_file, mode="w", format="mp4")
 
         # TODO:
         # - libx264 là sử dụng CPU
@@ -92,7 +256,9 @@ class MakerVideo:
                     )
                     saved_images.append(processed_img)
                     pbar.update(1)  # Cập nhật progress bar sau khi xử lý mỗi ảnh
-                audio_path = audio_future.result()  # đợi audio hoàn thành
+                audio_path, temp_audio_path = (
+                    audio_future.result()
+                )  # đợi audio hoàn thành
                 pbar.update(1)  # Cập nhật progress bar sau khi tạo audio
 
             # Tạo progress bar cho việc tạo frame
@@ -119,6 +285,7 @@ class MakerVideo:
             print("Error closing self.container:", e)
 
         os.remove(audio_path)
+        os.remove(temp_audio_path)
 
         del saved_images
         del audio_path
@@ -135,16 +302,68 @@ class MakerVideo:
         unique_id = uuid.uuid4().hex
         file_name = f"{timestamp}_{unique_id}.mp3"
         output_file = os.path.join(UPLOAD_FOLDER, file_name)
-        tts.save(output_file)
 
-        return output_file
+        temp_file_name = f"{timestamp}_{unique_id}_temp.mp3"
+        temp_file = os.path.join(UPLOAD_FOLDER, temp_file_name)
+
+        tts.save(temp_file)
+
+        audio = AudioSegment.from_file(temp_file, format="mp3")
+        current_duration_s = len(audio) / 1000.0
+
+        print("Thời lượng audio hiện tại:", current_duration_s, "giây")
+        print("Thời lượng video cần tạo:", self.total_times, "giây")
+
+        if abs(current_duration_s - self.total_times) < 0.1:
+            print("Thời lượng đã gần khớp, chỉ copy file.")
+            subprocess.run(["ffmpeg", "-y", "-i", temp_file, output_file], check=True)
+            return output_file, temp_file
+
+        # Tính hệ số tempo cần thiết
+        # Với atempo, thời lượng mới = current_duration / tempo, nên để có new_duration = target_duration_s,
+        # cần: tempo = current_duration / target_duration_s.
+        factor = current_duration_s / self.total_times
+        print(f"Hệ số tempo ban đầu: {factor:.6f}")
+
+        # FFmpeg atempo filter chỉ chấp nhận giá trị trong khoảng [0.5, 2.0]
+        # Nếu factor nằm ngoài khoảng này, chúng ta cần chia nhỏ thành các hệ số hợp lệ.
+        factors = []
+        temp_factor = factor
+        while temp_factor > 2.0:
+            factors.append(2.0)
+            temp_factor /= 2.0
+        while temp_factor < 0.5:
+            factors.append(0.5)
+            temp_factor /= 0.5
+        factors.append(temp_factor)
+
+        # Tạo chuỗi filter atempo bằng cách ghép các hệ số lại, ví dụ: "atempo=2.0,atempo=1.1"
+        filter_chain = ",".join(f"atempo={f:.6f}" for f in factors)
+
+        print("Chuỗi filter atempo:", filter_chain)
+
+        # Gọi FFmpeg để thay đổi tempo của audio
+        cmd = [
+            "ffmpeg",
+            "-y",  # ghi đè file output nếu tồn tại
+            "-i",
+            temp_file,
+            "-filter:a",
+            filter_chain,
+            output_file,
+        ]
+
+        subprocess.run(cmd, check=True)
+        print("Đã xuất file audio với tempo điều chỉnh:", output_file)
+
+        return output_file, temp_file
 
     def get_image_from_url(self, image_url):
         response = requests.get(image_url)
         image = Image.open(io.BytesIO(response.content))
         return image
 
-    def process_image(self, image_url, caption):
+    def process_image(self, image_url, caption, is_get_path=False):
         image = self.get_image_from_url(image_url)
 
         video_width, video_height = self.video_size
@@ -198,6 +417,16 @@ class MakerVideo:
         if image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg"):
             image = image.convert("RGB")
 
+        if is_get_path:
+            timestamp = int(time.time())
+            unique_id = uuid.uuid4().hex
+            extension = image_url.split(".")[-1]
+
+            image_name = f"{timestamp}_{unique_id}.{extension}"
+            output_file = os.path.join(UPLOAD_FOLDER, image_name)
+            image.save(output_file)
+            return output_file
+
         return image
 
     def create_frame(self, image, pbar):
@@ -243,7 +472,11 @@ class MakerVideo:
         """
         Thêm audio vào container, ép lại giá trị PTS cho audio frame để đồng bộ thời gian.
         """
-        audio_file = av.open(audio_path)
+        try:
+            audio_file = av.open(audio_path, mode="r")
+        except av.AVError as e:
+            print(f"Error opening audio file: {e}")
+            return None
         audio_in_stream = audio_file.streams.audio[0]
 
         print(f"Audio file sample rate: {audio_in_stream.rate}")
@@ -276,7 +509,16 @@ class MakerVideo:
             audio_pts += frame.samples
             for packet in self.audio_stream.encode(frame):
                 print(f"Audio packet PTS: {packet.pts}")  # In PTS của audio packet
-                self.container.mux(packet)
+                packet.stream = self.audio_stream
+                try:
+                    self.container.mux(packet)
+                except Exception as e:
+                    print(f"Lỗi khi mux packet: {e}")
+                    # Có thể in thêm thông tin của packet để debug
+                    print(
+                        f"Packet info: pts={packet.pts}, dts={packet.dts}, duration={packet.duration}"
+                    )
+                    raise
 
         original_duration = audio_pts / sample_rate
         print("Thời lượng audio gốc:", original_duration, "giây")

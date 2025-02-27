@@ -125,7 +125,9 @@ class APINewLink(Resource):
                 user_link.save()
 
                 code = args.get("AccessToken")
-                FacebookTokenService().exchange_token(access_token, user_link)
+                is_active = FacebookTokenService().exchange_token(
+                    access_token=access_token, user_link=user_link
+                )
         else:
             user_link.meta = json.dumps(info)
             user_link.status = 1
@@ -142,7 +144,7 @@ class APINewLink(Resource):
                 user_link.save()
 
                 access_token = args.get("AccessToken")
-                FacebookTokenService().exchange_token(
+                is_active = FacebookTokenService().exchange_token(
                     access_token=access_token, user_link=user_link
                 )
 
@@ -248,6 +250,52 @@ class APIPostToLinks(Resource):
                 message="Tạo bài viết that bai",
                 status=400,
             ).to_dict()
+
+
+@ns.route("/get-facebook-page")
+class APIGetFacebookPage(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={},
+        required=[],
+    )
+    def get(self, args):
+        current_user = AuthService.get_current_identity()
+        user_links = UserService.get_original_user_links(current_user.id)
+        link = LinkService.find_link_by_type("FACEBOOK")
+        if not link:
+            return Response(
+                message="Không tìm thấy link Facebook",
+                status=400,
+            ).to_dict()
+        facebook_links = []
+        for user_link in user_links:
+            if user_link.link_id == link.id:
+                facebook_links.append(user_link)
+        if not facebook_links:
+            return Response(
+                message="Không có link Facebook",
+                status=400,
+            ).to_dict()
+        list_pages = []
+        for link in facebook_links:
+            token_pages = FacebookTokenService().fetch_page_token(link)
+            if not token_pages:
+                continue
+            for page in token_pages:
+                list_pages.append(
+                    {
+                        "id": page.get("id"),
+                        "name": page.get("name"),
+                        "picture": page.get("picture"),
+                    }
+                )
+        return Response(
+            data=list_pages,
+            message="Lấy link Facebook thành công",
+        ).to_dict()
 
 
 TIKTOK_REDIRECT_URL = (

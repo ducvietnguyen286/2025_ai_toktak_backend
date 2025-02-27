@@ -128,30 +128,30 @@ class ImageMaker:
         text_color=(255, 255, 255),  # Trắng
         stroke_color=(0, 0, 0),  # Màu viền (đen)
         stroke_width=10,  # Độ dày viền
-        target_size=(1080, 1080),
+        target_size=(1080, 1350),
     ):
         image_path = ImageMaker.save_image_url_get_path(image_url)
         image_name = image_path.split("/")[-1]
 
         image = Image.open(image_path).convert("RGBA")
-        width, height = image.size
 
-        if width != height:
-            if width > height:
-                new_width = height
-                new_height = height
-                left = (width - new_width) // 2
-                upper = 0
-                right = left + new_width
-                lower = new_height
-            else:
-                new_width = width
-                new_height = width
-                left = 0
-                upper = (height - new_height) // 2
-                right = new_width
-                lower = upper + new_height
-            image = image.crop((left, upper, right, lower))
+        image_width, image_height = target_size
+        image_ratio = image_width / image_height
+
+        if image.height > image.width:
+            crop_height = int(image.width / image_ratio)
+            top = (image.height - crop_height) // 2
+            bottom = top + crop_height
+            image = image.crop((0, top, image.width, bottom))
+            image = image.resize(target_size, Image.LANCZOS)
+        else:
+            new_width = image_width
+            new_height = int(image.height * (image_width / image.width))
+            resized_image = image.resize((new_width, new_height), Image.LANCZOS)
+            background = Image.new("RGBA", target_size, (0, 0, 0, 255))
+            top = (image_height - new_height) // 2
+            background.paste(resized_image, (0, top))
+            image = background
 
         # Resize ảnh về kích thước chuẩn (1080x1080) với chất lượng cao
         image = image.resize(target_size, Image.LANCZOS)

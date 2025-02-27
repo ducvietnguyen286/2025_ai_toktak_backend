@@ -88,6 +88,7 @@ class FacebookTokenService:
                 meta = user_link.meta
                 meta = json.loads(meta)
                 meta.update(data)
+
                 user_link.meta = json.dumps(meta)
 
                 # expires_in = data.get("expires_in")
@@ -96,19 +97,19 @@ class FacebookTokenService:
                 # user_link.expired_date = datetime.fromtimestamp(expired_at).date()
 
                 user_link.save()
-                return data
+                return True
             else:
                 user_link.status = 0
                 user_link.save()
 
                 log_social_message(f"Error exchanging token: {data}")
-                return None
+                return False
 
         except Exception as e:
             traceback.print_exc()
             log_social_message(e)
             print(e)
-            return None
+            return False
 
 
 class FacebookService:
