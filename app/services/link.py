@@ -14,6 +14,10 @@ class LinkService:
         return Link.query.get(id)
 
     @staticmethod
+    def find_link_by_type(type):
+        return Link.query.where(Link.type == type).first()
+
+    @staticmethod
     def get_links():
         links = Link.query.where(Link.status == 1).all()
         return [link._to_json() for link in links]

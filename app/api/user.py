@@ -262,7 +262,16 @@ class APIGetFacebookPage(Resource):
     def get(self, args):
         current_user = AuthService.get_current_identity()
         user_links = UserService.get_original_user_links(current_user.id)
-        facebook_links = [link for link in user_links if link.type == "FACEBOOK"]
+        link = LinkService.find_link_by_type("FACEBOOK")
+        if not link:
+            return Response(
+                message="Không tìm thấy link Facebook",
+                status=400,
+            ).to_dict()
+        facebook_links = []
+        for user_link in user_links:
+            if user_link.link_id == link.id:
+                facebook_links.append(user_link)
         if not facebook_links:
             return Response(
                 message="Không có link Facebook",
