@@ -578,8 +578,6 @@ def generate_srt(batch_id, captions):
     """
     file_path = f"voice/{batch_id}"
     os.makedirs(f"static/{file_path}", exist_ok=True)
-    CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
-
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     file_paths = []
 
@@ -611,8 +609,9 @@ def generate_srt(batch_id, captions):
                     f.write(f"{segment}\n\n")
                     let_step = let_step + 1
                     start_time = end_time
-
-        file_paths.append(f"{CURRENT_DOMAIN}/{file_path}/{file_name}")
+        # CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
+        # file_paths.append(f"{CURRENT_DOMAIN}/{file_path}/{file_name}")
+        file_paths.append(file_path_srt)
 
     return file_paths  # Trả về danh sách các file đã tạo
 
@@ -685,7 +684,7 @@ def parse_srt_to_html_assets(url_path_srt: str, start_time):
         caption_text = caption.content.replace("\n", "<br>")
 
         # Tạo HTML cho asset với style tùy chỉnh
-        html_text =  f"<div  class='large-div'>{caption_text}</div>"
+        html_text = f"<div  class='large-div'>{caption_text}</div>"
 
         # "asset": {
         #     "type": "html",
@@ -707,7 +706,7 @@ def parse_srt_to_html_assets(url_path_srt: str, start_time):
                 "html": html_text,
                 "width": 500,
                 "height": 400,
-                "css": '.large-div { background-color: #030303;color: #ffffff;font-family: "Noto Sans KR", sans-serif;      font-size: 40px;  text-align: center;padding: 40px;border-radius: 40px;box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);       height : 400;   }',
+                "css": '.large-div { background-color: #030303;color: #ffffff;font-family: "Noto Sans KR", sans-serif;      font-size: 60px;  text-align: center;padding: 40px;border-radius: 40px;box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);       height : 400;   }',
             },
             "start": start_play,
             "length": length_seconds,
