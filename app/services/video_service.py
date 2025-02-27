@@ -36,8 +36,18 @@ class VideoService:
         voice_dir = f"static/voice/{batch_id}"
         os.makedirs(voice_dir, exist_ok=True)
 
+        # generate_audio_files(captions)
+        processed_captions = []
+        for caption in captions:
+            caption = caption.strip()
+            if not caption.endswith("."):
+                caption += "."
+            processed_captions.append(caption)
+
+        text_to_speech = " ".join(processed_captions)
+
         # create voice Google TTS
-        text_to_speech = f"{product_name} 출시되었습니다. 지금 만나보세요!"
+        log_make_video_message(text_to_speech)
         tts = gTTS(text=text_to_speech, lang="ko")
         file_name = f"template_voice_{uuid.uuid4().hex}.mp3"
         file_path = f"{voice_dir}/{file_name}"
@@ -387,37 +397,39 @@ class VideoService:
                             "type": "caption",
                             "src": url_path_srt,
                             "font": {
-                                "family": "Noto Sans KR",
-                                "color": "#fc0303",
-                                "size": 50,
                                 "lineHeight": 0.8,
+                                "family": "Noto Sans KR",
+                                "color": "#000000",
+                                "size": 50,
                             },
                         },
+                        "background": {"color": "#ffffff", "opacity": 1},
                         "start": current_start + i * time_run_ai,
                         "length": time_run_ai,
                     },
-                ) 
+                )
             current_start += len(ai_images) * time_run_ai
 
         start_time_caption = current_start
         time_show_image = 5
-        
+
         effects = [
             "zoomIn",
-            "zoomOut",
-            "slideLeft",
-            "slideRight",
-            "slideUp",
-            "slideDown",
+            # "zoomOut",
+            # "slideLeft",
+            # "slideRight",
+            # "slideUp",
+            # "slideDown",
         ]
-        
+
         for j_index, url in enumerate(images_slider_url):
-            
+
             random_effect = random.choice(effects)
+            start_slider_time = current_start + j_index * time_show_image
             clips.append(
                 {
                     "asset": {"type": "image", "src": url},
-                    "start": current_start + j_index * time_show_image,
+                    "start": start_slider_time,
                     "length": time_show_image,
                     "effect": random_effect,
                 },
@@ -430,15 +442,28 @@ class VideoService:
                         "type": "caption",
                         "src": url_path_srt,
                         "font": {
-                            "family": "Noto Sans KR",
-                            "color": "#fc0303",
-                            "size": 50,
                             "lineHeight": 0.8,
+                            "family": "Noto Sans KR",
+                            "color": "#000000",
+                            "size": 50,
                         },
                     },
-                    "start": current_start + j_index * time_show_image,
+                    "start": start_slider_time,
                     "length": time_show_image,
                 },
+            )
+            clips.append(
+                {
+                    "asset": {
+                        "type": "html",
+                        "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'>잠시만요. <span style='font-weight: bold;'>10</span>초 뒤에 더<br> 놀라운 영상이 이어집니다.</div>",
+                        "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
+                    },
+                    "start": start_slider_time + 0.01,
+                    "length": time_show_image,
+                    "position": "top",
+                    "offset": {"x": 0, "y": 0.4},
+                }
             )
 
         current_start += len(images_slider_url) * time_show_image
@@ -450,17 +475,20 @@ class VideoService:
                 "length": outro_length,
             }
         )
+        html_content = "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Buy It Now.</div>"
         clips.append(
             {
                 "asset": {
                     "type": "html",
-                    "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'><span style='font-weight: bold;'>Buy It Now</span></div>",
-                    "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
+                    "html": html_content,
+                    "css": "div { font-weight: bold; font-family: 'Noto Sans KR', sans-serif; border-radius: 40px; }",
+                    "width": 500,
+                    "height": 200,
+                    "background": "#FFD600",
+                    "position": "center",
                 },
-                "start": current_start,
+                "start": current_start + 0.01,
                 "length": "end",
-                "position": "top",
-                "offset": {"x": 0, "y": 0.4},
             },
         )
         current_start += outro_length
@@ -477,17 +505,6 @@ class VideoService:
                 "length": "end",
                 "scale": 0.15,
                 "position": "topRight",
-            },
-            {
-                "asset": {
-                    "type": "html",
-                    "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'>잠시만요. <span style='font-weight: bold;'>10</span>초 뒤에 더<br> 놀라운 영상이 이어집니다.</div>",
-                    "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
-                },
-                "start": 5.1,
-                "length": "end",
-                "position": "top",
-                "offset": {"x": 0, "y": 0.4},
             },
             {
                 "asset": {
