@@ -334,33 +334,33 @@ class VideoService:
             }
         )
 
-        clips.append(
-            {
-                "asset": {
-                    "type": "caption",
-                    "src": "https://apitoktak.voda-play.com/voice/caption/first_video_transcript.srt",
-                    "font": {
-                        "family": "Noto Sans KR",
-                        "color": "#ffffff",
-                        "opacity": 0.8,
-                        "size": 50,
-                        "lineHeight": 0.8,
-                        "stroke": "#ff6600",
-                        "strokeWidth": 0.8,
-                    },
-                    "background": {
-                        "color": "#000000",
-                        "opacity": 0.4,
-                        "padding": 80,
-                        "borderRadius": 30,
-                    },
-                    "margin": {"top": 0.05, "left": 0.25, "right": 0.25},
-                    "speed": 1,
-                },
-                "start": 0,
-                "length": 5,
-            },
-        )
+        # clips.append(
+        #     {
+        #         "asset": {
+        #             "type": "caption",
+        #             "src": "https://apitoktak.voda-play.com/voice/caption/first_video_transcript.srt",
+        #             "font": {
+        #                 "family": "Noto Sans KR",
+        #                 "color": "#ffffff",
+        #                 "opacity": 0.8,
+        #                 "size": 50,
+        #                 "lineHeight": 0.8,
+        #                 "stroke": "#ff6600",
+        #                 "strokeWidth": 0.8,
+        #             },
+        #             "background": {
+        #                 "color": "#000000",
+        #                 "opacity": 0.4,
+        #                 "padding": 80,
+        #                 "borderRadius": 30,
+        #             },
+        #             "margin": {"top": 0.05, "left": 0.25, "right": 0.25},
+        #             "speed": 1,
+        #         },
+        #         "start": 0,
+        #         "length": 5,
+        #     },
+        # )
         current_start += intro_length
 
         if is_ai_image == "1":
@@ -410,9 +410,10 @@ class VideoService:
             "slideUp",
             "slideDown",
         ]
-        random_effect = random.choice(effects)
         
         for j_index, url in enumerate(images_slider_url):
+            
+            random_effect = random.choice(effects)
             clips.append(
                 {
                     "asset": {"type": "image", "src": url},
@@ -587,7 +588,7 @@ def format_time(seconds):
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     sec = seconds % 60
-    return f"{hours:02}:{minutes:02}:{sec:02},000"
+    return f"{hours:02}:{minutes:02}:{sec:02},001"
 
 
 def test_create_combined_clips(
