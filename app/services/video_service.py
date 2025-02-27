@@ -14,6 +14,7 @@ from app.lib.logger import log_make_video_message
 
 from gtts import gTTS
 import uuid
+import srt
 
 
 class VideoService:
@@ -47,7 +48,6 @@ class VideoService:
         text_to_speech = " ".join(processed_captions)
 
         # create voice Google TTS
-        log_make_video_message(text_to_speech)
         tts = gTTS(text=text_to_speech, lang="ko")
         file_name = f"template_voice_{uuid.uuid4().hex}.mp3"
         file_path = f"{voice_dir}/{file_name}"
@@ -139,7 +139,6 @@ class VideoService:
             "callback": f"{current_domain}/api/v1/video_maker/shotstack_webhook",
         }
 
-        # log_make_video_message(f"payload: {payload}")
         log_make_video_message(
             f"++++++++++++++++++++++++++++++payload_dumps:\n\n {json.dumps(payload)} \n\n"
         )
@@ -450,22 +449,28 @@ class VideoService:
             clips.append(clip_detail)
 
             url_path_srt = file_path_srts[j_index]
-            clips.append(
-                {
-                    "asset": {
-                        "type": "caption",
-                        "src": url_path_srt,
-                        "font": {
-                            "lineHeight": 0.8,
-                            "family": "Noto Sans KR",
-                            "color": "#000000",
-                            "size": 50,
-                        },
-                    },
-                    "start": start_slider_time,
-                    "length": time_show_image,
-                },
-            )
+
+            srt_captions = parse_srt_to_html_assets(url_path_srt, start_slider_time)
+            for srt_caption in srt_captions:
+                clips.append(srt_caption)
+
+            # clips.append(
+            #     {
+            #         "asset": {
+            #             "type": "caption",
+            #             "src": url_path_srt,
+            #             "font": {
+            #                 "lineHeight": 0.8,
+            #                 "family": "Noto Sans KR",
+            #                 "color": "#ff0505",
+            #                 "size": 50,
+            #             },
+            #         },
+            #         "background": {"color": "#ffffff", "opacity": 1},
+            #         "start": start_slider_time,
+            #         "length": time_show_image,
+            #     },
+            # )
             clips.append(
                 {
                     "asset": {
@@ -654,3 +659,61 @@ def test_create_combined_clips(
     # Kết hợp hai danh sách clip lại
     combined_clips = clips_shape + clips
     return {"clips": combined_clips}
+
+
+def parse_srt_to_html_assets(url_path_srt: str, start_time):
+    """
+    Đọc file SRT từ đường dẫn url_path_srt và chuyển đổi từng caption
+    thành asset kiểu "html" với định dạng CSS tùy chỉnh.
+
+    :param url_path_srt: Đường dẫn tới file SRT (ví dụ: 'assets/transcript.srt')
+    :return: Danh sách các asset (dạng dictionary) cho caption
+    """
+
+    url_path_srt = url_path_srt.replace("http://118.70.171.129:6001", "static")
+
+    # Đọc file SRT với encoding utf-8
+    with open(url_path_srt, "r", encoding="utf-8") as f:
+        srt_content = f.read()
+
+    # Phân tích nội dung SRT thành danh sách đối tượng caption
+    captions = list(srt.parse(srt_content))
+    html_assets = []
+
+    for caption in captions:
+        # Chuyển nội dung caption: thay các ký tự xuống dòng thành <br>
+        caption_text = caption.content.replace("\n", "<br>")
+
+        # Tạo HTML cho asset với style tùy chỉnh
+        html_text =  f"<div  class='large-div'>{caption_text}</div>"
+
+        # "asset": {
+        #     "type": "html",
+        #     "html": "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Wait a minute.</div>",
+        #     "css": "div { font-weight: bold; font-family: 'Noto Sans KR', sans-serif; border-radius: 40px; }",
+        #     "width": 500,
+        #     "height": 200,
+        #     "background": "#FFD600",
+        #     "position": "center",
+        # },
+
+        # "start": caption.start.total_seconds() + 0.01,
+        # "length": (caption.end - caption.start).total_seconds(),
+        start_play = caption.start.total_seconds() + 0.01 + start_time
+        length_seconds = (caption.end - caption.start).total_seconds()
+        asset_dict = {
+            "asset": {
+                "type": "html",
+                "html": html_text,
+                "width": 500,
+                "height": 400,
+                "css": '.large-div { background-color: #030303;color: #ffffff;font-family: "Noto Sans KR", sans-serif;      font-size: 40px;  text-align: center;padding: 40px;border-radius: 40px;box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);       height : 400;   }',
+            },
+            "start": start_play,
+            "length": length_seconds,
+            "position": "bottom",
+            "offset": {"x": 0, "y": 0.08},
+        }
+        start_time = start_time + 2
+        html_assets.append(asset_dict)
+    return html_assets
