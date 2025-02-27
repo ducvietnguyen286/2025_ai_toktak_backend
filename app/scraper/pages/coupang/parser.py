@@ -32,6 +32,7 @@ def parse_mobile_response(html, url, base_url):
         name = data.get("name")
         description = data.get("description")
         images = data.get("image")
+        image_thumbs = data.get("image")
         image_url = images[0] if images else ""
         domain = get_domain(url)
         offers = data.get("offers")

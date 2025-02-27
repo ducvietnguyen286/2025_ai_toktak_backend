@@ -9,7 +9,7 @@ from app.ais.chatgpt import (
     call_chatgpt_create_social,
 )
 from app.decorators import parameters
-from app.lib.logger import logger
+from app.lib.logger import logger, log_make_video_message
 from app.lib.response import Response
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
@@ -20,6 +20,7 @@ from app.services.batch import BatchService
 from app.services.post import PostService
 from app.services.video_service import VideoService
 from flask import request
+
 
 ns = Namespace(name="maker", description="Maker API")
 
