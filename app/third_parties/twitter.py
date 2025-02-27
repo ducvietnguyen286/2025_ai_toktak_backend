@@ -176,7 +176,7 @@ class TwitterService:
                 media_id = self.upload_media(media, is_video)
             log_social_message(f"media_id: {media_id}")
             data = {
-                "text": post.content if post.type == "social" else post.title,
+                "text": post.content if post.type == "image" else post.title,
                 "media": {"media_ids": [media_id]},
             }
             log_social_message(data)
