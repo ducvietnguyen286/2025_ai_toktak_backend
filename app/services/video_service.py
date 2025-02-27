@@ -401,14 +401,24 @@ class VideoService:
 
         start_time_caption = current_start
         time_show_image = 5
-
+        
+        effects = [
+            "zoomIn",
+            "zoomOut",
+            "slideLeft",
+            "slideRight",
+            "slideUp",
+            "slideDown",
+        ]
+        random_effect = random.choice(effects)
+        
         for j_index, url in enumerate(images_slider_url):
             clips.append(
                 {
                     "asset": {"type": "image", "src": url},
                     "start": current_start + j_index * time_show_image,
                     "length": time_show_image,
-                    "effect": "zoomIn",
+                    "effect": random_effect,
                 },
             )
 
