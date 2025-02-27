@@ -59,6 +59,7 @@ class TiktokTokenService:
         except Exception as e:
             traceback.print_exc()
             log_social_message(e)
+            return None
 
 
 class TiktokService:
