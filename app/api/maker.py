@@ -2,9 +2,7 @@
 import time
 import json
 import os
-import uuid
 from flask_restx import Namespace, Resource
-import requests
 from app.ais.chatgpt import (
     call_chatgpt_create_caption,
     call_chatgpt_create_blog,
@@ -58,7 +56,7 @@ class APICreateBatch(Resource):
             images = data.get("images", [])
 
             thumbnail_url = data.get("image", "")
-            image_thumbs = data.get("image_thumbs", [])
+            thumbnails = data.get("thumbnails", [])
 
             if images and len(images) > max_count_image:
                 images = images[:max_count_image]
@@ -85,6 +83,7 @@ class APICreateBatch(Resource):
                 user_id=1,
                 url=url,
                 thumbnail=thumbnail_url,
+                thumbnails=json.dumps(thumbnails),
                 content=json.dumps(data),
                 type=1,
                 count_post=len(post_types),
@@ -180,7 +179,18 @@ class APIMakePost(Resource):
 
             data = json.loads(batch.content)
             images = data.get("images", [])
-            image_thumbs = data.get("image_thumbs", [])
+            thumbnails = batch.thumbnails
+
+            process_images = json.loads(thumbnails)
+            if process_images and len(process_images) < 5:
+                current_length = len(process_images)
+                need_length = 5 - current_length
+                process_images = process_images + images[:need_length]
+            elif process_images and len(process_images) > 5:
+                process_images = process_images[:5]
+            else:
+                process_images = images
+
             type = post.type
 
             response = None
@@ -190,30 +200,19 @@ class APIMakePost(Resource):
             thumbnail = batch.thumbnail
 
             if type == "video":
-                log_make_video_message(f"images: {images}")
-                
-                images = image_thumbs + images
-                log_make_video_message(f"images with thumbnail: {images}")
-                response = call_chatgpt_create_caption(images, data, post.id)
+                response = call_chatgpt_create_caption(process_images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
 
                     captions = parse_response.get("captions", [])
-                    
-
-                    for index, image_url in enumerate(images):
-                        caption = captions[index] or ""
-                        image_url = (
-                            ImageMaker.save_image_and_write_text_for_short_video(
-                                image_url, caption, font_size=80
-                            )
-                        )
-                        maker_images.append(image_url)
+                    for image_url in process_images:
+                        maker_image = ImageMaker.save_image_for_short_video(image_url)
+                        maker_images.append(maker_image)
 
                     # Tạo video từ ảnh
                     if len(maker_images) > 0:
-                        image_renders = maker_images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
+                        image_renders = maker_images[:1]  # Lấy tối đa 3 Ảnh đầu tiên
                         image_renders_sliders = maker_images[
                             :5
                         ]  # Lấy tối đa 5 Ảnh đầu tiên
@@ -222,7 +221,7 @@ class APIMakePost(Resource):
                         product_name = data["name"]
 
                         result = VideoService.create_video_from_images(
-                            post.id,
+                            post.batch_id,
                             product_name,
                             image_renders,
                             image_renders_sliders,
@@ -247,28 +246,30 @@ class APIMakePost(Resource):
                 logger.info(
                     "-------------------- PROCESSING CREATE IMAGES -------------------"
                 )
-                images = [thumbnail] + images
-                response = call_chatgpt_create_social(images, data, post.id)
+                response = call_chatgpt_create_social(process_images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
                     captions = parse_response.get("captions", [])
 
-                    for index, image_url in enumerate(images):
+                    for index, image_url in enumerate(process_images):
                         caption = captions[index] or ""
                         image_url = ImageMaker.save_image_and_write_text(
                             image_url, caption, font_size=80
                         )
                         maker_images.append(image_url)
-                
-                
 
                 logger.info(
                     "-------------------- PROCESSED CREATE IMAGES -------------------"
                 )
             elif type == "blog":
-                response = call_chatgpt_create_blog(images, data, post.id)
-
+                logger.info(
+                    "-------------------- PROCESSING CREATE LOGS -------------------"
+                )
+                response = call_chatgpt_create_blog(process_images, data, post.id)
+                logger.info(
+                    "-------------------- PROCESSED CREATE LOGS -------------------"
+                )
             title = ""
             subtitle = ""
             content = ""
