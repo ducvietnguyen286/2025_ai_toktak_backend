@@ -37,29 +37,6 @@ class VideoService:
         if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
             is_ai_image = "0"
 
-        voice_dir = f"static/voice/{batch_id}"
-        os.makedirs(voice_dir, exist_ok=True)
-
-        # generate_audio_files(captions)
-        processed_captions = []
-        for caption in captions:
-            caption = caption.strip()
-            if not caption.endswith("."):
-                caption += "."
-            processed_captions.append(caption)
-
-        text_to_speech = " ".join(processed_captions)
-
-        # create voice Google TTS
-        tts = gTTS(text=text_to_speech, lang="ko")
-        file_name = f"template_voice_{uuid.uuid4().hex}.mp3"
-        file_path = f"{voice_dir}/{file_name}"
-
-        tts.save(file_path)
-
-        CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
-        voice_url = f"{CURRENT_DOMAIN}/voice/{batch_id}/{file_name}"
-
         # prompt fake
         prompts = [
             "Slowly zoom in and out for a dramatic effect.",
@@ -101,20 +78,6 @@ class VideoService:
                 "background": "#FFFFFF",
                 "tracks": [
                     clips_data["clips"],
-                    {
-                        "clips": [
-                            {
-                                "asset": {
-                                    "type": "audio",
-                                    "src": voice_url,
-                                    "effect": "fadeIn",
-                                    "volume": MUSIC_VOLUMN,
-                                },
-                                "start": clips_data["intro_length"],
-                                "length": "end",
-                            }
-                        ]
-                    },
                     {
                         "clips": [
                             {
@@ -356,39 +319,9 @@ class VideoService:
             }
         )
 
-        # clips.append(
-        #     {
-        #         "asset": {
-        #             "type": "caption",
-        #             "src": "https://apitoktak.voda-play.com/voice/caption/first_video_transcript.srt",
-        #             "font": {
-        #                 "family": "Noto Sans KR",
-        #                 "color": "#ffffff",
-        #                 "opacity": 0.8,
-        #                 "size": 50,
-        #                 "lineHeight": 0.8,
-        #                 "stroke": "#ff6600",
-        #                 "strokeWidth": 0.8,
-        #             },
-        #             "background": {
-        #                 "color": "#000000",
-        #                 "opacity": 0.4,
-        #                 "padding": 80,
-        #                 "borderRadius": 30,
-        #             },
-        #             "margin": {"top": 0.05, "left": 0.25, "right": 0.25},
-        #             "speed": 1,
-        #         },
-        #         "start": 0,
-        #         "length": 5,
-        #     },
-        # )
+       
         current_start += intro_length
-        # The code you provided is not complete and seems to be missing some information. It appears
-        # to be a comment in a Python script that mentions a file path variable `file_path_srts`.
-        # Without the actual code that uses this variable or more context, it is difficult to
-        # determine what the code is doing. If you provide more information or the actual code snippet
-        # where `file_path_srts` is used, I can help explain its functionality.
+       
         file_path_srts = generate_srt(batch_id, captions)
 
         if is_ai_image == "1":
@@ -472,6 +405,8 @@ class VideoService:
             # for srt_caption in srt_captions:
             # clips.append(srt_caption)
 
+            voice_url = create_mp3_from_srt(batch_id, url_path_srt)
+
             clips.append(
                 {
                     "asset": {
@@ -493,6 +428,18 @@ class VideoService:
                     "start": start_slider_time,
                     "length": time_show_image,
                 },
+            )
+            clips.append(
+                {
+                    "asset": {
+                        "type": "audio",
+                        "src": voice_url,
+                        "effect": "fadeIn",
+                        "volume": 1,
+                    },
+                    "start": start_slider_time,
+                    "length": time_show_image,
+                }
             )
             clips.append(
                 {
@@ -535,7 +482,6 @@ class VideoService:
         )
         current_start += outro_length
 
-        time_show_caption = 5
 
         clips_shape = [
             {
@@ -561,17 +507,6 @@ class VideoService:
                 "start": 0.1,
                 "length": 5,
             },
-            # {
-            #     "asset": {
-            #         "type": "html",
-            #         "html": "<p>Style text in video using <b>HTML</b> and <u>CSS</u></p>",
-            #         "css": "p { font-family: 'Open Sans'; color: #ffffff; font-size: 42px; text-align: center; } b { color: #21bcb9; font-weight: normal; } u { color: #e784ff; text-decoration: none; }",
-            #         "width": 500,
-            #         "height": 300,
-            #     },
-            #     "start": 0,
-            #     "length": "end",
-            # },
         ]
 
         # Kết hợp hai danh sách clip lại
@@ -742,3 +677,44 @@ def parse_srt_to_html_assets(url_path_srt: str, start_time):
         start_time = start_time + 2
         html_assets.append(asset_dict)
     return html_assets
+
+
+def create_mp3_from_srt(batch_id, srt_filepath):
+    """
+    Đọc file SRT, trích xuất nội dung và tạo file MP3 từ nội dung đó.
+
+    :param srt_filepath: Đường dẫn tới file SRT.
+    :param output_mp3_path: Đường dẫn file MP3 sẽ được lưu.
+    :param lang: Mã ngôn ngữ cho TTS (mặc định 'ko' cho tiếng Hàn, có thể đổi 'en' cho tiếng Anh).
+    """
+
+    CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
+
+    srt_filepath = srt_filepath.replace(CURRENT_DOMAIN, "static")
+
+    # Đọc nội dung file SRT với encoding UTF-8
+    with open(srt_filepath, "r", encoding="utf-8") as f:
+        srt_content = f.read()
+
+    # Phân tích file SRT thành danh sách caption
+    captions = list(srt.parse(srt_content))
+
+    # Ghép nội dung tất cả các caption, thay dòng mới bằng dấu cách
+    text_to_speak = " ".join(
+        [caption.content.replace("\n", " ") for caption in captions]
+    )
+
+    public_patch = f"/voice/{batch_id}"
+    voice_dir = f"static/{public_patch}"
+    os.makedirs(voice_dir, exist_ok=True)
+
+    # create voice Google TTS
+    tts = gTTS(text=text_to_speak, lang="ko")
+    file_name = f"template_voice_sub_caption_{uuid.uuid4().hex}.mp3"
+    file_path = f"{voice_dir}/{file_name}"
+
+    tts.save(file_path)
+
+    CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
+    voice_url = f"{CURRENT_DOMAIN}/{public_patch}/{file_name}"
+    return voice_url
