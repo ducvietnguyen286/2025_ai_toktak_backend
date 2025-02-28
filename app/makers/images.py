@@ -191,8 +191,9 @@ class ImageMaker:
             or image_path.lower().endswith(".jpeg")
             or image_path.lower().endswith(".webp")
         ):
-            image_path = image_path.rsplit(".", 1)[0] + ".jpg"
             image = image.convert("RGB")
+            image_name = image_name.rsplit(".", 1)[0] + ".jpg"
+            image_path = image_path.rsplit(".", 1)[0] + ".jpg"
         image.save(image_path)
 
         image_url = f"{CURRENT_DOMAIN}/files/{image_name}"
