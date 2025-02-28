@@ -90,7 +90,79 @@ class TiktokService:
             self.upload_image(post.images)
 
     def upload_image(self, medias):
-        pass
+        try:
+            log_social_message("Upload image to Tiktok")
+            access_token = self.meta.get("access_token")
+            medias = json.loads(medias)
+
+            URL_IMAGE_UPLOAD = (
+                "https://open.tiktokapis.com/v2/post/publish/content/init/"
+            )
+
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json; charset=UTF-8",
+            }
+
+            log_social_message(headers)
+
+            payload = {
+                "post_info": {
+                    "title": self.post.title,
+                    "description": self.post.content + "  #tiktok " + self.post.hashtag,
+                    "privacy_level": "SELF_ONLY",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
+                    "disable_duet": False,
+                    "disable_comment": False,
+                    "disable_stitch": False,
+                    "video_cover_timestamp_ms": 1000,
+                },
+                "source_info": {
+                    "source": "PULL_FROM_URL",
+                    "photo_cover_index": len(medias) - 1,
+                    "photo_images": medias,
+                },
+                "post_mode": "DIRECT_POST",
+                "media_type": "PHOTO",
+            }
+
+            log_social_message(f"Payload: {payload}")
+
+            upload_response = requests.post(
+                URL_IMAGE_UPLOAD, headers=headers, data=json.dumps(payload)
+            )
+            parsed_response = upload_response.json()
+
+            log_social_message(f"Upload image to Tiktok response: {parsed_response}")
+
+            error = parsed_response.get("error")
+            error_code = error.get("code")
+            if error_code == "access_token_invalid":
+                TiktokTokenService.refresh_token(link=self.link, user=self.user)
+                self.user_link = UserService.find_user_link(
+                    link_id=self.link.id, user_id=self.user.id
+                )
+                self.meta = json.loads(self.user_link.meta)
+                return self.upload_image(medias=medias)
+
+            publish_id = parsed_response.get("data").get("publish_id")
+            status = self.check_status(publish_id)
+            if status.get("status"):
+                log_social_message("Upload image success")
+                self.social_post.status = "PUBLISHED"
+                self.social_post.social_link = "profile"
+                self.social_post.save()
+                return True
+            else:
+                log_social_message(f"Upload image failed: {status.get('message')}")
+                error_message = status.get("message")
+                self.social_post.status = "ERRPR"
+                self.social_post.error_message = error_message
+                self.social_post.save()
+                return False
+
+        except Exception as e:
+            log_social_message(f"Error upload image to Tiktok: {str(e)}")
+            return False
 
     def upload_video(self, media):
         try:
