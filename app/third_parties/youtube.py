@@ -1,3 +1,4 @@
+from io import BytesIO
 import json
 import os
 
@@ -8,7 +9,7 @@ from app.services.social_post import SocialPostService
 from app.services.user import UserService
 import google.oauth2.credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.errors import HttpError
 from google.auth.transport.requests import Request
 
@@ -125,7 +126,10 @@ class YoutubeService:
         tags = tags.split(" ") if tags else []
 
         video_url = post.video_url
-        video_file = requests.get(video_url).content
+        video_content = requests.get(video_url).content
+
+        video_io = BytesIO(video_content)
+        video_io.seek(0)
 
         body = {
             "snippet": {
@@ -139,7 +143,9 @@ class YoutubeService:
             },
         }
         try:
-            media = MediaFileUpload(video_file, chunksize=-1, resumable=True)
+            media = MediaIoBaseUpload(
+                video_io, mimetype="video/mp4", chunksize=-1, resumable=True
+            )
             request = youtube.videos().insert(
                 part="snippet,status", body=body, media_body=media
             )
