@@ -77,6 +77,6 @@ class PostService:
                 else None
             )
 
-            data.append({"social_post": post_data, "title": title})
+            data.append(post_data)
 
         return data
