@@ -32,7 +32,6 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
 
 - **Title**: 
   - Comment의 짧은 버전. 더 짧게 한줄로 요약.
-  - 줄바꿈 후 "구매링크👉: {base_url}" 이 문장 무조건 표시 
 
 - **Hashtag list**: 
   - 제품군과 관련된 해시태그 선정, 캡션과 분리된 개별 목록으로 제공
@@ -58,10 +57,10 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
 
 [예시 출력]
 ## title:
-'지금 애엄마들 사이에서 난리라는 거...(줄 바꿈)링크에서 확인👉: {base_url}'
+'지금 애엄마들 사이에서 난리라는 거...'
 
 ## content:
-'한번 써보면 다시는 못돌아 간다는 맘카페 전설의 제품(줄 바꿈)링크에서 확인👉: {base_url}'
+'한번 써보면 다시는 못돌아 간다는 맘카페 전설의 제품 링크에서 확인👉: {base_url}'
 
 ## Hashtag List:
 '#패션스타그램 #운동복추천 #ootd #일상룩 #스포티룩 #여자옷 #스타일링 #쇼핑'
@@ -108,7 +107,6 @@ macOS Sequoia 15.1을 통해 AI 기반 도구와 향상된 시리를 만나보�
 - 총 CAPTION_COUNT개의 문장을 각각 5초 분량으로 재생 가능하게 작성
 - 20대, 30대 커뮤니티 문화를 깊이 이해하고 이를 반영합니다.
 - 트렌디한 요소들을 정확히 파악하고 적용하는 데 중점을 둡니다.
-
 """
     prompt = replace_prompt_with_data(prompt, data)
 
