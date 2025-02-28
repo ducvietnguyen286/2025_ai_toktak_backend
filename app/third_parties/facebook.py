@@ -46,6 +46,14 @@ class FacebookTokenService:
                 user_link.save()
                 return None
 
+            log_social_message(
+                f"------------------  FACEBOOK PAGES ------------------ : {data}"
+            )
+
+            log_social_message(
+                f"------------------  FACEBOOK PAGE ID INPUT ------------------ : {page_id}"
+            )
+
             if page_id:
                 for page in data.get("data"):
                     if page.get("id") == page_id:
