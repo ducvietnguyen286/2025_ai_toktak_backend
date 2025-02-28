@@ -1,5 +1,9 @@
 from app.models.post import Post
+from app.models.link import Link
+from app.models.social_post import SocialPost
 from app.extensions import db
+from sqlalchemy import and_
+from flask import jsonify
 
 
 class PostService:
@@ -37,6 +41,42 @@ class PostService:
     @staticmethod
     def update_post_by_batch_id(batch_id, *args, **kwargs):
         print(batch_id)
-        updated_rows = Post.query.filter_by(batch_id=batch_id).update(kwargs)  # Cập nhật trực tiếp
+        updated_rows = Post.query.filter_by(batch_id=batch_id).update(
+            kwargs
+        )  # Cập nhật trực tiếp
         db.session.commit()  # Lưu vào database
         return updated_rows
+
+    @staticmethod
+    def get_social_post(post_id):
+
+        results = (
+            db.session.query(SocialPost, Link.title)
+            .select_from(Link)
+            .outerjoin(
+                SocialPost,
+                and_(SocialPost.link_id == Link.id, SocialPost.post_id == 586),
+            )
+            .all()
+        )
+
+        # Chuyển đổi kết quả thành danh sách dict
+        data = []
+        for social_post, title in results:
+            # Nếu không có SocialPost tương ứng thì social_post sẽ là None
+            post_data = (
+                {
+                    "id": social_post.id,
+                    "title": title,
+                    "status": social_post.status,
+                    "link_id": social_post.link_id,
+                    "post_id": social_post.post_id,
+                    "process_number": social_post.process_number,
+                }
+                if social_post
+                else None
+            )
+
+            data.append({"social_post": post_data, "title": title})
+
+        return data
