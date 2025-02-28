@@ -33,7 +33,7 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
 - **Title**: 
   - Content의 짧은 버전. 더 짧게 한줄로 요약.
 
-- **Hashtag list**: 
+- **Hashtag**: 
   - 제품군과 관련된 해시태그 선정, 캡션과 분리된 개별 목록으로 제공
   - 제품 및 타겟 고객층에 맞는 인기 해시태그 선정
   - 개별 해시태그로 제공하며, 캡션과 분리하여 작성합니다.
@@ -62,7 +62,7 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
 ## content:
 '한번 써보면 다시는 못돌아 간다는 맘카페 전설의 제품 링크에서 확인👉: {base_url}'
 
-## Hashtag List:
+## Hashtag:
 '#패션스타그램 #운동복추천 #ootd #일상룩 #스포티룩 #여자옷 #스타일링 #쇼핑'
 
 ## Captions:
