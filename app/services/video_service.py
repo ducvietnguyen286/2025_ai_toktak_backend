@@ -120,7 +120,7 @@ class VideoService:
                             {
                                 "asset": {
                                     "type": "audio",
-                                    "src": "https://shotstack-assets.s3.ap-southeast-2.amazonaws.com/music/unminus/ambisax.mp3",
+                                    "src": "https://apitoktak.voda-play.com/voice/audio/ambisax.mp3",
                                     "effect": "fadeOut",
                                     "volume": MUSIC_BACKGROUP_VOLUMN,
                                 },
