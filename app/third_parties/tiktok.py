@@ -74,9 +74,10 @@ class TiktokService:
         self.processing_info = None
         self.post = None
         self.social_post = None
+        self.user_id = None
 
     def send_post(self, post, link, user_id, social_post_id):
-        user_id = post.user_id
+        self.user_id = user_id
         self.user = UserService.find_user(user_id)
         self.link = link
         self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
