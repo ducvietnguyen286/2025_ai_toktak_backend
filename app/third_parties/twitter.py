@@ -312,12 +312,27 @@ class TwitterService:
                 url=MEDIA_ENDPOINT_URL, data=data, files=files, headers=headers
             )
 
+            req = requests.post(
+                url=MEDIA_ENDPOINT_URL, data=data, files=files, headers=headers
+            )
+
+            # Log the response content for debugging
+            log_social_message(f"Response status code: {req.status_code}")
+            log_social_message(f"Response content: {req.content}")
+
+            try:
+                response_json = req.json()
+            except ValueError as e:
+                log_social_message(f"JSONDecodeError: {e}")
+                log_social_message(f"Response content: {req.content}")
+                response_json = None
+
             RequestSocialLogService.create_request_social_log(
                 social="X",
                 user_id=self.user.id,
                 type="upload_media_append",
                 request=json.dumps(data),
-                response=json.dumps(req.json()),
+                response=json.dumps(response_json) if response_json else req.text,
             )
 
             status_code = req.status_code
