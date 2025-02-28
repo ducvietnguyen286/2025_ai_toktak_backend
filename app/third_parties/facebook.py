@@ -16,7 +16,44 @@ class FacebookTokenService:
         pass
 
     @staticmethod
-    def fetch_page_token(user_link, page_id=None):
+    def fetch_page_token(user_link):
+        try:
+            log_social_message(
+                "------------------  FETCH FACEBOOK PAGE TOKEN  ------------------"
+            )
+
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("access_token")
+            if not access_token:
+                log_social_message("Token not found")
+                return None
+
+            PAGE_URL = f"https://graph.facebook.com/v22.0/me/accounts?access_token={access_token}&fields=id,name,picture,access_token,tasks"
+
+            response = requests.get(PAGE_URL)
+            data = response.json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="FACEBOOK",
+                user_id=user_link.user_id,
+                type="fetch_page_token",
+                request=json.dumps({"access_token": access_token}),
+                response=json.dumps(data),
+            )
+
+            if "data" not in data:
+                user_link.status = 0
+                user_link.save()
+                return None
+
+            return data.get("data")
+
+        except Exception as e:
+            log_social_message(e)
+            return None
+
+    @staticmethod
+    def fetch_page_token_backend(user_link, page_id):
         try:
             log_social_message(
                 "------------------  FETCH FACEBOOK PAGE TOKEN  ------------------"
@@ -54,12 +91,9 @@ class FacebookTokenService:
                 f"------------------  FACEBOOK PAGE ID INPUT ------------------ : {page_id}"
             )
 
-            if page_id:
-                for page in data.get("data"):
-                    if page.get("id") == page_id:
-                        return page.get("access_token")
-
-            return data.get("data")
+            for page in data.get("data"):
+                if page.get("id") == page_id:
+                    return page.get("access_token")
 
         except Exception as e:
             log_social_message(e)
@@ -147,7 +181,9 @@ class FacebookService:
         self.meta = json.loads(self.user_link.meta)
         self.access_token = self.meta.get("access_token")
 
-        token_page = FacebookTokenService.fetch_page_token(self.user_link, page_id)
+        token_page = FacebookTokenService.fetch_page_token_backend(
+            self.user_link, page_id
+        )
         if not token_page:
             log_social_message(f"Token page not found")
             return False
