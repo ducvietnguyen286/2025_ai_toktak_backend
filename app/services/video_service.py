@@ -441,19 +441,19 @@ class VideoService:
                     "length": time_show_image,
                 }
             )
-            clips.append(
-                {
-                    "asset": {
-                        "type": "html",
-                        "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'>잠시만요. <span style='font-weight: bold;'>10</span>초 뒤에 더<br> 놀라운 영상이 이어집니다.</div>",
-                        "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
-                    },
-                    "start": start_slider_time + 0.01,
-                    "length": time_show_image,
-                    "position": "top",
-                    "offset": {"x": 0, "y": 0.4},
-                }
-            )
+            # clips.append(
+            #     {
+            #         "asset": {
+            #             "type": "html",
+            #             "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'>잠시만요. <span style='font-weight: bold;'>10</span>초 뒤에 더<br> 놀라운 영상이 이어집니다.</div>",
+            #             "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
+            #         },
+            #         "start": start_slider_time + 0.01,
+            #         "length": time_show_image,
+            #         "position": "top",
+            #         "offset": {"x": 0, "y": 0.4},
+            #     }
+            # )
 
         current_start += len(images_slider_url) * time_show_image
         outro_length = 5
@@ -464,22 +464,22 @@ class VideoService:
                 "length": outro_length,
             }
         )
-        html_content = "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Buy It Now.</div>"
-        clips.append(
-            {
-                "asset": {
-                    "type": "html",
-                    "html": html_content,
-                    "css": "div { font-weight: bold; font-family: 'Noto Sans KR', sans-serif; border-radius: 40px; }",
-                    "width": 500,
-                    "height": 200,
-                    "background": "#FFD600",
-                    "position": "center",
-                },
-                "start": current_start + 0.01,
-                "length": "end",
-            },
-        )
+        # html_content = "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Buy It Now.</div>"
+        # clips.append(
+        #     {
+        #         "asset": {
+        #             "type": "html",
+        #             "html": html_content,
+        #             "css": "div { font-weight: bold; font-family: 'Noto Sans KR', sans-serif; border-radius: 40px; }",
+        #             "width": 500,
+        #             "height": 200,
+        #             "background": "#FFD600",
+        #             "position": "center",
+        #         },
+        #         "start": current_start + 0.01,
+        #         "length": "end",
+        #     },
+        # )
         current_start += outro_length
 
 
@@ -494,19 +494,19 @@ class VideoService:
                 "scale": 0.15,
                 "position": "topRight",
             },
-            {
-                "asset": {
-                    "type": "html",
-                    "html": "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Wait a minute.</div>",
-                    "css": "div { font-weight: bold; font-family: 'Noto Sans KR', sans-serif; border-radius: 40px; }",
-                    "width": 500,
-                    "height": 200,
-                    "background": "#FFD600",
-                    "position": "center",
-                },
-                "start": 0.1,
-                "length": 5,
-            },
+            # {
+            #     "asset": {
+            #         "type": "html",
+            #         "html": "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Wait a minute.</div>",
+            #         "css": "div { font-weight: bold; font-family: 'Noto Sans KR', sans-serif; border-radius: 40px; }",
+            #         "width": 500,
+            #         "height": 200,
+            #         "background": "#FFD600",
+            #         "position": "center",
+            #     },
+            #     "start": 0.1,
+            #     "length": 5,
+            # },
         ]
 
         # Kết hợp hai danh sách clip lại
