@@ -1,9 +1,11 @@
 import json
 import os
+import time
 import traceback
 
 import requests
 from app.services.request_social_log import RequestSocialLogService
+from app.services.social_post import SocialPostService
 from app.services.user import UserService
 from app.lib.logger import log_social_message
 
@@ -70,18 +72,24 @@ class TiktokService:
         self.link = None
         self.meta = None
         self.processing_info = None
+        self.post = None
+        self.social_post = None
 
-    def send_post(self, post, link):
+    def send_post(self, post, link, social_post_id):
         user_id = post.user_id
         self.user = UserService.find_user(user_id)
         self.link = link
         self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
         self.meta = json.loads(self.user_link.meta)
+        self.post = post
+        self.social_post = SocialPostService.find_social_post(social_post_id)
 
         if post.type == "video":
             self.upload_video(post.video_url)
+        if post.type == "image":
+            self.upload_image(post.images)
 
-    def publish_video(self, post):
+    def upload_image(self, medias):
         pass
 
     def upload_video(self, media):
@@ -94,18 +102,66 @@ class TiktokService:
             log_social_message(f"Upload video info: {upload_info}")
             log_social_message(f"Upload video to Tiktok: {media}")
             info_data = upload_info.get("data")
-
-            upload_url = info_data.get("upload_url")
             publish_id = info_data.get("publish_id")
 
-            self.upload_video_append(upload_url, response)
-
-            self.check_status(publish_id)
-            log_social_message("Upload video success")
-            return True
+            status = self.check_status(publish_id)
+            if status.get("status"):
+                log_social_message("Upload video success")
+                self.social_post.status = "PUBLISHED"
+                self.social_post.social_link = "profile"
+                self.social_post.save()
+                return True
+            else:
+                log_social_message(f"Upload video failed: {status.get('message')}")
+                error_message = status.get("message")
+                self.social_post.status = "ERRPR"
+                self.social_post.error_message = error_message
+                self.social_post.save()
+                return False
         except Exception as e:
             log_social_message(f"Error upload video to Tiktok: {str(e)}")
             return False
+
+    def upload_video_by_url(self, media_url):
+        log_social_message("Upload video to Tiktok From URL")
+        access_token = self.meta.get("access_token")
+
+        URL_VIDEO_UPLOAD = "https://open.tiktokapis.com/v2/post/publish/video/init/"
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json; charset=UTF-8",
+        }
+
+        log_social_message(headers)
+
+        payload = {
+            "source_info": {
+                "source": "PULL_FROM_URL",
+                "video_url": media_url,
+            }
+        }
+
+        log_social_message(f"Payload: {payload}")
+
+        upload_response = requests.post(
+            URL_VIDEO_UPLOAD, headers=headers, data=json.dumps(payload)
+        )
+        parsed_response = upload_response.json()
+
+        log_social_message(f"Upload video to Tiktok By URL response: {parsed_response}")
+
+        error = parsed_response.get("error")
+        error_code = error.get("code")
+        if error_code == "access_token_invalid":
+            TiktokTokenService.refresh_token(link=self.link, user=self.user)
+            self.user_link = UserService.find_user_link(
+                link_id=self.link.id, user_id=self.user.id
+            )
+            self.meta = json.loads(self.user_link.meta)
+            return self.upload_video_by_url(media_url=media_url)
+
+        return parsed_response
 
     def check_status(self, publish_id):
         access_token = self.meta.get("access_token")
@@ -115,8 +171,13 @@ class TiktokService:
             "Content-Type": "application/json",
         }
         payload = {"publish_id": publish_id}
-        response = requests.post(URL_VIDEO_STATUS, headers=headers, data=payload)
+        response = requests.post(
+            URL_VIDEO_STATUS, headers=headers, data=json.dumps(payload)
+        )
         res_json = response.json()
+
+        log_social_message(f"Check status: {res_json}")
+
         error = res_json.get("error")
         error_code = error.get("code")
         if error_code == "access_token_invalid":
@@ -125,37 +186,26 @@ class TiktokService:
                 link_id=self.link.id, user_id=self.user.id
             )
             self.meta = json.loads(self.user_link.meta)
+            time.sleep(3)
             return self.check_status(publish_id)
         status = res_json.get("data").get("status")
         if status == "PUBLISH_COMPLETE":
-            return True
-        return self.check_status(publish_id)
-
-    def upload_video_append(upload_url, response):
-        try:
-            log_social_message("Upload video to Tiktok APPEND")
-            media_type = response.headers.get("content-type")
-            media_size = float(response.headers.get("content-length"))
-
-            video_file = response.content
-            headers = {
-                "Content-Range": f"bytes 0-{media_size - 1}/{media_size}",
-                "Content-Type": media_type,
+            return {"status": True}
+        if status == "FAILED":
+            return {
+                "status": False,
+                "message": res_json.get("data").get("fail_reason"),
             }
-            response = requests.put(upload_url, headers=headers, data=video_file)
-            log_social_message("Upload video")
-            return response.json()
-        except Exception as e:
-            log_social_message(f"Error upload video to Tiktok: {str(e)}")
+        time.sleep(3)
+        return self.check_status(publish_id)
 
     def upload_video_init(self, media):
         log_social_message("Upload video to Tiktok INIT")
         access_token = self.meta.get("access_token")
         media_size = int(media.headers.get("content-length"))
+        media_type = media.headers.get("content-type")
 
-        URL_VIDEO_UPLOAD = (
-            "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/"
-        )
+        URL_VIDEO_UPLOAD = "https://open.tiktokapis.com/v2/post/publish/video/init/"
 
         headers = {
             "Authorization": f"Bearer {access_token}",
@@ -176,17 +226,27 @@ class TiktokService:
             total_chunk = 1
 
         payload = {
+            "post_info": {
+                "title": self.post.content + "  #tiktok " + self.post.hashtag,
+                "privacy_level": "SELF_ONLY",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
+                "disable_duet": False,
+                "disable_comment": False,
+                "disable_stitch": False,
+                "video_cover_timestamp_ms": 1000,
+            },
             "source_info": {
                 "source": "FILE_UPLOAD",
                 "video_size": media_size,
                 "chunk_size": chunk_size,
                 "total_chunk_count": total_chunk,
-            }
+            },
         }
 
         log_social_message(f"Payload: {payload}")
 
-        upload_response = requests.post(URL_VIDEO_UPLOAD, headers=headers, data=payload)
+        upload_response = requests.post(
+            URL_VIDEO_UPLOAD, headers=headers, data=json.dumps(payload)
+        )
         parsed_response = upload_response.json()
 
         log_social_message(f"Upload video to Tiktok INIT response: {parsed_response}")
@@ -200,4 +260,68 @@ class TiktokService:
             )
             self.meta = json.loads(self.user_link.meta)
             return self.upload_video_init(media=media)
+
+        info_data = parsed_response.get("data")
+        upload_url = info_data.get("upload_url")
+
+        log_social_message(f"Chunk size: {chunk_size}")
+        log_social_message(f"Total chunk: {total_chunk}")
+
+        for i in range(total_chunk):
+            log_social_message(f"Upload video to Tiktok APPEND {i}")
+            start_bytes = i * chunk_size
+            end_bytes = min(start_bytes + chunk_size, media_size) - 1
+            current_chunk_size = start_bytes - end_bytes + 1
+
+            chunk_data = media.content[start_bytes:end_bytes]
+
+            self.upload_video_append(
+                upload_url,
+                chunk_data,
+                current_chunk_size,
+                start_bytes,
+                end_bytes,
+                media_size,
+                media_type,
+            )
         return parsed_response
+
+    def upload_video_append(
+        self,
+        upload_url,
+        chunk_data,
+        current_chunk_size,
+        start_bytes,
+        end_bytes,
+        total_bytes,
+        media_type,
+    ):
+        try:
+            log_social_message("Upload video to Tiktok APPEND")
+
+            headers = {
+                "Content-Range": f"bytes {start_bytes}-{end_bytes}/{total_bytes}",
+                "Content-Length": str(current_chunk_size),
+                "Content-Type": media_type,
+            }
+            response = requests.put(upload_url, headers=headers, data=chunk_data)
+            response_put = response.json()
+
+            log_social_message(f"Upload video to Tiktok APPEND headers: {headers}")
+            log_social_message(
+                f"Upload video to Tiktok APPEND response: {response_put}"
+            )
+            log_social_message("Upload video")
+
+            if response.status_code in (201, 206):
+                print(
+                    f"Chunk {start_bytes}-{end_bytes}/{total_bytes} tải lên thành công. Status code: {response.status_code}"
+                )
+            else:
+                print(
+                    f"Lỗi tải chunk {start_bytes}-{end_bytes}/{total_bytes}: {response.status_code}, {response.text}"
+                )
+
+            return response_put
+        except Exception as e:
+            log_social_message(f"Error upload video to Tiktok: {str(e)}")
