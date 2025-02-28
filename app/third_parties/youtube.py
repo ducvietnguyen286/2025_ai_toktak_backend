@@ -80,6 +80,9 @@ class YoutubeService:
             self.send_post_video(post)
 
     def get_youtube_service_from_token(self, user_link):
+        log_social_message(
+            "get_youtube_service_from_token: Start get_youtube_service_from_token"
+        )
         try:
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
@@ -110,6 +113,10 @@ class YoutubeService:
                     )
                     return None
 
+            log_social_message(
+                "get_youtube_service_from_token: End get_youtube_service_from_token"
+            )
+
             return build("youtube", "v3", credentials=credentials)
         except HttpError as e:
             log_social_message(f"Error get_youtube_service_from_token: {str(e)}")
@@ -118,6 +125,9 @@ class YoutubeService:
     def send_post_video(self, post):
         youtube = self.get_youtube_service_from_token(self.user_link)
         if not youtube:
+            log_social_message(
+                "Error send_post_video: Can not get youtube service from token"
+            )
             return None
 
         post_title = post.title
@@ -142,6 +152,11 @@ class YoutubeService:
                 "privacyStatus": "private"  # "public", "private" hoặc "unlisted"
             },
         }
+
+        log_social_message(
+            f"send_post_video: Start send_post_video: {post_title} - {post_description}"
+        )
+
         try:
             media = MediaIoBaseUpload(
                 video_io, mimetype="video/mp4", chunksize=-1, resumable=True
@@ -157,8 +172,10 @@ class YoutubeService:
         while response is None:
             status, response = request.next_chunk()
             if status:
-                print("Đang upload: {}%".format(int(status.progress() * 100)))
-        print("Upload hoàn tất! Video ID: {}".format(response.get("id")))
+                log_social_message(
+                    "Đang upload: {}%".format(int(status.progress() * 100))
+                )
+        log_social_message("Upload hoàn tất! Video ID: {}".format(response.get("id")))
 
         RequestSocialLogService.create_request_social_log(
             social="YOUTUBE",
