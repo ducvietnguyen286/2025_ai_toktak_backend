@@ -18,6 +18,7 @@ class Post(db.Model, BaseModel):
     video_url = db.Column(db.String(255), nullable=False, default="")
     type = db.Column(db.String(10), default="video", index=True)
     status = db.Column(db.Integer, default=1)
+    process_number = db.Column(db.Integer, default=0)
     render_id = db.Column(db.String(500), nullable=False, default="")
 
     to_json_parse = "images"

@@ -402,3 +402,39 @@ class APIBatchs(Resource):
             "total_pages": batches.pages,
             "data": [batch_detail.to_dict() for batch_detail in batches.items],
         }, 200
+
+
+@ns.route("/get-status-upload-with-batch-id/<int:id>")
+class APIGetStatusUploadWithBatch(Resource):
+
+    def get(self, id):
+        batch = BatchService.find_batch(id)
+        if not batch:
+            return Response(
+                message="Batch không tồn tại",
+                status=404,
+            ).to_dict()
+
+        posts = PostService.get_posts_by_batch_id(batch.id)
+        
+        for post_detail in posts:
+            print("post_detail", post_detail['id'])
+            
+            post_id = post_detail['id']
+            # get social_posts
+            log_make_video_message(post_id)
+            social_post_detail = PostService.get_social_post(post_id)
+            log_make_video_message(social_post_detail)
+            post_detail['social_post_detail'] = social_post_detail
+            
+        
+
+        batch_res = batch._to_json()
+        batch_res["posts"] = posts
+
+        return Response(
+            data=batch_res,
+            message="Lấy batch thành công",
+        ).to_dict()
+
+
