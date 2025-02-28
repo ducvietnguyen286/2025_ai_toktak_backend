@@ -10,6 +10,7 @@ import google.oauth2.credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
+from google.auth.transport.requests import Request
 
 
 class YoutubeService:
@@ -31,8 +32,12 @@ class YoutubeService:
         if post.type == "video":
             self.send_post_video(post)
 
-    def get_youtube_service_from_token(self, access_token, refresh_token=None):
+    def get_youtube_service_from_token(self, user_link):
         try:
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("access_token")
+            refresh_token = meta.get("refresh_token")
+            
             TOKEN_URI = "https://oauth2.googleapis.com/token"
             SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
             CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID") or ""
@@ -46,16 +51,28 @@ class YoutubeService:
                 client_secret=CLIENT_SECRET,
                 scopes=SCOPES,
             )
+            
+            if credentials.expired:
+                try:
+                    credentials.refresh(Request())
+                    meta["access_token"] = credentials.token
+                    user_link.meta = json.dumps(meta)
+                    user_link.save()
+                except Exception as e:     
+                    user_link.status = 0
+                    user_link.save()
+                    log_social_message("Error get_youtube_service_from_token: Refresh token failed")
+                    return None
+                
             return build("youtube", "v3", credentials=credentials)
         except HttpError as e:
             log_social_message(f"Error get_youtube_service_from_token: {str(e)}")
             return None
 
     def send_post_video(self, post):
-        access_token = self.meta.get("access_token")
-        refresh_token = self.meta.get("refresh_token")
-
-        youtube = self.get_youtube_service_from_token(access_token, refresh_token)
+        youtube = self.get_youtube_service_from_token(self.user_link)
+        if not youtube:
+            return None
 
         post_title = post.title
         post_description = post.content + " " + post.hashtag + " #shorts"
