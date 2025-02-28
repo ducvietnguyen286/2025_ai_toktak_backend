@@ -132,6 +132,14 @@ class TiktokService:
             )
             parsed_response = upload_response.json()
 
+            RequestSocialLogService.create_request_social_log(
+                social="TIKTOK",
+                user_id=self.user_id,
+                type="upload_image",
+                request=json.dumps(payload),
+                response=json.dumps(parsed_response),
+            )
+
             log_social_message(f"Upload image to Tiktok response: {parsed_response}")
 
             error = parsed_response.get("error")
@@ -321,6 +329,14 @@ class TiktokService:
         )
         parsed_response = upload_response.json()
 
+        RequestSocialLogService.create_request_social_log(
+            social="TIKTOK",
+            user_id=self.user_id,
+            type="upload_video",
+            request=json.dumps(payload),
+            response=json.dumps(parsed_response),
+        )
+
         log_social_message(f"Upload video to Tiktok INIT response: {parsed_response}")
 
         error = parsed_response.get("error")
@@ -378,6 +394,14 @@ class TiktokService:
             }
             response = requests.put(upload_url, headers=headers, data=chunk_data)
             response_put = response.json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="TIKTOK",
+                user_id=self.user_id,
+                type="upload_video_chunk",
+                request=json.dumps(headers),
+                response=json.dumps(response_put),
+            )
 
             log_social_message(f"Upload video to Tiktok APPEND headers: {headers}")
             log_social_message(

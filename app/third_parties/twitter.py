@@ -261,6 +261,14 @@ class TwitterService:
             url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
         )
 
+        RequestSocialLogService.create_request_social_log(
+            social="X",
+            user_id=self.user.id,
+            type="upload_media_init",
+            request=json.dumps(request_data),
+            response=json.dumps(req.json()),
+        )
+
         status_code = req.status_code
         if status_code == 401:
             TwitterTokenService().refresh_token(link=self.link, user=self.user)
@@ -305,6 +313,14 @@ class TwitterService:
                 url=MEDIA_ENDPOINT_URL, data=data, files=files, headers=headers
             )
 
+            RequestSocialLogService.create_request_social_log(
+                social="X",
+                user_id=self.user.id,
+                type="upload_media_append",
+                request=json.dumps(data),
+                response=json.dumps(req.json()),
+            )
+
             status_code = req.status_code
             if status_code == 401:
                 TwitterTokenService().refresh_token(link=self.link, user=self.user)
@@ -344,6 +360,14 @@ class TwitterService:
 
         req = requests.post(
             url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
+        )
+
+        RequestSocialLogService.create_request_social_log(
+            social="X",
+            user_id=self.user.id,
+            type="upload_media_finalize",
+            request=json.dumps(request_data),
+            response=json.dumps(req.json()),
         )
 
         status_code = req.status_code
