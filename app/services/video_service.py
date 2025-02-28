@@ -340,8 +340,6 @@ class VideoService:
         current_start = 0
         intro_length = 5
 
-        file_path_srts = generate_srt(batch_id, captions)
-
         clips.append(
             {
                 "asset": {"type": "video", "src": intro_url},
@@ -378,6 +376,12 @@ class VideoService:
         #     },
         # )
         current_start += intro_length
+        # The code you provided is not complete and seems to be missing some information. It appears
+        # to be a comment in a Python script that mentions a file path variable `file_path_srts`.
+        # Without the actual code that uses this variable or more context, it is difficult to
+        # determine what the code is doing. If you provide more information or the actual code snippet
+        # where `file_path_srts` is used, I can help explain its functionality.
+        file_path_srts = generate_srt(batch_id, captions)
 
         if is_ai_image == "1":
 
@@ -396,12 +400,19 @@ class VideoService:
                 )
                 # Cái này cần phải lấy từ chat GPT
                 # captions form Image to video
+
                 url_path_srt = file_path_srts[i]
                 clips.append(
                     {
                         "asset": {
                             "type": "caption",
                             "src": url_path_srt,
+                            "background": {
+                                "color": "#000000",
+                                "padding": 20,
+                                "borderRadius": 18,
+                                "opacity": 0.6,
+                            },
                             "font": {
                                 "lineHeight": 0.8,
                                 "family": "Noto Sans KR",
@@ -409,7 +420,6 @@ class VideoService:
                                 "size": 50,
                             },
                         },
-                        "background": {"color": "#ffffff", "opacity": 1},
                         "start": current_start + i * time_run_ai,
                         "length": time_run_ai,
                     },
@@ -450,27 +460,32 @@ class VideoService:
 
             url_path_srt = file_path_srts[j_index]
 
-            srt_captions = parse_srt_to_html_assets(url_path_srt, start_slider_time)
-            for srt_caption in srt_captions:
-                clips.append(srt_caption)
+            # srt_captions = parse_srt_to_html_assets(url_path_srt, start_slider_time)
+            # for srt_caption in srt_captions:
+            # clips.append(srt_caption)
 
-            # clips.append(
-            #     {
-            #         "asset": {
-            #             "type": "caption",
-            #             "src": url_path_srt,
-            #             "font": {
-            #                 "lineHeight": 0.8,
-            #                 "family": "Noto Sans KR",
-            #                 "color": "#ff0505",
-            #                 "size": 50,
-            #             },
-            #         },
-            #         "background": {"color": "#ffffff", "opacity": 1},
-            #         "start": start_slider_time,
-            #         "length": time_show_image,
-            #     },
-            # )
+            clips.append(
+                {
+                    "asset": {
+                        "type": "caption",
+                        "src": url_path_srt,
+                        "font": {
+                            "lineHeight": 0.8,
+                            "family": "Noto Sans KR",
+                            "color": "#ffffff",
+                            "size": 50,
+                        },
+                        "background": {
+                            "color": "#000000",
+                            "padding": 20,
+                            "borderRadius": 30,
+                            "opacity": 0.6,
+                        },
+                    },
+                    "start": start_slider_time,
+                    "length": time_show_image,
+                },
+            )
             clips.append(
                 {
                     "asset": {
@@ -609,9 +624,9 @@ def generate_srt(batch_id, captions):
                     f.write(f"{segment}\n\n")
                     let_step = let_step + 1
                     start_time = end_time
-        # CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
-        # file_paths.append(f"{CURRENT_DOMAIN}/{file_path}/{file_name}")
-        file_paths.append(file_path_srt)
+        CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
+        file_paths.append(f"{CURRENT_DOMAIN}/{file_path}/{file_name}")
+        # file_paths.append(file_path_srt)
 
     return file_paths  # Trả về danh sách các file đã tạo
 
@@ -703,10 +718,13 @@ def parse_srt_to_html_assets(url_path_srt: str, start_time):
         asset_dict = {
             "asset": {
                 "type": "html",
-                "html": html_text,
+                "html": "<div style='font-size: 40px; color: #080000; text-align: center;  padding: 10px 20px; display: inline-block; border-radius: 20px;'>Nội dung của bạn</div>",
+                "css": "div {   background: #FFD600; border-radius: 20px;  margin-bottom : 10px;  margin-top : 10px;}",
                 "width": 500,
                 "height": 400,
-                "css": '.large-div { background-color: #030303;color: #ffffff;font-family: "Noto Sans KR", sans-serif;      font-size: 60px;  text-align: center;padding: 40px;border-radius: 40px;box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);       height : 400;   }',
+                "background": "#80ffffff",
+                # "html": html_text,
+                # "css": '.large-div { background-color: #030303;color: #ffffff;font-family: "Noto Sans KR", sans-serif;      font-size: 60px;  text-align: center;padding: 40px;border-radius: 40px;box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);       height : 400;   }',
             },
             "start": start_play,
             "length": length_seconds,
