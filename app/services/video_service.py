@@ -15,6 +15,7 @@ from app.lib.logger import log_make_video_message
 from gtts import gTTS
 import uuid
 import srt
+from moviepy.editor import VideoFileClip
 
 
 class VideoService:
@@ -339,6 +340,11 @@ class VideoService:
         clips = []
         current_start = 0
         intro_length = 5
+        
+        intro_url_check = intro_url.replace("https://apitoktak.voda-play.com", "static")
+        clip = VideoFileClip(intro_url_check)
+        duration = clip.duration
+        intro_length = duration
 
         clips.append(
             {
