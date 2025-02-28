@@ -211,6 +211,13 @@ class FacebookService:
 
         post_response = requests.post(URL_UPLOAD, data=post_data, headers=headers)
         result = post_response.json()
+        RequestSocialLogService.create_request_social_log(
+            social="FACEBOOK",
+            user_id=self.user.id,
+            type="start_session_upload_reel",
+            request=json.dumps(post_data),
+            response=json.dumps(result),
+        )
         return result
 
     def upload_video(self, video_id, video_url, access_token):
@@ -221,6 +228,13 @@ class FacebookService:
         }
         post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers)
         result = post_response.json()
+        RequestSocialLogService.create_request_social_log(
+            social="FACEBOOK",
+            user_id=self.user.id,
+            type="upload_video",
+            request=json.dumps(headers),
+            response=json.dumps(result),
+        )
         log_social_message(f"Upload video: {result}")
 
     def get_upload_status(self, video_id, access_token):
@@ -274,12 +288,26 @@ class FacebookService:
 
         post_response = requests.post(final_url)
         result = post_response.json()
+        RequestSocialLogService.create_request_social_log(
+            social="FACEBOOK",
+            user_id=self.user.id,
+            type="publish_the_reel",
+            request=json.dumps(post_data),
+            response=json.dumps(result),
+        )
         return result
 
     def get_reel_uploaded(self, page_id, access_token):
         URL_REEL = f"https://graph.facebook.com/v22.0/{page_id}/video_reels?access_token={access_token}"
         get_response = requests.get(URL_REEL)
         result = get_response.json()
+        RequestSocialLogService.create_request_social_log(
+            social="FACEBOOK",
+            user_id=self.user.id,
+            type="get_reel_uploaded",
+            request=json.dumps({"page_id": page_id}),
+            response=json.dumps(result),
+        )
         log_social_message(f"Get reel: {result}")
         return result
 
@@ -310,6 +338,14 @@ class FacebookService:
         post_response = requests.post(FEED_URL, data=post_data)
         result = post_response.json()
 
+        RequestSocialLogService.create_request_social_log(
+            social="FACEBOOK",
+            user_id=self.user.id,
+            type="send_post_image",
+            request=json.dumps(post_data),
+            response=json.dumps(result),
+        )
+
         log_social_message(f"result: {result}")
 
         if "id" not in result:
@@ -339,6 +375,14 @@ class FacebookService:
             }
             response = requests.post(UNPUBLISH_URL, data=data)
             result = response.json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="FACEBOOK",
+                user_id=self.user.id,
+                type="unpublish_images",
+                request=json.dumps(data),
+                response=json.dumps(result),
+            )
 
             if "id" in result:
                 photo_ids.append(result["id"])
