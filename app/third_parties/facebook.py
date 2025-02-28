@@ -16,7 +16,7 @@ class FacebookTokenService:
         pass
 
     @staticmethod
-    def fetch_page_token(user_link):
+    def fetch_page_token(user_link, page_id=None):
         try:
             log_social_message(
                 "------------------  FETCH FACEBOOK PAGE TOKEN  ------------------"
@@ -28,7 +28,7 @@ class FacebookTokenService:
                 log_social_message("Token not found")
                 return None
 
-            PAGE_URL = f"https://graph.facebook.com/v22.0/me/accounts?access_token={access_token}&fields=id,name,picture,access_token,tasks"
+            PAGE_URL = f"https://graph.facebook.com/v22.0/me/accounts?access_token={access_token}&fields=id,name,picture,access_token,tasks&limit=100"
 
             response = requests.get(PAGE_URL)
             data = response.json()
@@ -45,6 +45,11 @@ class FacebookTokenService:
                 user_link.status = 0
                 user_link.save()
                 return None
+
+            if page_id:
+                for page in data.get("data"):
+                    if page.get("id") == page_id:
+                        return page.get("access_token")
 
             return data.get("data")
 
@@ -121,34 +126,26 @@ class FacebookService:
         self.user = None
         self.link = None
         self.meta = None
+        self.social_post = None
+        self.page_id = None
+        self.page_token = None
+        self.access_token = None
 
-    def send_post(self, post, link):
+    def send_post(self, post, link, social_post_id, page_id):
         user_id = post.user_id
         self.user = UserService.find_user(user_id)
         self.link = link
         self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
         self.meta = json.loads(self.user_link.meta)
-        access_token = self.meta.get("AccessToken")
-        if not access_token:
-            access_token = self.meta.get("access_token")
-        self.access_token = access_token
+        self.access_token = self.meta.get("access_token")
 
-        token_pages = FacebookTokenService.fetch_page_token(self.user_link)
-        if not token_pages:
-            log_social_message("Token not found")
-
-        log_social_message(f"Token pages: {token_pages}")
-
-        for page in token_pages:
-            tasks = page.get("tasks", [])
-            if "CREATE_CONTENT" not in tasks:
-                continue
-
-            page_access = {
-                "id": page.get("id"),
-                "access_token": page.get("access_token"),
-            }
-            self.pages.append(page_access)
+        token_page = FacebookTokenService.fetch_page_token(self.user_link, page_id)
+        if not token_page:
+            log_social_message(f"Token page not found")
+            return False
+        self.social_post = SocialPostService.find_social_post(social_post_id)
+        self.page_id = page_id
+        self.page_token = token_page
 
         if post.type == "image":
             self.send_post_image(post, link)
@@ -156,67 +153,54 @@ class FacebookService:
             self.send_post_video(post, link)
 
     def send_post_video(self, post, link):
-        for page in self.pages:
-            page_id = page.get("id")
-            page_access_token = page.get("access_token")
+        page_id = self.page_id
+        page_access_token = self.page_token
 
-            result = self.start_session_upload_reel(
-                page_id=page_id, page_access_token=page_access_token
-            )
-            video_id = result["video_id"]
+        result = self.start_session_upload_reel(
+            page_id=page_id, page_access_token=page_access_token
+        )
+        video_id = result["video_id"]
 
-            self.upload_video(
+        self.upload_video(
+            video_id=video_id,
+            video_url=post.video_url,
+            access_token=page_access_token,
+        )
+        result_status = self.get_upload_status(video_id, page_access_token)
+        status = result_status.get("status")
+        if status == "ready":
+            self.publish_the_reel(
+                post=post,
                 video_id=video_id,
-                video_url=post.video_url,
+                page_id=page_id,
                 access_token=page_access_token,
             )
-            result_status = self.get_upload_status(video_id, page_access_token)
-            status = result_status.get("status")
-            if status == "ready":
-                self.publish_the_reel(
-                    post=post,
-                    video_id=video_id,
-                    page_id=page_id,
-                    access_token=page_access_token,
-                )
-                reels = self.get_reel_uploaded(
-                    page_id=page_id, access_token=page_access_token
-                )
-                reel_data = reels.get("data")
-                reel_id = reel_data[0].get("id")
-                permalink = f"https://www.facebook.com/reel/{reel_id}"
+            reels = self.get_reel_uploaded(
+                page_id=page_id, access_token=page_access_token
+            )
+            reel_data = reels.get("data")
+            reel_id = reel_data[0].get("id")
+            permalink = f"https://www.facebook.com/reel/{reel_id}"
 
-                SocialPostService.create_social_post(
-                    link_id=link.id,
-                    user_id=post.user_id,
-                    post_id=post.id,
-                    status="PUBLISHED",
-                    social_link=permalink,
-                )
-            else:
-                log_social_message(f"Upload video error: {result_status}")
-                video_status = result_status.get("video_status")
-                uploading_phase = result_status.get("uploading_phase")
+            self.social_post.status = "PUBLISHED"
+            self.social_post.social_link = permalink
+            self.social_post.save()
+        else:
+            log_social_message(f"Upload video error: {result_status}")
+            video_status = result_status.get("video_status")
+            uploading_phase = result_status.get("uploading_phase")
 
-                if video_status == "error":
-                    log_social_message("Tình trạng video lỗi. Không thể upload video")
-                    SocialPostService.create_social_post(
-                        link_id=link.id,
-                        user_id=post.user_id,
-                        post_id=post.id,
-                        status="ERRORED",
-                        error_message="Video is error. Can't upload video",
-                    )
-                if uploading_phase == "error":
-                    error_message = uploading_phase.get("error").get("message")
-                    log_social_message(error_message)
-                    SocialPostService.create_social_post(
-                        link_id=link.id,
-                        user_id=post.user_id,
-                        post_id=post.id,
-                        status="ERRORED",
-                        error_message=error_message,
-                    )
+            if video_status == "error":
+                log_social_message("Tình trạng video lỗi. Không thể upload video")
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = "Video is error. Can't upload video"
+                self.social_post.save()
+            if uploading_phase == "error":
+                error_message = uploading_phase.get("error").get("message")
+                log_social_message(error_message)
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = error_message
+                self.social_post.save()
         return True
 
     def start_session_upload_reel(self, page_id, page_access_token):
@@ -300,57 +284,48 @@ class FacebookService:
         return result
 
     def send_post_image(self, post, link):
-        for page in self.pages:
-            page_id = page["id"]
-            page_access_token = page["access_token"]
-            FEED_URL = f"https://graph.facebook.com/v18.0/{page_id}/feed"
+        page_id = self.page_id
+        page_access_token = self.page_token
+        FEED_URL = f"https://graph.facebook.com/v22.0/{page_id}/feed"
 
-            images = post.images
-            images = json.loads(images)
+        images = post.images
+        images = json.loads(images)
 
-            photo_ids = self.unpublish_images(
-                images=images, page_id=page_id, page_access_token=page_access_token
-            )
+        photo_ids = self.unpublish_images(
+            images=images, page_id=page_id, page_access_token=page_access_token
+        )
 
-            attached_media = [{"media_fbid": pid} for pid in photo_ids]
+        attached_media = [{"media_fbid": pid} for pid in photo_ids]
 
-            log_social_message(f"Attached media: {attached_media}")
+        log_social_message(f"Attached media: {attached_media}")
 
-            post_data = {
-                "message": post.content + " " + post.hashtag,
-                "attached_media": json.dumps(attached_media),
-                "access_token": page_access_token,
-            }
+        post_data = {
+            "message": post.content + " " + post.hashtag,
+            "attached_media": json.dumps(attached_media),
+            "access_token": page_access_token,
+        }
 
-            log_social_message(f"post_data: {post_data}")
+        log_social_message(f"post_data: {post_data}")
 
-            post_response = requests.post(FEED_URL, data=post_data)
-            result = post_response.json()
+        post_response = requests.post(FEED_URL, data=post_data)
+        result = post_response.json()
 
-            log_social_message(f"result: {result}")
+        log_social_message(f"result: {result}")
 
-            if "id" not in result:
-                error = result.get("error", {})
-                error_message = error.get("message", "Error")
-                SocialPostService.create_social_post(
-                    link_id=link.id,
-                    user_id=post.user_id,
-                    post_id=post.id,
-                    status="ERRORED",
-                    error_message=error_message,
-                )
-                return False
-            post_id = photo_ids[0]
+        if "id" not in result:
+            error = result.get("error", {})
+            error_message = error.get("message", "Error")
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = error_message
+            self.social_post.save()
+            return False
+        post_id = photo_ids[0]
 
-            permalink = f"https://www.facebook.com/photo/?fbid={post_id}"
+        permalink = f"https://www.facebook.com/photo/?fbid={post_id}"
 
-            SocialPostService.create_social_post(
-                link_id=link.id,
-                user_id=post.user_id,
-                post_id=post.id,
-                status="PUBLISHED",
-                social_link=permalink,
-            )
+        self.social_post.status = "PUBLISHED"
+        self.social_post.social_link = permalink
+        self.social_post.save()
         return True
 
     def unpublish_images(self, images, page_id, page_access_token):

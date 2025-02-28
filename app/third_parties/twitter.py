@@ -134,13 +134,15 @@ class TwitterService:
         self.link = None
         self.meta = None
         self.processing_info = None
+        self.social_post = None
 
-    def send_post(self, post, link):
+    def send_post(self, post, link, social_post_id):
         user_id = post.user_id
         self.user = UserService.find_user(user_id)
         self.link = link
         self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
         self.meta = json.loads(self.user_link.meta)
+        self.social_post = SocialPostService.find_social_post(social_post_id)
 
         if post.type == "image":
             self.send_post_social(post, link)
@@ -199,24 +201,16 @@ class TwitterService:
                 return self.send_post_to_x(media, post, link, is_video, media_id)
             errors = parsed_response.get("errors")
             if errors:
-                SocialPostService.create_social_post(
-                    link_id=link.id,
-                    user_id=post.user_id,
-                    post_id=post.id,
-                    status="ERRORED",
-                    error_message=json.dumps(errors),
-                )
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = json.dumps(errors)
+                self.social_post.save()
             else:
                 data = parsed_response.get("data")
                 log_social_message(data)
                 permalink = data.get("id")
-                SocialPostService.create_social_post(
-                    link_id=link.id,
-                    user_id=post.user_id,
-                    post_id=post.id,
-                    status="PUBLISHED",
-                    social_link=permalink,
-                )
+                self.social_post.status = "PUBLISHED"
+                self.social_post.social_link = permalink
+                self.social_post.save()
         except Exception as e:
             traceback.print_exc()
             log_social_message(f"Error send post to X: {str(e)}")

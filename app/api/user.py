@@ -17,6 +17,7 @@ import secrets
 from app.services.auth import AuthService
 from app.services.post import PostService
 from app.services.request_social_log import RequestSocialLogService
+from app.services.social_post import SocialPostService
 from app.services.tiktok_callback import TiktokCallbackService
 from app.services.user import UserService
 from app.services.link import LinkService
@@ -179,6 +180,7 @@ class APIPostToLinks(Resource):
                 "uniqueItems": True,
             },
             "post_id": {"type": "integer"},
+            "page_id": {"type": "string"},
         },
         required=["post_id"],
     )
@@ -187,6 +189,7 @@ class APIPostToLinks(Resource):
             current_user = AuthService.get_current_identity()
             is_all = args.get("is_all", 0)
             post_id = args.get("post_id", 0)
+            page_id = args.get("page_id", "")
             link_ids = args.get("link_ids", [])
 
             if not link_ids and is_all == 0:
@@ -231,12 +234,20 @@ class APIPostToLinks(Resource):
             post = PostService.find_post(post_id)
 
             for link in active_links:
+                social_post = SocialPostService.create_social_post(
+                    link_id=link,
+                    user_id=current_user.id,
+                    post_id=post.id,
+                    status="PROCESSING",
+                )
                 message = {
                     "action": "SEND_POST_TO_LINK",
                     "message": {
                         "link_id": link,
                         "post_id": post.id,
                         "user_id": current_user.id,
+                        "social_post_id": social_post.id,
+                        "page_id": page_id,
                     },
                 }
                 send_message(message)

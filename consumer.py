@@ -46,6 +46,8 @@ def action_send_post_to_link(message):
     try:
         link_id = message.get("link_id")
         post_id = message.get("post_id")
+        page_id = message.get("page_id")
+        social_post_id = message.get("social_post_id")
 
         link = LinkService.find_link(link_id)
         post = PostService.find_post(post_id)
@@ -61,25 +63,25 @@ def action_send_post_to_link(message):
         if link.social_type == "SOCIAL":
 
             if link.type == "FACEBOOK":
-                FacebookService().send_post(post, link)
+                FacebookService().send_post(post, link, social_post_id, page_id)
 
             if link.type == "TELEGRAM":
                 pass
 
             if link.type == "X":
-                TwitterService().send_post(post, link)
+                TwitterService().send_post(post, link, social_post_id)
 
             if link.type == "INSTAGRAM":
-                InstagramService().send_post(post, link)
+                InstagramService().send_post(post, link, social_post_id)
 
             if link.type == "YOUTUBE":
-                YoutubeService().send_post(post, link)
+                YoutubeService().send_post(post, link, social_post_id)
 
             if link.type == "TIKTOK":
-                TiktokService().send_post(post, link)
+                TiktokService().send_post(post, link, social_post_id)
 
             if link.type == "THREAD":
-                ThreadService().send_post(post, link)
+                ThreadService().send_post(post, link, social_post_id)
 
         return True
     except Exception as e:
