@@ -155,7 +155,7 @@ class TiktokService:
             else:
                 log_social_message(f"Upload image failed: {status.get('message')}")
                 error_message = status.get("message")
-                self.social_post.status = "ERRPR"
+                self.social_post.status = "ERRORED"
                 self.social_post.error_message = error_message
                 self.social_post.save()
                 return False
@@ -186,7 +186,7 @@ class TiktokService:
             else:
                 log_social_message(f"Upload video failed: {status.get('message')}")
                 error_message = status.get("message")
-                self.social_post.status = "ERRPR"
+                self.social_post.status = "ERRORED"
                 self.social_post.error_message = error_message
                 self.social_post.save()
                 return False
