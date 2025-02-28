@@ -228,7 +228,7 @@ class APIPostToLinks(Resource):
                     active_links.append(link_id)
 
             if is_all == 1:
-                user_links = UserService.get_user_links(current_user.id)
+                user_links = UserService.get_original_user_links(current_user.id)
                 active_links = [link.link_id for link in user_links if link.status == 1]
 
             if not active_links:
