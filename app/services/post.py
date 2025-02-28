@@ -55,7 +55,7 @@ class PostService:
             .select_from(Link)
             .outerjoin(
                 SocialPost,
-                and_(SocialPost.link_id == Link.id, SocialPost.post_id == 586),
+                and_(SocialPost.link_id == Link.id, SocialPost.post_id == post_id),
             )
             .all()
         )
