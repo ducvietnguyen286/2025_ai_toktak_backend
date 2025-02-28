@@ -30,6 +30,8 @@ class VideoService:
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
         is_ai_image = config["SHOTSTACK_AI_IMAGE"]
+        MUSIC_BACKGROUP_VOLUMN = float(config["MUSIC_BACKGROUP_VOLUMN"])
+        MUSIC_VOLUMN = float(config["MUSIC_VOLUMN"])
 
         # FAKE để cho local host không tạo AI
         if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
@@ -98,7 +100,7 @@ class VideoService:
                 ],
                 "background": "#FFFFFF",
                 "tracks": [
-                    clips_data,
+                    clips_data["clips"],
                     {
                         "clips": [
                             {
@@ -106,9 +108,9 @@ class VideoService:
                                     "type": "audio",
                                     "src": voice_url,
                                     "effect": "fadeIn",
-                                    "volume": 1,
+                                    "volume": MUSIC_VOLUMN,
                                 },
-                                "start": 5,
+                                "start": clips_data["intro_length"],
                                 "length": "end",
                             }
                         ]
@@ -120,7 +122,7 @@ class VideoService:
                                     "type": "audio",
                                     "src": "https://shotstack-assets.s3.ap-southeast-2.amazonaws.com/music/unminus/ambisax.mp3",
                                     "effect": "fadeOut",
-                                    "volume": 1,
+                                    "volume": MUSIC_BACKGROUP_VOLUMN,
                                 },
                                 "start": 5,
                                 "length": "end",
@@ -340,7 +342,7 @@ class VideoService:
         clips = []
         current_start = 0
         intro_length = 5
-        
+
         intro_url_check = intro_url.replace("https://apitoktak.voda-play.com", "static")
         clip = VideoFileClip(intro_url_check)
         duration = clip.duration
@@ -574,7 +576,7 @@ class VideoService:
 
         # Kết hợp hai danh sách clip lại
         combined_clips = clips_shape + clips
-        return {"clips": combined_clips}
+        return {"intro_length": intro_length, "clips": {"clips": combined_clips}}
 
 
 def get_random_videos(limit=2):
