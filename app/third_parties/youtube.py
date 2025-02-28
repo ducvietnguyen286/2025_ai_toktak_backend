@@ -17,9 +17,10 @@ TOKEN_URI = "https://oauth2.googleapis.com/token"
 CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID") or ""
 CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET") or ""
 
+
 class YoutubeTokenService:
-    
-    def exchange_code_for_token(self, code, user_link):    
+
+    def exchange_code_for_token(self, code, user_link):
         try:
             REDIRECT_URI = os.environ.get("YOUTUBE_REDIRECT_URI") or ""
 
@@ -33,7 +34,7 @@ class YoutubeTokenService:
 
             response = requests.post(TOKEN_URI, data=data)
             response_data = response.json()
-            
+
             RequestSocialLogService.create_request_social_log(
                 social="YOUTUBE",
                 user_id=user_link.user_id,
@@ -56,6 +57,7 @@ class YoutubeTokenService:
         except Exception as e:
             log_social_message(f"Error exchange_code_for_token: {str(e)}")
             return False
+
 
 class YoutubeService:
     def __init__(self):
@@ -81,7 +83,7 @@ class YoutubeService:
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
             refresh_token = meta.get("refresh_token")
-            
+
             SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 
             credentials = google.oauth2.credentials.Credentials(
@@ -92,19 +94,21 @@ class YoutubeService:
                 client_secret=CLIENT_SECRET,
                 scopes=SCOPES,
             )
-            
+
             if credentials.expired:
                 try:
                     credentials.refresh(Request())
                     meta["access_token"] = credentials.token
                     user_link.meta = json.dumps(meta)
                     user_link.save()
-                except Exception as e:     
+                except Exception as e:
                     user_link.status = 0
                     user_link.save()
-                    log_social_message("Error get_youtube_service_from_token: Refresh token failed")
+                    log_social_message(
+                        "Error get_youtube_service_from_token: Refresh token failed"
+                    )
                     return None
-                
+
             return build("youtube", "v3", credentials=credentials)
         except HttpError as e:
             log_social_message(f"Error get_youtube_service_from_token: {str(e)}")
@@ -163,7 +167,16 @@ class YoutubeService:
             self.social_post.error_message = response["error"]["message"]
             self.social_post.save()
         else:
-            permalink = f"https://www.youtube.com/watch?v={response.get("id")}"
+            try:
+                video_id = response["id"]
+            except Exception as e:
+                try:
+                    video_id = response.get("id")
+                except Exception as e:
+                    log_social_message(f"Error send_post_video: {str(e)}")
+                    return None
+
+            permalink = f"https://www.youtube.com/watch?v={video_id}"
             self.social_post.status = "PUBLISHED"
             self.social_post.social_link = permalink
             self.social_post.save()
