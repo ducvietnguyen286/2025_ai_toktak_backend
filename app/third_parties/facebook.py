@@ -173,8 +173,7 @@ class FacebookService:
         self.page_token = None
         self.access_token = None
 
-    def send_post(self, post, link, social_post_id, page_id):
-        user_id = post.user_id
+    def send_post(self, post, link, user_id, social_post_id, page_id):
         self.user = UserService.find_user(user_id)
         self.link = link
         self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
