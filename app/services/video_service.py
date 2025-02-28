@@ -124,7 +124,7 @@ class VideoService:
                                     "effect": "fadeOut",
                                     "volume": MUSIC_BACKGROUP_VOLUMN,
                                 },
-                                "start": 5,
+                                "start": clips_data["intro_length"],
                                 "length": "end",
                             }
                         ]
