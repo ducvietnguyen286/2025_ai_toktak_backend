@@ -59,6 +59,7 @@ class TiktokTokenService:
         except Exception as e:
             traceback.print_exc()
             log_social_message(e)
+            return None
 
 
 class TiktokService:
@@ -163,14 +164,23 @@ class TiktokService:
 
         log_social_message(headers)
 
-        chunk_size = 10000000
+        chunk_size = 0
+
+        if media_size < 20000000:
+            chunk_size = media_size
+        else:
+            chunk_size = 10000000
+
+        total_chunk = media_size // chunk_size
+        if total_chunk <= 0:
+            total_chunk = 1
 
         payload = {
             "source_info": {
                 "source": "FILE_UPLOAD",
                 "video_size": media_size,
                 "chunk_size": chunk_size,
-                "total_chunk_count": media_size // chunk_size + 1,
+                "total_chunk_count": total_chunk,
             }
         }
 

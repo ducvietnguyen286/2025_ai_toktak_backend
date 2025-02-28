@@ -21,6 +21,7 @@ from app.services.tiktok_callback import TiktokCallbackService
 from app.services.user import UserService
 from app.services.link import LinkService
 from app.third_parties.facebook import FacebookTokenService
+from app.third_parties.tiktok import TiktokTokenService
 from app.third_parties.twitter import TwitterTokenService
 from app.rabbitmq.producer import send_message
 
@@ -124,7 +125,7 @@ class APINewLink(Resource):
                 user_link.status = 0
                 user_link.save()
 
-                code = args.get("AccessToken")
+                access_token = args.get("AccessToken")
                 is_active = FacebookTokenService().exchange_token(
                     access_token=access_token, user_link=user_link
                 )
@@ -482,3 +483,43 @@ class APIGetCallbackTiktok(Resource):
         except Exception as e:
             print(f"Error verify state token: {str(e)}")
             return None
+
+
+@ns.route("/oauth/tiktok-refresh-token")
+class APIRefreshTiktokToken(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "link_id": {"type": "integer"},
+        },
+        required=["link_id"],
+    )
+    def post(self, args):
+        try:
+            current_user = AuthService.get_current_identity()
+            link_id = args.get("link_id")
+            link = LinkService.find_link(link_id)
+            if not link:
+                return Response(
+                    message="Không tìm thấy link",
+                    status=400,
+                ).to_dict()
+
+            refresh_token = TiktokTokenService().refresh_token(link, current_user)
+            print("Refresh token:", refresh_token)
+            if not refresh_token:
+                return Response(
+                    message="Không tìm thấy refresh token",
+                    status=400,
+                ).to_dict()
+
+            return Response(data=refresh_token, message="Refresh token").to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
