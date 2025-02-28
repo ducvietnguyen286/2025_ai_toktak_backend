@@ -25,6 +25,7 @@ from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.tiktok import TiktokTokenService
 from app.third_parties.twitter import TwitterTokenService
 from app.rabbitmq.producer import send_message
+from app.third_parties.youtube import YoutubeTokenService
 
 ns = Namespace(name="user", description="User API")
 
@@ -130,6 +131,15 @@ class APINewLink(Resource):
                 is_active = FacebookTokenService().exchange_token(
                     access_token=access_token, user_link=user_link
                 )
+
+            if link.type == "YOUTUBE":
+                user_link.status = 0
+                user_link.save()
+
+                code = args.get("Code")
+                is_active = YoutubeTokenService().exchange_code_for_token(
+                    code=code, user_link=user_link
+                )
         else:
             user_link.meta = json.dumps(info)
             user_link.status = 1
@@ -148,6 +158,15 @@ class APINewLink(Resource):
                 access_token = args.get("AccessToken")
                 is_active = FacebookTokenService().exchange_token(
                     access_token=access_token, user_link=user_link
+                )
+
+            if link.type == "YOUTUBE":
+                user_link.status = 0
+                user_link.save()
+
+                code = args.get("Code")
+                is_active = YoutubeTokenService().exchange_code_for_token(
+                    code=code, user_link=user_link
                 )
 
         if is_active:

@@ -13,6 +13,50 @@ from googleapiclient.errors import HttpError
 from google.auth.transport.requests import Request
 
 
+TOKEN_URI = "https://oauth2.googleapis.com/token"
+CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID") or ""
+CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET") or ""
+
+class YoutubeTokenService:
+    
+    def exchange_code_for_token(self, code, user_link):    
+        try:
+            REDIRECT_URI = os.environ.get("YOUTUBE_REDIRECT_URI") or ""
+
+            data = {
+                "code": code,
+                "client_id": CLIENT_ID,
+                "client_secret": CLIENT_SECRET,
+                "redirect_uri": REDIRECT_URI,
+                "grant_type": "authorization_code",
+            }
+
+            response = requests.post(TOKEN_URI, data=data)
+            response_data = response.json()
+            
+            RequestSocialLogService.create_request_social_log(
+                social="YOUTUBE",
+                user_id=user_link.user_id,
+                type="exchange_code_for_token",
+                request=json.dumps(data),
+                response=json.dumps(response_data),
+            )
+
+            if "access_token" not in response_data:
+                log_social_message(f"Error exchange_code_for_token: {response_data}")
+                return None
+
+            meta = json.loads(user_link.meta)
+            meta["access_token"] = response_data["access_token"]
+            meta["refresh_token"] = response_data["refresh_token"]
+            user_link.meta = json.dumps(meta)
+            user_link.save()
+
+            return True
+        except Exception as e:
+            log_social_message(f"Error exchange_code_for_token: {str(e)}")
+            return False
+
 class YoutubeService:
     def __init__(self):
         self.user_link = None
@@ -38,10 +82,7 @@ class YoutubeService:
             access_token = meta.get("access_token")
             refresh_token = meta.get("refresh_token")
             
-            TOKEN_URI = "https://oauth2.googleapis.com/token"
             SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
-            CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID") or ""
-            CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET") or ""
 
             credentials = google.oauth2.credentials.Credentials(
                 token=access_token,
