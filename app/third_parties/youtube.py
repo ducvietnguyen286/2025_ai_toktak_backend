@@ -82,7 +82,7 @@ class YoutubeService:
 
     def get_youtube_service_from_token(self, user_link):
         log_social_message(
-            "get_youtube_service_from_token: Start get_youtube_service_from_token"
+            "----------------------- GET YOUTUBE SERVICE ---------------------------"
         )
         try:
             meta = json.loads(user_link.meta)
@@ -109,25 +109,39 @@ class YoutubeService:
                 except Exception as e:
                     user_link.status = 0
                     user_link.save()
+                    
+                    self.social_post.status = "ERRORED"
+                    self.social_post.error_message = "Refresh token failed"
+                    self.social_post.save()
+                    
                     log_social_message(
-                        "Error get_youtube_service_from_token: Refresh token failed"
+                        "----------------------- GET YOUTUBE SERVICE FAIL:  Refresh token failed ---------------------------"
                     )
+                    
                     return None
 
+            
             log_social_message(
-                "get_youtube_service_from_token: End get_youtube_service_from_token"
+                "----------------------- END GET YOUTUBE SERVICE ---------------------------"
             )
 
             return build("youtube", "v3", credentials=credentials)
         except HttpError as e:
-            log_social_message(f"Error get_youtube_service_from_token: {str(e)}")
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+            log_social_message(f"---------------ERROR: {str(e)}-----------------")
             return None
 
     def send_post_video(self, post):
+        log_social_message(
+            "----------------------- SEND VIDEO TO YOUTUBE ---------------------------"
+        )
+        
         youtube = self.get_youtube_service_from_token(self.user_link)
         if not youtube:
             log_social_message(
-                "Error send_post_video: Can not get youtube service from token"
+                "----------------------- ERROR: SEND YOUTUBE ERROR ---------------------------"
             )
             return None
 
@@ -153,9 +167,9 @@ class YoutubeService:
                 "privacyStatus": "private"  # "public", "private" hoặc "unlisted"
             },
         }
-
+        
         log_social_message(
-            f"send_post_video: Start send_post_video: {post_title} - {post_description}"
+            f"----------------------- YOUTUBE START: {post_title}  ---------------------------"
         )
 
         try:
@@ -166,17 +180,37 @@ class YoutubeService:
                 part="snippet,status", body=body, media_body=media
             )
         except Exception as e:
-            log_social_message(f"Error send_post_video: {str(e)}")
+            log_social_message(
+                f"----------------------- YOUTUBE ERROR SEND : {post_title} -> {str(e)}  ---------------------------"
+            )
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
             return
+        
+        self.social_post.status = "UPLOADING"
+        self.social_post.save()
 
-        response = None
-        while response is None:
-            status, response = request.next_chunk()
-            if status:
-                log_social_message(
-                    "Đang upload: {}%".format(int(status.progress() * 100))
-                )
-        log_social_message("Upload hoàn tất! Video ID: {}".format(response.get("id")))
+        try:
+            response = None
+            while response is None:
+                status, response = request.next_chunk()
+                if status:
+                    log_social_message(
+                        "YOUTUBE Đang upload: {}%".format(int(status.progress() * 100))
+                    )
+        except Exception as e:
+            log_social_message(
+                f"----------------------- YOUTUBE ERROR SEND : {post_title} -> {str(e)}  ---------------------------"
+            )
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+            return     
+                
+        log_social_message(
+            "----------------------- YOUTUBE UPLOADED : VIDEO ID {}  ---------------------------".format(response.get("id"))
+        )
 
         RequestSocialLogService.create_request_social_log(
             social="YOUTUBE",
@@ -197,7 +231,10 @@ class YoutubeService:
                 try:
                     video_id = response.get("id")
                 except Exception as e:
-                    log_social_message(f"Error send_post_video: {str(e)}")
+                    log_social_message(f"--------------------YOUTUBE ERROR GET VIDEO ID: {str(e)}---------------------")
+                    self.social_post.status = "ERRORED"
+                    self.social_post.error_message = str(e)
+                    self.social_post.save()
                     return None
 
             permalink = f"https://www.youtube.com/watch?v={video_id}"

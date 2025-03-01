@@ -1,7 +1,5 @@
-import datetime
 import json
 import os
-import time
 import traceback
 import requests
 
@@ -179,14 +177,18 @@ class FacebookService:
         self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
         self.meta = json.loads(self.user_link.meta)
         self.access_token = self.meta.get("access_token")
+        self.social_post = SocialPostService.find_social_post(social_post_id)
 
         token_page = FacebookTokenService.fetch_page_token_backend(
             self.user_link, page_id
         )
         if not token_page:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = "Can't get page token"
+            self.social_post.save()
             log_social_message(f"Token page not found")
             return False
-        self.social_post = SocialPostService.find_social_post(social_post_id)
+
         self.page_id = page_id
         self.page_token = token_page
 
@@ -261,6 +263,10 @@ class FacebookService:
             request=json.dumps(post_data),
             response=json.dumps(result),
         )
+        
+        self.social_post.status = "UPLOADING"
+        self.social_post.save()
+        
         return result
 
     def upload_video(self, video_id, video_url, access_token):
@@ -410,6 +416,10 @@ class FacebookService:
     def unpublish_images(self, images, page_id, page_access_token):
         UNPUBLISH_URL = f"https://graph.facebook.com/v22.0/{page_id}/photos"
         photo_ids = []
+        
+        self.social_post.status = "UPLOADING"
+        self.social_post.save()
+        
         for url in images:
             data = {
                 "url": url,

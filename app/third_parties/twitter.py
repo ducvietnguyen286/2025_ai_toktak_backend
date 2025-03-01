@@ -169,7 +169,7 @@ class TwitterService:
         self.send_post_to_x(post.video_url, post, link, is_video=True)
         log_social_message(f"Send post Video to Twitter {post.id} successfully")
 
-    def send_post_to_x(self, media, post, link, is_video=False, media_id=None):
+    def send_post_to_x(self, media, post, link, is_video=False, media_id=None, retry=0):
         try:
             log_social_message(f"Send post to X {post.id}")
             access_token = self.meta.get("access_token")
@@ -192,12 +192,21 @@ class TwitterService:
             log_social_message(parsed_response)
             status = parsed_response.get("status")
             if status == 401:
+                if retry > 0:
+                    self.social_post.status = "ERRORED"
+                    self.social_post.error_message = "Access token invalid"
+                    self.social_post.save()
+                    
+                    self.user_link.status = 0
+                    self.user_link.save()
+                    raise ValueError("Access token invalid")
+                
                 TwitterTokenService().refresh_token(link=self.link, user=self.user)
                 self.user_link = UserService.find_user_link(
                     link_id=self.link.id, user_id=self.user.id
                 )
                 self.meta = json.loads(self.user_link.meta)
-                return self.send_post_to_x(media, post, link, is_video, media_id)
+                return self.send_post_to_x(media, post, link, is_video, media_id, retry + 1)
             errors = parsed_response.get("errors")
             if errors:
                 self.social_post.status = "ERRORED"
@@ -229,6 +238,7 @@ class TwitterService:
         log_social_message(f"total_bytes: {total_bytes}")
 
         media_id = self.upload_media_init(media_type, total_bytes, is_video)
+        
         uploaded = self.upload_append(
             media_id=media_id, content=response.content, total_bytes=total_bytes
         )
@@ -238,7 +248,7 @@ class TwitterService:
         log_social_message(f"Upload media {media} done")
         return media_id
 
-    def upload_media_init(self, media_type, total_bytes, is_video=False):
+    def upload_media_init(self, media_type, total_bytes, is_video=False, retry=0):
         log_social_message("Upload Media INIT")
         access_token = self.meta.get("access_token")
 
@@ -267,16 +277,28 @@ class TwitterService:
             request=json.dumps(request_data),
             response=json.dumps(req.json()),
         )
+        
+        self.social_post.status = "UPLOADING"
+        self.social_post.save()
 
         status_code = req.status_code
         if status_code == 401:
+            if retry > 0:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = "Access token invalid"
+                self.social_post.save()
+                
+                self.user_link.status = 0
+                self.user_link.save()
+                raise ValueError("Access token invalid")
+            
             TwitterTokenService().refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
                 link_id=self.link.id, user_id=self.user.id
             )
             self.meta = json.loads(self.user_link.meta)
             return self.upload_media_init(
-                media_type=media_type, total_bytes=total_bytes, is_video=is_video
+                media_type=media_type, total_bytes=total_bytes, is_video=is_video, retry=retry + 1
             )
 
         log_social_message(req.status_code)
@@ -285,7 +307,7 @@ class TwitterService:
 
         return media_id
 
-    def upload_append(self, media_id, content, total_bytes):
+    def upload_append(self, media_id, content, total_bytes, retry=0):
         access_token = self.meta.get("access_token")
         segment_id = 0
         bytes_sent = 0
@@ -337,13 +359,22 @@ class TwitterService:
 
             status_code = req.status_code
             if status_code == 401:
+                if retry > 0:
+                    self.social_post.status = "ERRORED"
+                    self.social_post.error_message = "Access token invalid"
+                    self.social_post.save()
+                    
+                    self.user_link.status = 0
+                    self.user_link.save()
+                    raise ValueError("Access token invalid")
+                
                 TwitterTokenService().refresh_token(link=self.link, user=self.user)
                 self.user_link = UserService.find_user_link(
                     link_id=self.link.id, user_id=self.user.id
                 )
                 self.meta = json.loads(self.user_link.meta)
                 return self.upload_append(
-                    media_id=media_id, content=content, total_bytes=total_bytes
+                    media_id=media_id, content=content, total_bytes=total_bytes, retry=retry + 1
                 )
 
             if req.status_code < 200 or req.status_code > 299:
@@ -359,7 +390,7 @@ class TwitterService:
         log_social_message("Upload chunks complete.")
         return True
 
-    def upload_finalize(self, media_id):
+    def upload_finalize(self, media_id, retry=0):
         access_token = self.meta.get("access_token")
 
         # Finalizes uploads and starts video processing
@@ -386,12 +417,20 @@ class TwitterService:
 
         status_code = req.status_code
         if status_code == 401:
+            if retry > 0:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = "Access token invalid"
+                self.social_post.save()
+                
+                self.user_link.status = 0
+                self.user_link.save()
+                raise ValueError("Access token invalid")
             TwitterTokenService().refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
                 link_id=self.link.id, user_id=self.user.id
             )
             self.meta = json.loads(self.user_link.meta)
-            return self.upload_finalize(media_id=media_id)
+            return self.upload_finalize(media_id=media_id, retry=retry + 1)
         else:
             try:
                 response_json = req.json()
@@ -406,7 +445,7 @@ class TwitterService:
                 log_social_message("JSONDecodeError:", e)
                 return None
 
-    def check_status(self, media_id):
+    def check_status(self, media_id, retry=0):
         access_token = self.meta.get("access_token")
 
         # Checks video processing status
@@ -443,12 +482,20 @@ class TwitterService:
 
         status_code = req.status_code
         if status_code == 401:
+            if retry > 0:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = "Access token invalid"
+                self.social_post.save()
+                
+                self.user_link.status = 0
+                self.user_link.save()
+                raise ValueError("Access token invalid")
             TwitterTokenService().refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
                 link_id=self.link.id, user_id=self.user.id
             )
             self.meta = json.loads(self.user_link.meta)
-            return self.check_status(media_id=media_id)
+            return self.check_status(media_id=media_id, retry=retry + 1)
 
         self.processing_info = req.json()["data"].get("processing_info", None)
-        self.check_status(media_id=media_id)
+        self.check_status(media_id=media_id, retry=retry)

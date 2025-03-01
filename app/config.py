@@ -27,6 +27,12 @@ class Config(object):
     JWT_REFRESH_TOKEN_EXPIRES = False  # timedelta(days=7)
 
     MAX_COUNT_IMAGE = os.environ.get("MAX_COUNT_IMAGE") or 8
+    
+    RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST") or "localhost"
+    RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT") or 5672
+    RABBITMQ_USER = os.environ.get("RABBITMQ_USER") or "guest"
+    RABBITMQ_PASSWORD = os.environ.get("RABBITMQ_PASSWORD") or "guest"
+    RABBITMQ_QUEUE = os.environ.get("RABBITMQ_QUEUE") or "hello"
 
 
 class TestingConfig(Config):

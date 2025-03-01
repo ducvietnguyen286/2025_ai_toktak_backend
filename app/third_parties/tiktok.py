@@ -90,7 +90,7 @@ class TiktokService:
         if post.type == "image":
             self.upload_image(post.images)
 
-    def upload_image(self, medias):
+    def upload_image(self, medias, retry=0):
         try:
             log_social_message("Upload image to Tiktok")
             access_token = self.meta.get("access_token")
@@ -132,6 +132,9 @@ class TiktokService:
                 URL_IMAGE_UPLOAD, headers=headers, data=json.dumps(payload)
             )
             parsed_response = upload_response.json()
+            
+            self.social_post.status = "UPLOADING"
+            self.social_post.save()
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
@@ -146,12 +149,21 @@ class TiktokService:
             error = parsed_response.get("error")
             error_code = error.get("code")
             if error_code == "access_token_invalid":
+                if retry > 0:
+                    self.social_post.status = "ERRORED"
+                    self.social_post.error_message = "Access token invalid"
+                    self.social_post.save()
+                    
+                    self.user_link.status = 0
+                    self.user_link.save()
+                    
+                    raise Exception("Retry limit exceeded")
                 TiktokTokenService.refresh_token(link=self.link, user=self.user)
                 self.user_link = UserService.find_user_link(
                     link_id=self.link.id, user_id=self.user.id
                 )
                 self.meta = json.loads(self.user_link.meta)
-                return self.upload_image(medias=medias)
+                return self.upload_image(medias=medias, retry=retry + 1)
 
             publish_id = parsed_response.get("data").get("publish_id")
             status = self.check_status(publish_id)
@@ -203,7 +215,7 @@ class TiktokService:
             log_social_message(f"Error upload video to Tiktok: {str(e)}")
             return False
 
-    def upload_video_by_url(self, media_url):
+    def upload_video_by_url(self, media_url, retry=0):
         log_social_message("Upload video to Tiktok From URL")
         access_token = self.meta.get("access_token")
 
@@ -235,16 +247,25 @@ class TiktokService:
         error = parsed_response.get("error")
         error_code = error.get("code")
         if error_code == "access_token_invalid":
+            if retry > 0:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = "Access token invalid"
+                self.social_post.save()
+                
+                self.user_link.status = 0
+                self.user_link.save()
+                raise Exception("Retry limit exceeded")
+                
             TiktokTokenService.refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
                 link_id=self.link.id, user_id=self.user.id
             )
             self.meta = json.loads(self.user_link.meta)
-            return self.upload_video_by_url(media_url=media_url)
+            return self.upload_video_by_url(media_url=media_url, retry=retry + 1)
 
         return parsed_response
 
-    def check_status(self, publish_id):
+    def check_status(self, publish_id, retry=0):
         access_token = self.meta.get("access_token")
         URL_VIDEO_STATUS = "https://open.tiktokapis.com/v2/post/publish/status/fetch/"
         headers = {
@@ -262,13 +283,22 @@ class TiktokService:
         error = res_json.get("error")
         error_code = error.get("code")
         if error_code == "access_token_invalid":
+            if retry > 0:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = "Access token invalid"
+                self.social_post.save()
+                
+                self.user_link.status = 0
+                self.user_link.save()
+                raise Exception("Retry limit exceeded")
+                
             TiktokTokenService.refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
                 link_id=self.link.id, user_id=self.user.id
             )
             self.meta = json.loads(self.user_link.meta)
             time.sleep(3)
-            return self.check_status(publish_id)
+            return self.check_status(publish_id, retry=retry + 1)
         status = res_json.get("data").get("status")
         if status == "PUBLISH_COMPLETE":
             return {"status": True}
@@ -278,9 +308,9 @@ class TiktokService:
                 "message": res_json.get("data").get("fail_reason"),
             }
         time.sleep(3)
-        return self.check_status(publish_id)
+        return self.check_status(publish_id, retry=retry)
 
-    def upload_video_init(self, media):
+    def upload_video_init(self, media, retry=0):
         log_social_message("Upload video to Tiktok INIT")
         access_token = self.meta.get("access_token")
         media_size = int(media.headers.get("content-length"))
@@ -329,6 +359,9 @@ class TiktokService:
             URL_VIDEO_UPLOAD, headers=headers, data=json.dumps(payload)
         )
         parsed_response = upload_response.json()
+        
+        self.social_post.status = "UPLOADING"
+        self.social_post.save()
 
         RequestSocialLogService.create_request_social_log(
             social="TIKTOK",
@@ -343,12 +376,21 @@ class TiktokService:
         error = parsed_response.get("error")
         error_code = error.get("code")
         if error_code == "access_token_invalid":
+            if retry > 0:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = "Access token invalid"
+                self.social_post.save()
+                
+                self.user_link.status = 0
+                self.user_link.save()
+                raise Exception("Retry limit exceeded")
+                
             TiktokTokenService.refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
                 link_id=self.link.id, user_id=self.user.id
             )
             self.meta = json.loads(self.user_link.meta)
-            return self.upload_video_init(media=media)
+            return self.upload_video_init(media=media, retry=retry + 1)
 
         info_data = parsed_response.get("data")
         upload_url = info_data.get("upload_url")
