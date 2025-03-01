@@ -10,6 +10,10 @@ from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
 
+from app.extensions import redis_client
+
+PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
+
 MEDIA_ENDPOINT_URL = "https://api.x.com/2/media/upload"
 X_POST_TO_X_URL = "https://api.x.com/2/tweets"
 TOKEN_URL = "https://api.x.com/2/oauth2/token"
@@ -142,6 +146,8 @@ class TwitterService:
         self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
         self.meta = json.loads(self.user_link.meta)
         self.social_post = SocialPostService.find_social_post(social_post_id)
+        self.link_id = link.id
+        self.post_id = post.id
 
         if post.type == "image":
             self.send_post_social(post, link)
@@ -196,22 +202,48 @@ class TwitterService:
                     self.social_post.status = "ERRORED"
                     self.social_post.error_message = "Access token invalid"
                     self.social_post.save()
-                    
+
                     self.user_link.status = 0
                     self.user_link.save()
+
+                    redis_client.publish(
+                        PROGRESS_CHANNEL,
+                        json.dumps(
+                            {
+                                "link_id": self.link_id,
+                                "post_id": self.post_id,
+                                "status": "ERRORED",
+                                "value": 100,
+                            }
+                        ),
+                    )
                     raise ValueError("Access token invalid")
-                
+
                 TwitterTokenService().refresh_token(link=self.link, user=self.user)
                 self.user_link = UserService.find_user_link(
                     link_id=self.link.id, user_id=self.user.id
                 )
                 self.meta = json.loads(self.user_link.meta)
-                return self.send_post_to_x(media, post, link, is_video, media_id, retry + 1)
+                return self.send_post_to_x(
+                    media, post, link, is_video, media_id, retry + 1
+                )
             errors = parsed_response.get("errors")
             if errors:
                 self.social_post.status = "ERRORED"
                 self.social_post.error_message = json.dumps(errors)
                 self.social_post.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
             else:
                 data = parsed_response.get("data")
                 log_social_message(data)
@@ -219,6 +251,13 @@ class TwitterService:
                 self.social_post.status = "PUBLISHED"
                 self.social_post.social_link = permalink
                 self.social_post.save()
+                
+                redis_client.publish(PROGRESS_CHANNEL, json.dumps({
+                    "link_id": self.link_id,
+                    "post_id": self.post_id,
+                    "status": "PUBLISHED",
+                    "value": 100,
+                }))
         except Exception as e:
             traceback.print_exc()
             log_social_message(f"Error send post to X: {str(e)}")
@@ -238,7 +277,7 @@ class TwitterService:
         log_social_message(f"total_bytes: {total_bytes}")
 
         media_id = self.upload_media_init(media_type, total_bytes, is_video)
-        
+
         uploaded = self.upload_append(
             media_id=media_id, content=response.content, total_bytes=total_bytes
         )
@@ -277,9 +316,21 @@ class TwitterService:
             request=json.dumps(request_data),
             response=json.dumps(req.json()),
         )
-        
+
         self.social_post.status = "UPLOADING"
         self.social_post.save()
+
+        redis_client.publish(
+            PROGRESS_CHANNEL,
+            json.dumps(
+                {
+                    "link_id": self.link_id,
+                    "post_id": self.post_id,
+                    "status": "UPLOADING",
+                    "value": 10,
+                }
+            ),
+        )
 
         status_code = req.status_code
         if status_code == 401:
@@ -287,18 +338,33 @@ class TwitterService:
                 self.social_post.status = "ERRORED"
                 self.social_post.error_message = "Access token invalid"
                 self.social_post.save()
-                
+
                 self.user_link.status = 0
                 self.user_link.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
                 raise ValueError("Access token invalid")
-            
+
             TwitterTokenService().refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
                 link_id=self.link.id, user_id=self.user.id
             )
             self.meta = json.loads(self.user_link.meta)
             return self.upload_media_init(
-                media_type=media_type, total_bytes=total_bytes, is_video=is_video, retry=retry + 1
+                media_type=media_type,
+                total_bytes=total_bytes,
+                is_video=is_video,
+                retry=retry + 1,
             )
 
         log_social_message(req.status_code)
@@ -312,6 +378,10 @@ class TwitterService:
         segment_id = 0
         bytes_sent = 0
         chunk_size = 4 * 1024 * 1024  # 4MB chunk size
+
+        total_chunks = total_bytes // chunk_size
+        progress_by_chunk = 20 // total_chunks
+
         while bytes_sent < total_bytes:
             chunk = content[bytes_sent : bytes_sent + chunk_size]
 
@@ -357,24 +427,51 @@ class TwitterService:
                 response=json.dumps(response_json) if response_json else req.text,
             )
 
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "UPLOADING",
+                        "value": 10 + (progress_by_chunk * (segment_id + 1)),
+                    }
+                ),
+            )
+
             status_code = req.status_code
             if status_code == 401:
                 if retry > 0:
                     self.social_post.status = "ERRORED"
                     self.social_post.error_message = "Access token invalid"
                     self.social_post.save()
-                    
+
                     self.user_link.status = 0
                     self.user_link.save()
+
+                    redis_client.publish(
+                        PROGRESS_CHANNEL,
+                        json.dumps(
+                            {
+                                "link_id": self.link_id,
+                                "post_id": self.post_id,
+                                "status": "ERRORED",
+                                "value": 100,
+                            }
+                        ),
+                    )
                     raise ValueError("Access token invalid")
-                
+
                 TwitterTokenService().refresh_token(link=self.link, user=self.user)
                 self.user_link = UserService.find_user_link(
                     link_id=self.link.id, user_id=self.user.id
                 )
                 self.meta = json.loads(self.user_link.meta)
                 return self.upload_append(
-                    media_id=media_id, content=content, total_bytes=total_bytes, retry=retry + 1
+                    media_id=media_id,
+                    content=content,
+                    total_bytes=total_bytes,
+                    retry=retry + 1,
                 )
 
             if req.status_code < 200 or req.status_code > 299:
@@ -421,9 +518,22 @@ class TwitterService:
                 self.social_post.status = "ERRORED"
                 self.social_post.error_message = "Access token invalid"
                 self.social_post.save()
-                
+
                 self.user_link.status = 0
                 self.user_link.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
+
                 raise ValueError("Access token invalid")
             TwitterTokenService().refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
@@ -438,14 +548,36 @@ class TwitterService:
                 self.processing_info = response_json["data"].get(
                     "processing_info", None
                 )
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "UPLOADING",
+                            "value": 40,
+                        }
+                    ),
+                )
                 self.check_status(media_id=media_id)
             except requests.exceptions.JSONDecodeError as e:
                 log_social_message(f"FINALIZE Res: {req}")
                 log_social_message(f"FINALIZE Res: {req.text}")
                 log_social_message("JSONDecodeError:", e)
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
                 return None
 
-    def check_status(self, media_id, retry=0):
+    def check_status(self, media_id, count=1, retry=0):
         access_token = self.meta.get("access_token")
 
         # Checks video processing status
@@ -486,16 +618,42 @@ class TwitterService:
                 self.social_post.status = "ERRORED"
                 self.social_post.error_message = "Access token invalid"
                 self.social_post.save()
-                
+
                 self.user_link.status = 0
                 self.user_link.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
                 raise ValueError("Access token invalid")
             TwitterTokenService().refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
                 link_id=self.link.id, user_id=self.user.id
             )
             self.meta = json.loads(self.user_link.meta)
-            return self.check_status(media_id=media_id, retry=retry + 1)
+            return self.check_status(media_id=media_id, count=count, retry=retry + 1)
+
+        if count <= 5:
+            progress = 40 + (count * 10)
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "UPLOADING",
+                        "value": progress,
+                    }
+                ),
+            )
 
         self.processing_info = req.json()["data"].get("processing_info", None)
-        self.check_status(media_id=media_id, retry=retry)
+        self.check_status(media_id=media_id, count=count + 1, retry=retry)

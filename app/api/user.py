@@ -253,8 +253,6 @@ class APIPostToLinks(Resource):
 
             post = PostService.find_post(post_id)
 
-            print("Active links:", active_links)
-
             for link in active_links:
                 social_post = SocialPostService.create_social_post(
                     link_id=link,
@@ -273,15 +271,6 @@ class APIPostToLinks(Resource):
                     },
                 }
                 asyncio.run(send_message(message))
-                # send_message(message)
-                # message = {
-                #     "link_id": link,
-                #     "post_id": post.id,
-                #     "user_id": current_user.id,
-                #     "social_post_id": social_post.id,
-                #     "page_id": page_id,
-                # }
-                # send_post_to_link(json.dumps(message))
 
             return Response(
                 message="Tạo bài viết thành công. Vui lòng đợi trong giây lát",

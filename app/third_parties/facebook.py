@@ -7,6 +7,9 @@ from app.lib.logger import log_social_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
+from app.extensions import redis_client
+
+PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
 
 class FacebookTokenService:
@@ -170,6 +173,8 @@ class FacebookService:
         self.page_id = None
         self.page_token = None
         self.access_token = None
+        self.link_id = None
+        self.post_id = None
 
     def send_post(self, post, link, user_id, social_post_id, page_id):
         self.user = UserService.find_user(user_id)
@@ -178,6 +183,8 @@ class FacebookService:
         self.meta = json.loads(self.user_link.meta)
         self.access_token = self.meta.get("access_token")
         self.social_post = SocialPostService.find_social_post(social_post_id)
+        self.link_id = link.id
+        self.post_id = post.id
 
         token_page = FacebookTokenService.fetch_page_token_backend(
             self.user_link, page_id
@@ -186,6 +193,19 @@ class FacebookService:
             self.social_post.status = "ERRORED"
             self.social_post.error_message = "Can't get page token"
             self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
             log_social_message(f"Token page not found")
             return False
 
@@ -230,6 +250,18 @@ class FacebookService:
             self.social_post.status = "PUBLISHED"
             self.social_post.social_link = permalink
             self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "PUBLISHED",
+                        "value": 100,
+                    }
+                ),
+            )
         else:
             log_social_message(f"Upload video error: {result_status}")
             video_status = result_status.get("video_status")
@@ -263,10 +295,22 @@ class FacebookService:
             request=json.dumps(post_data),
             response=json.dumps(result),
         )
-        
+
         self.social_post.status = "UPLOADING"
         self.social_post.save()
-        
+
+        redis_client.publish(
+            PROGRESS_CHANNEL,
+            json.dumps(
+                {
+                    "link_id": self.link_id,
+                    "post_id": self.post_id,
+                    "status": "UPLOADING",
+                    "value": 10,
+                }
+            ),
+        )
+
         return result
 
     def upload_video(self, video_id, video_url, access_token):
@@ -284,10 +328,22 @@ class FacebookService:
             request=json.dumps(headers),
             response=json.dumps(result),
         )
+        redis_client.publish(
+            PROGRESS_CHANNEL,
+            json.dumps(
+                {
+                    "link_id": self.link_id,
+                    "post_id": self.post_id,
+                    "status": "UPLOADING",
+                    "value": 20,
+                }
+            ),
+        )
         log_social_message(f"Upload video: {result}")
 
-    def get_upload_status(self, video_id, access_token):
+    def get_upload_status(self, video_id, access_token, count=1):
         status = None
+
         try:
             URL_CHECK_STATUS = f"https://graph.facebook.com/v22.0/{video_id}?fields=status&access_token={access_token}"
             get_response = requests.get(URL_CHECK_STATUS)
@@ -296,8 +352,33 @@ class FacebookService:
             log_social_message(f"get upload status: {result}")
 
             status = result["status"]
+
+            if count <= 6:
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "UPLOADING",
+                            "value": 20 + (count * 10),
+                        }
+                    ),
+                )
+
         except Exception as e:
             log_social_message(f"Error get upload status: {str(e)}")
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
             return {
                 "status": "error",
                 "error": str(e),
@@ -318,7 +399,7 @@ class FacebookService:
                 "uploading_phase": uploading_phase,
             }
         else:
-            return self.get_upload_status(video_id, access_token)
+            return self.get_upload_status(video_id, access_token, count + 1)
 
     def publish_the_reel(self, post, video_id, page_id, access_token):
         URL_PUBLISH = f"https://graph.facebook.com/v22.0/{page_id}/video_reels"
@@ -344,6 +425,19 @@ class FacebookService:
             request=json.dumps(post_data),
             response=json.dumps(result),
         )
+
+        redis_client.publish(
+            PROGRESS_CHANNEL,
+            json.dumps(
+                {
+                    "link_id": self.link_id,
+                    "post_id": self.post_id,
+                    "status": "UPLOADING",
+                    "value": 90,
+                }
+            ),
+        )
+
         return result
 
     def get_reel_uploaded(self, page_id, access_token):
@@ -403,6 +497,18 @@ class FacebookService:
             self.social_post.status = "ERRORED"
             self.social_post.error_message = error_message
             self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
             return False
         post_id = photo_ids[0]
 
@@ -411,15 +517,30 @@ class FacebookService:
         self.social_post.status = "PUBLISHED"
         self.social_post.social_link = permalink
         self.social_post.save()
+
+        redis_client.publish(
+            PROGRESS_CHANNEL,
+            json.dumps(
+                {
+                    "link_id": self.link_id,
+                    "post_id": self.post_id,
+                    "status": "PUBLISHED",
+                    "value": 100,
+                }
+            ),
+        )
         return True
 
     def unpublish_images(self, images, page_id, page_access_token):
         UNPUBLISH_URL = f"https://graph.facebook.com/v22.0/{page_id}/photos"
         photo_ids = []
-        
+
         self.social_post.status = "UPLOADING"
         self.social_post.save()
-        
+
+        progress = 0
+        progress_per_image = 80 / len(images)
+
         for url in images:
             data = {
                 "url": url,
@@ -435,6 +556,20 @@ class FacebookService:
                 type="unpublish_images",
                 request=json.dumps(data),
                 response=json.dumps(result),
+            )
+
+            progress += progress_per_image
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "UPLOADING",
+                        "value": progress,
+                    }
+                ),
             )
 
             if "id" in result:

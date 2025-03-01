@@ -7,7 +7,8 @@ from .errors.handler import api_error_handler
 
 from flask import Flask, jsonify
 from flask_cors import CORS
-from .extensions import redis_client, db, bcrypt, jwt
+from .extensions import redis_client, db, bcrypt, jwt, socketio
+from .socket_sub import start_redis_subscriber
 
 
 def create_app(config_app):
@@ -19,6 +20,8 @@ def create_app(config_app):
     __config_logging(app)
     __register_blueprint(app)
     __config_error_handlers(app)
+    
+    start_redis_subscriber(app)
     return app
 
 
@@ -38,6 +41,7 @@ def __init_app(app):
     redis_client.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
+    socketio.init_app(app)
 
     app.logger.info("Initial app...")
 

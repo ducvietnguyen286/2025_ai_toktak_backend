@@ -8,6 +8,8 @@ from flask import Flask
 from functools import partial
 from werkzeug.exceptions import default_exceptions
 
+load_dotenv(override=False)
+
 from app.lib.logger import logger
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db
@@ -20,8 +22,6 @@ from app.third_parties.thread import ThreadService
 from app.third_parties.tiktok import TiktokService
 from app.third_parties.twitter import TwitterService
 from app.third_parties.youtube import YoutubeService
-
-load_dotenv(override=False)
 
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST") or "localhost"
 RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT") or 5672
@@ -77,7 +77,9 @@ def action_send_post_to_link(message):
 
         if link.social_type == "SOCIAL":
             if link.type == "FACEBOOK":
-                FacebookService().send_post(post, link, user_id, social_post_id, page_id)
+                FacebookService().send_post(
+                    post, link, user_id, social_post_id, page_id
+                )
             elif link.type == "TELEGRAM":
                 # Xử lý cho Telegram nếu cần
                 pass
@@ -131,8 +133,10 @@ async def on_message(message: IncomingMessage, app):
 
 
 async def main():
-    RABBITMQ_URL = f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/"
-    
+    RABBITMQ_URL = (
+        f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/"
+    )
+
     app = create_app()
     connection = await connect_robust(RABBITMQ_URL)
     channel = await connection.channel()

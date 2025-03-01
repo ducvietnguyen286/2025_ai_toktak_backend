@@ -12,6 +12,9 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.errors import HttpError
 from google.auth.transport.requests import Request
+from app.extensions import redis_client
+
+PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
 
 TOKEN_URI = "https://oauth2.googleapis.com/token"
@@ -76,6 +79,8 @@ class YoutubeService:
         self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
         self.meta = json.loads(self.user_link.meta)
         self.social_post = SocialPostService.find_social_post(social_post_id)
+        self.link_id = link.id
+        self.post_id = post.id
 
         if post.type == "video":
             self.send_post_video(post)
@@ -109,18 +114,17 @@ class YoutubeService:
                 except Exception as e:
                     user_link.status = 0
                     user_link.save()
-                    
+
                     self.social_post.status = "ERRORED"
                     self.social_post.error_message = "Refresh token failed"
                     self.social_post.save()
-                    
+
                     log_social_message(
                         "----------------------- GET YOUTUBE SERVICE FAIL:  Refresh token failed ---------------------------"
                     )
-                    
+
                     return None
 
-            
             log_social_message(
                 "----------------------- END GET YOUTUBE SERVICE ---------------------------"
             )
@@ -137,11 +141,25 @@ class YoutubeService:
         log_social_message(
             "----------------------- SEND VIDEO TO YOUTUBE ---------------------------"
         )
-        
+
         youtube = self.get_youtube_service_from_token(self.user_link)
         if not youtube:
             log_social_message(
                 "----------------------- ERROR: SEND YOUTUBE ERROR ---------------------------"
+            )
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = "Can't get youtube service"
+            self.social_post.save()
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
             )
             return None
 
@@ -167,7 +185,7 @@ class YoutubeService:
                 "privacyStatus": "private"  # "public", "private" hoặc "unlisted"
             },
         }
-        
+
         log_social_message(
             f"----------------------- YOUTUBE START: {post_title}  ---------------------------"
         )
@@ -186,19 +204,57 @@ class YoutubeService:
             self.social_post.status = "ERRORED"
             self.social_post.error_message = str(e)
             self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
             return
-        
+
         self.social_post.status = "UPLOADING"
         self.social_post.save()
 
+        redis_client.publish(
+            PROGRESS_CHANNEL,
+            json.dumps(
+                {
+                    "link_id": self.link_id,
+                    "post_id": self.post_id,
+                    "status": "UPLOADING",
+                    "value": 10,
+                }
+            ),
+        )
+
         try:
             response = None
+            i = 1
             while response is None:
                 status, response = request.next_chunk()
                 if status:
                     log_social_message(
                         "YOUTUBE Đang upload: {}%".format(int(status.progress() * 100))
                     )
+                if i <= 7:
+                    redis_client.publish(
+                        PROGRESS_CHANNEL,
+                        json.dumps(
+                            {
+                                "link_id": self.link_id,
+                                "post_id": self.post_id,
+                                "status": "UPLOADING",
+                                "value": 10 + (i * 10),
+                            }
+                        ),
+                    )
+                i += 1
         except Exception as e:
             log_social_message(
                 f"----------------------- YOUTUBE ERROR SEND : {post_title} -> {str(e)}  ---------------------------"
@@ -206,10 +262,24 @@ class YoutubeService:
             self.social_post.status = "ERRORED"
             self.social_post.error_message = str(e)
             self.social_post.save()
-            return     
-                
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+            return
+
         log_social_message(
-            "----------------------- YOUTUBE UPLOADED : VIDEO ID {}  ---------------------------".format(response.get("id"))
+            "----------------------- YOUTUBE UPLOADED : VIDEO ID {}  ---------------------------".format(
+                response.get("id")
+            )
         )
 
         RequestSocialLogService.create_request_social_log(
@@ -224,6 +294,18 @@ class YoutubeService:
             self.social_post.status = "ERRORED"
             self.social_post.error_message = response["error"]["message"]
             self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
         else:
             try:
                 video_id = response["id"]
@@ -231,15 +313,41 @@ class YoutubeService:
                 try:
                     video_id = response.get("id")
                 except Exception as e:
-                    log_social_message(f"--------------------YOUTUBE ERROR GET VIDEO ID: {str(e)}---------------------")
+                    log_social_message(
+                        f"--------------------YOUTUBE ERROR GET VIDEO ID: {str(e)}---------------------"
+                    )
                     self.social_post.status = "ERRORED"
                     self.social_post.error_message = str(e)
                     self.social_post.save()
+
+                    redis_client.publish(
+                        PROGRESS_CHANNEL,
+                        json.dumps(
+                            {
+                                "link_id": self.link_id,
+                                "post_id": self.post_id,
+                                "status": "ERRORED",
+                                "value": 100,
+                            }
+                        ),
+                    )
                     return None
 
             permalink = f"https://www.youtube.com/watch?v={video_id}"
             self.social_post.status = "PUBLISHED"
             self.social_post.social_link = permalink
             self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "PUBLISHED",
+                        "value": 100,
+                    }
+                ),
+            )
 
         return response
