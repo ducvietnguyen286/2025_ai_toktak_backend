@@ -71,6 +71,9 @@ class YoutubeService:
         self.meta = None
         self.social_post = None
         self.user_id = None
+        self.link_id = None
+        self.post_id = None
+        self.batch_id = None
 
     def send_post(self, post, link, user_id, social_post_id):
         self.user_id = user_id
@@ -81,6 +84,7 @@ class YoutubeService:
         self.social_post = SocialPostService.find_social_post(social_post_id)
         self.link_id = link.id
         self.post_id = post.id
+        self.batch_id = post.batch_id
 
         if post.type == "video":
             self.send_post_video(post)
@@ -154,6 +158,7 @@ class YoutubeService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "ERRORED",
@@ -209,6 +214,7 @@ class YoutubeService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "ERRORED",
@@ -225,6 +231,7 @@ class YoutubeService:
             PROGRESS_CHANNEL,
             json.dumps(
                 {
+                    "batch_id": self.batch_id,
                     "link_id": self.link_id,
                     "post_id": self.post_id,
                     "status": "UPLOADING",
@@ -247,6 +254,7 @@ class YoutubeService:
                         PROGRESS_CHANNEL,
                         json.dumps(
                             {
+                                "batch_id": self.batch_id,
                                 "link_id": self.link_id,
                                 "post_id": self.post_id,
                                 "status": "UPLOADING",
@@ -267,6 +275,7 @@ class YoutubeService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "ERRORED",
@@ -299,6 +308,7 @@ class YoutubeService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "ERRORED",
@@ -324,6 +334,7 @@ class YoutubeService:
                         PROGRESS_CHANNEL,
                         json.dumps(
                             {
+                                "batch_id": self.batch_id,
                                 "link_id": self.link_id,
                                 "post_id": self.post_id,
                                 "status": "ERRORED",
@@ -342,6 +353,7 @@ class YoutubeService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "PUBLISHED",

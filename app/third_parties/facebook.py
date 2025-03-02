@@ -175,6 +175,7 @@ class FacebookService:
         self.access_token = None
         self.link_id = None
         self.post_id = None
+        self.batch_id = None
 
     def send_post(self, post, link, user_id, social_post_id, page_id):
         self.user = UserService.find_user(user_id)
@@ -185,6 +186,7 @@ class FacebookService:
         self.social_post = SocialPostService.find_social_post(social_post_id)
         self.link_id = link.id
         self.post_id = post.id
+        self.batch_id = post.batch_id
 
         token_page = FacebookTokenService.fetch_page_token_backend(
             self.user_link, page_id
@@ -198,6 +200,7 @@ class FacebookService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "ERRORED",
@@ -255,6 +258,7 @@ class FacebookService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "PUBLISHED",
@@ -303,6 +307,7 @@ class FacebookService:
             PROGRESS_CHANNEL,
             json.dumps(
                 {
+                    "batch_id": self.batch_id,
                     "link_id": self.link_id,
                     "post_id": self.post_id,
                     "status": "UPLOADING",
@@ -332,6 +337,7 @@ class FacebookService:
             PROGRESS_CHANNEL,
             json.dumps(
                 {
+                    "batch_id": self.batch_id,
                     "link_id": self.link_id,
                     "post_id": self.post_id,
                     "status": "UPLOADING",
@@ -358,6 +364,7 @@ class FacebookService:
                     PROGRESS_CHANNEL,
                     json.dumps(
                         {
+                            "batch_id": self.batch_id,
                             "link_id": self.link_id,
                             "post_id": self.post_id,
                             "status": "UPLOADING",
@@ -372,6 +379,7 @@ class FacebookService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "ERRORED",
@@ -430,6 +438,7 @@ class FacebookService:
             PROGRESS_CHANNEL,
             json.dumps(
                 {
+                    "batch_id": self.batch_id,
                     "link_id": self.link_id,
                     "post_id": self.post_id,
                     "status": "UPLOADING",
@@ -502,6 +511,7 @@ class FacebookService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "ERRORED",
@@ -522,6 +532,7 @@ class FacebookService:
             PROGRESS_CHANNEL,
             json.dumps(
                 {
+                    "batch_id": self.batch_id,
                     "link_id": self.link_id,
                     "post_id": self.post_id,
                     "status": "PUBLISHED",
@@ -564,6 +575,7 @@ class FacebookService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "UPLOADING",

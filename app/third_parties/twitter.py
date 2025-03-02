@@ -139,6 +139,9 @@ class TwitterService:
         self.meta = None
         self.processing_info = None
         self.social_post = None
+        self.link_id = None
+        self.post_id = None
+        self.batch_id = None
 
     def send_post(self, post, link, user_id, social_post_id):
         self.user = UserService.find_user(user_id)
@@ -148,6 +151,7 @@ class TwitterService:
         self.social_post = SocialPostService.find_social_post(social_post_id)
         self.link_id = link.id
         self.post_id = post.id
+        self.batch_id = post.batch_id
 
         if post.type == "image":
             self.send_post_social(post, link)
@@ -210,6 +214,7 @@ class TwitterService:
                         PROGRESS_CHANNEL,
                         json.dumps(
                             {
+                                "batch_id": self.batch_id,
                                 "link_id": self.link_id,
                                 "post_id": self.post_id,
                                 "status": "ERRORED",
@@ -237,6 +242,7 @@ class TwitterService:
                     PROGRESS_CHANNEL,
                     json.dumps(
                         {
+                            "batch_id": self.batch_id,
                             "link_id": self.link_id,
                             "post_id": self.post_id,
                             "status": "ERRORED",
@@ -251,13 +257,19 @@ class TwitterService:
                 self.social_post.status = "PUBLISHED"
                 self.social_post.social_link = permalink
                 self.social_post.save()
-                
-                redis_client.publish(PROGRESS_CHANNEL, json.dumps({
-                    "link_id": self.link_id,
-                    "post_id": self.post_id,
-                    "status": "PUBLISHED",
-                    "value": 100,
-                }))
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "PUBLISHED",
+                            "value": 100,
+                        }
+                    ),
+                )
         except Exception as e:
             traceback.print_exc()
             log_social_message(f"Error send post to X: {str(e)}")
@@ -324,6 +336,7 @@ class TwitterService:
             PROGRESS_CHANNEL,
             json.dumps(
                 {
+                    "batch_id": self.batch_id,
                     "link_id": self.link_id,
                     "post_id": self.post_id,
                     "status": "UPLOADING",
@@ -346,6 +359,7 @@ class TwitterService:
                     PROGRESS_CHANNEL,
                     json.dumps(
                         {
+                            "batch_id": self.batch_id,
                             "link_id": self.link_id,
                             "post_id": self.post_id,
                             "status": "ERRORED",
@@ -431,6 +445,7 @@ class TwitterService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "UPLOADING",
@@ -453,6 +468,7 @@ class TwitterService:
                         PROGRESS_CHANNEL,
                         json.dumps(
                             {
+                                "batch_id": self.batch_id,
                                 "link_id": self.link_id,
                                 "post_id": self.post_id,
                                 "status": "ERRORED",
@@ -526,6 +542,7 @@ class TwitterService:
                     PROGRESS_CHANNEL,
                     json.dumps(
                         {
+                            "batch_id": self.batch_id,
                             "link_id": self.link_id,
                             "post_id": self.post_id,
                             "status": "ERRORED",
@@ -552,6 +569,7 @@ class TwitterService:
                     PROGRESS_CHANNEL,
                     json.dumps(
                         {
+                            "batch_id": self.batch_id,
                             "link_id": self.link_id,
                             "post_id": self.post_id,
                             "status": "UPLOADING",
@@ -568,6 +586,7 @@ class TwitterService:
                     PROGRESS_CHANNEL,
                     json.dumps(
                         {
+                            "batch_id": self.batch_id,
                             "link_id": self.link_id,
                             "post_id": self.post_id,
                             "status": "ERRORED",
@@ -626,6 +645,7 @@ class TwitterService:
                     PROGRESS_CHANNEL,
                     json.dumps(
                         {
+                            "batch_id": self.batch_id,
                             "link_id": self.link_id,
                             "post_id": self.post_id,
                             "status": "ERRORED",
@@ -647,6 +667,7 @@ class TwitterService:
                 PROGRESS_CHANNEL,
                 json.dumps(
                     {
+                        "batch_id": self.batch_id,
                         "link_id": self.link_id,
                         "post_id": self.post_id,
                         "status": "UPLOADING",

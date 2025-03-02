@@ -31,6 +31,7 @@ google-auth~=2.38.0
 srt~=3.5.3
 pydub~=0.25.1
 Flask-SocketIO~=5.5.1
+gevent-websocket~=0.10.1
 
 threads-api~=1.2.0
 google-auth-oauthlib~=1.2.1

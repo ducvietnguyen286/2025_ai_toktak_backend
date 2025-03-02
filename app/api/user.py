@@ -13,6 +13,7 @@ import requests
 from app.decorators import parameters
 from app.lib.logger import logger
 from app.lib.response import Response
+from app.extensions import redis_client
 import secrets
 
 from app.services.auth import AuthService
@@ -253,6 +254,17 @@ class APIPostToLinks(Resource):
 
             post = PostService.find_post(post_id)
 
+            batch_id = post.batch_id
+            total_link = len(active_links)
+
+            progress = {
+                "batch_id": batch_id,
+                "total_link": total_link,
+                "total_percent": 0,
+                "status": "PROCESSING",
+                "upload": [],
+            }
+
             for link in active_links:
                 social_post = SocialPostService.create_social_post(
                     link_id=link,
@@ -260,6 +272,16 @@ class APIPostToLinks(Resource):
                     post_id=post.id,
                     status="PROCESSING",
                 )
+
+                progress["upload"].append(
+                    {
+                        "link_id": link,
+                        "post_id": post.id,
+                        "status": "PROCESSING",
+                        "value": 0,
+                    }
+                )
+
                 message = {
                     "action": "SEND_POST_TO_LINK",
                     "message": {
@@ -271,6 +293,8 @@ class APIPostToLinks(Resource):
                     },
                 }
                 asyncio.run(send_message(message))
+
+            redis_client.set(f"toktak:progress:{batch_id}", json.dumps(progress))
 
             return Response(
                 message="Tạo bài viết thành công. Vui lòng đợi trong giây lát",
