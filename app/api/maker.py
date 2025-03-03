@@ -416,18 +416,16 @@ class APIGetStatusUploadWithBatch(Resource):
             ).to_dict()
 
         posts = PostService.get_posts_by_batch_id(batch.id)
-        
+
         for post_detail in posts:
-            print("post_detail", post_detail['id'])
-            
-            post_id = post_detail['id']
+            print("post_detail", post_detail["id"])
+
+            post_id = post_detail["id"]
             # get social_posts
             log_make_video_message(post_id)
             social_post_detail = PostService.get_social_post(post_id)
             log_make_video_message(social_post_detail)
-            post_detail['social_post_detail'] = social_post_detail
-            
-        
+            post_detail["social_post_detail"] = social_post_detail
 
         batch_res = batch._to_json()
         batch_res["posts"] = posts
@@ -436,5 +434,3 @@ class APIGetStatusUploadWithBatch(Resource):
             data=batch_res,
             message="Lấy batch thành công",
         ).to_dict()
-
-
