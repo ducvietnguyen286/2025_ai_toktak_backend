@@ -293,8 +293,28 @@ class FacebookService:
 
         post_data = {"upload_phase": "start", "access_token": page_access_token}
         headers = {"Content-Type": "application/json"}
+        try:
+            post_response = requests.post(URL_UPLOAD, data=post_data, headers=headers)
+        except Exception as e:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
 
-        post_response = requests.post(URL_UPLOAD, data=post_data, headers=headers)
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
+            log_social_message(f"Error upload video to X: {str(e)}")
+            raise ValueError("Access token invalid")
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
             social="FACEBOOK",
@@ -328,7 +348,28 @@ class FacebookService:
             "Authorization": f"OAuth {access_token}",
             "file_url": video_url,
         }
-        post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers)
+        try:
+            post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers)
+        except Exception as e:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
+            log_social_message(f"Error upload video to X: {str(e)}")
+            raise ValueError("Access token invalid")
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
             social="FACEBOOK",
@@ -356,7 +397,28 @@ class FacebookService:
 
         try:
             URL_CHECK_STATUS = f"https://graph.facebook.com/v22.0/{video_id}?fields=status&access_token={access_token}"
-            get_response = requests.get(URL_CHECK_STATUS)
+            try:
+                get_response = requests.get(URL_CHECK_STATUS)
+            except Exception as e:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = str(e)
+                self.social_post.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
+
+                log_social_message(f"Error upload video to X: {str(e)}")
+                raise ValueError("Access token invalid")
             result = get_response.json()
 
             log_social_message(f"get upload status: {result}")
@@ -427,8 +489,28 @@ class FacebookService:
         final_url = (
             URL_PUBLISH + "?" + "&".join([f"{k}={v}" for k, v in post_data.items()])
         )
+        try:
+            post_response = requests.post(final_url)
+        except Exception as e:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
 
-        post_response = requests.post(final_url)
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
+            log_social_message(f"Error upload video to X: {str(e)}")
+            raise ValueError("Access token invalid")
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
             social="FACEBOOK",
@@ -455,7 +537,28 @@ class FacebookService:
 
     def get_reel_uploaded(self, page_id, access_token):
         URL_REEL = f"https://graph.facebook.com/v22.0/{page_id}/video_reels?access_token={access_token}"
-        get_response = requests.get(URL_REEL)
+        try:
+            get_response = requests.get(URL_REEL)
+        except Exception as e:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
+            log_social_message(f"Error upload video to X: {str(e)}")
+            raise ValueError("Access token invalid")
         result = get_response.json()
         RequestSocialLogService.create_request_social_log(
             social="FACEBOOK",
@@ -490,8 +593,28 @@ class FacebookService:
         }
 
         log_social_message(f"post_data: {post_data}")
+        try:
+            post_response = requests.post(FEED_URL, data=post_data)
+        except Exception as e:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
 
-        post_response = requests.post(FEED_URL, data=post_data)
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
+            log_social_message(f"Error upload video to X: {str(e)}")
+            raise ValueError("Access token invalid")
         result = post_response.json()
 
         RequestSocialLogService.create_request_social_log(
@@ -562,7 +685,28 @@ class FacebookService:
                 "published": "false",
                 "access_token": page_access_token,
             }
-            response = requests.post(UNPUBLISH_URL, data=data)
+            try:
+                response = requests.post(UNPUBLISH_URL, data=data)
+            except Exception as e:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = str(e)
+                self.social_post.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
+
+                log_social_message(f"Error upload video to X: {str(e)}")
+                raise ValueError("Access token invalid")
             result = response.json()
 
             RequestSocialLogService.create_request_social_log(
