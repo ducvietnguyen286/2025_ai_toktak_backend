@@ -229,6 +229,13 @@ class FacebookService:
         self.page_id = page_id
         self.page_token = token_page
 
+        log_social_message(
+            f"--------------------FACEBOOK PAGE ID: {page_id}------------------------"
+        )
+        log_social_message(
+            f"--------------------FACEBOOK PAGE TOKEN: {token_page}------------------------"
+        )
+
         try:
             if post.type == "image":
                 self.send_post_image(post, link)
