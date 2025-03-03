@@ -47,15 +47,21 @@ class SocialPostService:
     @staticmethod
     def by_post_id_get_latest_social_posts(post_id):
         subq = (
-            db.session.query(func.max(SocialPost.created_at).label("max_created"))
+            db.session.query(
+                SocialPost.post_id,
+                SocialPost.link_id,
+                func.max(SocialPost.created_at).label("max_created"),
+            )
             .filter(SocialPost.post_id == post_id)
-            .group_by(SocialPost.link_id)
+            .group_by(SocialPost.post_id, SocialPost.link_id)
             .subquery()
         )
+
         query = db.session.query(SocialPost).join(
             subq,
             and_(
                 SocialPost.post_id == subq.c.post_id,
+                SocialPost.link_id == subq.c.link_id,
                 SocialPost.created_at == subq.c.max_created,
             ),
         )
@@ -63,18 +69,13 @@ class SocialPostService:
 
         data = []
         for social_post in results:
-            post_data = (
-                {
-                    "id": social_post.id,
-                    "status": social_post.status,
-                    "link_id": social_post.link_id,
-                    "post_id": social_post.post_id,
-                    "process_number": social_post.process_number,
-                }
-                if social_post
-                else None
-            )
-
+            post_data = {
+                "id": social_post.id,
+                "status": social_post.status,
+                "link_id": social_post.link_id,
+                "post_id": social_post.post_id,
+                "process_number": social_post.process_number,
+            }
             data.append(post_data)
 
         return data
