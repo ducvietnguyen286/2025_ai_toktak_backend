@@ -448,7 +448,7 @@ class TwitterService:
         )
 
         res_json = req.json()
-        if not res_json.get("data") and res_json.get("data").get("media_id"):
+        if not res_json["data"]:
             self.social_post.status = "ERRORED"
             self.social_post.error_message = "Error Get Media ID"
             self.social_post.save()
