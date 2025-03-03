@@ -4,6 +4,7 @@ import os
 import random
 from app.models.video_create import VideoCreate
 from app.models.video_viral import VideoViral
+from app.models.captions import Caption
 from app.models.setting import Setting
 from app.lib.logger import logger
 from sqlalchemy.sql.expression import func
@@ -16,6 +17,7 @@ from gtts import gTTS
 import uuid
 import srt
 from moviepy.editor import VideoFileClip
+from app.extensions import redis_client
 
 
 class VideoService:
@@ -32,6 +34,16 @@ class VideoService:
         is_ai_image = config["SHOTSTACK_AI_IMAGE"]
         MUSIC_BACKGROUP_VOLUMN = float(config["MUSIC_BACKGROUP_VOLUMN"])
         MUSIC_VOLUMN = float(config["MUSIC_VOLUMN"])
+
+        key_redis = f"caption_videos_default"
+        progress_json = redis_client.get(key_redis)
+
+        if progress_json:
+            caption_videos_default = json.loads(progress_json) if progress_json else {}
+        else:
+
+            caption_videos_default = VideoService.get_caption_defaults()
+            redis_client.set(key_redis, json.dumps(caption_videos_default))
 
         # FAKE để cho local host không tạo AI
         if domain.startswith("localhost") or domain.startswith("127.0.0.1"):
@@ -62,6 +74,7 @@ class VideoService:
             is_ai_image,
             captions,
             config,
+            caption_videos_default,
         )
 
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -289,6 +302,24 @@ class VideoService:
         }
         return settings_dict
 
+    @staticmethod
+    def get_caption_defaults():
+        captions = Caption.query.filter_by(status=1).all()
+        return [
+            {"content": caption.content, "type_content": caption.type_content}
+            for caption in captions
+        ]
+
+    def filter_content_by_type(captions_list, type_content):
+        filtered = [
+            item["content"]
+            for item in captions_list
+            if item["type_content"] == f"{type_content}"
+        ]
+        if filtered:
+            return random.choice(filtered)
+        return ""
+
     def create_combined_clips(
         batch_id,
         ai_images,
@@ -297,31 +328,49 @@ class VideoService:
         is_ai_image="0",
         captions=None,
         config=None,
+        caption_videos_default=None,
     ):
         video_urls = get_random_videos(2)
         # Chọn 2 URL khác nhau một cách ngẫu nhiên
-        intro_url, outro_url = random.sample(video_urls, 2)
+        first_viral_url, last_viral_url = random.sample(video_urls, 2)
 
         clips = []
         current_start = 0
         intro_length = 5
 
-        intro_url_check = intro_url.replace("https://apitoktak.voda-play.com", "static")
+        intro_url_check = first_viral_url.replace(
+            "https://apitoktak.voda-play.com", "static"
+        )
         clip = VideoFileClip(intro_url_check)
         duration = clip.duration
         intro_length = duration
 
         clips.append(
             {
-                "asset": {"type": "video", "src": intro_url},
+                "asset": {"type": "video", "src": first_viral_url},
                 "start": current_start,
                 "length": intro_length,
             }
         )
+        first_caption_videos_default = VideoService.filter_content_by_type(
+            caption_videos_default, 1
+        )
 
-       
+        clips.append(
+            {
+                "asset": {
+                    "type": "html",
+                    "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'> <span style='font-weight: bold;'>{first_caption_videos_default}</span> </div>",
+                    "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
+                },
+                "start": current_start + 0.01,
+                "length": intro_length,
+                "position": "top",
+                "offset": {"x": 0, "y": 0.4},
+            }
+        )
+
         current_start += intro_length
-       
         file_path_srts = generate_srt(batch_id, captions)
 
         if is_ai_image == "1":
@@ -395,9 +444,67 @@ class VideoService:
                 "start": start_slider_time,
                 "length": time_show_image,
             }
+
             if random_effect != "":
                 clip_detail["effect"] = random_effect
             clips.append(clip_detail)
+
+            if j_index == 0:
+                first_caption_image_default = VideoService.filter_content_by_type(
+                    caption_videos_default, 2
+                )
+                # When 1st image start, display for 2 sec
+                clips.append(
+                    {
+                        "asset": {
+                            "type": "html",
+                            "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '> <span style='font-weight: bold; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '>{first_caption_image_default}</span> </div>",
+                            "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
+                        },
+                        "start": start_slider_time,
+                        "length": start_slider_time + 2,
+                        "position": "top",
+                        "offset": {"x": 0, "y": 0.4},
+                    }
+                )
+            elif j_index == 2:
+                # When 3rd image start, display for 2 sec
+                first_caption_image_default = VideoService.filter_content_by_type(
+                    caption_videos_default, 3
+                )
+                # When 1st image start, display for 2 sec
+                clips.append(
+                    {
+                        "asset": {
+                            "type": "html",
+                            "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '> <span style='font-weight: bold;text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '>{first_caption_image_default}</span> </div>",
+                            "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
+                        },
+                        "start": start_slider_time,
+                        "length": start_slider_time + 2,
+                        "position": "top",
+                        "offset": {"x": 0, "y": 0.4},
+                    }
+                )
+            elif j_index == 4:
+                # When 5th image start, display for 2 sec & When start last hooking video, display for 2 sec in the middle of screen until end of video
+                first_caption_image_default = VideoService.filter_content_by_type(
+                    caption_videos_default, 4
+                )
+                # When 1st image start, display for 2 sec
+                clips.append(
+                    {
+                        "asset": {
+                            "type": "html",
+                            "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '> <span style='font-weight: bold;text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '>{first_caption_image_default}</span> </div>",
+                            "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
+                        },
+                        "start": start_slider_time,
+                        "length": start_slider_time + 2,
+                        "position": "top",
+                        "offset": {"x": 0, "y": 0.4},
+                    }
+                )
 
             url_path_srt = file_path_srts[j_index]
 
@@ -434,7 +541,6 @@ class VideoService:
                     "asset": {
                         "type": "audio",
                         "src": voice_url,
-                        "effect": "fadeIn",
                         "volume": 1,
                     },
                     "start": start_slider_time,
@@ -459,11 +565,30 @@ class VideoService:
         outro_length = 5
         clips.append(
             {
-                "asset": {"type": "video", "src": outro_url},
+                "asset": {"type": "video", "src": last_viral_url},
                 "start": current_start,
                 "length": outro_length,
             }
         )
+
+        last_caption_videos_default = VideoService.filter_content_by_type(
+            caption_videos_default, 4
+        )
+
+        clips.append(
+            {
+                "asset": {
+                    "type": "html",
+                    "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'> <span style='font-weight: bold;'>{last_caption_videos_default}</span> </div>",
+                    "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
+                },
+                "start": current_start,
+                "length": outro_length,
+                "position": "top",
+                "offset": {"x": 0, "y": 0.4},
+            }
+        )
+
         # html_content = "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Buy It Now.</div>"
         # clips.append(
         #     {
@@ -482,18 +607,17 @@ class VideoService:
         # )
         current_start += outro_length
 
-
         clips_shape = [
-            {
-                "asset": {
-                    "type": "image",
-                    "src": "https://apitoktak.voda-play.com/voice/logo.png",
-                },
-                "start": 0,
-                "length": "end",
-                "scale": 0.15,
-                "position": "topRight",
-            },
+            # {
+            #     "asset": {
+            #         "type": "image",
+            #         "src": "https://apitoktak.voda-play.com/voice/logo.png",
+            #     },
+            #     "start": 0,
+            #     "length": "end",
+            #     "scale": 0.15,
+            #     "position": "topRight",
+            # },
             # {
             #     "asset": {
             #         "type": "html",
