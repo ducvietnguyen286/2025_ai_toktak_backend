@@ -56,8 +56,8 @@ class TiktokTokenService:
 
             meta = user_link.meta
             meta = json.loads(meta)
-            meta.update(token_data)
-            user_link.meta = json.dumps(data_token)
+            meta.update(data_token)
+            user_link.meta = json.dumps(meta)
             user_link.save()
 
             return token_data
