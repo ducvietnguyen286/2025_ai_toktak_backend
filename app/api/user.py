@@ -263,11 +263,15 @@ class APIPostToLinks(Resource):
                 all_social_posts = SocialPostService.get_all_by_post_ids(post_ids)
 
                 all_status = [social_post.status for social_post in all_social_posts]
+
                 if "PROCESSING" in all_status:
                     return Response(
                         message="Bài viết đang được xử lý",
                         status=400,
                     ).to_dict()
+
+            batch.process_status = "PROCESSING"
+            batch.save()
 
             total_link = len(active_links)
 
