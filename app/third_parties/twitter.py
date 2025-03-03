@@ -153,10 +153,29 @@ class TwitterService:
         self.post_id = post.id
         self.batch_id = post.batch_id
 
-        if post.type == "image":
-            self.send_post_social(post, link)
-        if post.type == "video":
-            self.send_post_video(post, link)
+        try:
+            if post.type == "image":
+                self.send_post_social(post, link)
+            if post.type == "video":
+                self.send_post_video(post, link)
+        except Exception as e:
+            log_social_message(f"Error send post to X: {str(e)}")
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = f"Error send post to X: {str(e)}"
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
 
     def send_post_social(self, post, link):
         log_social_message(f"Send post Social to Twitter {post.id}")
