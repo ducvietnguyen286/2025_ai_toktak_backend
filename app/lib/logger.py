@@ -26,7 +26,7 @@ handler.setLevel(logging.INFO)
 handler.setFormatter(formatter)
 
 errorLogHandler = handlers.RotatingFileHandler(
-    "logs/error-{0}.log".format(filename), backupCount=14
+    "logs/error-{0}.log".format(filename), backupCount=14, encoding="utf-8"
 )
 errorLogHandler.setLevel(logging.ERROR)
 errorLogHandler.setFormatter(formatter)
@@ -37,7 +37,7 @@ logger.addHandler(errorLogHandler)
 
 def log_social_message(message):
     custom_handler = handlers.RotatingFileHandler(
-        "logs/social-{0}.log".format(filename), backupCount=14
+        "logs/social-{0}.log".format(filename), backupCount=14, encoding="utf-8"
     )
     custom_handler.setLevel(logging.INFO)
     custom_handler.setFormatter(formatter)
@@ -50,7 +50,7 @@ def log_social_message(message):
     custom_logger.removeHandler(custom_handler)
     custom_handler.close()
 
- 
+
 def log_make_video_message(message):
     custom_handler = None  # Khởi tạo biến custom_handler
     try:
@@ -86,4 +86,3 @@ def log_make_video_message(message):
         # Đảm bảo đóng handler sau khi sử dụng
         if custom_handler:
             custom_handler.close()
-            

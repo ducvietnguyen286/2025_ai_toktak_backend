@@ -1,5 +1,4 @@
 # coding: utf8
-import asyncio
 import datetime
 import json
 import os
@@ -17,6 +16,7 @@ from app.extensions import redis_client
 import secrets
 
 from app.services.auth import AuthService
+from app.services.batch import BatchService
 from app.services.post import PostService
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
@@ -255,6 +255,20 @@ class APIPostToLinks(Resource):
             post = PostService.find_post(post_id)
 
             batch_id = post.batch_id
+
+            batch = BatchService.find_batch(batch_id)
+            if batch.process_status != "PENDING":
+                all_posts = PostService.get_posts_by_batch_id(batch_id)
+                post_ids = [post.id for post in all_posts]
+                all_social_posts = SocialPostService.get_all_by_post_ids(post_ids)
+
+                all_status = [social_post.status for social_post in all_social_posts]
+                if "PROCESSING" in all_status:
+                    return Response(
+                        message="Bài viết đang được xử lý",
+                        status=400,
+                    ).to_dict()
+
             total_link = len(active_links)
 
             progress = {
@@ -292,7 +306,7 @@ class APIPostToLinks(Resource):
                         "page_id": page_id,
                     },
                 }
-                asyncio.run(send_message(message))
+                send_message(message)
 
             redis_client.set(f"toktak:progress:{batch_id}", json.dumps(progress))
 

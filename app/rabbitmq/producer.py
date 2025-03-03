@@ -1,41 +1,41 @@
+import pika
 import json
 import os
-import asyncio
-import aio_pika
 from dotenv import load_dotenv
 
+# Load biến môi trường từ file .env
 load_dotenv()
 
-RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST") or "localhost"
-RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT") or 5672
-RABBITMQ_USER = os.environ.get("RABBITMQ_USER") or "guest"
-RABBITMQ_PASSWORD = os.environ.get("RABBITMQ_PASSWORD") or "guest"
-RABBITMQ_QUEUE = os.environ.get("RABBITMQ_QUEUE") or "hello"
+# Cấu hình kết nối RabbitMQ
+RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST", "localhost")
+RABBITMQ_PORT = int(os.environ.get("RABBITMQ_PORT", 5672))
+RABBITMQ_USER = os.environ.get("RABBITMQ_USER", "guest")
+RABBITMQ_PASSWORD = os.environ.get("RABBITMQ_PASSWORD", "guest")
+RABBITMQ_QUEUE = os.environ.get("RABBITMQ_QUEUE", "hello")
 
-RABBITMQ_URL = (
-    f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/"
+credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD)
+connection_params = pika.ConnectionParameters(
+    host=RABBITMQ_HOST, port=RABBITMQ_PORT, credentials=credentials
 )
 
 
-async def create_connection():
-    # Kết nối robust giúp tự động tái kết nối khi cần
-    connection = await aio_pika.connect_robust(RABBITMQ_URL)
-    channel = await connection.channel()
-    # Khai báo queue với durable=True để queue được lưu lại sau restart broker
-    await channel.declare_queue(RABBITMQ_QUEUE, durable=False)
-    return connection, channel
+def send_message(message):
+    try:
+        connection = pika.BlockingConnection(connection_params)
+        channel = connection.channel()
+        channel.queue_declare(queue=RABBITMQ_QUEUE, durable=False)
 
+        message_body = json.dumps(message)
 
-async def send_message(message):
-    connection, channel = await create_connection()
-
-    message_body = json.dumps(message)
-    # Tạo message với delivery_mode persistent để message được lưu lại
-    msg = aio_pika.Message(
-        body=message_body.encode(), delivery_mode=aio_pika.DeliveryMode.PERSISTENT
-    )
-
-    # Gửi message đến default exchange với routing_key là tên queue
-    await channel.default_exchange.publish(msg, routing_key=RABBITMQ_QUEUE)
-    print(f" [x] Sent '{message}'")
-    await connection.close()
+        channel.basic_publish(
+            exchange="",
+            routing_key=RABBITMQ_QUEUE,
+            body=message_body,
+            properties=pika.BasicProperties(
+                delivery_mode=2,
+            ),
+        )
+        print(f" [x] Sent '{message}'")
+        connection.close()
+    except Exception as e:
+        print(f"Error sending message: {e}")
