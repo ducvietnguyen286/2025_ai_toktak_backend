@@ -42,11 +42,11 @@ class CoupangScraper:
                 query_params = query_params + "&vendorItemId=" + target_vendor_item_id
             query_params = query_params[1:]
             real_url = "https://m.coupang.com" + path_mobile + "?" + query_params
-            
+
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
-            if exist_data:
-                return json.loads(exist_data.response)
+            # exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            # if exist_data:
+            #     return json.loads(exist_data.response)
 
             added_headers = {
                 "referer": real_url,
@@ -68,15 +68,15 @@ class CoupangScraper:
                 logger.info("meta_url: {0}".format(meta_url))
                 coupang_btf_content = self.get_coupang_btf_content(meta_url, headers)
                 response.update(coupang_btf_content)
-                
-            CrawlDataService.create_crawl_data(
-                site="COUPANG",
-                input_url=base_url,
-                crawl_url=real_url,
-                crawl_url_hash=crawl_url_hash,
-                request=json.dumps(headers),
-                response=json.dumps(response),
-            )
+
+            # CrawlDataService.create_crawl_data(
+            #     site="COUPANG",
+            #     input_url=base_url,
+            #     crawl_url=real_url,
+            #     crawl_url_hash=crawl_url_hash,
+            #     request=json.dumps(headers),
+            #     response=json.dumps(response),
+            # )
             return response
         except Exception as e:
             logger.error("Exception: {0}".format(str(e)))
@@ -101,6 +101,7 @@ class CoupangScraper:
             response = session.get(btf_url, headers=headers, timeout=5)
             btf_content = response.json()
             r_data = btf_content.get("rData")
+
             if r_data is None:
                 return {}
             page_list = r_data.get("pageList")
@@ -147,9 +148,9 @@ class CoupangScraper:
                         )
                         vendor_html_item_content_descriptions.append(html_item[0])
                         is_html = True
-                    elif (
-                        "contentType" in vendor_item_content
-                        and vendor_item_content["contentType"] == "IMAGE_NO_SPACE"
+                    elif "contentType" in vendor_item_content and (
+                        vendor_item_content["contentType"] == "IMAGE_NO_SPACE"
+                        or vendor_item_content["contentType"] == "IMAGE"
                     ):
                         vendor_item_content_descriptions = vendor_item_content.get(
                             "vendorItemContentDescriptions"
