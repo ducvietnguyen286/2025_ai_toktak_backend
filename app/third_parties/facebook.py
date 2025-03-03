@@ -1,5 +1,7 @@
+import datetime
 import json
 import os
+import time
 import traceback
 import requests
 
@@ -139,10 +141,10 @@ class FacebookTokenService:
 
                 user_link.meta = json.dumps(meta)
 
-                # expires_in = data.get("expires_in")
-                # expired_at = time.time() + expires_in
-                # user_link.expired_at = datetime.fromtimestamp(expired_at)
-                # user_link.expired_date = datetime.fromtimestamp(expired_at).date()
+                expires_in = 60 * 60 * 24 * 60  # 60 days
+                expired_at = time.time() + expires_in
+                user_link.expired_at = datetime.fromtimestamp(expired_at)
+                user_link.expired_date = datetime.fromtimestamp(expired_at).date()
 
                 user_link.save()
                 return True
