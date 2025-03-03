@@ -356,15 +356,17 @@ class VideoService:
             caption_videos_default, 1
         )
 
+        html_image = create_html_caption(first_caption_videos_default)
+
         clips.append(
             {
                 "asset": {
                     "type": "html",
-                    "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'> <span style='font-weight: bold;'>{first_caption_videos_default}</span> </div>",
-                    "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
+                    "html": html_image["html"],
+                    "css": html_image["css"],
                 },
                 "start": current_start + 0.01,
-                "length": intro_length,
+                "length": 2,
                 "position": "top",
                 "offset": {"x": 0, "y": 0.4},
             }
@@ -453,16 +455,17 @@ class VideoService:
                 first_caption_image_default = VideoService.filter_content_by_type(
                     caption_videos_default, 2
                 )
+                html_image = create_html_caption(first_caption_image_default)
                 # When 1st image start, display for 2 sec
                 clips.append(
                     {
                         "asset": {
                             "type": "html",
-                            "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif;   '> <span style='font-weight: bold;  '>{first_caption_image_default}</span> </div>",
-                            "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
+                            "html": html_image["html"],
+                            "css": html_image["css"],
                         },
                         "start": start_slider_time,
-                        "length":  2,
+                        "length": 2,
                         "position": "top",
                         "offset": {"x": 0, "y": 0.4},
                     }
@@ -472,16 +475,17 @@ class VideoService:
                 first_caption_image_default = VideoService.filter_content_by_type(
                     caption_videos_default, 3
                 )
-                # When 1st image start, display for 2 sec
+
+                html_image = create_html_caption(first_caption_image_default)
                 clips.append(
                     {
                         "asset": {
                             "type": "html",
-                            "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '> <span style='font-weight: bold;text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '>{first_caption_image_default}</span> </div>",
-                            "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
+                            "html": html_image["html"],
+                            "css": html_image["css"],
                         },
                         "start": start_slider_time,
-                        "length":   2,
+                        "length": 2,
                         "position": "top",
                         "offset": {"x": 0, "y": 0.4},
                     }
@@ -491,16 +495,16 @@ class VideoService:
                 first_caption_image_default = VideoService.filter_content_by_type(
                     caption_videos_default, 4
                 )
-                # When 1st image start, display for 2 sec
+                html_image = create_html_caption(first_caption_image_default)
                 clips.append(
                     {
                         "asset": {
                             "type": "html",
-                            "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '> <span style='font-weight: bold;text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '>{first_caption_image_default}</span> </div>",
-                            "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
+                            "html": html_image["html"],
+                            "css": html_image["css"],
                         },
                         "start": start_slider_time,
-                        "length":  2,
+                        "length": 2,
                         "position": "top",
                         "offset": {"x": 0, "y": 0.4},
                     }
@@ -842,3 +846,16 @@ def create_mp3_from_srt(batch_id, srt_filepath):
     CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
     voice_url = f"{CURRENT_DOMAIN}/{public_patch}/{file_name}"
     return voice_url
+
+
+def create_html_caption(caption_text, start = 0, length = 0, add_time=0):
+    """
+    Tạo HTML cho caption text.
+    """
+    html = f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'> <span style='font-weight: bold;'>{caption_text}</span> </div>"
+    css = "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}"
+
+    return {
+        "html": html,
+        "css": css,
+    }
