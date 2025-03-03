@@ -44,9 +44,9 @@ class CoupangScraper:
             real_url = "https://m.coupang.com" + path_mobile + "?" + query_params
 
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            # exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
-            # if exist_data:
-            #     return json.loads(exist_data.response)
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            if exist_data:
+                return json.loads(exist_data.response)
 
             added_headers = {
                 "referer": real_url,
@@ -69,14 +69,14 @@ class CoupangScraper:
                 coupang_btf_content = self.get_coupang_btf_content(meta_url, headers)
                 response.update(coupang_btf_content)
 
-            # CrawlDataService.create_crawl_data(
-            #     site="COUPANG",
-            #     input_url=base_url,
-            #     crawl_url=real_url,
-            #     crawl_url_hash=crawl_url_hash,
-            #     request=json.dumps(headers),
-            #     response=json.dumps(response),
-            # )
+            CrawlDataService.create_crawl_data(
+                site="COUPANG",
+                input_url=base_url,
+                crawl_url=real_url,
+                crawl_url_hash=crawl_url_hash,
+                request=json.dumps(headers),
+                response=json.dumps(response),
+            )
             return response
         except Exception as e:
             logger.error("Exception: {0}".format(str(e)))
