@@ -134,13 +134,13 @@ async def on_message(message: IncomingMessage, app):
 
 async def main():
     RABBITMQ_URL = (
-        f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}"
+        f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/"
     )
 
     app = create_app()
     connection = await connect_robust(RABBITMQ_URL)
     channel = await connection.channel()
-    queue = await channel.declare_queue(RABBITMQ_QUEUE, durable=True)
+    queue = await channel.declare_queue(RABBITMQ_QUEUE, durable=False)
 
     logger.info("Đang chờ message. Nhấn CTRL+C để dừng.")
     await queue.consume(partial(on_message, app=app), no_ack=False)
