@@ -250,7 +250,7 @@ class YoutubeService:
                         }
                     ),
                 )
-                return
+                raise e
 
             self.social_post.status = "UPLOADING"
             self.social_post.save()
@@ -313,7 +313,7 @@ class YoutubeService:
                         }
                     ),
                 )
-                return
+                raise e
 
             log_social_message(
                 "----------------------- YOUTUBE UPLOADED : VIDEO ID {}  ---------------------------".format(
