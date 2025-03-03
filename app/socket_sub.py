@@ -75,6 +75,13 @@ def process_redis_message(message, app):
             progress["status"] = "UPLOADING"
             redis_client.set(f"toktak:progress:{batch_id}", json.dumps(progress))
 
+        logger.info(
+            "Emitting progress %s to room %s: %s",
+            SOCKETIO_PROGRESS_EVENT,
+            batch_id,
+            progress,
+        )
+
         socketio.emit(SOCKETIO_PROGRESS_EVENT, json.dumps(progress), room=batch_id)
     except Exception as e:
         app.logger.error("Error processing Redis message: %s", e)
