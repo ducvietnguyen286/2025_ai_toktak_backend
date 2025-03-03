@@ -221,10 +221,31 @@ class FacebookService:
         self.page_id = page_id
         self.page_token = token_page
 
-        if post.type == "image":
-            self.send_post_image(post, link)
-        if post.type == "video":
-            self.send_post_video(post, link)
+        try:
+            if post.type == "image":
+                self.send_post_image(post, link)
+            if post.type == "video":
+                self.send_post_video(post, link)
+        except Exception as e:
+            log_social_message(f"Error send post to FACEBOOK: {str(e)}")
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
+            return False
 
     def send_post_video(self, post, link):
         page_id = self.page_id
