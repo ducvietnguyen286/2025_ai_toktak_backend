@@ -443,9 +443,12 @@ class TwitterService:
 
         log_social_message(req.status_code)
         log_social_message(f"------------------X: {req.text}-----------------")
+        log_social_message(
+            f"------------------X INIT RESPONSE: {req.json()}-----------------"
+        )
 
         res_json = req.json()
-        if not res_json.get("media_id"):
+        if not res_json.get("data") and res_json.get("data").get("media_id"):
             self.social_post.status = "ERRORED"
             self.social_post.error_message = "Error Get Media ID"
             self.social_post.save()
