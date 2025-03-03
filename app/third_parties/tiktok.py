@@ -179,6 +179,7 @@ class TiktokService:
                         }
                     ),
                 )
+                raise Exception("Error upload image to Tiktok")
             parsed_response = upload_response.json()
 
             redis_client.publish(
