@@ -112,8 +112,8 @@ class VideoService:
                 "quality": "veryhigh",
                 # "resolution": "hd",
                 # "aspectRatio": "16:9",
-                # "size": {"width": 1200, "height": 800},
-                "size": video_size,
+                "size": {"width": 1280, "height": 720},
+                # "size": video_size,
             },
             "callback": f"{current_domain}/api/v1/video_maker/shotstack_webhook",
         }
