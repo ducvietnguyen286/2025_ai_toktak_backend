@@ -129,6 +129,7 @@ class TwitterTokenService:
         except Exception as e:
             traceback.print_exc()
             log_social_message(e)
+            return False
 
 
 class TwitterService:
@@ -176,6 +177,7 @@ class TwitterService:
                     }
                 ),
             )
+            return False
 
     def send_post_social(self, post, link):
         log_social_message(f"Send post Social to Twitter {post.id}")
