@@ -294,6 +294,24 @@ class TwitterService:
         except Exception as e:
             traceback.print_exc()
             log_social_message(f"Error send post to X: {str(e)}")
+
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = f"Error send post to X: {str(e)}"
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
             return False
 
     def upload_media(self, media, is_video=False):
@@ -424,11 +442,12 @@ class TwitterService:
             )
 
         log_social_message(req.status_code)
-        log_social_message(req.text)
+        log_social_message(f"------------------X: {req.text}-----------------")
+
         res_json = req.json()
         if not res_json.get("media_id"):
             self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
+            self.social_post.error_message = "Error Get Media ID"
             self.social_post.save()
 
             redis_client.publish(

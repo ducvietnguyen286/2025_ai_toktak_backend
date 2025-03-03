@@ -145,12 +145,227 @@ class YoutubeService:
         log_social_message(
             "----------------------- SEND VIDEO TO YOUTUBE ---------------------------"
         )
+        try:
+            youtube = self.get_youtube_service_from_token(self.user_link)
+            if not youtube:
+                log_social_message(
+                    "----------------------- ERROR: SEND YOUTUBE ERROR ---------------------------"
+                )
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = "Can't get youtube service"
+                self.social_post.save()
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
+                return None
 
-        youtube = self.get_youtube_service_from_token(self.user_link)
-        if not youtube:
+            post_title = post.title
+            post_description = post.content + " " + post.hashtag + " #shorts"
+            tags = post.hashtag
+            tags = tags.split(" ") if tags else []
+
+            video_url = post.video_url
+            video_content = requests.get(video_url).content
+
+            video_io = BytesIO(video_content)
+            video_io.seek(0)
+
+            body = {
+                "snippet": {
+                    "title": post_title,
+                    "description": post_description,
+                    "tags": tags,
+                    "categoryId": 22,  # Ví dụ: "22" cho 'People & Blogs'
+                },
+                "status": {
+                    "privacyStatus": "private"  # "public", "private" hoặc "unlisted"
+                },
+            }
+
             log_social_message(
-                "----------------------- ERROR: SEND YOUTUBE ERROR ---------------------------"
+                f"----------------------- YOUTUBE START: {post_title}  ---------------------------"
             )
+
+            try:
+                media = MediaIoBaseUpload(
+                    video_io, mimetype="video/mp4", chunksize=-1, resumable=True
+                )
+                request = youtube.videos().insert(
+                    part="snippet,status", body=body, media_body=media
+                )
+            except Exception as e:
+                log_social_message(
+                    f"----------------------- YOUTUBE ERROR SEND : {post_title} -> {str(e)}  ---------------------------"
+                )
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = str(e)
+                self.social_post.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
+                return
+
+            self.social_post.status = "UPLOADING"
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "UPLOADING",
+                        "value": 10,
+                    }
+                ),
+            )
+
+            try:
+                response = None
+                i = 1
+                while response is None:
+                    status, response = request.next_chunk()
+                    if status:
+                        log_social_message(
+                            "YOUTUBE Đang upload: {}%".format(
+                                int(status.progress() * 100)
+                            )
+                        )
+                    if i <= 7:
+                        redis_client.publish(
+                            PROGRESS_CHANNEL,
+                            json.dumps(
+                                {
+                                    "batch_id": self.batch_id,
+                                    "link_id": self.link_id,
+                                    "post_id": self.post_id,
+                                    "status": "UPLOADING",
+                                    "value": 10 + (i * 10),
+                                }
+                            ),
+                        )
+                    i += 1
+            except Exception as e:
+                log_social_message(
+                    f"----------------------- YOUTUBE ERROR SEND : {post_title} -> {str(e)}  ---------------------------"
+                )
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = str(e)
+                self.social_post.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
+                return
+
+            log_social_message(
+                "----------------------- YOUTUBE UPLOADED : VIDEO ID {}  ---------------------------".format(
+                    response.get("id")
+                )
+            )
+
+            RequestSocialLogService.create_request_social_log(
+                social="YOUTUBE",
+                user_id=self.user_id,
+                type="upload_video",
+                request=json.dumps(body),
+                response=json.dumps(response),
+            )
+
+            if "error" in response:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = response["error"]["message"]
+                self.social_post.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
+            else:
+                try:
+                    video_id = response["id"]
+                except Exception as e:
+                    try:
+                        video_id = response.get("id")
+                    except Exception as e:
+                        log_social_message(
+                            f"--------------------YOUTUBE ERROR GET VIDEO ID: {str(e)}---------------------"
+                        )
+                        self.social_post.status = "ERRORED"
+                        self.social_post.error_message = str(e)
+                        self.social_post.save()
+
+                        redis_client.publish(
+                            PROGRESS_CHANNEL,
+                            json.dumps(
+                                {
+                                    "batch_id": self.batch_id,
+                                    "link_id": self.link_id,
+                                    "post_id": self.post_id,
+                                    "status": "ERRORED",
+                                    "value": 100,
+                                }
+                            ),
+                        )
+                        return None
+
+                permalink = f"https://www.youtube.com/watch?v={video_id}"
+                self.social_post.status = "PUBLISHED"
+                self.social_post.social_link = permalink
+                self.social_post.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "PUBLISHED",
+                            "value": 100,
+                        }
+                    ),
+                )
+
+            return response
+        except Exception as e:
             self.social_post.status = "ERRORED"
             self.social_post.error_message = "Can't get youtube service"
             self.social_post.save()
@@ -167,199 +382,3 @@ class YoutubeService:
                 ),
             )
             return None
-
-        post_title = post.title
-        post_description = post.content + " " + post.hashtag + " #shorts"
-        tags = post.hashtag
-        tags = tags.split(" ") if tags else []
-
-        video_url = post.video_url
-        video_content = requests.get(video_url).content
-
-        video_io = BytesIO(video_content)
-        video_io.seek(0)
-
-        body = {
-            "snippet": {
-                "title": post_title,
-                "description": post_description,
-                "tags": tags,
-                "categoryId": 22,  # Ví dụ: "22" cho 'People & Blogs'
-            },
-            "status": {
-                "privacyStatus": "private"  # "public", "private" hoặc "unlisted"
-            },
-        }
-
-        log_social_message(
-            f"----------------------- YOUTUBE START: {post_title}  ---------------------------"
-        )
-
-        try:
-            media = MediaIoBaseUpload(
-                video_io, mimetype="video/mp4", chunksize=-1, resumable=True
-            )
-            request = youtube.videos().insert(
-                part="snippet,status", body=body, media_body=media
-            )
-        except Exception as e:
-            log_social_message(
-                f"----------------------- YOUTUBE ERROR SEND : {post_title} -> {str(e)}  ---------------------------"
-            )
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
-            return
-
-        self.social_post.status = "UPLOADING"
-        self.social_post.save()
-
-        redis_client.publish(
-            PROGRESS_CHANNEL,
-            json.dumps(
-                {
-                    "batch_id": self.batch_id,
-                    "link_id": self.link_id,
-                    "post_id": self.post_id,
-                    "status": "UPLOADING",
-                    "value": 10,
-                }
-            ),
-        )
-
-        try:
-            response = None
-            i = 1
-            while response is None:
-                status, response = request.next_chunk()
-                if status:
-                    log_social_message(
-                        "YOUTUBE Đang upload: {}%".format(int(status.progress() * 100))
-                    )
-                if i <= 7:
-                    redis_client.publish(
-                        PROGRESS_CHANNEL,
-                        json.dumps(
-                            {
-                                "batch_id": self.batch_id,
-                                "link_id": self.link_id,
-                                "post_id": self.post_id,
-                                "status": "UPLOADING",
-                                "value": 10 + (i * 10),
-                            }
-                        ),
-                    )
-                i += 1
-        except Exception as e:
-            log_social_message(
-                f"----------------------- YOUTUBE ERROR SEND : {post_title} -> {str(e)}  ---------------------------"
-            )
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
-            return
-
-        log_social_message(
-            "----------------------- YOUTUBE UPLOADED : VIDEO ID {}  ---------------------------".format(
-                response.get("id")
-            )
-        )
-
-        RequestSocialLogService.create_request_social_log(
-            social="YOUTUBE",
-            user_id=self.user_id,
-            type="upload_video",
-            request=json.dumps(body),
-            response=json.dumps(response),
-        )
-
-        if "error" in response:
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = response["error"]["message"]
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
-        else:
-            try:
-                video_id = response["id"]
-            except Exception as e:
-                try:
-                    video_id = response.get("id")
-                except Exception as e:
-                    log_social_message(
-                        f"--------------------YOUTUBE ERROR GET VIDEO ID: {str(e)}---------------------"
-                    )
-                    self.social_post.status = "ERRORED"
-                    self.social_post.error_message = str(e)
-                    self.social_post.save()
-
-                    redis_client.publish(
-                        PROGRESS_CHANNEL,
-                        json.dumps(
-                            {
-                                "batch_id": self.batch_id,
-                                "link_id": self.link_id,
-                                "post_id": self.post_id,
-                                "status": "ERRORED",
-                                "value": 100,
-                            }
-                        ),
-                    )
-                    return None
-
-            permalink = f"https://www.youtube.com/watch?v={video_id}"
-            self.social_post.status = "PUBLISHED"
-            self.social_post.social_link = permalink
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "PUBLISHED",
-                        "value": 100,
-                    }
-                ),
-            )
-
-        return response
