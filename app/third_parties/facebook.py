@@ -94,7 +94,7 @@ class FacebookTokenService:
                 f"------------------  FACEBOOK PAGE ID INPUT ------------------ : {page_id}"
             )
             if is_all:
-                first_page = data.get("data")
+                first_page = data.get("data")[0]
                 log_social_message(
                     f"------------------  FACEBOOK PAGE ------------------ : {first_page}"
                 )
