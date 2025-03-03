@@ -36,4 +36,8 @@ def create_app():
 if __name__ == "__main__":
     application = create_app()
     SOCKET_PORT = os.environ.get("SOCKET_PORT") or 5001
-    socketio.run(application, debug=True, port=SOCKET_PORT)
+    socketio.run(
+        application,
+        debug=True,
+        port=int(SOCKET_PORT) if not isinstance(SOCKET_PORT, int) else 5001,
+    )
