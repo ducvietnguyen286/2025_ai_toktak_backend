@@ -13,7 +13,7 @@ RABBITMQ_PASSWORD = os.environ.get("RABBITMQ_PASSWORD") or "guest"
 RABBITMQ_QUEUE = os.environ.get("RABBITMQ_QUEUE") or "hello"
 
 RABBITMQ_URL = (
-    f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}"
+    f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/"
 )
 
 
@@ -22,7 +22,7 @@ async def create_connection():
     connection = await aio_pika.connect_robust(RABBITMQ_URL)
     channel = await connection.channel()
     # Khai báo queue với durable=True để queue được lưu lại sau restart broker
-    await channel.declare_queue(RABBITMQ_QUEUE, durable=True)
+    await channel.declare_queue(RABBITMQ_QUEUE, durable=False)
     return connection, channel
 
 
