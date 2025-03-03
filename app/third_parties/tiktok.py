@@ -335,6 +335,22 @@ class TiktokService:
                 return False
         except Exception as e:
             log_social_message(f"Error upload video to Tiktok: {str(e)}")
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
             return False
 
     def check_status(self, publish_id, count=1, retry=0):
