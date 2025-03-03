@@ -13,4 +13,4 @@ class UserLink(db.Model, BaseModel):
     expired_date = db.Column(db.Date, nullable=True, index=True)
     status = db.Column(db.Integer, default=1)
 
-    to_json_filter = ("meta",)
+    to_json_filter = ("meta", "expired_at", "expired_date")
