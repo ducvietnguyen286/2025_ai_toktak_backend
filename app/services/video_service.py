@@ -492,10 +492,10 @@ class VideoService:
                 )
             elif j_index == 4:
                 # When 5th image start, display for 2 sec & When start last hooking video, display for 2 sec in the middle of screen until end of video
-                first_caption_image_default = VideoService.filter_content_by_type(
+                last_caption_videos_default = VideoService.filter_content_by_type(
                     caption_videos_default, 4
                 )
-                html_image = create_html_caption(first_caption_image_default)
+                html_image = create_html_caption(last_caption_videos_default)
                 clips.append(
                     {
                         "asset": {
@@ -575,16 +575,19 @@ class VideoService:
             }
         )
 
-        last_caption_videos_default = VideoService.filter_content_by_type(
-            caption_videos_default, 4
-        )
+        if not last_caption_videos_default:
+            last_caption_videos_default = VideoService.filter_content_by_type(
+                caption_videos_default, 4
+            )
+
+        html_image = create_html_caption(last_caption_videos_default)
 
         clips.append(
             {
                 "asset": {
                     "type": "html",
-                    "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'> <span style='font-weight: bold;'>{last_caption_videos_default}</span> </div>",
-                    "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
+                    "html": html_image["html"],
+                    "css": html_image["css"],
                 },
                 "start": current_start,
                 "length": outro_length,
@@ -848,7 +851,7 @@ def create_mp3_from_srt(batch_id, srt_filepath):
     return voice_url
 
 
-def create_html_caption(caption_text, start = 0, length = 0, add_time=0):
+def create_html_caption(caption_text, start=0, length=0, add_time=0):
     """
     Tạo HTML cho caption text.
     """
