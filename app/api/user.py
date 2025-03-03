@@ -28,6 +28,7 @@ from app.third_parties.tiktok import TiktokTokenService
 from app.third_parties.twitter import TwitterTokenService
 from app.rabbitmq.producer import send_message
 from app.third_parties.youtube import YoutubeTokenService
+from socket_runner import main_loop
 
 ns = Namespace(name="user", description="User API")
 
@@ -188,8 +189,7 @@ class APINewLink(Resource):
 
 
 def schedule_task(message):
-    loop = asyncio.get_event_loop()
-    loop.create_task(send_message(message))
+    asyncio.run_coroutine_threadsafe(send_message(message), main_loop)
 
 
 @ns.route("/post-to-links")
