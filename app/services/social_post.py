@@ -1,4 +1,5 @@
 from sqlalchemy import and_, func
+from app.models.link import Link
 from app.models.social_post import SocialPost
 from app.extensions import db
 
@@ -67,10 +68,16 @@ class SocialPostService:
         )
         results = query.all()
 
+        link_ids = [result.link_id for result in results]
+        links = Link.query.filter(Link.id.in_(link_ids)).all()
+        link_dict = {link.id: link for link in links}
+
         data = []
         for social_post in results:
+            link = link_dict.get(social_post.link_id)
             post_data = {
                 "id": social_post.id,
+                "title": link.title,
                 "status": social_post.status,
                 "link_id": social_post.link_id,
                 "post_id": social_post.post_id,
