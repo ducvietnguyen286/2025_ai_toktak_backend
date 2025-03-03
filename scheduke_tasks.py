@@ -6,6 +6,8 @@ from logging import DEBUG
 from dotenv import load_dotenv
 from flask import Flask
 
+from app.schedules.exchange_facebook_token import exchange_facebook_token
+
 load_dotenv(override=False)
 
 from werkzeug.exceptions import default_exceptions
@@ -33,8 +35,14 @@ def start_scheduler():
 
     scheduler = BackgroundScheduler()
     one_hour_trigger = CronTrigger(hour="*/1")
+    one_day_trigger = CronTrigger(hour="0", minute="0")
 
     scheduler.add_job(func=schedule_task, trigger=one_hour_trigger, id="one_hour_job")
+    scheduler.add_job(
+        func=exchange_facebook_token,
+        trigger=one_day_trigger,
+        id="one_day_job_exchange_facebook_token",
+    )
 
     atexit.register(lambda: scheduler.shutdown())
 
