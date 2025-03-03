@@ -18,6 +18,7 @@ import traceback
 
 from app.services.batch import BatchService
 from app.services.post import PostService
+from app.services.social_post import SocialPostService
 from app.services.video_service import VideoService
 from flask import request
 
@@ -88,6 +89,7 @@ class APICreateBatch(Resource):
                 type=1,
                 count_post=len(post_types),
                 status=0,
+                process_status="PENDING",
             )
 
             posts = []
@@ -418,13 +420,11 @@ class APIGetStatusUploadWithBatch(Resource):
         posts = PostService.get_posts_by_batch_id(batch.id)
 
         for post_detail in posts:
-            print("post_detail", post_detail["id"])
-
             post_id = post_detail["id"]
-            # get social_posts
-            log_make_video_message(post_id)
-            social_post_detail = PostService.get_social_post(post_id)
-            log_make_video_message(social_post_detail)
+
+            social_post_detail = SocialPostService.by_post_id_get_latest_social_posts(
+                post_id
+            )
             post_detail["social_post_detail"] = social_post_detail
 
         batch_res = batch._to_json()

@@ -2,7 +2,7 @@ from app.models.post import Post
 from app.models.link import Link
 from app.models.social_post import SocialPost
 from app.extensions import db
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from flask import jsonify
 
 
@@ -22,6 +22,10 @@ class PostService:
     def get_posts():
         posts = Post.query.where(Post.status == 1).all()
         return [post._to_json() for post in posts]
+
+    def get_posts_by_batch(batch_id):
+        posts = Post.query.where(Post.batch_id == batch_id).all()
+        return posts
 
     @staticmethod
     def update_post(id, *args, **kwargs):
@@ -46,6 +50,24 @@ class PostService:
         )  # Cập nhật trực tiếp
         db.session.commit()  # Lưu vào database
         return updated_rows
+
+    @staticmethod
+    def get_latest_social_post_by_post_ids(post_ids):
+        subq = (
+            db.session.query(func.max(SocialPost.created_at).label("max_created"))
+            .filter(SocialPost.post_id.in_(post_ids))
+            .group_by(SocialPost.post_id)
+            .subquery()
+        )
+        query = db.session.query(SocialPost).join(
+            subq,
+            and_(
+                SocialPost.post_id == subq.c.post_id,
+                SocialPost.created_at == subq.c.max_created,
+            ),
+        )
+        results = query.all()
+        return results
 
     @staticmethod
     def get_social_post(post_id):

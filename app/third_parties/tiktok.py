@@ -136,9 +136,28 @@ class TiktokService:
 
             log_social_message(f"Payload: {payload}")
 
-            upload_response = requests.post(
-                URL_IMAGE_UPLOAD, headers=headers, data=json.dumps(payload)
-            )
+            try:
+                upload_response = requests.post(
+                    URL_IMAGE_UPLOAD, headers=headers, data=json.dumps(payload)
+                )
+
+            except Exception as e:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = str(e)
+                self.social_post.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
             parsed_response = upload_response.json()
 
             redis_client.publish(
@@ -308,9 +327,29 @@ class TiktokService:
             "Content-Type": "application/json",
         }
         payload = {"publish_id": publish_id}
-        response = requests.post(
-            URL_VIDEO_STATUS, headers=headers, data=json.dumps(payload)
-        )
+        try:
+            response = requests.post(
+                URL_VIDEO_STATUS, headers=headers, data=json.dumps(payload)
+            )
+        except Exception as e:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+            log_social_message(f"Error check status Tiktok: {str(e)}")
+            return False
         res_json = response.json()
 
         log_social_message(f"Check status: {res_json}")
@@ -418,10 +457,30 @@ class TiktokService:
         }
 
         log_social_message(f"Payload: {payload}")
+        try:
+            upload_response = requests.post(
+                URL_VIDEO_UPLOAD, headers=headers, data=json.dumps(payload)
+            )
+        except Exception as e:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
 
-        upload_response = requests.post(
-            URL_VIDEO_UPLOAD, headers=headers, data=json.dumps(payload)
-        )
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
+            log_social_message(f"Error upload video to Tiktok: {str(e)}")
+            return False
         parsed_response = upload_response.json()
 
         self.social_post.status = "UPLOADING"
@@ -491,11 +550,20 @@ class TiktokService:
         progress_per_chunk = 20 // total_chunk
         left_over = 20 % total_chunk
 
+        is_last_chunk = False
         for i in range(total_chunk):
+
+            is_last_chunk = i == total_chunk - 1
+
             log_social_message(f"Upload video to Tiktok APPEND {i}")
-            start_bytes = i * chunk_size
-            end_bytes = min(start_bytes + chunk_size, media_size) - 1
-            current_chunk_size = start_bytes - end_bytes + 1
+            if is_last_chunk:
+                start_bytes = i * chunk_size
+                end_bytes = media_size - 1
+                current_chunk_size = media_size - (chunk_size * i)
+            else:
+                start_bytes = i * chunk_size
+                end_bytes = min(start_bytes + chunk_size, media_size) - 1
+                current_chunk_size = start_bytes - end_bytes + 1
 
             chunk_data = media.content[start_bytes:end_bytes]
 
@@ -544,7 +612,28 @@ class TiktokService:
                 "Content-Length": str(current_chunk_size),
                 "Content-Type": media_type,
             }
-            response = requests.put(upload_url, headers=headers, data=chunk_data)
+            try:
+                response = requests.put(upload_url, headers=headers, data=chunk_data)
+            except Exception as e:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = str(e)
+                self.social_post.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
+
+                log_social_message(f"Error upload video to Tiktok: {str(e)}")
+                return False
             response_put = response.json()
 
             RequestSocialLogService.create_request_social_log(

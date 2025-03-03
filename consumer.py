@@ -22,7 +22,6 @@ from app.third_parties.thread import ThreadService
 from app.third_parties.tiktok import TiktokService
 from app.third_parties.twitter import TwitterService
 from app.third_parties.youtube import YoutubeService
-from socket_runner import main_loop
 
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST") or "localhost"
 RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT") or 5672
@@ -135,7 +134,7 @@ async def on_message(message: IncomingMessage, app):
     Hàm callback bất đồng bộ để xử lý từng message.
     Sử dụng create_task để xử lý message nền, giúp event loop không bị block.
     """
-    print("Received message")
+
     async with message.process():
         body = message.body.decode()
         logger.info(f"Received message: {body}")
@@ -159,12 +158,13 @@ async def main():
 
 
 if __name__ == "__main__":
-
-    connection = main_loop.run_until_complete(main())
+    loop = asyncio.get_event_loop()
+    asyncio.set_event_loop(loop)
+    connection = loop.run_until_complete(main())
     try:
-        main_loop.run_forever()
+        loop.run_forever()
     except KeyboardInterrupt:
         logger.info("Consumer stopped by user")
     finally:
-        main_loop.run_until_complete(connection.close())
-        main_loop.close()
+        loop.run_until_complete(connection.close())
+        loop.close()

@@ -1,4 +1,6 @@
+from sqlalchemy import and_, func
 from app.models.social_post import SocialPost
+from app.extensions import db
 
 
 class SocialPostService:
@@ -17,6 +19,63 @@ class SocialPostService:
     def get_social_posts():
         social_posts = SocialPost.query.where(SocialPost.status == 1).all()
         return [social_post._to_json() for social_post in social_posts]
+
+    def get_all_by_post_ids(post_ids):
+        social_posts = SocialPost.query.where(SocialPost.post_id.in_(post_ids)).all()
+        return social_posts
+
+    @staticmethod
+    def get_latest_social_post_by_post_ids(post_ids):
+        subq = (
+            db.session.query(func.max(SocialPost.created_at).label("max_created"))
+            .filter(SocialPost.post_id.in_(post_ids))
+            .group_by(SocialPost.post_id)
+            .subquery()
+        )
+        query = db.session.query(SocialPost).join(
+            subq,
+            and_(
+                SocialPost.post_id == subq.c.post_id,
+                SocialPost.created_at == subq.c.max_created,
+            ),
+        )
+        results = query.all()
+        return results
+
+    @staticmethod
+    def by_post_id_get_latest_social_posts(post_id):
+        subq = (
+            db.session.query(func.max(SocialPost.created_at).label("max_created"))
+            .filter(SocialPost.post_id == post_id)
+            .group_by(SocialPost.link_id)
+            .subquery()
+        )
+        query = db.session.query(SocialPost).join(
+            subq,
+            and_(
+                SocialPost.post_id == subq.c.post_id,
+                SocialPost.created_at == subq.c.max_created,
+            ),
+        )
+        results = query.all()
+
+        data = []
+        for social_post in results:
+            post_data = (
+                {
+                    "id": social_post.id,
+                    "status": social_post.status,
+                    "link_id": social_post.link_id,
+                    "post_id": social_post.post_id,
+                    "process_number": social_post.process_number,
+                }
+                if social_post
+                else None
+            )
+
+            data.append(post_data)
+
+        return data
 
     @staticmethod
     def update_social_post(id, *args):
