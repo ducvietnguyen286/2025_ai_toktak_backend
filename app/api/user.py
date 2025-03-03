@@ -291,6 +291,7 @@ class APIPostToLinks(Resource):
                         "user_id": current_user.id,
                         "social_post_id": social_post.id,
                         "page_id": page_id,
+                        "is_all": is_all,
                     },
                 }
                 send_message(message)
