@@ -319,6 +319,7 @@ class YoutubeService:
                     ),
                 )
             else:
+                video_id = ""
                 try:
                     video_id = response["id"]
                 except Exception as e:
@@ -345,6 +346,28 @@ class YoutubeService:
                             ),
                         )
                         return None
+
+                if not video_id:
+                    log_social_message(
+                        f"--------------------YOUTUBE ERROR GET VIDEO ID: {str(e)}---------------------"
+                    )
+                    self.social_post.status = "ERRORED"
+                    self.social_post.error_message = "Can't get video id"
+                    self.social_post.save()
+
+                    redis_client.publish(
+                        PROGRESS_CHANNEL,
+                        json.dumps(
+                            {
+                                "batch_id": self.batch_id,
+                                "link_id": self.link_id,
+                                "post_id": self.post_id,
+                                "status": "ERRORED",
+                                "value": 100,
+                            }
+                        ),
+                    )
+                    return None
 
                 permalink = f"https://www.youtube.com/watch?v={video_id}"
                 self.social_post.status = "PUBLISHED"
