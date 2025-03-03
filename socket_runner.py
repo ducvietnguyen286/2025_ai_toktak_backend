@@ -1,3 +1,4 @@
+import asyncio
 import os
 from dotenv import load_dotenv
 import logging
@@ -31,6 +32,9 @@ def create_app():
     start_redis_subscriber(app)
 
     return app
+
+
+main_loop = asyncio.get_event_loop()
 
 
 if __name__ == "__main__":
