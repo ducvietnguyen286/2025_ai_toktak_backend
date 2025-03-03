@@ -201,7 +201,7 @@ class FacebookService:
             self.user_link, page_id, is_all
         )
 
-        if is_all and not token_page:
+        if not is_all and not token_page:
             self.social_post.status = "ERRORED"
             self.social_post.error_message = "Can't get page token"
             self.social_post.save()
@@ -222,6 +222,26 @@ class FacebookService:
             log_social_message(f"Token page not found")
             return False
         else:
+            if not token_page:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = "Can't get page token"
+                self.social_post.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
+
+                log_social_message(f"Token page not found")
+                return False
             response_token = token_page
             page_id = response_token.get("id")
             token_page = response_token.get("access_token")
