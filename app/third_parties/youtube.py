@@ -109,6 +109,16 @@ class YoutubeService:
                 scopes=SCOPES,
             )
 
+            RequestSocialLogService.create_request_social_log(
+                social="YOUTUBE",
+                user_id=user_link.user_id,
+                type="get_youtube_service_from_token",
+                request=json.dumps(
+                    {"access_token": access_token, "refresh_token": refresh_token}
+                ),
+                response=json.dumps(json.loads(credentials.to_json())),
+            )
+
             if credentials.expired:
                 try:
                     credentials.refresh(Request())
