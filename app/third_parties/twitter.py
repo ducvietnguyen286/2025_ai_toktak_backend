@@ -498,12 +498,7 @@ class TwitterService:
         chunk_size = 4 * 1024 * 1024  # 4MB chunk size
 
         total_chunks = total_bytes // chunk_size
-        progress_by_chunk = 20 // total_chunks
-        
-        if total_chunks == 0:
-            progress_by_chunk = 0 
-        else:
-            progress_by_chunk = 20 // total_chunks  
+        progress_by_chunk = 20 // (total_chunks if total_chunks > 0 else 1)
 
         while bytes_sent < total_bytes:
             chunk = content[bytes_sent : bytes_sent + chunk_size]
@@ -545,8 +540,12 @@ class TwitterService:
                     ),
                 )
 
-                log_social_message(f"Error upload video to X total_chunks : {total_chunks}")
-                log_social_message(f"Error upload video to X progress_by_chunk: {progress_by_chunk}")
+                log_social_message(
+                    f"Error upload video to X total_chunks : {total_chunks}"
+                )
+                log_social_message(
+                    f"Error upload video to X progress_by_chunk: {progress_by_chunk}"
+                )
                 log_social_message(f"Error upload video to X: {str(e)}")
                 raise ValueError("Access token invalid")
 
