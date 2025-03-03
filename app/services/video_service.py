@@ -82,11 +82,8 @@ class VideoService:
             "timeline": {
                 "fonts": [
                     {
-                        "src": "http://admin.lang.canvasee.com/fonts/Noto_Sans_KR/NotoSansKR-VariableFont_wght.ttf"
-                    },
-                    {
-                        "src": "http://admin.lang.canvasee.com/fonts/Noto_Sans_KR/static/NotoSansKR-Bold.ttf"
-                    },
+                        "src": "http://admin.lang.canvasee.com/fonts/pretendard/variable/PretendardVariable.ttf"
+                    }
                 ],
                 "background": "#FFFFFF",
                 "tracks": [
@@ -364,6 +361,7 @@ class VideoService:
                     "type": "html",
                     "html": html_image["html"],
                     "css": html_image["css"],
+                    "background": "#000000",
                 },
                 "start": current_start + 0.01,
                 "length": 2,
@@ -407,7 +405,7 @@ class VideoService:
                             },
                             "font": {
                                 "lineHeight": 0.8,
-                                "family": "Noto Sans KR",
+                                "family": "Pretendard Regular",
                                 "color": "#ff0505",
                                 "size": 50,
                             },
@@ -435,6 +433,10 @@ class VideoService:
             effects = [
                 SHOTSTACK_IMAGE_EFFECTS,
             ]
+
+        last_caption_videos_default = VideoService.filter_content_by_type(
+            caption_videos_default, 4
+        )
 
         for j_index, url in enumerate(images_slider_url):
 
@@ -492,9 +494,7 @@ class VideoService:
                 )
             elif j_index == 4:
                 # When 5th image start, display for 2 sec & When start last hooking video, display for 2 sec in the middle of screen until end of video
-                last_caption_videos_default = VideoService.filter_content_by_type(
-                    caption_videos_default, 4
-                )
+
                 html_image = create_html_caption(last_caption_videos_default)
                 clips.append(
                     {
@@ -525,7 +525,7 @@ class VideoService:
                         "src": url_path_srt,
                         "font": {
                             "lineHeight": 0.8,
-                            "family": "Noto Sans KR",
+                            "family": "Pretendard Regular",
                             "color": "#ffffff",
                             "size": 50,
                         },
@@ -555,8 +555,8 @@ class VideoService:
             #     {
             #         "asset": {
             #             "type": "html",
-            #             "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'>잠시만요. <span style='font-weight: bold;'>10</span>초 뒤에 더<br> 놀라운 영상이 이어집니다.</div>",
-            #             "css": "div {   font-family: 'Noto Sans KR', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
+            #             "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Pretendard Regular', sans-serif;'>잠시만요. <span style='font-weight: bold;'>10</span>초 뒤에 더<br> 놀라운 영상이 이어집니다.</div>",
+            #             "css": "div {   font-family: 'Pretendard Regular', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
             #         },
             #         "start": start_slider_time + 0.01,
             #         "length": time_show_image,
@@ -575,13 +575,7 @@ class VideoService:
             }
         )
 
-        if not last_caption_videos_default:
-            last_caption_videos_default = VideoService.filter_content_by_type(
-                caption_videos_default, 4
-            )
-
         html_image = create_html_caption(last_caption_videos_default)
-
         clips.append(
             {
                 "asset": {
@@ -602,7 +596,7 @@ class VideoService:
         #         "asset": {
         #             "type": "html",
         #             "html": html_content,
-        #             "css": "div { font-weight: bold; font-family: 'Noto Sans KR', sans-serif; border-radius: 40px; }",
+        #             "css": "div { font-weight: bold; font-family: 'Pretendard Regular', sans-serif; border-radius: 40px; }",
         #             "width": 500,
         #             "height": 200,
         #             "background": "#FFD600",
@@ -629,7 +623,7 @@ class VideoService:
             #     "asset": {
             #         "type": "html",
             #         "html": "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Wait a minute.</div>",
-            #         "css": "div { font-weight: bold; font-family: 'Noto Sans KR', sans-serif; border-radius: 40px; }",
+            #         "css": "div { font-weight: bold; font-family: 'Pretendard Regular', sans-serif; border-radius: 40px; }",
             #         "width": 500,
             #         "height": 200,
             #         "background": "#FFD600",
@@ -778,7 +772,7 @@ def parse_srt_to_html_assets(url_path_srt: str, start_time):
         # "asset": {
         #     "type": "html",
         #     "html": "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Wait a minute.</div>",
-        #     "css": "div { font-weight: bold; font-family: 'Noto Sans KR', sans-serif; border-radius: 40px; }",
+        #     "css": "div { font-weight: bold; font-family: 'Pretendard Regular', sans-serif; border-radius: 40px; }",
         #     "width": 500,
         #     "height": 200,
         #     "background": "#FFD600",
@@ -798,7 +792,7 @@ def parse_srt_to_html_assets(url_path_srt: str, start_time):
                 "height": 400,
                 "background": "#80ffffff",
                 # "html": html_text,
-                # "css": '.large-div { background-color: #030303;color: #ffffff;font-family: "Noto Sans KR", sans-serif;      font-size: 60px;  text-align: center;padding: 40px;border-radius: 40px;box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);       height : 400;   }',
+                # "css": '.large-div { background-color: #030303;color: #ffffff;font-family: "Pretendard Regular", sans-serif;      font-size: 60px;  text-align: center;padding: 40px;border-radius: 40px;box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);       height : 400;   }',
             },
             "start": start_play,
             "length": length_seconds,
@@ -855,8 +849,8 @@ def create_html_caption(caption_text, start=0, length=0, add_time=0):
     """
     Tạo HTML cho caption text.
     """
-    html = f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif;'> <span style='font-weight: bold;'>{caption_text}</span> </div>"
-    css = "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}"
+    html = f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Pretendard Regular', sans-serif; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; -webkit-text-stroke: 2px #000000; '> <span style='font-weight: bold;'>{caption_text}</span> </div>"
+    css = "div {   font-family: 'Pretendard Regular', sans-serif;    border-radius: 40px;}"
 
     return {
         "html": html,
