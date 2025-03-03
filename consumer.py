@@ -134,7 +134,7 @@ async def on_message(message: IncomingMessage, app):
 
 async def main():
     RABBITMQ_URL = (
-        f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/"
+        f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}"
     )
 
     app = create_app()
