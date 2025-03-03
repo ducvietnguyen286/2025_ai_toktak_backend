@@ -262,6 +262,24 @@ class TiktokService:
 
         except Exception as e:
             log_social_message(f"Error upload image to Tiktok: {str(e)}")
+
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = error_message
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
             return False
 
     def upload_video(self, media):
@@ -349,7 +367,7 @@ class TiktokService:
                 ),
             )
             log_social_message(f"Error check status Tiktok: {str(e)}")
-            return False
+            raise Exception("Error check status Tiktok")
         res_json = response.json()
 
         log_social_message(f"Check status: {res_json}")
@@ -480,7 +498,8 @@ class TiktokService:
             )
 
             log_social_message(f"Error upload video to Tiktok: {str(e)}")
-            return False
+            raise Exception("Error upload video to Tiktok")
+
         parsed_response = upload_response.json()
 
         self.social_post.status = "UPLOADING"
@@ -633,7 +652,7 @@ class TiktokService:
                 )
 
                 log_social_message(f"Error upload video to Tiktok: {str(e)}")
-                return False
+                raise Exception("Error upload video to Tiktok")
             response_put = response.json()
 
             RequestSocialLogService.create_request_social_log(
