@@ -93,10 +93,31 @@ class TiktokService:
         self.post_id = post.id
         self.batch_id = post.batch_id
 
-        if post.type == "video":
-            self.upload_video(post.video_url)
-        if post.type == "image":
-            self.upload_image(post.images)
+        try:
+
+            if post.type == "video":
+                self.upload_video(post.video_url)
+            if post.type == "image":
+                self.upload_image(post.images)
+        except Exception as e:
+            log_social_message(f"Error send post to Tiktok {str(e)}")
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+            return False
 
     def upload_image(self, medias, retry=0):
         try:

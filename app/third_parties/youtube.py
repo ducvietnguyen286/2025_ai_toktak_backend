@@ -86,8 +86,26 @@ class YoutubeService:
         self.post_id = post.id
         self.batch_id = post.batch_id
 
-        if post.type == "video":
-            self.send_post_video(post)
+        try:
+            if post.type == "video":
+                self.send_post_video(post)
+        except Exception as e:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+            return False
 
     def get_youtube_service_from_token(self, user_link):
         log_social_message(
