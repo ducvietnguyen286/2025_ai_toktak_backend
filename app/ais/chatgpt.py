@@ -39,8 +39,9 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
   - 개별 해시태그로 제공하며, 캡션과 분리하여 작성합니다.
 
 - **Captions**: 
-  - 총 CAPTION_COUNT개의 문장을 각각 5초 분량으로 재생 가능하게 작성
+  - 총 CAPTION_COUNT개의 문장을 각각 20자 이내의 텍스트로 작성 
   - 각 caption은 gTTS를 통해 생성되는 오디오가 약 5초 동안 재생될 수 있도록 구성
+  - 이모티콘 사용 금지
   - 스토리텔링 형식으로 상품에 대해서 소개하는 caption 작성
   - 반드시 "[예시 출력]의 ##Caption"을 참고해서 작성할 것.
   - 한 문장을 끝까지 온전하게 작성할 것.
