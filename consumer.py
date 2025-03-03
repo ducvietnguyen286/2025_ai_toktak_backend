@@ -118,19 +118,27 @@ def process_message_sync(body, app):
         return False
 
 
+async def process_message_async(body, app):
+    """
+    Hàm bọc để chạy process_message_sync trong executor, không block event loop.
+    """
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(None, process_message_sync, body, app)
+    if not result:
+        logger.error("Message processing failed")
+    return result
+
+
 async def on_message(message: IncomingMessage, app):
     """
     Hàm callback bất đồng bộ để xử lý từng message.
-    Sử dụng asyncio.to_thread để chạy hàm xử lý đồng bộ trong một thread riêng.
+    Sử dụng create_task để xử lý message nền, giúp event loop không bị block.
     """
     async with message.process():
         body = message.body.decode()
-        print(f"Received message: {body}")
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, process_message_sync, body, app)
-        if not result:
-            logger.error("Message processing failed")
-            # Tùy chọn: có thể thêm xử lý khi message thất bại (requeue, log,...)
+        logger.info(f"Received message: {body}")
+        # Tạo task nền để xử lý message, không chặn việc nhận message mới
+        asyncio.create_task(process_message_async(body, app))
 
 
 async def main():
