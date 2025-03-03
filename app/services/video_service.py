@@ -484,7 +484,7 @@ class VideoService:
                             "html": html_image["html"],
                             "css": html_image["css"],
                         },
-                        "start": start_slider_time,
+                        "start": start_slider_time + 0.01,
                         "length": 2,
                         "position": "top",
                         "offset": {"x": 0, "y": 0.4},
