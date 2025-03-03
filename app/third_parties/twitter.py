@@ -480,6 +480,11 @@ class TwitterService:
 
         total_chunks = total_bytes // chunk_size
         progress_by_chunk = 20 // total_chunks
+        
+        if total_chunks == 0:
+            progress_by_chunk = 0 
+        else:
+            progress_by_chunk = 20 // total_chunks  
 
         while bytes_sent < total_bytes:
             chunk = content[bytes_sent : bytes_sent + chunk_size]
