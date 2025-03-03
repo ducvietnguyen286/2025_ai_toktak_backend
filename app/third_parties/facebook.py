@@ -317,9 +317,7 @@ class FacebookService:
         post_data = {"upload_phase": "start", "access_token": page_access_token}
         headers = {"Content-Type": "application/json"}
         try:
-            post_response = requests.post(
-                URL_UPLOAD, data=json.dumps(post_data), headers=headers
-            )
+            post_response = requests.post(URL_UPLOAD, data=post_data, headers=headers)
         except Exception as e:
             self.social_post.status = "ERRORED"
             self.social_post.error_message = str(e)
@@ -619,7 +617,7 @@ class FacebookService:
 
         log_social_message(f"post_data: {post_data}")
         try:
-            post_response = requests.post(FEED_URL, data=json.dumps(post_data))
+            post_response = requests.post(FEED_URL, data=post_data)
         except Exception as e:
             self.social_post.status = "ERRORED"
             self.social_post.error_message = str(e)
@@ -711,7 +709,7 @@ class FacebookService:
                 "access_token": page_access_token,
             }
             try:
-                response = requests.post(UNPUBLISH_URL, data=json.dumps(data))
+                response = requests.post(UNPUBLISH_URL, data=data)
             except Exception as e:
                 self.social_post.status = "ERRORED"
                 self.social_post.error_message = str(e)
