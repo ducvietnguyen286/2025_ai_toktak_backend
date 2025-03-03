@@ -126,7 +126,8 @@ async def on_message(message: IncomingMessage, app):
     async with message.process():
         body = message.body.decode()
         print(f"Received message: {body}")
-        result = await asyncio.to_thread(process_message_sync, body, app)
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(None, process_message_sync, body, app)
         if not result:
             logger.error("Message processing failed")
             # Tùy chọn: có thể thêm xử lý khi message thất bại (requeue, log,...)

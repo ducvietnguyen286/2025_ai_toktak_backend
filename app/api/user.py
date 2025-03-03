@@ -292,7 +292,7 @@ class APIPostToLinks(Resource):
                         "page_id": page_id,
                     },
                 }
-                asyncio.run(send_message(message))
+                asyncio.create_task(send_message(message))
 
             redis_client.set(f"toktak:progress:{batch_id}", json.dumps(progress))
 
