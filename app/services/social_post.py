@@ -27,7 +27,9 @@ class SocialPostService:
     @staticmethod
     def get_latest_social_post_by_post_ids(post_ids):
         subq = (
-            db.session.query(func.max(SocialPost.created_at).label("max_created"))
+            db.session.query(
+                SocialPost.post_id, func.max(SocialPost.created_at).label("max_created")
+            )
             .filter(SocialPost.post_id.in_(post_ids))
             .group_by(SocialPost.post_id)
             .subquery()
