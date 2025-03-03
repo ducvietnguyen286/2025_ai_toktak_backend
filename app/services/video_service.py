@@ -34,7 +34,7 @@ class VideoService:
         is_ai_image = config["SHOTSTACK_AI_IMAGE"]
         MUSIC_BACKGROUP_VOLUMN = float(config["MUSIC_BACKGROUP_VOLUMN"])
         MUSIC_VOLUMN = float(config["MUSIC_VOLUMN"])
-
+        video_size = config["VIDEO_SIZE"] or '{"width": 1200, "height": 800}'
         key_redis = f"caption_videos_default"
         progress_json = redis_client.get(key_redis)
 
@@ -113,7 +113,7 @@ class VideoService:
                 # "resolution": "hd",
                 # "aspectRatio": "16:9",
                 # "size": {"width": 1200, "height": 800},
-                "size": {"width": 720, "height": 1280},
+                "size": video_size,
             },
             "callback": f"{current_domain}/api/v1/video_maker/shotstack_webhook",
         }
