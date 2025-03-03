@@ -83,7 +83,10 @@ class VideoService:
                 "fonts": [
                     {
                         "src": "http://admin.lang.canvasee.com/fonts/pretendard/variable/PretendardVariable.ttf"
-                    }
+                    },
+                    {
+                        "src": "http://admin.lang.canvasee.com/fonts/pretendard/static/Pretendard-Bold.otf"
+                    },
                 ],
                 "background": "#FFFFFF",
                 "tracks": [
@@ -361,7 +364,6 @@ class VideoService:
                     "type": "html",
                     "html": html_image["html"],
                     "css": html_image["css"],
-                    "background": "#000000",
                 },
                 "start": current_start + 0.01,
                 "length": 2,
@@ -369,6 +371,30 @@ class VideoService:
                 "offset": {"x": 0, "y": 0.4},
             }
         )
+
+        # clips.append(
+        #     {
+        #         "asset": {
+        #             "type": "text",
+        #             "text": first_caption_videos_default,
+        #             "font": {
+        #                 "family": "Pretendard Regular",
+        #                 "color": "#ffffff",
+        #                 "size": 30,
+        #             },
+        #             "background": {
+        #                 "color": "#000000",
+        #                 "padding": 5,
+        #                 "borderRadius": 30,
+        #                 "opacity": 0.6,
+        #             },
+        #             "height": 100,
+        #         },
+        #         "start": current_start + 0.01,
+        #         "length": 5,
+        #         "position": "top",
+        #     }
+        # )
 
         current_start += intro_length
         file_path_srts = generate_srt(batch_id, captions)
@@ -524,10 +550,10 @@ class VideoService:
                         "type": "caption",
                         "src": url_path_srt,
                         "font": {
-                            "lineHeight": 0.8,
-                            "family": "Pretendard Regular",
+                            "lineHeight": 1,
+                            "family": "Pretendard SemiBold",
                             "color": "#ffffff",
-                            "size": 50,
+                            "size": 40,
                         },
                         "background": {
                             "color": "#000000",
@@ -849,8 +875,11 @@ def create_html_caption(caption_text, start=0, length=0, add_time=0):
     """
     Tạo HTML cho caption text.
     """
-    html = f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Pretendard Regular', sans-serif; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; -webkit-text-stroke: 2px #000000; '> <span style='font-weight: bold;'>{caption_text}</span> </div>"
-    css = "div {   font-family: 'Pretendard Regular', sans-serif;    border-radius: 40px;}"
+    # html = f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Pretendard Regular', sans-serif; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; -webkit-text-stroke: 2px #000000; '> <span style='font-weight: bold;'>{caption_text}</span> </div>"
+    # css = "div {  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; -webkit-text-stroke: 2px #000000; font-family: 'Pretendard Regular', sans-serif;    border-radius: 40px;}"
+
+    html = f"<table border='0' width='1000'><tr><td bgcolor='#FF0000' width='10'>&nbsp;</td><td width='990'><p>{caption_text}</p></td></tr></table>"
+    css = "table { background-color: #77000000; } td { padding-top: 16px; padding-bottom: 16px; } p { color: #FFFFFF; font-size: 34px; font-family: 'Pretendard Regular' sans-serif; font-weight: bold; margin: 20px; }"
 
     return {
         "html": html,
