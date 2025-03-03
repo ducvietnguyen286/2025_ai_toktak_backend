@@ -482,7 +482,7 @@ class TwitterService:
         progress_by_chunk = 20 // total_chunks
         
         if total_chunks == 0:
-            progress_by_chunk = 0  # hoặc xử lý theo logic phù hợp với ứng dụng của bạn
+            progress_by_chunk = 0 
         else:
             progress_by_chunk = 20 // total_chunks  
 
