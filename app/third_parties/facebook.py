@@ -95,6 +95,9 @@ class FacebookTokenService:
             )
             if is_all:
                 first_page = data.get("data")[0]
+                log_social_message(
+                    f"------------------  FACEBOOK PAGE ------------------ : {first_page}"
+                )
                 return first_page.get("access_token")
             for page in data.get("data"):
                 if page.get("id") == page_id:
