@@ -143,8 +143,10 @@ class FacebookTokenService:
 
                 expires_in = 60 * 60 * 24 * 60  # 60 days
                 expired_at = time.time() + expires_in
-                user_link.expired_at = datetime.fromtimestamp(expired_at)
-                user_link.expired_date = datetime.fromtimestamp(expired_at).date()
+                user_link.expired_at = datetime.datetime.fromtimestamp(expired_at)
+                user_link.expired_date = datetime.datetime.fromtimestamp(
+                    expired_at
+                ).date()
 
                 user_link.save()
                 return True
