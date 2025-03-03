@@ -94,11 +94,11 @@ class FacebookTokenService:
                 f"------------------  FACEBOOK PAGE ID INPUT ------------------ : {page_id}"
             )
             if is_all:
-                first_page = data.get("data")[0]
+                first_page = data.get("data")
                 log_social_message(
                     f"------------------  FACEBOOK PAGE ------------------ : {first_page}"
                 )
-                return first_page.get("access_token")
+                return first_page
             for page in data.get("data"):
                 if page.get("id") == page_id:
                     return page.get("access_token")
@@ -200,7 +200,8 @@ class FacebookService:
         token_page = FacebookTokenService.fetch_page_token_backend(
             self.user_link, page_id, is_all
         )
-        if not token_page:
+
+        if is_all and not token_page:
             self.social_post.status = "ERRORED"
             self.social_post.error_message = "Can't get page token"
             self.social_post.save()
@@ -220,6 +221,10 @@ class FacebookService:
 
             log_social_message(f"Token page not found")
             return False
+        else:
+            response_token = token_page
+            page_id = response_token.get("id")
+            token_page = response_token.get("access_token")
 
         self.page_id = page_id
         self.page_token = token_page
@@ -599,6 +604,10 @@ class FacebookService:
     def send_post_image(self, post, link):
         page_id = self.page_id
         page_access_token = self.page_token
+
+        log_social_message(f"page_id: {page_id}")
+        log_social_message(f"page_access_token: {page_access_token}")
+
         FEED_URL = f"https://graph.facebook.com/v22.0/{page_id}/feed"
 
         images = post.images
