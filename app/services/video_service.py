@@ -458,11 +458,11 @@ class VideoService:
                     {
                         "asset": {
                             "type": "html",
-                            "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '> <span style='font-weight: bold; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; '>{first_caption_image_default}</span> </div>",
+                            "html": f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Noto Sans KR', sans-serif;   '> <span style='font-weight: bold;  '>{first_caption_image_default}</span> </div>",
                             "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
                         },
                         "start": start_slider_time,
-                        "length": start_slider_time + 2,
+                        "length":  2,
                         "position": "top",
                         "offset": {"x": 0, "y": 0.4},
                     }
@@ -481,7 +481,7 @@ class VideoService:
                             "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
                         },
                         "start": start_slider_time,
-                        "length": start_slider_time + 2,
+                        "length":   2,
                         "position": "top",
                         "offset": {"x": 0, "y": 0.4},
                     }
@@ -500,7 +500,7 @@ class VideoService:
                             "css": "div {   font-family: 'Noto Sans KR', sans-serif;    border-radius: 40px;}",
                         },
                         "start": start_slider_time,
-                        "length": start_slider_time + 2,
+                        "length":  2,
                         "position": "top",
                         "offset": {"x": 0, "y": 0.4},
                     }
