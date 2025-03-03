@@ -540,6 +540,12 @@ class TwitterService:
                     ),
                 )
 
+                log_social_message(
+                    f"Error upload video to X total_chunks : {total_chunks}"
+                )
+                log_social_message(
+                    f"Error upload video to X progress_by_chunk: {progress_by_chunk}"
+                )
                 log_social_message(f"Error upload video to X: {str(e)}")
                 raise ValueError("Access token invalid")
 
