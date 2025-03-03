@@ -34,9 +34,6 @@ def create_app():
     return app
 
 
-main_loop = asyncio.get_event_loop()
-
-
 if __name__ == "__main__":
     application = create_app()
     SOCKET_PORT = os.environ.get("SOCKET_PORT") or 5001
