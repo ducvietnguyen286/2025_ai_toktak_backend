@@ -56,7 +56,7 @@ class FacebookTokenService:
             return None
 
     @staticmethod
-    def fetch_page_token_backend(user_link, page_id):
+    def fetch_page_token_backend(user_link, page_id, is_all=None):
         try:
             log_social_message(
                 "------------------  FETCH FACEBOOK PAGE TOKEN  ------------------"
@@ -93,7 +93,9 @@ class FacebookTokenService:
             log_social_message(
                 f"------------------  FACEBOOK PAGE ID INPUT ------------------ : {page_id}"
             )
-
+            if is_all:
+                first_page = data.get("data")[0]
+                return first_page.get("access_token")
             for page in data.get("data"):
                 if page.get("id") == page_id:
                     return page.get("access_token")
@@ -181,7 +183,7 @@ class FacebookService:
         self.post_id = None
         self.batch_id = None
 
-    def send_post(self, post, link, user_id, social_post_id, page_id):
+    def send_post(self, post, link, user_id, social_post_id, page_id, is_all=None):
         self.user = UserService.find_user(user_id)
         self.link = link
         self.user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
@@ -193,7 +195,7 @@ class FacebookService:
         self.batch_id = post.batch_id
 
         token_page = FacebookTokenService.fetch_page_token_backend(
-            self.user_link, page_id
+            self.user_link, page_id, is_all
         )
         if not token_page:
             self.social_post.status = "ERRORED"

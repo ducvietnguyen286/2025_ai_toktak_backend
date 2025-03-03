@@ -64,6 +64,7 @@ def action_send_post_to_link(message):
         user_id = message.get("user_id")
         page_id = message.get("page_id")
         social_post_id = message.get("social_post_id")
+        is_all = message.get("is_all")
 
         link = LinkService.find_link(link_id)
         post = PostService.find_post(post_id)
@@ -78,7 +79,7 @@ def action_send_post_to_link(message):
         if link.social_type == "SOCIAL":
             if link.type == "FACEBOOK":
                 FacebookService().send_post(
-                    post, link, user_id, social_post_id, page_id
+                    post, link, user_id, social_post_id, page_id, is_all
                 )
             elif link.type == "TELEGRAM":
                 # Xử lý cho Telegram nếu cần
