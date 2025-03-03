@@ -371,7 +371,7 @@ class TwitterService:
 
             TwitterTokenService().refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
-                link_id=self.link.id, user_id=self.user.id
+                link_id=self.link_id, user_id=self.user.id
             )
             self.meta = json.loads(self.user_link.meta)
             return self.upload_media_init(
