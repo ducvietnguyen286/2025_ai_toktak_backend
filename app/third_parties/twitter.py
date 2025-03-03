@@ -195,9 +195,30 @@ class TwitterService:
                 "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json",
             }
-            response = requests.post(
-                X_POST_TO_X_URL, headers=headers, data=json.dumps(data)
-            )
+            try:
+                response = requests.post(
+                    X_POST_TO_X_URL, headers=headers, data=json.dumps(data)
+                )
+            except Exception as e:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = str(e)
+                self.social_post.save()
+
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
+
+                log_social_message(f"Error upload video to X: {str(e)}")
+                raise ValueError("Access token invalid")
             parsed_response = response.json()
             log_social_message(parsed_response)
             status = parsed_response.get("status")
@@ -317,9 +338,30 @@ class TwitterService:
 
         log_social_message(request_data)
 
-        req = requests.post(
-            url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
-        )
+        try:
+            req = requests.post(
+                url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
+            )
+        except Exception as e:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
+            log_social_message(f"Error upload video to X: {str(e)}")
+            raise ValueError("Access token invalid")
 
         RequestSocialLogService.create_request_social_log(
             social="X",
@@ -383,7 +425,28 @@ class TwitterService:
 
         log_social_message(req.status_code)
         log_social_message(req.text)
-        media_id = req.json()["data"]["id"]
+        res_json = req.json()
+        if not res_json.get("media_id"):
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
+            log_social_message(f"Error upload video to X: {str(e)}")
+            raise ValueError("Access token invalid")
+        media_id = res_json["data"]["id"]
 
         return media_id
 
@@ -414,13 +477,30 @@ class TwitterService:
                 "User-Agent": "MediaUploadSampleCode",
             }
 
-            req = requests.post(
-                url=MEDIA_ENDPOINT_URL, data=data, files=files, headers=headers
-            )
+            try:
+                req = requests.post(
+                    url=MEDIA_ENDPOINT_URL, data=data, files=files, headers=headers
+                )
+            except Exception as e:
+                self.social_post.status = "ERRORED"
+                self.social_post.error_message = str(e)
+                self.social_post.save()
 
-            req = requests.post(
-                url=MEDIA_ENDPOINT_URL, data=data, files=files, headers=headers
-            )
+                redis_client.publish(
+                    PROGRESS_CHANNEL,
+                    json.dumps(
+                        {
+                            "batch_id": self.batch_id,
+                            "link_id": self.link_id,
+                            "post_id": self.post_id,
+                            "status": "ERRORED",
+                            "value": 100,
+                        }
+                    ),
+                )
+
+                log_social_message(f"Error upload video to X: {str(e)}")
+                raise ValueError("Access token invalid")
 
             # Log the response content for debugging
             log_social_message(f"Response status code: {req.status_code}")
@@ -516,9 +596,30 @@ class TwitterService:
 
         request_data = {"command": "FINALIZE", "media_id": media_id}
 
-        req = requests.post(
-            url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
-        )
+        try:
+            req = requests.post(
+                url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
+            )
+        except Exception as e:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
+            log_social_message(f"Error upload video to X: {str(e)}")
+            raise ValueError("Access token invalid")
 
         RequestSocialLogService.create_request_social_log(
             social="X",
@@ -627,9 +728,30 @@ class TwitterService:
 
         request_params = {"command": "STATUS", "media_id": media_id}
 
-        req = requests.get(
-            url=MEDIA_ENDPOINT_URL, params=request_params, headers=headers
-        )
+        try:
+            req = requests.get(
+                url=MEDIA_ENDPOINT_URL, params=request_params, headers=headers
+            )
+        except Exception as e:
+            self.social_post.status = "ERRORED"
+            self.social_post.error_message = str(e)
+            self.social_post.save()
+
+            redis_client.publish(
+                PROGRESS_CHANNEL,
+                json.dumps(
+                    {
+                        "batch_id": self.batch_id,
+                        "link_id": self.link_id,
+                        "post_id": self.post_id,
+                        "status": "ERRORED",
+                        "value": 100,
+                    }
+                ),
+            )
+
+            log_social_message(f"Error upload video to X: {str(e)}")
+            raise ValueError("Access token invalid")
 
         status_code = req.status_code
         if status_code == 401:
