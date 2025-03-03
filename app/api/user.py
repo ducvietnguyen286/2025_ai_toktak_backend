@@ -187,6 +187,11 @@ class APINewLink(Resource):
         ).to_dict()
 
 
+def schedule_task(message):
+    loop = asyncio.get_event_loop()
+    loop.create_task(send_message(message))
+
+
 @ns.route("/post-to-links")
 class APIPostToLinks(Resource):
 
@@ -292,7 +297,7 @@ class APIPostToLinks(Resource):
                         "page_id": page_id,
                     },
                 }
-                asyncio.create_task(send_message(message))
+                schedule_task(message)
 
             redis_client.set(f"toktak:progress:{batch_id}", json.dumps(progress))
 
