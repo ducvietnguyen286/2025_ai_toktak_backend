@@ -315,7 +315,7 @@ class FacebookService:
                 ),
             )
 
-            log_social_message(f"Error upload video to X: {str(e)}")
+            log_social_message(f"Error upload video to FACEBOOK: {str(e)}")
             raise ValueError("Access token invalid")
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
@@ -370,7 +370,7 @@ class FacebookService:
                 ),
             )
 
-            log_social_message(f"Error upload video to X: {str(e)}")
+            log_social_message(f"Error upload video to FACEBOOK: {str(e)}")
             raise ValueError("Access token invalid")
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
@@ -419,7 +419,7 @@ class FacebookService:
                     ),
                 )
 
-                log_social_message(f"Error upload video to X: {str(e)}")
+                log_social_message(f"Error upload video to FACEBOOK: {str(e)}")
                 raise ValueError("Access token invalid")
             result = get_response.json()
 
@@ -511,7 +511,7 @@ class FacebookService:
                 ),
             )
 
-            log_social_message(f"Error upload video to X: {str(e)}")
+            log_social_message(f"Error upload video to FACEBOOK: {str(e)}")
             raise ValueError("Access token invalid")
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
@@ -559,7 +559,7 @@ class FacebookService:
                 ),
             )
 
-            log_social_message(f"Error upload video to X: {str(e)}")
+            log_social_message(f"Error upload video to FACEBOOK: {str(e)}")
             raise ValueError("Access token invalid")
         result = get_response.json()
         RequestSocialLogService.create_request_social_log(
@@ -615,7 +615,7 @@ class FacebookService:
                 ),
             )
 
-            log_social_message(f"Error upload video to X: {str(e)}")
+            log_social_message(f"Error upload image to FACEBOOK: {str(e)}")
             raise ValueError("Access token invalid")
         result = post_response.json()
 
@@ -707,7 +707,7 @@ class FacebookService:
                     ),
                 )
 
-                log_social_message(f"Error upload video to X: {str(e)}")
+                log_social_message(f"Error upload video to FACEBOOK: {str(e)}")
                 raise ValueError("Access token invalid")
             result = response.json()
 
