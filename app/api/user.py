@@ -85,118 +85,126 @@ class APINewLink(Resource):
         required=["link_id", "social_id", "name", "avatar", "url"],
     )
     def post(self, args):
-        current_user = AuthService.get_current_identity()
-        link_id = args.get("link_id", 0)
-        social_id = args.get("social_id", "")
-        name = args.get("name", "")
-        avatar = args.get("avatar", "")
-        url = args.get("url", "")
-        link = LinkService.find_link(link_id)
+        try:
+            current_user = AuthService.get_current_identity()
+            link_id = args.get("link_id", 0)
+            social_id = args.get("social_id", "")
+            name = args.get("name", "")
+            avatar = args.get("avatar", "")
+            url = args.get("url", "")
+            link = LinkService.find_link(link_id)
 
-        if not link:
+            if not link:
+                return Response(
+                    message="Không tìm thấy link",
+                    status=400,
+                ).to_dict()
+
+            link_need_info = link.need_info
+            info = {}
+            if link_need_info:
+                link_need_info = json.loads(link_need_info)
+                for key in link_need_info:
+                    if key not in args:
+                        return Response(
+                            message=f"Thiếu thông tin cần thiết: {key}",
+                            status=400,
+                        ).to_dict()
+                    info[key] = args[key]
+            else:
+                return Response(
+                    message="Link chưa setup thông tin cần thiết",
+                    status=400,
+                ).to_dict()
+
+            user_link = UserService.find_user_link_exist(link_id, current_user.id)
+            is_active = True
+            if not user_link:
+                user_link = UserService.create_user_link(
+                    user_id=current_user.id,
+                    link_id=link_id,
+                    meta=json.dumps(info),
+                    status=1,
+                )
+
+                if link.type == "X":
+                    user_link.status = 0
+                    user_link.save()
+
+                    code = args.get("Code")
+                    is_active = TwitterTokenService().fetch_token(code, user_link)
+
+                if link.type == "FACEBOOK":
+                    user_link.status = 0
+                    user_link.save()
+
+                    access_token = args.get("AccessToken")
+                    is_active = FacebookTokenService().exchange_token(
+                        access_token=access_token, user_link=user_link
+                    )
+
+                if link.type == "YOUTUBE":
+                    user_link.status = 0
+                    user_link.save()
+
+                    code = args.get("Code")
+                    is_active = YoutubeTokenService().exchange_code_for_token(
+                        code=code, user_link=user_link
+                    )
+            else:
+                user_link.meta = json.dumps(info)
+                user_link.status = 1
+                user_link.save()
+
+                if link.type == "X":
+                    user_link.status = 0
+                    user_link.save()
+
+                    code = args.get("Code")
+                    is_active = TwitterTokenService().fetch_token(code, user_link)
+                if link.type == "FACEBOOK":
+                    user_link.status = 0
+                    user_link.save()
+
+                    access_token = args.get("AccessToken")
+                    is_active = FacebookTokenService().exchange_token(
+                        access_token=access_token, user_link=user_link
+                    )
+
+                if link.type == "YOUTUBE":
+                    user_link.status = 0
+                    user_link.save()
+
+                    code = args.get("Code")
+                    is_active = YoutubeTokenService().exchange_code_for_token(
+                        code=code, user_link=user_link
+                    )
+
+            if is_active:
+                user_link.social_id = social_id
+                user_link.name = name
+                user_link.avatar = avatar
+                user_link.url = url
+                user_link.status = 1
+                user_link.save()
+
+            if not is_active:
+                return Response(
+                    message="Không thể kích hoạt link",
+                    status=400,
+                ).to_dict()
+
             return Response(
-                message="Không tìm thấy link",
+                data=user_link._to_json(),
+                message="Thêm link thành công",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Lỗi kết nối",
                 status=400,
             ).to_dict()
-
-        link_need_info = link.need_info
-        info = {}
-        if link_need_info:
-            link_need_info = json.loads(link_need_info)
-            for key in link_need_info:
-                if key not in args:
-                    return Response(
-                        message=f"Thiếu thông tin cần thiết: {key}",
-                        status=400,
-                    ).to_dict()
-                info[key] = args[key]
-        else:
-            return Response(
-                message="Link chưa setup thông tin cần thiết",
-                status=400,
-            ).to_dict()
-
-        user_link = UserService.find_user_link_exist(link_id, current_user.id)
-        is_active = True
-        if not user_link:
-            user_link = UserService.create_user_link(
-                user_id=current_user.id,
-                link_id=link_id,
-                meta=json.dumps(info),
-                status=1,
-            )
-
-            if link.type == "X":
-                user_link.status = 0
-                user_link.save()
-
-                code = args.get("Code")
-                is_active = TwitterTokenService().fetch_token(code, user_link)
-
-            if link.type == "FACEBOOK":
-                user_link.status = 0
-                user_link.save()
-
-                access_token = args.get("AccessToken")
-                is_active = FacebookTokenService().exchange_token(
-                    access_token=access_token, user_link=user_link
-                )
-
-            if link.type == "YOUTUBE":
-                user_link.status = 0
-                user_link.save()
-
-                code = args.get("Code")
-                is_active = YoutubeTokenService().exchange_code_for_token(
-                    code=code, user_link=user_link
-                )
-        else:
-            user_link.meta = json.dumps(info)
-            user_link.status = 1
-            user_link.save()
-
-            if link.type == "X":
-                user_link.status = 0
-                user_link.save()
-
-                code = args.get("Code")
-                is_active = TwitterTokenService().fetch_token(code, user_link)
-            if link.type == "FACEBOOK":
-                user_link.status = 0
-                user_link.save()
-
-                access_token = args.get("AccessToken")
-                is_active = FacebookTokenService().exchange_token(
-                    access_token=access_token, user_link=user_link
-                )
-
-            if link.type == "YOUTUBE":
-                user_link.status = 0
-                user_link.save()
-
-                code = args.get("Code")
-                is_active = YoutubeTokenService().exchange_code_for_token(
-                    code=code, user_link=user_link
-                )
-
-        if is_active:
-            user_link.social_id = social_id
-            user_link.name = name
-            user_link.avatar = avatar
-            user_link.url = url
-            user_link.status = 1
-            user_link.save()
-
-        if not is_active:
-            return Response(
-                message="Không thể kích hoạt link",
-                status=400,
-            ).to_dict()
-
-        return Response(
-            data=user_link._to_json(),
-            message="Thêm link thành công",
-        ).to_dict()
 
 
 @ns.route("/post-to-links")
