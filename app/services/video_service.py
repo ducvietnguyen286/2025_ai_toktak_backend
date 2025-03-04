@@ -28,7 +28,8 @@ class VideoService:
     def create_video_from_images(
         batch_id, product_name, images_url, images_slider_url, captions
     ):
-
+        log_make_video_message(captions)
+        log_make_video_message(images_slider_url)
         domain = request.host
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
@@ -480,16 +481,10 @@ class VideoService:
                             "lineHeight": 1,
                             "family": "Jalnan 2 Regular",
                             "color": "#ffffff",
-                            "size": 28,
+                            "size": 30,
                             "stroke": "#000000",
                             "strokeWidth": 1.5
-                        },
-                        "background": {
-                            "color": "#000000",
-                            "padding": 20,
-                            "borderRadius": 30,
-                            "opacity": 0.6,
-                        },
+                        } 
                     },
                     "start": start_slider_time,
                     "length": time_show_image,
@@ -599,7 +594,7 @@ def generate_srt(batch_id, captions):
     Tạo các file transcript.srt riêng biệt cho từng caption.
     Lưu vào thư mục static/voice/caption/
     """
-    file_path = f"voice/{batch_id}"
+    file_path = f"voice/gtts_voice/{batch_id}"
     os.makedirs(f"static/{file_path}", exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     file_paths = []
@@ -623,7 +618,7 @@ def generate_srt(batch_id, captions):
                 f.write(f"{start} --> {end}\n")
                 f.write(f"{text}\n\n")
             else:
-                duration_per_caption = 2
+                duration_per_caption = 2.25
                 for segment in segments:
                     segment = segment.replace('"', "")
                     end_time = start_time + duration_per_caption
