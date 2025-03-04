@@ -11,6 +11,11 @@ def parameters(**schema):
     def decorated(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            if request.endpoint == "api.user_api_new_link":
+                req_args = request.get_json()
+                new_args = args + (req_args,)
+                return func(*new_args, **kwargs)
+
             req_args = request.args.to_dict()
             if (
                 request.method in ("POST", "PUT", "PATCH", "DELETE")
@@ -47,8 +52,6 @@ def parameters(**schema):
                     message = exp.message  # pragma: no cover
                 raise BadRequest(message=message)
 
-            if request.endpoint == "api.user_api_new_link":
-                req_args = request.get_json()
             new_args = args + (req_args,)
             return func(*new_args, **kwargs)
 
