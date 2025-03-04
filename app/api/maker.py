@@ -375,10 +375,11 @@ class APIMakePost(Resource):
                 message="Tạo post thành công",
             ).to_dict()
         except Exception as e:
-            traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
+            traceback.print_exc()
             return Response(
                 message="Tạo post that bai ex",
+                message_detail=str(e),
                 status=400,
             ).to_dict()
 
