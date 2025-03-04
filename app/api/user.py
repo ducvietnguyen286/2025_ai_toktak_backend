@@ -77,16 +77,20 @@ class APINewLink(Resource):
         type="object",
         properties={
             "link_id": {"type": "integer"},
+            "social_id": {"type": "string"},
             "name": {"type": "string"},
-            "email": {"type": "string"},
+            "avatar": {"type": "string"},
+            "url": {"type": "string"},
         },
-        required=["link_id", "name", "email"],
+        required=["link_id", "social_id", "name", "avatar", "url"],
     )
     def post(self, args):
         current_user = AuthService.get_current_identity()
         link_id = args.get("link_id", 0)
+        social_id = args.get("social_id", "")
         name = args.get("name", "")
-        email = args.get("email", "")
+        avatar = args.get("avatar", "")
+        url = args.get("url", "")
         link = LinkService.find_link(link_id)
 
         if not link:
@@ -176,8 +180,10 @@ class APINewLink(Resource):
                 )
 
         if is_active:
+            user_link.social_id = social_id
             user_link.name = name
-            user_link.email = email
+            user_link.avatar = avatar
+            user_link.url = url
             user_link.status = 1
             user_link.save()
 
@@ -286,6 +292,7 @@ class APIPostToLinks(Resource):
 
             progress = {
                 "batch_id": batch_id,
+                "post_id": post.id,
                 "total_link": total_link,
                 "total_percent": 0,
                 "status": "PROCESSING",
