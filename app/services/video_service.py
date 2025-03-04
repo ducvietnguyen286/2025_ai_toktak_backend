@@ -18,6 +18,8 @@ import uuid
 import srt
 from moviepy.editor import VideoFileClip
 from app.extensions import redis_client
+from pydub import AudioSegment
+import subprocess
 
 
 class VideoService:
@@ -36,7 +38,7 @@ class VideoService:
         MUSIC_VOLUMN = float(config["MUSIC_VOLUMN"])
         video_size_json = config["VIDEO_SIZE"] or '{"width": 1200, "height": 800}'
         video_size = json.loads(video_size_json)
-        
+
         key_redis = f"caption_videos_default"
         progress_json = redis_client.get(key_redis)
 
@@ -114,7 +116,7 @@ class VideoService:
                 "quality": "veryhigh",
                 # "resolution": "hd",
                 # "aspectRatio": "16:9",
-                "size": {"width": video_size['width'], "height": video_size['height']},
+                "size": {"width": video_size["width"], "height": video_size["height"]},
                 # "size": video_size,
             },
             "callback": f"{current_domain}/api/v1/video_maker/shotstack_webhook",
@@ -857,20 +859,29 @@ def create_mp3_from_srt(batch_id, srt_filepath):
         [caption.content.replace("\n", " ") for caption in captions]
     )
 
-    public_patch = f"/voice/{batch_id}"
+    public_patch = f"/voice/gtts_voice/{batch_id}"
     voice_dir = f"static/{public_patch}"
     os.makedirs(voice_dir, exist_ok=True)
 
+    uuid_str = uuid.uuid4().hex
+
     # create voice Google TTS
     tts = gTTS(text=text_to_speak, lang="ko")
-    file_name = f"template_voice_sub_caption_{uuid.uuid4().hex}.mp3"
+    file_name = f"template_voice_sub_caption_{uuid_str}_1.mp3"
     file_path = f"{voice_dir}/{file_name}"
 
     tts.save(file_path)
 
     CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
     voice_url = f"{CURRENT_DOMAIN}/{public_patch}/{file_name}"
-    return voice_url
+
+    new_file_name = f"template_voice_sub_caption_{uuid_str}_3.mp3"
+    new_voice_dir = f"{voice_dir}/{new_file_name}"
+
+    change_speed_ffmpeg(file_path, new_voice_dir, speed=1.5)
+
+    new_voice_url = f"{CURRENT_DOMAIN}/{public_patch}/{new_file_name}"
+    return new_voice_url
 
 
 def create_html_caption(caption_text, start=0, length=0, add_time=0):
@@ -887,3 +898,41 @@ def create_html_caption(caption_text, start=0, length=0, add_time=0):
         "html": html,
         "css": css,
     }
+
+
+def speed_change(sound, speed=1.5):
+    """
+    Tăng tốc độ phát của âm thanh bằng cách thay đổi frame_rate.
+    Lưu ý: Phương pháp này cũng thay đổi cao độ của âm thanh.
+    """
+    # Tăng frame_rate theo hệ số speed
+    altered_sound = sound._spawn(
+        sound.raw_data, overrides={"frame_rate": int(sound.frame_rate * speed)}
+    )
+    # Thiết lập lại frame_rate ban đầu để file mp3 có thể phát đúng định dạng
+    return altered_sound.set_frame_rate(sound.frame_rate)
+
+
+def change_speed_ffmpeg(input_file, output_file, speed=1.5):
+    # Lưu ý: ffmpeg atempo filter hỗ trợ tốc độ từ 0.5 đến 2.0, đối với tốc độ ngoài khoảng này cần thực hiện nhiều bước.
+    command = [
+        "ffmpeg",
+        "-i",
+        input_file,
+        "-filter:a",
+        f"atempo={speed}",
+        "-vn",  # Không xử lý video
+        output_file,
+    ]
+
+    try:
+        # Thực hiện lệnh ffmpeg
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as e:
+        log_make_video_message(f"Đã xảy ra lỗi khi thay đổi tốc độ: {e}")
+    else:
+        # Nếu không có lỗi, xóa file cũ
+        try:
+            os.remove(input_file)
+        except OSError as e:
+            log_make_video_message(f"Lỗi khi xóa file {input_file}: {e}")
