@@ -82,7 +82,7 @@ class APINewLink(Resource):
             "avatar": {"type": "string"},
             "url": {"type": "string"},
         },
-        required=["link_id", "social_id", "name", "avatar", "url"],
+        required=["link_id"],
     )
     def post(self, args):
         try:
