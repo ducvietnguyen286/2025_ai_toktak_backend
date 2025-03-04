@@ -13,6 +13,7 @@ from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.errors import HttpError
 from google.auth.transport.requests import Request
 from app.extensions import redis_client
+from app.third_parties.base_service import BaseService
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
@@ -63,7 +64,7 @@ class YoutubeTokenService:
             return False
 
 
-class YoutubeService:
+class YoutubeService(BaseService):
     def __init__(self):
         self.user_link = None
         self.user = None
@@ -74,6 +75,7 @@ class YoutubeService:
         self.link_id = None
         self.post_id = None
         self.batch_id = None
+        self.service = "YOUTUBE"
 
     def send_post(self, post, link, user_id, social_post_id):
         self.user_id = user_id
@@ -90,21 +92,7 @@ class YoutubeService:
             if post.type == "video":
                 self.send_post_video(post)
         except Exception as e:
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
-            self.social_post.save()
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
+            self.save_errors("ERRORED", str(e))
             return False
 
     def get_youtube_service_from_token(self, user_link):
@@ -147,13 +135,7 @@ class YoutubeService:
                     user_link.status = 0
                     user_link.save()
 
-                    self.social_post.status = "ERRORED"
-                    self.social_post.error_message = "Refresh token failed"
-                    self.social_post.save()
-
-                    log_social_message(
-                        "----------------------- GET YOUTUBE SERVICE FAIL:  Refresh token failed ---------------------------"
-                    )
+                    self.save_errors("ERRORED", str(e))
 
                     return None
 
@@ -163,10 +145,7 @@ class YoutubeService:
 
             return build("youtube", "v3", credentials=credentials)
         except HttpError as e:
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
-            self.social_post.save()
-            log_social_message(f"---------------ERROR: {str(e)}-----------------")
+            self.save_errors("ERRORED", str(e))
             return None
 
     def send_post_video(self, post):
@@ -179,21 +158,7 @@ class YoutubeService:
                 log_social_message(
                     "----------------------- ERROR: SEND YOUTUBE ERROR ---------------------------"
                 )
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = "Can't get youtube service"
-                self.social_post.save()
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_errors("ERRORED", "Can't get youtube service")
                 return None
 
             post_title = post.title
@@ -234,39 +199,10 @@ class YoutubeService:
                 log_social_message(
                     f"----------------------- YOUTUBE ERROR SEND : {post_title} -> {str(e)}  ---------------------------"
                 )
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = str(e)
-                self.social_post.save()
-
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_errors("ERRORED", str(e))
                 raise e
 
-            self.social_post.status = "UPLOADING"
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "UPLOADING",
-                        "value": 10,
-                    }
-                ),
-            )
+            self.save_uploading(10)
 
             try:
                 response = None
@@ -280,39 +216,10 @@ class YoutubeService:
                             )
                         )
                     if i <= 7:
-                        redis_client.publish(
-                            PROGRESS_CHANNEL,
-                            json.dumps(
-                                {
-                                    "batch_id": self.batch_id,
-                                    "link_id": self.link_id,
-                                    "post_id": self.post_id,
-                                    "status": "UPLOADING",
-                                    "value": 10 + (i * 10),
-                                }
-                            ),
-                        )
+                        self.save_uploading(10 + (i * 10))
                     i += 1
             except Exception as e:
-                log_social_message(
-                    f"----------------------- YOUTUBE ERROR SEND : {post_title} -> {str(e)}  ---------------------------"
-                )
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = str(e)
-                self.social_post.save()
-
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_errors("ERRORED", str(e))
                 raise e
 
             log_social_message(
@@ -330,22 +237,7 @@ class YoutubeService:
             )
 
             if "error" in response:
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = response["error"]["message"]
-                self.social_post.save()
-
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_errors("ERRORED", response["error"]["message"])
             else:
                 video_id = ""
                 try:
@@ -354,82 +246,18 @@ class YoutubeService:
                     try:
                         video_id = response.get("id")
                     except Exception as e:
-                        log_social_message(
-                            f"--------------------YOUTUBE ERROR GET VIDEO ID: {str(e)}---------------------"
-                        )
-                        self.social_post.status = "ERRORED"
-                        self.social_post.error_message = str(e)
-                        self.social_post.save()
-
-                        redis_client.publish(
-                            PROGRESS_CHANNEL,
-                            json.dumps(
-                                {
-                                    "batch_id": self.batch_id,
-                                    "link_id": self.link_id,
-                                    "post_id": self.post_id,
-                                    "status": "ERRORED",
-                                    "value": 100,
-                                }
-                            ),
-                        )
+                        self.save_errors("ERRORED", str(e))
                         return None
 
                 if not video_id:
-                    log_social_message(
-                        f"--------------------YOUTUBE ERROR GET VIDEO ID: {str(e)}---------------------"
-                    )
-                    self.social_post.status = "ERRORED"
-                    self.social_post.error_message = "Can't get video id"
-                    self.social_post.save()
-
-                    redis_client.publish(
-                        PROGRESS_CHANNEL,
-                        json.dumps(
-                            {
-                                "batch_id": self.batch_id,
-                                "link_id": self.link_id,
-                                "post_id": self.post_id,
-                                "status": "ERRORED",
-                                "value": 100,
-                            }
-                        ),
-                    )
+                    self.save_errors("ERRORED", "Can't get video id")
                     return None
 
                 permalink = f"https://www.youtube.com/watch?v={video_id}"
-                self.social_post.status = "PUBLISHED"
-                self.social_post.social_link = permalink
-                self.social_post.save()
 
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "PUBLISHED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_publish("PUBLISHED", permalink)
 
             return response
         except Exception as e:
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = "Can't get youtube service"
-            self.social_post.save()
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
+            self.save_errors("ERRORED", str(e))
             return None

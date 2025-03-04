@@ -77,12 +77,16 @@ class APINewLink(Resource):
         type="object",
         properties={
             "link_id": {"type": "integer"},
+            "name": {"type": "string"},
+            "email": {"type": "string"},
         },
-        required=["link_id"],
+        required=["link_id", "name", "email"],
     )
     def post(self, args):
         current_user = AuthService.get_current_identity()
         link_id = args.get("link_id", 0)
+        name = args.get("name", "")
+        email = args.get("email", "")
         link = LinkService.find_link(link_id)
 
         if not link:
@@ -172,6 +176,8 @@ class APINewLink(Resource):
                 )
 
         if is_active:
+            user_link.name = name
+            user_link.email = email
             user_link.status = 1
             user_link.save()
 
@@ -256,7 +262,27 @@ class APIPostToLinks(Resource):
 
             batch_id = post.batch_id
 
-            total_link = len(active_links)
+            links = LinkService.get_not_json_links()
+            link_pluck_by_id = {link.id: link for link in links}
+
+            total_link = 0
+            for link_id in active_links:
+                link = link_pluck_by_id.get(link_id)
+                if not link:
+                    continue
+
+                if post.type == "blog" and link.social_type != "BLOG":
+                    continue
+
+                if (
+                    post.type == "image" or post.type == "video"
+                ) and link.social_type != "SOCIAL":
+                    continue
+
+                if post.type == "image" and link.type == "YOUTUBE":
+                    continue
+
+                total_link += 1
 
             progress = {
                 "batch_id": batch_id,
@@ -266,9 +292,22 @@ class APIPostToLinks(Resource):
                 "upload": [],
             }
 
-            for link in active_links:
+            for link_id in active_links:
+                link = link_pluck_by_id.get(link_id)
+                if not link:
+                    continue
+                if post.type == "blog" and link.social_type != "BLOG":
+                    continue
+                if (
+                    post.type == "image" or post.type == "video"
+                ) and link.social_type != "SOCIAL":
+                    continue
+
+                if post.type == "image" and link.type == "YOUTUBE":
+                    continue
+
                 social_post = SocialPostService.create_social_post(
-                    link_id=link,
+                    link_id=link_id,
                     user_id=current_user.id,
                     post_id=post.id,
                     status="PROCESSING",
@@ -276,7 +315,7 @@ class APIPostToLinks(Resource):
 
                 progress["upload"].append(
                     {
-                        "link_id": link,
+                        "link_id": link_id,
                         "post_id": post.id,
                         "status": "PROCESSING",
                         "value": 0,
@@ -286,7 +325,7 @@ class APIPostToLinks(Resource):
                 message = {
                     "action": "SEND_POST_TO_LINK",
                     "message": {
-                        "link_id": link,
+                        "link_id": link_id,
                         "post_id": post.id,
                         "user_id": current_user.id,
                         "social_post_id": social_post.id,
