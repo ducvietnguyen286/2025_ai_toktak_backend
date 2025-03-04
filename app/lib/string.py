@@ -1,6 +1,7 @@
 import json
 import math
 import kss
+import re
 
 
 def is_json(data):
@@ -24,5 +25,7 @@ def split_text_by_sentences(text, num_captions):
         start_index = int(round(i * group_size))
         end_index = int(round((i + 1) * group_size))
         caption = " ".join(sentences[start_index:end_index])
-        captions.append(caption)
+        # Thêm "\n" sau dấu chấm nếu không phải là dấu chấm cuối cùng (cho phép có khoảng trắng sau dấu chấm)
+        modified_text = re.sub(r'\.(?!\s*$)', '.\n', caption)
+        captions.append(modified_text)
     return captions
