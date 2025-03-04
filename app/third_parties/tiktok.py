@@ -83,6 +83,7 @@ class TiktokService(BaseService):
         self.progress = 10
         self.batch_id = None
         self.link_id = None
+        self.social_post_id = None
         self.service = "TIKTOK"
 
     def send_post(self, post, link, user_id, social_post_id):
@@ -96,6 +97,7 @@ class TiktokService(BaseService):
         self.link_id = link.id
         self.post_id = post.id
         self.batch_id = post.batch_id
+        self.social_post_id = self.social_post.id
 
         try:
 
@@ -341,7 +343,7 @@ class TiktokService(BaseService):
 
         RequestSocialLogService.create_request_social_log(
             social="TIKTOK",
-            social_post_id=self.social_post.id,
+            social_post_id=self.social_post_id,
             user_id=self.user_id,
             type="upload_video",
             request=json.dumps(payload),
@@ -444,7 +446,7 @@ class TiktokService(BaseService):
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
-                social_post_id=self.social_post.id,
+                social_post_id=self.social_post_id,
                 user_id=self.user_id,
                 type="upload_video_chunk",
                 request=json.dumps(headers),
