@@ -18,6 +18,7 @@ def process_redis_message(message, app):
     try:
         data = json.loads(message)
         logger.info("Received message from Redis: %s", data)
+        print("Received message from Redis: %s", data)
 
         batch_id = data.get("batch_id")
         value = data.get("value")
@@ -71,16 +72,24 @@ def process_redis_message(message, app):
         if is_done:
             total_percent = 100
             progress["status"] = "PUBLISHED"
-            redis_client.delete(f"toktak:progress:{batch_id}")
         else:
             progress["status"] = "UPLOADING"
-            redis_client.set(f"toktak:progress:{batch_id}", json.dumps(progress))
+            redis_client.set(
+                f"toktak:progress:{batch_id}", json.dumps(progress), ex=3600
+            )
 
         logger.info(
             "Emitting progress %s to room %s: %s",
             SOCKETIO_PROGRESS_EVENT,
             batch_id,
             progress,
+        )
+
+        print(
+            "Emitting progress %s to room %s: %s",
+            SOCKETIO_PROGRESS_EVENT,
+            batch_id,
+            post_id,
         )
 
         socketio.emit(SOCKETIO_PROGRESS_EVENT, json.dumps(progress), room=batch_id)
@@ -101,7 +110,6 @@ def start_redis_subscriber(app):
         pubsub.subscribe(PROGRESS_CHANNEL)
         logger.info("Started Redis subscriber on channel '%s'", PROGRESS_CHANNEL)
         for item in pubsub.listen():
-            print("item", item)
             if item.get("type") != "message":
                 continue
             message_str = item.get("data").decode("utf-8")
