@@ -355,46 +355,10 @@ class VideoService:
         first_caption_videos_default = VideoService.filter_content_by_type(
             caption_videos_default, 1
         )
+        
+        clip_detail = create_header_text(first_caption_videos_default , current_start , 2 )
+        clips.append(clip_detail)
 
-        html_image = create_html_caption(first_caption_videos_default)
-
-        clips.append(
-            {
-                "asset": {
-                    "type": "html",
-                    "html": html_image["html"],
-                    "css": html_image["css"],
-                },
-                "start": current_start + 0.01,
-                "length": 2,
-                "position": "top",
-                "offset": {"x": 0, "y": 0.4},
-            }
-        )
-
-        # clips.append(
-        #     {
-        #         "asset": {
-        #             "type": "text",
-        #             "text": first_caption_videos_default,
-        #             "font": {
-        #                 "family": "Pretendard Regular",
-        #                 "color": "#ffffff",
-        #                 "size": 30,
-        #             },
-        #             "background": {
-        #                 "color": "#000000",
-        #                 "padding": 5,
-        #                 "borderRadius": 30,
-        #                 "opacity": 0.6,
-        #             },
-        #             "height": 100,
-        #         },
-        #         "start": current_start + 0.01,
-        #         "length": 5,
-        #         "position": "top",
-        #     }
-        # )
 
         current_start += intro_length
         file_path_srts = generate_srt(batch_id, captions)
@@ -483,58 +447,21 @@ class VideoService:
                 first_caption_image_default = VideoService.filter_content_by_type(
                     caption_videos_default, 2
                 )
-                html_image = create_html_caption(first_caption_image_default)
-                # When 1st image start, display for 2 sec
-                clips.append(
-                    {
-                        "asset": {
-                            "type": "html",
-                            "html": html_image["html"],
-                            "css": html_image["css"],
-                        },
-                        "start": start_slider_time,
-                        "length": 2,
-                        "position": "top",
-                        "offset": {"x": 0, "y": 0.4},
-                    }
-                )
+                clip_detail = create_header_text(first_caption_image_default , start_slider_time , 2 )
+                clips.append(clip_detail)
             elif j_index == 2:
                 # When 3rd image start, display for 2 sec
                 first_caption_image_default = VideoService.filter_content_by_type(
                     caption_videos_default, 3
                 )
-
-                html_image = create_html_caption(first_caption_image_default)
-                clips.append(
-                    {
-                        "asset": {
-                            "type": "html",
-                            "html": html_image["html"],
-                            "css": html_image["css"],
-                        },
-                        "start": start_slider_time + 0.01,
-                        "length": 2,
-                        "position": "top",
-                        "offset": {"x": 0, "y": 0.4},
-                    }
-                )
+                clip_detail = create_header_text(first_caption_image_default , start_slider_time , 2 )
+                clips.append(clip_detail)
+ 
             elif j_index == 4:
                 # When 5th image start, display for 2 sec & When start last hooking video, display for 2 sec in the middle of screen until end of video
-
-                html_image = create_html_caption(last_caption_videos_default)
-                clips.append(
-                    {
-                        "asset": {
-                            "type": "html",
-                            "html": html_image["html"],
-                            "css": html_image["css"],
-                        },
-                        "start": start_slider_time,
-                        "length": 2,
-                        "position": "top",
-                        "offset": {"x": 0, "y": 0.4},
-                    }
-                )
+                clip_detail = create_header_text(last_caption_videos_default , start_slider_time , 2 )
+                clips.append(clip_detail)
+                
 
             url_path_srt = file_path_srts[j_index]
 
@@ -602,37 +529,9 @@ class VideoService:
             }
         )
 
-        html_image = create_html_caption(last_caption_videos_default)
-        clips.append(
-            {
-                "asset": {
-                    "type": "html",
-                    "html": html_image["html"],
-                    "css": html_image["css"],
-                },
-                "start": current_start,
-                "length": last_duration,
-                "position": "top",
-                "offset": {"x": 0, "y": 0.4},
-            }
-        )
-
-        # html_content = "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Buy It Now.</div>"
-        # clips.append(
-        #     {
-        #         "asset": {
-        #             "type": "html",
-        #             "html": html_content,
-        #             "css": "div { font-weight: bold; font-family: 'Pretendard Regular', sans-serif; border-radius: 40px; }",
-        #             "width": 500,
-        #             "height": 200,
-        #             "background": "#FFD600",
-        #             "position": "center",
-        #         },
-        #         "start": current_start + 0.01,
-        #         "length": "end",
-        #     },
-        # )
+        clip_detail = create_header_text(last_caption_videos_default , current_start , last_duration )
+        clips.append(clip_detail)
+                
         clips_shape = [
             # {
             #     "asset": {
@@ -945,3 +844,32 @@ def change_speed_ffmpeg(input_file, output_file, speed=1.5):
             os.remove(input_file)
         except OSError as e:
             log_make_video_message(f"Lỗi khi xóa file {input_file}: {e}")
+
+
+def create_header_text(caption_text, start=0, length=0, add_time=0):
+    clip_detail = {
+        "asset": {
+            "type": "text",
+            "text": caption_text,
+            "font": {
+                "family": "Pretendard SemiBold",
+                "color": "#ffffff",
+                "opacity": 0.8,
+                "size": 28,
+                "lineHeight": 0.85,
+            },
+            "background": {
+                "color": "#000000",
+                "borderRadius": 20,
+                "padding": 0,
+                "opacity": 0.6,
+            },
+            "height": 80,
+            "width": 600,
+        },
+        "start": start + add_time,
+        "length": length,
+        "position": "top",
+        "offset": {"x": 0, "y": -0.01},
+    }
+    return clip_detail
