@@ -75,6 +75,7 @@ class YoutubeService(BaseService):
         self.link_id = None
         self.post_id = None
         self.batch_id = None
+        self.social_post_id = None
         self.service = "YOUTUBE"
 
     def send_post(self, post, link, user_id, social_post_id):
@@ -87,6 +88,7 @@ class YoutubeService(BaseService):
         self.link_id = link.id
         self.post_id = post.id
         self.batch_id = post.batch_id
+        self.social_post_id = self.social_post.id
 
         try:
             if post.type == "video":
@@ -117,7 +119,7 @@ class YoutubeService(BaseService):
 
             RequestSocialLogService.create_request_social_log(
                 social="YOUTUBE",
-                social_post_id=self.social_post.id,
+                social_post_id=self.social_post_id,
                 user_id=user_link.user_id,
                 type="get_youtube_service_from_token",
                 request=json.dumps(
@@ -231,7 +233,7 @@ class YoutubeService(BaseService):
 
             RequestSocialLogService.create_request_social_log(
                 social="YOUTUBE",
-                social_post_id=self.social_post.id,
+                social_post_id=self.social_post_id,
                 user_id=self.user_id,
                 type="upload_video",
                 request=json.dumps(body),

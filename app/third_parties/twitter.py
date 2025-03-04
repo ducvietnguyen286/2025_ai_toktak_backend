@@ -145,6 +145,7 @@ class TwitterService(BaseService):
         self.link_id = None
         self.post_id = None
         self.batch_id = None
+        self.social_post_id = None
         self.service = "X (TWITTER)"
 
     def send_post(self, post, link, user_id, social_post_id):
@@ -156,6 +157,7 @@ class TwitterService(BaseService):
         self.link_id = link.id
         self.post_id = post.id
         self.batch_id = post.batch_id
+        self.social_post_id = self.social_post.id
 
         try:
             if post.type == "image":
@@ -297,7 +299,7 @@ class TwitterService(BaseService):
 
         RequestSocialLogService.create_request_social_log(
             social="X",
-            social_post_id=self.social_post.id,
+            social_post_id=self.social_post_id,
             user_id=self.user.id,
             type="upload_media_init",
             request=json.dumps(request_data),
@@ -385,7 +387,7 @@ class TwitterService(BaseService):
 
             RequestSocialLogService.create_request_social_log(
                 social="X",
-                social_post_id=self.social_post.id,
+                social_post_id=self.social_post_id,
                 user_id=self.user.id,
                 type="upload_media_append",
                 request=json.dumps(data),
@@ -451,7 +453,7 @@ class TwitterService(BaseService):
 
         RequestSocialLogService.create_request_social_log(
             social="X",
-            social_post_id=self.social_post.id,
+            social_post_id=self.social_post_id,
             user_id=self.user.id,
             type="upload_media_finalize",
             request=json.dumps(request_data),
