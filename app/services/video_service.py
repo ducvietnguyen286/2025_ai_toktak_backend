@@ -480,7 +480,7 @@ class VideoService:
                             "lineHeight": 1,
                             "family": "Jalnan 2 Regular",
                             "color": "#ffffff",
-                            "size": 50,
+                            "size": 24,
                             "stroke": "#000000",
                             "strokeWidth": 1.5
                         },
