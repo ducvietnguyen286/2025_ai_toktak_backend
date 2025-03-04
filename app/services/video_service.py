@@ -480,7 +480,7 @@ class VideoService:
                             "lineHeight": 1,
                             "family": "Jalnan 2 Regular",
                             "color": "#ffffff",
-                            "size": 24,
+                            "size": 28,
                             "stroke": "#000000",
                             "strokeWidth": 1.5
                         },
@@ -857,7 +857,7 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
                 "family": "Pretendard SemiBold",
                 "color": "#ffffff",
                 "opacity": 0.8,
-                "size": 28,
+                "size": 30,
                 "lineHeight": 0.85,
             },
             "background": {

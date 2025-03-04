@@ -54,31 +54,19 @@ def log_social_message(message):
 def log_make_video_message(message):
     custom_handler = None  # Khởi tạo biến custom_handler
     try:
-        # Tạo thư mục logs nếu chưa có
-
-        # Tạo tên file log dựa trên ngày tháng
-        filename = now_date.strftime("%Y-%m-%d")
-
-        # Tạo file handler xoay vòng với 14 file backup
         custom_handler = handlers.RotatingFileHandler(
-            f"logs/shotstack_make_video-{filename}.log",
-            maxBytes=5 * 1024 * 1024,
-            backupCount=14,
-            encoding="utf-8",
+            "logs/make_video-{0}.log".format(filename), backupCount=14, encoding="utf-8"
         )
         custom_handler.setLevel(logging.INFO)
         custom_handler.setFormatter(formatter)
 
-        # Tạo logger
-        custom_logger = logging.getLogger("ShotStackLogger")
+        custom_logger = logging.getLogger("SocialLogger")
         custom_logger.setLevel(logging.INFO)
+        custom_logger.addHandler(custom_handler)
 
-        # Tránh thêm handler trùng lặp
-        if not custom_logger.hasHandlers():
-            custom_logger.addHandler(custom_handler)
-
-        # Ghi log
         custom_logger.info(message)
+        custom_logger.removeHandler(custom_handler)
+
     except Exception as e:
         # Xử lý ngoại lệ nếu có lỗi xảy ra
         print(f"Đã xảy ra lỗi khi ghi log: {e}")
