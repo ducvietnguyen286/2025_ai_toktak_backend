@@ -9,8 +9,9 @@ from app.ais.chatgpt import (
     call_chatgpt_create_social,
 )
 from app.decorators import parameters
-from app.lib.logger import logger, log_make_video_message
+from app.lib.logger import logger
 from app.lib.response import Response
+from app.lib.string import split_text_by_sentences
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
 from app.scraper import Scraper
@@ -45,8 +46,6 @@ class APICreateBatch(Resource):
             max_count_image = int(max_count_image)
 
             data = Scraper().scraper({"url": url})
-
-            logger.info("data: {0}".format(data))
 
             if not data:
                 return Response(
@@ -225,6 +224,7 @@ class APIMakePost(Resource):
 
             response = None
             render_id = ""
+            hooking = []
             maker_images = []
             captions = []
             thumbnail = batch.thumbnail
@@ -235,7 +235,11 @@ class APIMakePost(Resource):
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
 
-                    captions = parse_response.get("captions", [])
+                    caption = parse_response.get("caption", [])
+                    hooking = parse_response.get("hooking", [])
+
+                    captions = split_text_by_sentences(caption, len(process_images))
+
                     for image_url in process_images:
                         maker_image = ImageMaker.save_image_for_short_video(image_url)
                         maker_images.append(maker_image)
@@ -280,12 +284,12 @@ class APIMakePost(Resource):
                 if response:
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
-                    captions = parse_response.get("captions", [])
+                    captions = parse_response.get("caption", "")
 
                     for index, image_url in enumerate(process_images):
-                        caption = captions[index] or ""
+                        image_caption = captions[index] or ""
                         image_url = ImageMaker.save_image_and_write_text(
-                            image_url, caption, font_size=80
+                            image_url, image_caption, font_size=80
                         )
                         maker_images.append(image_url)
 
@@ -305,6 +309,7 @@ class APIMakePost(Resource):
             content = ""
             video_url = ""
             hashtag = ""
+            description = ""
 
             if response:
                 parse_caption = json.loads(response)
@@ -312,6 +317,8 @@ class APIMakePost(Resource):
 
                 if parse_response and "post" in parse_response:
                     content = parse_response.get("post", "")
+                if parse_response and "description" in parse_response:
+                    description = parse_response.get("description", "")
                 if parse_response and "title" in parse_response:
                     title = parse_response.get("title", "")
                 if parse_response and "summarize" in parse_response:
@@ -321,7 +328,18 @@ class APIMakePost(Resource):
                 if parse_response and "content" in parse_response:
                     content = parse_response.get("content", "")
 
-                    for index, image_url in enumerate(images):
+                    blog_images = images
+                    if blog_images and len(blog_images) < need_count:
+                        current_length = len(blog_images)
+                        need_length = need_count - current_length
+                        blog_images = blog_images + process_images[:need_length]
+                    elif blog_images and len(blog_images) >= need_count:
+                        blog_images = blog_images[:need_count]
+                    else:
+                        blog_images = process_images
+                        blog_images = blog_images[:need_count]
+
+                    for index, image_url in enumerate(blog_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
 
             else:
@@ -337,6 +355,8 @@ class APIMakePost(Resource):
                 captions=json.dumps(captions),
                 title=title,
                 subtitle=subtitle,
+                hooking=json.dumps(hooking),
+                description=description,
                 content=content,
                 video_url=video_url,
                 hashtag=hashtag,
