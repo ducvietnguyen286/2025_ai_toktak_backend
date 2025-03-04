@@ -9,6 +9,7 @@ from app.services.social_post import SocialPostService
 from app.services.user import UserService
 from app.lib.logger import log_social_message
 from app.extensions import redis_client
+from app.third_parties.base_service import BaseService
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
@@ -67,7 +68,7 @@ class TiktokTokenService:
             return None
 
 
-class TiktokService:
+class TiktokService(BaseService):
 
     def __init__(self):
         self.user_link = None
@@ -80,6 +81,8 @@ class TiktokService:
         self.user_id = None
         self.progress = 10
         self.batch_id = None
+        self.link_id = None
+        self.service = "TIKTOK"
 
     def send_post(self, post, link, user_id, social_post_id):
         self.user_id = user_id
@@ -100,23 +103,7 @@ class TiktokService:
             if post.type == "image":
                 self.upload_image(post.images)
         except Exception as e:
-            log_social_message(f"Error send post to Tiktok {str(e)}")
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
+            self.save_errors("ERRORED", str(e))
             return False
 
     def upload_image(self, medias, retry=0):
@@ -163,40 +150,12 @@ class TiktokService:
                 )
 
             except Exception as e:
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = str(e)
-                self.social_post.save()
-
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_errors("ERRORED", str(e))
                 raise Exception("Error upload image to Tiktok")
+
             parsed_response = upload_response.json()
 
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "UPLOADING",
-                        "value": self.progress,
-                    }
-                ),
-            )
-
-            self.social_post.status = "UPLOADING"
-            self.social_post.save()
+            self.save_uploading(self.progress)
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
@@ -212,25 +171,10 @@ class TiktokService:
             error_code = error.get("code")
             if error_code == "access_token_invalid":
                 if retry > 0:
-                    self.social_post.status = "ERRORED"
-                    self.social_post.error_message = "Access token invalid"
-                    self.social_post.save()
+                    self.save_errors("ERRORED", "Access token invalid")
 
                     self.user_link.status = 0
                     self.user_link.save()
-
-                    redis_client.publish(
-                        PROGRESS_CHANNEL,
-                        json.dumps(
-                            {
-                                "batch_id": self.batch_id,
-                                "link_id": self.link_id,
-                                "post_id": self.post_id,
-                                "status": "ERRORED",
-                                "value": 10,
-                            }
-                        ),
-                    )
 
                     raise Exception("Retry limit exceeded")
                 TiktokTokenService.refresh_token(link=self.link, user=self.user)
@@ -244,64 +188,17 @@ class TiktokService:
             status = self.check_status(publish_id)
             if status.get("status"):
                 log_social_message("Upload image success")
-                self.social_post.status = "PUBLISHED"
-                self.social_post.social_link = "profile"
-                self.social_post.save()
 
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "PUBLISHED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_publish("PUBLISHED", "profile")
                 return True
             else:
-                log_social_message(f"Upload image failed: {status.get('message')}")
                 error_message = status.get("message")
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = error_message
-                self.social_post.save()
+                self.save_errors("ERRORED", error_message)
 
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
                 return False
 
         except Exception as e:
-            log_social_message(f"Error upload image to Tiktok: {str(e)}")
-
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = error_message
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
-
+            self.save_errors("ERRORED", error_message)
             return False
 
     def upload_video(self, media):
@@ -319,60 +216,14 @@ class TiktokService:
             status = self.check_status(publish_id)
             if status.get("status"):
                 log_social_message("Upload video success")
-                self.social_post.status = "PUBLISHED"
-                self.social_post.social_link = "profile"
-                self.social_post.save()
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "PUBLISHED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_publish("PUBLISHED", "profile")
                 return True
             else:
-                log_social_message(f"Upload video failed: {status.get('message')}")
                 error_message = status.get("message")
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = error_message
-                self.social_post.save()
-
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_errors("ERRORED", error_message)
                 return False
         except Exception as e:
-            log_social_message(f"Error upload video to Tiktok: {str(e)}")
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
+            self.save_errors("ERRORED", str(e))
             return False
 
     def check_status(self, publish_id, count=1, retry=0):
@@ -388,23 +239,7 @@ class TiktokService:
                 URL_VIDEO_STATUS, headers=headers, data=json.dumps(payload)
             )
         except Exception as e:
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
-            log_social_message(f"Error check status Tiktok: {str(e)}")
+            self.save_errors("ERRORED", str(e))
             raise Exception("Error check status Tiktok")
         res_json = response.json()
 
@@ -414,26 +249,10 @@ class TiktokService:
         error_code = error.get("code")
         if error_code == "access_token_invalid":
             if retry > 0:
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = "Access token invalid"
-                self.social_post.save()
-
                 self.user_link.status = 0
                 self.user_link.save()
 
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
-
+                self.save_errors("ERRORED", "Access token invalid")
                 raise Exception("Retry limit exceeded")
 
             TiktokTokenService.refresh_token(link=self.link, user=self.user)
@@ -443,18 +262,7 @@ class TiktokService:
             self.meta = json.loads(self.user_link.meta)
 
             if count <= 6:
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "UPLOADING",
-                            "value": self.progress + (count * 10),
-                        }
-                    ),
-                )
+                self.save_uploading(self.progress + (count * 10))
 
             time.sleep(3)
             return self.check_status(publish_id, count=count, retry=retry + 1)
@@ -518,43 +326,12 @@ class TiktokService:
                 URL_VIDEO_UPLOAD, headers=headers, data=json.dumps(payload)
             )
         except Exception as e:
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
-
-            log_social_message(f"Error upload video to Tiktok: {str(e)}")
+            self.save_errors("ERRORED", str(e))
             raise Exception("Error upload video to Tiktok")
 
         parsed_response = upload_response.json()
 
-        self.social_post.status = "UPLOADING"
-        self.social_post.save()
-
-        redis_client.publish(
-            PROGRESS_CHANNEL,
-            json.dumps(
-                {
-                    "batch_id": self.batch_id,
-                    "link_id": self.link_id,
-                    "post_id": self.post_id,
-                    "status": "UPLOADING",
-                    "value": self.progress,
-                }
-            ),
-        )
+        self.save_uploading(self.progress)
 
         RequestSocialLogService.create_request_social_log(
             social="TIKTOK",
@@ -570,25 +347,10 @@ class TiktokService:
         error_code = error.get("code")
         if error_code == "access_token_invalid":
             if retry > 0:
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = "Access token invalid"
-                self.social_post.save()
-
                 self.user_link.status = 0
                 self.user_link.save()
+                self.save_errors("ERRORED", "Access token invalid")
 
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
                 raise Exception("Retry limit exceeded")
 
             TiktokTokenService.refresh_token(link=self.link, user=self.user)
@@ -634,19 +396,10 @@ class TiktokService:
                 media_type,
             )
 
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "UPLOADING",
-                        "value": self.progress
-                        + (progress_per_chunk * (i + 1))
-                        + (i == total_chunk - 1 and left_over or 0),
-                    }
-                ),
+            self.save_uploading(
+                self.progress
+                + (progress_per_chunk * i)
+                + (is_last_chunk and left_over or 0)
             )
 
         return parsed_response
@@ -672,25 +425,9 @@ class TiktokService:
             try:
                 response = requests.put(upload_url, headers=headers, data=chunk_data)
             except Exception as e:
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = str(e)
-                self.social_post.save()
-
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
-
-                log_social_message(f"Error upload video to Tiktok: {str(e)}")
+                self.save_errors("ERRORED", str(e))
                 raise Exception("Error upload video to Tiktok")
+
             response_put = response.json()
 
             RequestSocialLogService.create_request_social_log(
@@ -718,4 +455,5 @@ class TiktokService:
 
             return response_put
         except Exception as e:
+            self.save_errors("ERRORED", str(e))
             log_social_message(f"Error upload video to Tiktok: {str(e)}")

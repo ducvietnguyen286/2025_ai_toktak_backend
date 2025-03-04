@@ -11,6 +11,7 @@ from app.services.social_post import SocialPostService
 from app.services.user import UserService
 
 from app.extensions import redis_client
+from app.third_parties.base_service import BaseService
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
@@ -132,7 +133,7 @@ class TwitterTokenService:
             return False
 
 
-class TwitterService:
+class TwitterService(BaseService):
     def __init__(self):
         self.user_link = None
         self.user = None
@@ -143,6 +144,7 @@ class TwitterService:
         self.link_id = None
         self.post_id = None
         self.batch_id = None
+        self.service = "X (TWITTER)"
 
     def send_post(self, post, link, user_id, social_post_id):
         self.user = UserService.find_user(user_id)
@@ -160,23 +162,7 @@ class TwitterService:
             if post.type == "video":
                 self.send_post_video(post, link)
         except Exception as e:
-            log_social_message(f"Error send post to X: {str(e)}")
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = f"Error send post to X: {str(e)}"
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
+            self.save_errors("ERRORED", str(e))
             return False
 
     def send_post_social(self, post, link):
@@ -221,49 +207,18 @@ class TwitterService:
                     X_POST_TO_X_URL, headers=headers, data=json.dumps(data)
                 )
             except Exception as e:
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = str(e)
-                self.social_post.save()
-
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
-
-                log_social_message(f"Error upload video to X: {str(e)}")
+                self.save_errors("ERRORED", str(e))
                 raise ValueError("Access token invalid")
             parsed_response = response.json()
             log_social_message(parsed_response)
             status = parsed_response.get("status")
             if status == 401:
                 if retry > 0:
-                    self.social_post.status = "ERRORED"
-                    self.social_post.error_message = "Access token invalid"
-                    self.social_post.save()
-
                     self.user_link.status = 0
                     self.user_link.save()
 
-                    redis_client.publish(
-                        PROGRESS_CHANNEL,
-                        json.dumps(
-                            {
-                                "batch_id": self.batch_id,
-                                "link_id": self.link_id,
-                                "post_id": self.post_id,
-                                "status": "ERRORED",
-                                "value": 100,
-                            }
-                        ),
-                    )
+                    self.save_errors("ERRORED", "Access token invalid")
+
                     raise ValueError("Access token invalid")
 
                 TwitterTokenService().refresh_token(link=self.link, user=self.user)
@@ -276,63 +231,17 @@ class TwitterService:
                 )
             errors = parsed_response.get("errors")
             if errors:
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = json.dumps(errors)
-                self.social_post.save()
-
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_errors("ERRORED", json.dumps(errors))
+                return False
             else:
                 data = parsed_response.get("data")
                 log_social_message(data)
                 permalink = data.get("id")
-                self.social_post.status = "PUBLISHED"
-                self.social_post.social_link = permalink
-                self.social_post.save()
-
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "PUBLISHED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_publish("PUBLISHED", permalink)
+                return True
         except Exception as e:
             traceback.print_exc()
-            log_social_message(f"Error send post to X: {str(e)}")
-
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = f"Error send post to X: {str(e)}"
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
-
+            self.save_errors("ERRORED", str(e))
             return False
 
     def upload_media(self, media, is_video=False):
@@ -382,24 +291,7 @@ class TwitterService:
                 url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
             )
         except Exception as e:
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
-
-            log_social_message(f"Error upload video to X: {str(e)}")
+            self.save_errors("ERRORED", str(e))
             raise ValueError("Access token invalid")
 
         RequestSocialLogService.create_request_social_log(
@@ -410,44 +302,15 @@ class TwitterService:
             response=json.dumps(req.json()),
         )
 
-        self.social_post.status = "UPLOADING"
-        self.social_post.save()
-
-        redis_client.publish(
-            PROGRESS_CHANNEL,
-            json.dumps(
-                {
-                    "batch_id": self.batch_id,
-                    "link_id": self.link_id,
-                    "post_id": self.post_id,
-                    "status": "UPLOADING",
-                    "value": 10,
-                }
-            ),
-        )
+        self.save_uploading(10)
 
         status_code = req.status_code
         if status_code == 401:
             if retry > 0:
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = "Access token invalid"
-                self.social_post.save()
-
                 self.user_link.status = 0
                 self.user_link.save()
 
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_errors("ERRORED", "Access token invalid")
                 raise ValueError("Access token invalid")
 
             TwitterTokenService().refresh_token(link=self.link, user=self.user)
@@ -470,24 +333,7 @@ class TwitterService:
 
         res_json = req.json()
         if not res_json["data"]:
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = "Error Get Media ID"
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
-
-            log_social_message(f"Error upload video to X: {str(e)}")
+            self.save_errors("ERRORED", "Error Get Media ID")
             raise ValueError("Access token invalid")
         media_id = res_json["data"]["id"]
 
@@ -525,35 +371,8 @@ class TwitterService:
                     url=MEDIA_ENDPOINT_URL, data=data, files=files, headers=headers
                 )
             except Exception as e:
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = str(e)
-                self.social_post.save()
-
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
-
-                log_social_message(
-                    f"Error upload video to X total_chunks : {total_chunks}"
-                )
-                log_social_message(
-                    f"Error upload video to X progress_by_chunk: {progress_by_chunk}"
-                )
-                log_social_message(f"Error upload video to X: {str(e)}")
+                self.save_errors("ERRORED", str(e))
                 raise ValueError("Access token invalid")
-
-            # Log the response content for debugging
-            log_social_message(f"Response status code: {req.status_code}")
-            log_social_message(f"Response content: {req.content}")
 
             try:
                 response_json = req.json()
@@ -570,41 +389,15 @@ class TwitterService:
                 response=json.dumps(response_json) if response_json else req.text,
             )
 
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "UPLOADING",
-                        "value": 10 + (progress_by_chunk * (segment_id + 1)),
-                    }
-                ),
-            )
+            self.save_uploading(10 + (progress_by_chunk * (segment_id + 1)))
 
             status_code = req.status_code
             if status_code == 401:
                 if retry > 0:
-                    self.social_post.status = "ERRORED"
-                    self.social_post.error_message = "Access token invalid"
-                    self.social_post.save()
-
                     self.user_link.status = 0
                     self.user_link.save()
 
-                    redis_client.publish(
-                        PROGRESS_CHANNEL,
-                        json.dumps(
-                            {
-                                "batch_id": self.batch_id,
-                                "link_id": self.link_id,
-                                "post_id": self.post_id,
-                                "status": "ERRORED",
-                                "value": 100,
-                            }
-                        ),
-                    )
+                    self.save_errors("ERRORED", str(e))
                     raise ValueError("Access token invalid")
 
                 TwitterTokenService().refresh_token(link=self.link, user=self.user)
@@ -650,24 +443,7 @@ class TwitterService:
                 url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
             )
         except Exception as e:
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
-
-            log_social_message(f"Error upload video to X: {str(e)}")
+            self.save_errors("ERRORED", str(e))
             raise ValueError("Access token invalid")
 
         RequestSocialLogService.create_request_social_log(
@@ -681,25 +457,10 @@ class TwitterService:
         status_code = req.status_code
         if status_code == 401:
             if retry > 0:
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = "Access token invalid"
-                self.social_post.save()
-
                 self.user_link.status = 0
                 self.user_link.save()
 
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_errors("ERRORED", "Access token invalid")
 
                 raise ValueError("Access token invalid")
             TwitterTokenService().refresh_token(link=self.link, user=self.user)
@@ -715,35 +476,11 @@ class TwitterService:
                 self.processing_info = response_json["data"].get(
                     "processing_info", None
                 )
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "UPLOADING",
-                            "value": 40,
-                        }
-                    ),
-                )
+                self.save_uploading(40)
                 self.check_status(media_id=media_id)
             except requests.exceptions.JSONDecodeError as e:
-                log_social_message(f"FINALIZE Res: {req}")
-                log_social_message(f"FINALIZE Res: {req.text}")
-                log_social_message("JSONDecodeError:", e)
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
+
+                self.save_errors("ERRORED", str(e))
                 return None
 
     def check_status(self, media_id, count=1, retry=0):
@@ -782,48 +519,16 @@ class TwitterService:
                 url=MEDIA_ENDPOINT_URL, params=request_params, headers=headers
             )
         except Exception as e:
-            self.social_post.status = "ERRORED"
-            self.social_post.error_message = str(e)
-            self.social_post.save()
-
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "ERRORED",
-                        "value": 100,
-                    }
-                ),
-            )
-
-            log_social_message(f"Error upload video to X: {str(e)}")
+            self.save_errors("ERRORED", str(e))
             raise ValueError("Access token invalid")
 
         status_code = req.status_code
         if status_code == 401:
             if retry > 0:
-                self.social_post.status = "ERRORED"
-                self.social_post.error_message = "Access token invalid"
-                self.social_post.save()
-
                 self.user_link.status = 0
                 self.user_link.save()
 
-                redis_client.publish(
-                    PROGRESS_CHANNEL,
-                    json.dumps(
-                        {
-                            "batch_id": self.batch_id,
-                            "link_id": self.link_id,
-                            "post_id": self.post_id,
-                            "status": "ERRORED",
-                            "value": 100,
-                        }
-                    ),
-                )
+                self.save_errors("ERRORED", "Access token invalid")
                 raise ValueError("Access token invalid")
             TwitterTokenService().refresh_token(link=self.link, user=self.user)
             self.user_link = UserService.find_user_link(
@@ -834,18 +539,7 @@ class TwitterService:
 
         if count <= 5:
             progress = 40 + (count * 10)
-            redis_client.publish(
-                PROGRESS_CHANNEL,
-                json.dumps(
-                    {
-                        "batch_id": self.batch_id,
-                        "link_id": self.link_id,
-                        "post_id": self.post_id,
-                        "status": "UPLOADING",
-                        "value": progress,
-                    }
-                ),
-            )
+            self.save_uploading(progress)
 
         self.processing_info = req.json()["data"].get("processing_info", None)
         self.check_status(media_id=media_id, count=count + 1, retry=retry)

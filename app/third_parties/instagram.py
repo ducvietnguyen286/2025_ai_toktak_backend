@@ -1,6 +1,15 @@
 class InstagramService:
-    def __init__(self, access_token):
-        self.access_token = access_token
+    def __init__(self):
+        self.user_link = None
+        self.user = None
+        self.link = None
+        self.meta = None
+        self.social_post = None
+        self.user_id = None
+        self.link_id = None
+        self.post_id = None
+        self.batch_id = None
+        self.service = "INSTAGRAM"
 
-    def send_post(self, post):
+    def send_post(self, post, link, user_id, social_post_id):
         pass

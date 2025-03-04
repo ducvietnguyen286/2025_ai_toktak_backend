@@ -18,6 +18,7 @@ def process_redis_message(message, app):
     try:
         data = json.loads(message)
         logger.info("Received message from Redis: %s", data)
+
         batch_id = data.get("batch_id")
         value = data.get("value")
         link_id = data.get("link_id")
