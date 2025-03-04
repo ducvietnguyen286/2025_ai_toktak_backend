@@ -36,6 +36,7 @@ class FacebookTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="FACEBOOK",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="fetch_page_token",
                 request=json.dumps({"access_token": access_token}),
@@ -73,6 +74,7 @@ class FacebookTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="FACEBOOK",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="fetch_page_token",
                 request=json.dumps({"access_token": access_token}),
@@ -129,6 +131,7 @@ class FacebookTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="FACEBOOK",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="refresh_token",
                 request=json.dumps(params),
@@ -288,6 +291,7 @@ class FacebookService(BaseService):
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
             social="FACEBOOK",
+            social_post_id=self.social_post.id,
             user_id=self.user.id,
             type="start_session_upload_reel",
             request=json.dumps(post_data),
@@ -313,6 +317,7 @@ class FacebookService(BaseService):
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
             social="FACEBOOK",
+            social_post_id=self.social_post.id,
             user_id=self.user.id,
             type="upload_video",
             request=json.dumps(headers),
@@ -388,6 +393,7 @@ class FacebookService(BaseService):
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
             social="FACEBOOK",
+            social_post_id=self.social_post.id,
             user_id=self.user.id,
             type="publish_the_reel",
             request=json.dumps(post_data),
@@ -409,6 +415,7 @@ class FacebookService(BaseService):
         result = get_response.json()
         RequestSocialLogService.create_request_social_log(
             social="FACEBOOK",
+            social_post_id=self.social_post.id,
             user_id=self.user.id,
             type="get_reel_uploaded",
             request=json.dumps({"page_id": page_id}),
@@ -453,6 +460,7 @@ class FacebookService(BaseService):
 
         RequestSocialLogService.create_request_social_log(
             social="FACEBOOK",
+            social_post_id=self.social_post.id,
             user_id=self.user.id,
             type="send_post_image",
             request=json.dumps(post_data),
@@ -500,6 +508,7 @@ class FacebookService(BaseService):
 
             RequestSocialLogService.create_request_social_log(
                 social="FACEBOOK",
+                social_post_id=self.social_post.id,
                 user_id=self.user.id,
                 type="unpublish_images",
                 request=json.dumps(data),

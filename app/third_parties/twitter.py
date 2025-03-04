@@ -10,7 +10,6 @@ from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
 
-from app.extensions import redis_client
 from app.third_parties.base_service import BaseService
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
@@ -53,6 +52,7 @@ class TwitterTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="X",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="authorization_code",
                 request=json.dumps(r_data),
@@ -107,6 +107,7 @@ class TwitterTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="X",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="refresh_token",
                 request=json.dumps(r_data),
@@ -296,6 +297,7 @@ class TwitterService(BaseService):
 
         RequestSocialLogService.create_request_social_log(
             social="X",
+            social_post_id=self.social_post.id,
             user_id=self.user.id,
             type="upload_media_init",
             request=json.dumps(request_data),
@@ -383,6 +385,7 @@ class TwitterService(BaseService):
 
             RequestSocialLogService.create_request_social_log(
                 social="X",
+                social_post_id=self.social_post.id,
                 user_id=self.user.id,
                 type="upload_media_append",
                 request=json.dumps(data),
@@ -448,6 +451,7 @@ class TwitterService(BaseService):
 
         RequestSocialLogService.create_request_social_log(
             social="X",
+            social_post_id=self.social_post.id,
             user_id=self.user.id,
             type="upload_media_finalize",
             request=json.dumps(request_data),

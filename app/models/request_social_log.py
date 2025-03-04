@@ -8,6 +8,7 @@ class RequestSocialLog(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True)
     social = db.Column(db.String(50), index=True, nullable=False)
+    social_post_id = db.Column(db.Integer, nullable=True)
     user_id = db.Column(db.Integer, index=True, nullable=False)
     type = db.Column(db.String(50), nullable=False)
     request = db.Column(db.Text, nullable=False)

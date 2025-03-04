@@ -47,6 +47,7 @@ class TiktokTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="refresh_token",
                 request=json.dumps(r_data),
@@ -159,6 +160,7 @@ class TiktokService(BaseService):
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
+                social_post_id=0,
                 user_id=self.user_id,
                 type="upload_image",
                 request=json.dumps(payload),
@@ -339,6 +341,7 @@ class TiktokService(BaseService):
 
         RequestSocialLogService.create_request_social_log(
             social="TIKTOK",
+            social_post_id=self.social_post.id,
             user_id=self.user_id,
             type="upload_video",
             request=json.dumps(payload),
@@ -441,6 +444,7 @@ class TiktokService(BaseService):
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
+                social_post_id=self.social_post.id,
                 user_id=self.user_id,
                 type="upload_video_chunk",
                 request=json.dumps(headers),
