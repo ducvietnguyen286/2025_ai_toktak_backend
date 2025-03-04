@@ -3,6 +3,7 @@ py -m venv env
 python -m venv venv  # Tạo môi trường ảo
 venv\Scripts\activate
 flask run --port=5001
+flask run --port=6001 --host=0.0.0.0
 
 
 git pull origin main && sudo systemctl restart toktak.service

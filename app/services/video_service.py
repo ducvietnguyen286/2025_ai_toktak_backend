@@ -335,19 +335,15 @@ class VideoService:
         caption_videos_default=None,
     ):
         video_urls = get_random_videos(2)
+        first_viral_detail = video_urls[0] or []
+        last_viral_detail = video_urls[1] or []
         # Chọn 2 URL khác nhau một cách ngẫu nhiên
-        first_viral_url, last_viral_url = random.sample(video_urls, 2)
+        first_viral_url = first_viral_detail["video_url"]
+        first_duration = float(first_viral_detail["duration"] or 0)
 
         clips = []
         current_start = 0
-        intro_length = 5
-
-        intro_url_check = first_viral_url.replace(
-            "https://apitoktak.voda-play.com", "static"
-        )
-        clip = VideoFileClip(intro_url_check)
-        duration = clip.duration
-        intro_length = duration
+        intro_length = first_duration
 
         clips.append(
             {
@@ -596,12 +592,13 @@ class VideoService:
             # )
 
         current_start += len(images_slider_url) * time_show_image
-        outro_length = 5
+        last_viral_url = last_viral_detail["video_url"]
+        last_duration = float(last_viral_detail["duration"] or 0)
         clips.append(
             {
                 "asset": {"type": "video", "src": last_viral_url},
                 "start": current_start,
-                "length": outro_length,
+                "length": last_duration,
             }
         )
 
@@ -614,7 +611,7 @@ class VideoService:
                     "css": html_image["css"],
                 },
                 "start": current_start,
-                "length": outro_length,
+                "length": last_duration,
                 "position": "top",
                 "offset": {"x": 0, "y": 0.4},
             }
@@ -636,8 +633,6 @@ class VideoService:
         #         "length": "end",
         #     },
         # )
-        current_start += outro_length
-
         clips_shape = [
             # {
             #     "asset": {
@@ -671,13 +666,27 @@ class VideoService:
 
 def get_random_videos(limit=2):
     try:
-        videos = (
-            VideoViral.query.with_entities(VideoViral.video_url)
-            .order_by(func.rand())
-            .limit(limit)
-            .all()
-        )
-        return [video.video_url for video in videos]
+        videos = VideoViral.query.filter_by(status=1).all()
+        video_data = [
+            {
+                "video_name": video_detail.video_name,
+                "video_url": video_detail.video_url,
+                "duration": video_detail.duration,
+            }
+            for video_detail in videos
+        ]
+
+        key_redis = "viral_video_redis"
+        progress_json = redis_client.get(key_redis)
+
+        if progress_json:
+            video_viral_s = json.loads(progress_json) if progress_json else {}
+        else:
+            video_viral_s = video_data
+            redis_client.set(key_redis, json.dumps(video_viral_s))
+
+        random_items = random.sample(video_viral_s, limit)
+        return random_items
 
     except Exception as e:
         log_make_video_message(f"get_random_videos: {str(e)}")
