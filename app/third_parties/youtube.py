@@ -12,7 +12,6 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.errors import HttpError
 from google.auth.transport.requests import Request
-from app.extensions import redis_client
 from app.third_parties.base_service import BaseService
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
@@ -42,6 +41,7 @@ class YoutubeTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="YOUTUBE",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="exchange_code_for_token",
                 request=json.dumps(data),
@@ -117,6 +117,7 @@ class YoutubeService(BaseService):
 
             RequestSocialLogService.create_request_social_log(
                 social="YOUTUBE",
+                social_post_id=self.social_post.id,
                 user_id=user_link.user_id,
                 type="get_youtube_service_from_token",
                 request=json.dumps(
@@ -230,6 +231,7 @@ class YoutubeService(BaseService):
 
             RequestSocialLogService.create_request_social_log(
                 social="YOUTUBE",
+                social_post_id=self.social_post.id,
                 user_id=self.user_id,
                 type="upload_video",
                 request=json.dumps(body),
