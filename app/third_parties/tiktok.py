@@ -183,6 +183,10 @@ class TiktokService(BaseService):
                 )
                 self.meta = json.loads(self.user_link.meta)
                 return self.upload_image(medias=medias, retry=retry + 1)
+            elif error and error_code != "access_token_invalid":
+                error_message = error.get("message") or "Upload image error"
+                self.save_errors("ERRORED", error_message)
+                return
 
             publish_id = parsed_response.get("data").get("publish_id")
             status = self.check_status(publish_id)
@@ -198,7 +202,7 @@ class TiktokService(BaseService):
                 return False
 
         except Exception as e:
-            self.save_errors("ERRORED", error_message)
+            self.save_errors("ERRORED", str(e))
             return False
 
     def upload_video(self, media):
@@ -359,6 +363,10 @@ class TiktokService(BaseService):
             )
             self.meta = json.loads(self.user_link.meta)
             return self.upload_video_init(media=media, retry=retry + 1)
+        elif error and error_code != "access_token_invalid":
+            error_message = error.get("message") or "Upload video INIT error"
+            self.save_errors("ERRORED", error_message)
+            return
 
         info_data = parsed_response.get("data")
         upload_url = info_data.get("upload_url")
@@ -413,6 +421,7 @@ class TiktokService(BaseService):
         end_bytes,
         total_bytes,
         media_type,
+        retry=0,
     ):
         try:
             log_social_message("Upload video to Tiktok APPEND")
@@ -452,6 +461,36 @@ class TiktokService(BaseService):
                 print(
                     f"Lỗi tải chunk {start_bytes}-{end_bytes}/{total_bytes}: {response.status_code}, {response.text}"
                 )
+
+            error = response_put.get("error")
+            error_code = error.get("code")
+            if error_code == "access_token_invalid":
+                if retry > 0:
+                    self.user_link.status = 0
+                    self.user_link.save()
+                    self.save_errors("ERRORED", "Access token invalid")
+
+                    raise Exception("Retry limit exceeded")
+
+                TiktokTokenService.refresh_token(link=self.link, user=self.user)
+                self.user_link = UserService.find_user_link(
+                    link_id=self.link.id, user_id=self.user.id
+                )
+                self.meta = json.loads(self.user_link.meta)
+                return self.upload_video_append(
+                    upload_url=upload_url,
+                    chunk_data=chunk_data,
+                    current_chunk_size=current_chunk_size,
+                    start_bytes=start_bytes,
+                    end_bytes=end_bytes,
+                    total_bytes=total_bytes,
+                    media_type=media_type,
+                    retry=retry + 1,
+                )
+            elif error and error_code != "access_token_invalid":
+                error_message = error.get("message") or "Upload video INIT error"
+                self.save_errors("ERRORED", error_message)
+                return
 
             return response_put
         except Exception as e:
