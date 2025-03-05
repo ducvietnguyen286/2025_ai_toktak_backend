@@ -257,7 +257,7 @@ class TiktokService(BaseService):
             return False
         res_json = response.json()
 
-        log_social_message(f"Check status: {res_json}")
+        log_social_message(f"TIKTOK: Check status: {res_json}")
 
         error = res_json.get("error")
         error_code = error.get("code")
