@@ -90,7 +90,7 @@ def parse_mobile_response(html, url, base_url):
                 break_sku = sku.split("-")
                 item_id = break_sku[-1]
                 meta_url = "{0}?itemId={1}&vendorItemId={2}".format(
-                    meta_base_url, item_id, vendor_item_id
+                    meta_base_url, item_id, vendor_item_id[0]
                 )
 
         return {
