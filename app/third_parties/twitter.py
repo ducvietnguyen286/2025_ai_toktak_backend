@@ -196,6 +196,8 @@ class TwitterService(BaseService):
             if not media_id:
                 media_id = self.upload_media(media, is_video)
             log_social_message(f"media_id: {media_id}")
+            if not media_id:
+                return False
             data = {
                 "text": post.title,
                 "media": {"media_ids": [media_id]},
@@ -486,16 +488,17 @@ class TwitterService(BaseService):
             try:
                 response_json = req.json()
                 log_social_message(f"FINALIZE Res: {response_json}")
-                self.processing_info = response_json["data"].get(
-                    "processing_info", None
-                )
-                self.save_uploading(40)
-                is_done = self.check_status(media_id=media_id)
-                if is_done:
+                if "processing_info" in response_json:
+                    self.processing_info = response_json.get("processing_info", None)
+                    self.save_uploading(40)
+                    is_done = self.check_status(media_id=media_id)
+                    if is_done:
+                        return True
+                    return False
+                elif "data" in response_json:
+                    self.save_uploading(90)
                     return True
-                return False
             except requests.exceptions.JSONDecodeError as e:
-
                 self.save_errors("ERRORED", f"UPLOAD MEDIA FINALIZE: {str(e)}")
                 return False
 
