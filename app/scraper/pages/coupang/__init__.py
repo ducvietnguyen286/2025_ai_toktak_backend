@@ -80,7 +80,7 @@ class CoupangScraper:
             traceback.print_exc()
             return {}
 
-    def get_coupang_btf_content(self, meta_url, headers):
+    def get_coupang_btf_content(self, meta_url, headers, retry=0):
         try:
             parsed_url = urlparse(meta_url)
             path = parsed_url.path
@@ -91,7 +91,7 @@ class CoupangScraper:
             product_id = path.split("/")[-1]
 
             btf_url = "https://m.coupang.com/vm/sdp/v3/mweb/products/{0}/items/{1}/vendor-items/{2}/btf?invalid=false&isFashion=true&freshProduct=false&memberEligible=true&src=&spec=&lptag=&ctag=&addtag=".format(
-                product_id, item_id[0], vendor_item_id[0]
+                product_id, item_id[0] or "", vendor_item_id[0] or ""
             )
 
             session = requests.Session()
@@ -189,9 +189,15 @@ class CoupangScraper:
             logger.info("Get Images Successfully")
             return {"images": images, "text": text, "iframes": iframes}
         except Exception as e:
-            logger.error("Exception: {0}".format(str(e)))
+            logger.error("Exception GET COUPANG BRF: {0}".format(str(e)))
             traceback.print_exc()
-            return {}
+            if retry < 3:
+                return self.get_coupang_btf_content(meta_url, headers, retry + 1)
+            return {
+                "images": [],
+                "text": "",
+                "iframes": [],
+            }
 
     def extract_images_and_text(self, html):
         soup = BeautifulSoup(html, "html.parser")

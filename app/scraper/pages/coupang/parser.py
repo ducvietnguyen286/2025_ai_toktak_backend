@@ -32,7 +32,7 @@ def parse_mobile_response(html, url, base_url):
         name = data.get("name")
         description = data.get("description")
         images = data.get("image")
-        image_thumbs = data.get("image")
+        sku = data.get("sku")
         image_url = images[0] if images else ""
         domain = get_domain(url)
         offers = data.get("offers")
@@ -73,10 +73,31 @@ def parse_mobile_response(html, url, base_url):
                     meta_base_url, item_id, vendor_item_id
                 )
 
+        parsed_url = urlparse(meta_url)
+        meta_base_url = "{0}://{1}".format(parsed_url.scheme, parsed_url.netloc)
+        query_params = parsed_url.query
+        query_params_dict = parse_qs(query_params)
+        item_id = query_params_dict.get("itemId")
+        vendor_item_id = query_params_dict.get("vendorItemId")
+
+        if (
+            not item_id
+            or not vendor_item_id
+            or len(item_id) == 0
+            or len(vendor_item_id) == 0
+        ):
+            if len(item_id) == 0 and len(vendor_item_id) > 0:
+                break_sku = sku.split("-")
+                item_id = break_sku[-1]
+                meta_url = "{0}?itemId={1}&vendorItemId={2}".format(
+                    meta_base_url, item_id, vendor_item_id
+                )
+
         return {
             "name": name,
             "description": description,
             "stock": in_stock,
+            "sku": sku,
             "domain": domain,
             "brand": "",
             "image": image_url,
