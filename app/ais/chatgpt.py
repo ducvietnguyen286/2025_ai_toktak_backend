@@ -686,16 +686,12 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
                             "type": "string",
                             "description": "The description of the post.",
                         },
-                        "post": {
-                            "type": "string",
-                            "description": "The post of the post.",
-                        },
                         "hashtag": {
                             "type": "string",
                             "description": "The associated hashtag.",
                         },
                     },
-                    "required": ["caption", "description", "post", "hashtag"],
+                    "required": ["caption", "description", "hashtag"],
                     "additionalProperties": False,
                 }
             },
