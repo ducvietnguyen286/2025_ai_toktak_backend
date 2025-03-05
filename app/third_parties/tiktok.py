@@ -164,7 +164,7 @@ class TiktokService(BaseService):
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
-                social_post_id=0,
+                social_post_id=self.social_post_id,
                 user_id=self.user_id,
                 type="upload_image",
                 request=json.dumps(payload),
@@ -480,46 +480,13 @@ class TiktokService(BaseService):
                 log_social_message(
                     f"Chunk {start_bytes}-{end_bytes}/{total_bytes} tải lên thành công. Status code: {response.status_code}"
                 )
+                return True
             else:
-                log_social_message(
-                    f"Lỗi tải chunk {start_bytes}-{end_bytes}/{total_bytes}: {response.status_code}, {response.text}"
-                )
-
-            error = response_put.get("error")
-            error_code = error.get("code")
-            if error_code == "access_token_invalid":
-                if retry > 0:
-                    self.user_link.status = 0
-                    self.user_link.save()
-                    self.save_errors(
-                        "ERRORED", "UPLOAD VIDEO APPEND: Access token invalid"
-                    )
-
-                    return False
-
-                TiktokTokenService.refresh_token(link=self.link, user=self.user)
-                self.user_link = UserService.find_user_link(
-                    link_id=self.link.id, user_id=self.user.id
-                )
-                self.meta = json.loads(self.user_link.meta)
-                return self.upload_video_append(
-                    upload_url=upload_url,
-                    chunk_data=chunk_data,
-                    current_chunk_size=current_chunk_size,
-                    start_bytes=start_bytes,
-                    end_bytes=end_bytes,
-                    total_bytes=total_bytes,
-                    media_type=media_type,
-                    retry=retry + 1,
-                )
-            elif error and error_code != "ok":
-                error_message = error.get("message") or "Upload video INIT error"
+                error_message = f"Lỗi tải chunk {start_bytes}-{end_bytes}/{total_bytes}: {response.status_code}, {response.text}"
                 self.save_errors(
                     "ERRORED", f"UPLOAD VIDEO APPEND - GET ERROR: {error_message}"
                 )
                 return False
-
-            return True
         except Exception as e:
             self.save_errors("ERRORED", f"UPLOAD VIDEO APPEND - ERROR: {str(e)}")
             return False
