@@ -184,6 +184,7 @@ class APIMakePost(Resource):
 
     def post(self, id):
         try:
+            message = "Tạo post thành công"
             post = PostService.find_post(id)
             if not post:
                 return Response(
@@ -375,10 +376,24 @@ class APIMakePost(Resource):
                 message="Tạo post thành công",
             ).to_dict()
         except Exception as e:
-            logger.error("Exception: {0}".format(str(e)))
+            if type == "video":
+                message = "Tạo video that bai"
+            elif type == "image":
+                message = "Tạo image that bai"
+            elif type == "blog":
+                message = "Tạo blog that bai"
+
+            logger.error(f"Exception:  {message} :  {str(e)}")
             traceback.print_exc()
+            if type == "video":
+                message = "Tạo video that bai"
+            elif type == "image":
+                message = "Tạo image that bai"
+            elif type == "blog":
+                message = "Tạo blog that bai"
+
             return Response(
-                message="Tạo post that bai ex",
+                message=message,
                 message_detail=str(e),
                 status=400,
             ).to_dict()
