@@ -278,6 +278,12 @@ class APIMakePost(Resource):
                                 description="",
                                 post_id=post.id,
                             )
+                        else:
+                            return Response(
+                                message=result["message"],
+                                status=200,
+                                code=201,
+                            ).to_dict()
 
             elif type == "image":
                 logger.info(
