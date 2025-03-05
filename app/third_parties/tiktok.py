@@ -167,7 +167,9 @@ class TiktokService(BaseService):
             payload = {
                 "post_info": {
                     "title": self.post.title,
-                    "description": self.post.content + "  #tiktok " + self.post.hashtag,
+                    "description": self.post.description
+                    + "  #tiktok "
+                    + self.post.hashtag,
                     "privacy_level": "SELF_ONLY",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
                     "disable_duet": False,
                     "disable_comment": False,

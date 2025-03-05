@@ -500,7 +500,7 @@ class FacebookService(BaseService):
         log_social_message(f"Attached media: {attached_media}")
 
         post_data = {
-            "message": post.content + " " + post.hashtag,
+            "message": post.description + " " + post.hashtag,
             "attached_media": json.dumps(attached_media),
             "access_token": page_access_token,
         }
