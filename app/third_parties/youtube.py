@@ -24,6 +24,46 @@ CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET") or ""
 
 class YoutubeTokenService:
 
+    def fetch_channel_info(self, user_link):
+        try:
+            PAGE_URL = (
+                f"https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true"
+            )
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("access_token")
+            if not access_token:
+                log_social_message("Error fetch_channel_info: access_token not found")
+                return None
+
+            response = requests.get(
+                PAGE_URL, headers={"Authorization": f"Bearer {access_token}"}
+            ).json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="YOUTUBE",
+                social_post_id=0,
+                user_id=user_link.user_id,
+                type="fetch_channel_info",
+                request=json.dumps({}),
+                response=json.dumps(response),
+            )
+
+            if "items" not in response:
+                log_social_message(f"Error fetch_channel_info: {response}")
+                return None
+
+            item = response["items"][0]
+
+            return {
+                "id": item["id"] or "",
+                "name": item["snippet"]["title"] or "",
+                "avatar": item["snippet"]["thumbnails"]["default"]["url"] or "",
+                "url": f"https://www.youtube.com/{item['snippet']['customUrl']}" or "",
+            }
+        except Exception as e:
+            log_social_message(f"Error fetch_channel_info: {str(e)}")
+            return None
+
     def exchange_code_for_token(self, code, user_link):
         try:
             REDIRECT_URI = os.environ.get("YOUTUBE_REDIRECT_URI") or ""

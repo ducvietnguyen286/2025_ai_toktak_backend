@@ -35,9 +35,9 @@ class UserService:
             UserLink.query.where(UserLink.user_id == user_id)
             .where(UserLink.link_id == link_id)
             .where(UserLink.status == 1)
-            .all()
+            .first()
         )
-        return user_link[0] if user_link else None
+        return user_link
 
     @staticmethod
     def find_user_link_exist(link_id=0, user_id=0):

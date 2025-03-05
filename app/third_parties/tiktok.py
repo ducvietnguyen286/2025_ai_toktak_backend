@@ -17,6 +17,44 @@ PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 class TiktokTokenService:
 
     @staticmethod
+    def fetch_user_info(user_link):
+        try:
+            log_social_message(
+                "------------------  FETCH TIKTOK USER INFO  ------------------"
+            )
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("access_token")
+
+            URL_USER_INFO = f"https://open.tiktokapis.com/v2/user/info/?fields=open_id,union_id,avatar_url,display_name,username"
+
+            response = requests.get(
+                URL_USER_INFO, headers={"Authorization": f"Bearer {access_token}"}
+            )
+            user_data = response.json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="TIKTOK",
+                social_post_id=0,
+                user_id=user_link.user_id,
+                type="fetch_user_info",
+                request={},
+                response=json.dumps(user_data),
+            )
+
+            log_social_message(f"Fetch user info response: {user_data}")
+
+            return {
+                "id": user_data.get("open_id") or "",
+                "name": user_data.get("display_name") or "",
+                "avatar": user_data.get("avatar_url") or "",
+                "url": f"https://www.tiktok.com/@{user_data.get('username')}" or "",
+            }
+        except Exception as e:
+            traceback.print_exc()
+            log_social_message(e)
+            return None
+
+    @staticmethod
     def refresh_token(link, user):
         try:
             log_social_message(
