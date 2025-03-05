@@ -333,6 +333,8 @@ class APIMakePost(Resource):
                     content = parse_response.get("post", "")
                 if parse_response and "description" in parse_response:
                     description = parse_response.get("description", "")
+                    if "<" in description or ">" in description:
+                        description = description.replace("<", "").replace(">", "")
                 if parse_response and "title" in parse_response:
                     title = parse_response.get("title", "")
                 if parse_response and "summarize" in parse_response:
