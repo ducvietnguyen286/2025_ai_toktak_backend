@@ -628,7 +628,7 @@ def generate_srt(batch_id, captions):
                 f.write(f"{start} --> {end}\n")
                 f.write(f"{text}\n\n")
             else:
-                duration_per_caption = 2
+                duration_per_caption = 2.5
                 for segment in segments:
                     segment = segment.replace('"', "")
                     segment = segment.strip()
@@ -638,6 +638,7 @@ def generate_srt(batch_id, captions):
                     f.write(f"{segment}\n\n")
                     let_step = let_step + 1
                     start_time = end_time
+                    duration_per_caption = duration_per_caption + 0.1
         CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
         file_paths.append(f"{CURRENT_DOMAIN}/{file_path}/{file_name}")
         # file_paths.append(file_path_srt)
@@ -647,13 +648,14 @@ def generate_srt(batch_id, captions):
 
 def format_time(seconds):
     """
-    Chuyển đổi giây thành định dạng thời gian SRT (hh:mm:ss,ms).
+    Chuyển đổi giây (có thể là float) thành định dạng thời gian SRT (hh:mm:ss,ms).
     """
-    hours = seconds // 3600
-    minutes = (seconds % 3600) // 60
-    sec = seconds % 60
-    return f"{hours:02}:{minutes:02}:{sec:02},001"
-
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    sec = int(seconds % 60)
+    # Tính phần mili giây
+    ms = int(round((seconds - int(seconds)) * 1000)) + 1
+    return f"{hours:02}:{minutes:02}:{sec:02},{ms:03}"
 
 def test_create_combined_clips(
     batch_id,
