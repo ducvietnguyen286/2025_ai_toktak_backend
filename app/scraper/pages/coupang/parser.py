@@ -47,29 +47,17 @@ def parse_mobile_response(html, url, base_url):
         meta_url = meta_url_tag["content"] if meta_url_tag else ""
 
         parsed_url = urlparse(meta_url)
+        meta_base_url = "{0}://{1}".format(parsed_url.scheme, parsed_url.netloc)
         query_params = parsed_url.query
         query_params_dict = parse_qs(query_params)
+        item_id = query_params_dict.get("itemId")
         vendor_item_id = query_params_dict.get("vendorItemId")
 
-        if len(vendor_item_id) > 0 and sku:
-            break_sku = sku.split("-")
-            product_id = break_sku[0]
-            item_id_sku = break_sku[1]
-            vendor_item_id_sku = vendor_item_id[0]
-            meta_url = f"https://m.coupang.com/vm/products/{product_id}?itemId={item_id_sku}&vendorItemId={vendor_item_id_sku}"
-
-        parsed_url_1 = urlparse(meta_url)
-        meta_base_url_1 = "{0}://{1}".format(parsed_url_1.scheme, parsed_url_1.netloc)
-        query_params = parsed_url_1.query
-        query_params_dict = parse_qs(query_params)
-        item_id_1 = query_params_dict.get("itemId")
-        vendor_item_id_1 = query_params_dict.get("vendorItemId")
-
         if (
-            not item_id_1
-            or not vendor_item_id_1
-            or len(item_id_1) == 0
-            or len(vendor_item_id_1) == 0
+            not item_id
+            or not vendor_item_id
+            or len(item_id) == 0
+            or len(vendor_item_id) == 0
         ):
             next_data_json = html.find("script", {"id": "__NEXT_DATA__"})
             if next_data_json:
@@ -78,32 +66,34 @@ def parse_mobile_response(html, url, base_url):
                 page_props = props.get("pageProps")
                 properties = page_props.get("properties")
                 item_detail = properties.get("itemDetail")
-                item_id_2 = item_detail.get("itemId")
-                vendor_item_id_2 = item_detail.get("vendorItemId")
+                item_id = item_detail.get("itemId")
+                vendor_item_id = item_detail.get("vendorItemId")
 
                 meta_url = "{0}?itemId={1}&vendorItemId={2}".format(
-                    meta_base_url_1, item_id_2, vendor_item_id_2
+                    meta_base_url, item_id, vendor_item_id
                 )
 
-        parsed_url_2 = urlparse(meta_url)
-        meta_base_url_2 = "{0}://{1}".format(parsed_url_2.scheme, parsed_url_2.netloc)
-        query_params = parsed_url_2.query
+        parsed_url = urlparse(meta_url)
+        meta_base_url = "{0}://{1}".format(parsed_url.scheme, parsed_url.netloc)
+        query_params = parsed_url.query
         query_params_dict = parse_qs(query_params)
-        item_id_3 = query_params_dict.get("itemId")
-        vendor_item_id_3 = query_params_dict.get("vendorItemId")
+        item_id = query_params_dict.get("itemId")
+        vendor_item_id = query_params_dict.get("vendorItemId")
 
         if (
-            not item_id_3
-            or not vendor_item_id_3
-            or len(item_id_3) == 0
-            or len(vendor_item_id_3) == 0
+            not item_id
+            or not vendor_item_id
+            or len(item_id) == 0
+            or len(vendor_item_id) == 0
         ):
-            if (not item_id_3 or len(item_id_3) == 0) and len(vendor_item_id_3) > 0:
+            if (not item_id or len(item_id) == 0) and len(vendor_item_id) > 0:
                 break_sku = sku.split("-")
                 item_id = break_sku[-1]
                 meta_url = "{0}?itemId={1}&vendorItemId={2}".format(
-                    meta_base_url_2, item_id_3, vendor_item_id_3[0]
+                    meta_base_url, item_id, vendor_item_id[0]
                 )
+
+        logger.info("meta_url: {0}".format(meta_url))
 
         return {
             "name": name,
