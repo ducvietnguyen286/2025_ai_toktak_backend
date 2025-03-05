@@ -26,7 +26,12 @@ from app.services.link import LinkService
 from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.tiktok import TiktokTokenService
 from app.third_parties.twitter import TwitterTokenService
-from app.rabbitmq.producer import send_message
+from app.rabbitmq.producer import (
+    send_facebook_message,
+    send_tiktok_message,
+    send_twitter_message,
+    send_youtube_message,
+)
 from app.third_parties.youtube import YoutubeTokenService
 
 ns = Namespace(name="user", description="User API")
@@ -348,7 +353,14 @@ class APIPostToLinks(Resource):
                         "is_all": is_all,
                     },
                 }
-                send_message(message)
+                if link.type == "FACEBOOK":
+                    send_facebook_message(message)
+                if link.type == "TIKTOK":
+                    send_tiktok_message(message)
+                if link.type == "X":
+                    send_twitter_message(message)
+                if link.type == "YOUTUBE":
+                    send_youtube_message(message)
 
             redis_client.set(f"toktak:progress:{batch_id}", json.dumps(progress))
 
