@@ -89,9 +89,7 @@ class VideoService:
                     {
                         "src": "http://admin.lang.canvasee.com/fonts/Jalnan2/Jalnan2TTF.ttf"
                     },
-                    {
-                        "src": "http://admin.lang.canvasee.com/fonts/Jalnan2/Jalnan2.otf"
-                    },
+                    {"src": "http://admin.lang.canvasee.com/fonts/Jalnan2/Jalnan2.otf"},
                 ],
                 "background": "#FFFFFF",
                 "tracks": [
@@ -356,10 +354,9 @@ class VideoService:
         first_caption_videos_default = VideoService.filter_content_by_type(
             caption_videos_default, 1
         )
-        
-        clip_detail = create_header_text(first_caption_videos_default , current_start , 2 )
-        clips.append(clip_detail)
 
+        clip_detail = create_header_text(first_caption_videos_default, current_start, 2)
+        clips.append(clip_detail)
 
         current_start += intro_length
         file_path_srts = generate_srt(batch_id, captions)
@@ -448,21 +445,26 @@ class VideoService:
                 first_caption_image_default = VideoService.filter_content_by_type(
                     caption_videos_default, 2
                 )
-                clip_detail = create_header_text(first_caption_image_default , start_slider_time , 2 )
+                clip_detail = create_header_text(
+                    first_caption_image_default, start_slider_time, 2
+                )
                 clips.append(clip_detail)
             elif j_index == 2:
                 # When 3rd image start, display for 2 sec
                 first_caption_image_default = VideoService.filter_content_by_type(
                     caption_videos_default, 3
                 )
-                clip_detail = create_header_text(first_caption_image_default , start_slider_time , 2 )
+                clip_detail = create_header_text(
+                    first_caption_image_default, start_slider_time, 2
+                )
                 clips.append(clip_detail)
- 
+
             elif j_index == 4:
                 # When 5th image start, display for 2 sec & When start last hooking video, display for 2 sec in the middle of screen until end of video
-                clip_detail = create_header_text(last_caption_videos_default , start_slider_time , 2 )
+                clip_detail = create_header_text(
+                    last_caption_videos_default, start_slider_time, 2
+                )
                 clips.append(clip_detail)
-                
 
             url_path_srt = file_path_srts[j_index]
 
@@ -483,8 +485,8 @@ class VideoService:
                             "color": "#ffffff",
                             "size": 30,
                             "stroke": "#000000",
-                            "strokeWidth": 1.5
-                        } 
+                            "strokeWidth": 1.5,
+                        },
                     },
                     "start": start_slider_time,
                     "length": time_show_image,
@@ -526,9 +528,11 @@ class VideoService:
             }
         )
 
-        clip_detail = create_header_text(last_caption_videos_default , current_start , last_duration )
+        clip_detail = create_header_text(
+            last_caption_videos_default, current_start, last_duration
+        )
         clips.append(clip_detail)
-                
+
         clips_shape = [
             # {
             #     "asset": {
@@ -852,16 +856,17 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
                 "family": "Pretendard SemiBold",
                 "color": "#ffffff",
                 "opacity": 0.8,
-                "size": 30,
+                "size": 46,
                 "lineHeight": 0.85,
             },
-            "background": {
-                "color": "#000000",
-                "borderRadius": 20,
-                "padding": 0,
-                "opacity": 0.6,
-            },
-            "height": 80,
+            # "background": {
+            #     "color": "#000000",
+            #     "borderRadius": 20,
+            #     "padding": 0,
+            #     "opacity": 0.6,
+            # },
+            "stroke": {"color": "#000000", "width": 1.5},
+            "height": 110,
             "width": 600,
         },
         "start": start + add_time,
