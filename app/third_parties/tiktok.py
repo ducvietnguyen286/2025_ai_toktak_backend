@@ -257,7 +257,7 @@ class TiktokService(BaseService):
             return False
         res_json = response.json()
 
-        log_social_message(f"Check status: {res_json}")
+        log_social_message(f"TIKTOK: Check status: {res_json}")
 
         error = res_json.get("error")
         error_code = error.get("code")
@@ -342,7 +342,7 @@ class TiktokService(BaseService):
             },
         }
 
-        log_social_message(f"Payload: {payload}")
+        log_social_message(f"TIKTOK UPLOAD VIDEO INIT Payload: {payload}")
         try:
             upload_response = requests.post(
                 URL_VIDEO_UPLOAD, headers=headers, data=json.dumps(payload)
