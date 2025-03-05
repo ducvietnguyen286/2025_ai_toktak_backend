@@ -25,6 +25,47 @@ class TwitterTokenService:
         self.client_secret = os.environ.get("X_CLIENT_SECRET")
         self.redirect_uri = os.environ.get("X_REDIRECT_URI")
 
+    def fetch_user_info(self, user_link):
+        try:
+            log_social_message(
+                "------------------  FETCH TWITTER USER INFO  ------------------"
+            )
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("access_token")
+
+            URL_USER_INFO = (
+                f"https://api.x.com/2/users/me?user.fields=profile_image_url"
+            )
+
+            response = requests.get(
+                URL_USER_INFO, headers={"Authorization": f"Bearer {access_token}"}
+            )
+            user_data = response.json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="X",
+                social_post_id=0,
+                user_id=user_link.user_id,
+                type="fetch_user_info",
+                request={},
+                response=json.dumps(user_data),
+            )
+
+            log_social_message(f"Fetch user info response: {user_data}")
+
+            data = user_data.get("data")
+
+            return {
+                "id": data.get("id") or "",
+                "name": data.get("name") or "",
+                "avatar": data.get("profile_image_url") or "",
+                "url": f"https://x.com/{data.get('username')}" or "",
+            }
+        except Exception as e:
+            traceback.print_exc()
+            log_social_message(e)
+            return None
+
     def fetch_token(self, code, user_link):
         try:
 

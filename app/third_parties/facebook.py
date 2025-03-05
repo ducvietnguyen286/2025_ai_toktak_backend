@@ -108,6 +108,46 @@ class FacebookTokenService:
             return None
 
     @staticmethod
+    def fetch_user_info(user_link):
+        try:
+            log_social_message(
+                "------------------  GET FACEBOOK USER INFO BY TOKEN  ------------------"
+            )
+            user_link = UserService.find_user_link(
+                link_id=user_link.id, user_id=user_link.user_id
+            )
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("access_token")
+            if not access_token:
+                log_social_message("Token not found")
+                return None
+
+            USER_URL = f"https://graph.facebook.com/v22.0/me?access_token={access_token}&fields=id,name,email,picture"
+            response = requests.get(USER_URL)
+            data = response.json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="FACEBOOK",
+                social_post_id=0,
+                user_id=user_link.user_id,
+                type="get_user_info_by_token",
+                request=json.dumps({"access_token": access_token}),
+                response=json.dumps(data),
+            )
+
+            log_social_message(f"User info: {data}")
+            return {
+                "id": data.get("id") or "",
+                "name": data.get("name") or "",
+                "avatar": data.get("picture").get("data").get("url") or "",
+                "url": f"https://facebook.com/profile.php?id={data.get('id')}" or "",
+            }
+
+        except Exception as e:
+            log_social_message(e)
+            return None
+
+    @staticmethod
     def exchange_token(access_token, user_link):
         try:
             log_social_message(

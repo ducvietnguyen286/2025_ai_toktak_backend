@@ -138,6 +138,13 @@ class APINewLink(Resource):
 
                     code = args.get("Code")
                     is_active = TwitterTokenService().fetch_token(code, user_link)
+                    if is_active:
+                        data = TwitterTokenService().fetch_user_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
 
                 if link.type == "FACEBOOK":
                     user_link.status = 0
@@ -147,6 +154,13 @@ class APINewLink(Resource):
                     is_active = FacebookTokenService().exchange_token(
                         access_token=access_token, user_link=user_link
                     )
+                    if is_active:
+                        data = FacebookTokenService().fetch_user_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
 
                 if link.type == "YOUTUBE":
                     user_link.status = 0
@@ -156,6 +170,13 @@ class APINewLink(Resource):
                     is_active = YoutubeTokenService().exchange_code_for_token(
                         code=code, user_link=user_link
                     )
+                    if is_active:
+                        data = YoutubeTokenService().fetch_channel_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
             else:
                 user_link.meta = json.dumps(info)
                 user_link.status = 1
@@ -167,6 +188,13 @@ class APINewLink(Resource):
 
                     code = args.get("Code")
                     is_active = TwitterTokenService().fetch_token(code, user_link)
+                    if is_active:
+                        data = TwitterTokenService().fetch_user_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
                 if link.type == "FACEBOOK":
                     user_link.status = 0
                     user_link.save()
@@ -176,6 +204,14 @@ class APINewLink(Resource):
                         access_token=access_token, user_link=user_link
                     )
 
+                    if is_active:
+                        data = FacebookTokenService().fetch_user_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
+
                 if link.type == "YOUTUBE":
                     user_link.status = 0
                     user_link.save()
@@ -184,6 +220,13 @@ class APINewLink(Resource):
                     is_active = YoutubeTokenService().exchange_code_for_token(
                         code=code, user_link=user_link
                     )
+                    if is_active:
+                        data = YoutubeTokenService().fetch_channel_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
 
             if is_active:
                 user_link.social_id = social_id
@@ -612,6 +655,19 @@ class APIGetCallbackTiktok(Resource):
             else:
                 user_link.meta = json.dumps(token)
                 user_link.status = 1
+                user_link.save()
+
+            user_info = TiktokTokenService().fetch_user_info(user_link)
+            if user_info:
+                social_id = user_info.get("id") or ""
+                name = user_info.get("name") or ""
+                avatar = user_info.get("avatar") or ""
+                url = user_info.get("url") or ""
+
+                user_link.social_id = social_id
+                user_link.name = name
+                user_link.avatar = avatar
+                user_link.url = url
                 user_link.save()
 
             return redirect(PAGE_PROFILE + "?success=1")
