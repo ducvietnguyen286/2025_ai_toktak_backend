@@ -24,3 +24,15 @@ class RequestLog(db.Model, BaseModel):
     )
     total_tokens = db.Column(db.Integer, nullable=False, default=0)
     status = db.Column(db.Integer, default=1)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "post_id": self.post_id,
+            "ai_type": self.ai_type,
+            "request": self.request,
+            "response": self.response,
+            "status": self.status,
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+        }
