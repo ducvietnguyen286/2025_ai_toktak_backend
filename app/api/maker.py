@@ -246,7 +246,8 @@ class APIMakePost(Resource):
                     caption = parse_response.get("caption", [])
                     hooking = parse_response.get("hooking", [])
 
-                    captions = split_text_by_sentences(caption, len(process_images))
+                    captions = caption
+                    # captions = split_text_by_sentences(caption, len(process_images))
 
                     for image_url in process_images:
                         maker_image = ImageMaker.save_image_for_short_video(image_url)
