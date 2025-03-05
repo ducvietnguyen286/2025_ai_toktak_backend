@@ -3,11 +3,11 @@ import threading
 import json
 
 from flask_socketio import join_room
-from app.lib.logger import logger
+from app.lib.logger import log_socket_message
 from .extensions import redis_client, socketio
 
 
-def process_redis_message(message, app):
+def process_redis_message(message):
     """
     Xử lý dữ liệu nhận được từ Redis.
     Bạn có thể thêm logic tính toán vào đây, rồi emit kết quả qua SocketIO.
@@ -17,7 +17,6 @@ def process_redis_message(message, app):
 
     try:
         data = json.loads(message)
-        logger.info("Received message from Redis: %s", data)
         print("Received message from Redis: %s", data)
 
         batch_id = data.get("batch_id")
@@ -26,7 +25,9 @@ def process_redis_message(message, app):
         post_id = data.get("post_id")
         status = data.get("status")
 
-        progress_json = redis_client.get(f"toktak:progress:{batch_id}")
+        redis_key = f"toktak:progress:{batch_id}:{post_id}"
+
+        progress_json = redis_client.get(redis_key)
         progress = json.loads(progress_json) if progress_json else {}
         if not progress:
             return
@@ -66,24 +67,15 @@ def process_redis_message(message, app):
 
             if total_progress == total_link:
                 is_done = 1
+                total_percent = 100
 
         progress["total_percent"] = total_percent
 
         if is_done:
-            total_percent = 100
             progress["status"] = "PUBLISHED"
         else:
             progress["status"] = "UPLOADING"
-            redis_client.set(
-                f"toktak:progress:{batch_id}", json.dumps(progress), ex=3600
-            )
-
-        logger.info(
-            "Emitting progress %s to room %s: %s",
-            SOCKETIO_PROGRESS_EVENT,
-            batch_id,
-            progress,
-        )
+            redis_client.set(redis_key, json.dumps(progress), ex=3600)
 
         print(
             "Emitting progress %s to room %s: %s",
@@ -94,7 +86,7 @@ def process_redis_message(message, app):
 
         socketio.emit(SOCKETIO_PROGRESS_EVENT, json.dumps(progress), room=batch_id)
     except Exception as e:
-        app.logger.error("Error processing Redis message: %s", e)
+        log_socket_message("Error processing Redis message: %s".format(e))
 
 
 def start_redis_subscriber(app):
@@ -108,12 +100,14 @@ def start_redis_subscriber(app):
 
         pubsub = redis_client.pubsub()
         pubsub.subscribe(PROGRESS_CHANNEL)
-        logger.info("Started Redis subscriber on channel '%s'", PROGRESS_CHANNEL)
+        log_socket_message(
+            "Started Redis subscriber on channel '%s'".format(PROGRESS_CHANNEL)
+        )
         for item in pubsub.listen():
             if item.get("type") != "message":
                 continue
             message_str = item.get("data").decode("utf-8")
-            process_redis_message(message_str, app)
+            process_redis_message(message_str)
 
     thread = threading.Thread(target=redis_listener)
     thread.daemon = True
@@ -131,4 +125,4 @@ def handle_join(data):
         join_room(room)
         socketio.emit("join_response", {"msg": f"Joined room {room}"}, room=room)
     else:
-        logger.error("Room not provided in join event")
+        log_socket_message("Room not provided in join event")

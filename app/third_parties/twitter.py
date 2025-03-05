@@ -380,20 +380,13 @@ class TwitterService(BaseService):
                 )
                 return False
 
-            try:
-                response_json = req.json()
-            except ValueError as e:
-                log_social_message(f"JSONDecodeError: {e}")
-                log_social_message(f"Response content: {req.content}")
-                response_json = None
-
             RequestSocialLogService.create_request_social_log(
                 social="X",
                 social_post_id=self.social_post_id,
                 user_id=self.user.id,
                 type="upload_media_append",
                 request=json.dumps(data),
-                response=json.dumps(response_json) if response_json else req.text,
+                response=req.text,
             )
 
             self.save_uploading(10 + (progress_by_chunk * (segment_id + 1)))
