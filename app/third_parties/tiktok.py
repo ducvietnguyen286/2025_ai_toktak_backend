@@ -189,7 +189,7 @@ class TiktokService(BaseService):
                 )
                 self.meta = json.loads(self.user_link.meta)
                 return self.upload_image(medias=medias, retry=retry + 1)
-            elif error and error_code != "access_token_invalid":
+            elif error and error_code != "ok":
                 error_message = error.get("message") or "Upload image error"
                 self.save_errors("ERRORED", f"UPLOAD IMAGE: {error_message}")
                 return False
@@ -283,6 +283,11 @@ class TiktokService(BaseService):
 
             time.sleep(3)
             return self.check_status(publish_id, count=count, retry=retry + 1)
+
+        elif error and error_code != "ok":
+            error_message = error.get("message") or "Upload video CHECK STATUS error"
+            self.save_errors("ERRORED", f"CHECK STATUS - GET ERROR: {error_message}")
+            return False
         status = res_json.get("data").get("status")
         if status == "PUBLISH_COMPLETE":
             return {"status": True}
@@ -379,7 +384,7 @@ class TiktokService(BaseService):
             )
             self.meta = json.loads(self.user_link.meta)
             return self.upload_video_init(media=media, retry=retry + 1)
-        elif error and error_code != "access_token_invalid":
+        elif error and error_code != "ok":
             error_message = error.get("message") or "Upload video INIT error"
             self.save_errors(
                 "ERRORED", f"UPLOAD VIDEO INIT - GET ERROR: {error_message}"
@@ -507,7 +512,7 @@ class TiktokService(BaseService):
                     media_type=media_type,
                     retry=retry + 1,
                 )
-            elif error and error_code != "access_token_invalid":
+            elif error and error_code != "ok":
                 error_message = error.get("message") or "Upload video INIT error"
                 self.save_errors(
                     "ERRORED", f"UPLOAD VIDEO APPEND - GET ERROR: {error_message}"
