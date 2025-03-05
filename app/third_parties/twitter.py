@@ -488,16 +488,18 @@ class TwitterService(BaseService):
             try:
                 response_json = req.json()
                 log_social_message(f"FINALIZE Res: {response_json}")
-                if "processing_info" in response_json:
-                    self.processing_info = response_json.get("processing_info", None)
-                    self.save_uploading(40)
-                    is_done = self.check_status(media_id=media_id)
-                    if is_done:
+                if "data" in response_json:
+                    data = response_json.get("data", None)
+                    if "processing_info" in data:
+                        self.processing_info = data.get("processing_info", None)
+                        self.save_uploading(40)
+                        is_done = self.check_status(media_id=media_id)
+                        if is_done:
+                            return True
+                        return False
+                    else:
+                        self.save_uploading(90)
                         return True
-                    return False
-                elif "data" in response_json:
-                    self.save_uploading(90)
-                    return True
             except requests.exceptions.JSONDecodeError as e:
                 self.save_errors("ERRORED", f"UPLOAD MEDIA FINALIZE: {str(e)}")
                 return False
