@@ -628,7 +628,7 @@ def generate_srt(batch_id, captions):
                 f.write(f"{start} --> {end}\n")
                 f.write(f"{text}\n\n")
             else:
-                duration_per_caption = 2.25
+                duration_per_caption = 2
                 for segment in segments:
                     segment = segment.replace('"', "")
                     segment = segment.strip()
