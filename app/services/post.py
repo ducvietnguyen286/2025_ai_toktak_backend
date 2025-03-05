@@ -43,6 +43,11 @@ class PostService:
         return [post._to_json() for post in posts]
 
     @staticmethod
+    def get_posts__by_batch_id(batch_id):
+        posts = Post.query.where(Post.batch_id == batch_id).all()
+        return posts
+
+    @staticmethod
     def update_post_by_batch_id(batch_id, *args, **kwargs):
         print(batch_id)
         updated_rows = Post.query.filter_by(batch_id=batch_id).update(

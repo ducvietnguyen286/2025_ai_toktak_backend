@@ -51,6 +51,22 @@ def log_social_message(message):
     custom_handler.close()
 
 
+def log_socket_message(message):
+    custom_handler = handlers.RotatingFileHandler(
+        "logs/socket-{0}.log".format(filename), backupCount=14, encoding="utf-8"
+    )
+    custom_handler.setLevel(logging.INFO)
+    custom_handler.setFormatter(formatter)
+
+    custom_logger = logging.getLogger("SocketLogger")
+    custom_logger.setLevel(logging.INFO)
+    custom_logger.addHandler(custom_handler)
+
+    custom_logger.info(message)
+    custom_logger.removeHandler(custom_handler)
+    custom_handler.close()
+
+
 def log_make_video_message(message):
     custom_handler = None  # Khởi tạo biến custom_handler
     try:

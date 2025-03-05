@@ -284,29 +284,48 @@ class APIPostToLinks(Resource):
             links = LinkService.get_not_json_links()
             link_pluck_by_id = {link.id: link for link in links}
 
+            posts = PostService.get_posts__by_batch_id(batch_id)
+
+            total_post = 0
+            post_checked = {}
+            for post_to_check in posts:
+                for link_id in active_links:
+                    if post_checked.get(post_to_check.id):
+                        continue
+                    link = link_pluck_by_id.get(link_id)
+                    if not link:
+                        continue
+                    if post_to_check.type == "blog" and link.social_type != "BLOG":
+                        continue
+                    if (
+                        post_to_check.type == "image" or post_to_check.type == "video"
+                    ) and link.social_type != "SOCIAL":
+                        continue
+                    if post_to_check.type == "image" and link.type == "YOUTUBE":
+                        continue
+                    post_checked[post_to_check.id] = post_to_check
+                    total_post += 1
+
             total_link = 0
             for link_id in active_links:
                 link = link_pluck_by_id.get(link_id)
                 if not link:
                     continue
-
                 if post.type == "blog" and link.social_type != "BLOG":
                     continue
-
                 if (
                     post.type == "image" or post.type == "video"
                 ) and link.social_type != "SOCIAL":
                     continue
-
                 if post.type == "image" and link.type == "YOUTUBE":
                     continue
-
                 total_link += 1
 
             progress = {
                 "batch_id": batch_id,
                 "post_id": post.id,
                 "total_link": total_link,
+                "total_post": total_post,
                 "total_percent": 0,
                 "status": "PROCESSING",
                 "upload": [],
@@ -362,7 +381,9 @@ class APIPostToLinks(Resource):
                 if link.type == "YOUTUBE":
                     send_youtube_message(message)
 
-            redis_client.set(f"toktak:progress:{batch_id}", json.dumps(progress))
+            redis_client.set(
+                f"toktak:progress:{batch_id}:{post_id}", json.dumps(progress)
+            )
 
             return Response(
                 message="Tạo bài viết thành công. Vui lòng đợi trong giây lát",
