@@ -60,7 +60,12 @@ class APICreateBatch(Resource):
 
             if images and len(images) > max_count_image:
                 images = images[:max_count_image]
+
             data["images"] = images
+            if "text" not in data:
+                data["text"] = ""
+            if "iframes" not in data:
+                data["iframes"] = []
 
             # TODO: Save images
             # image_paths = []
