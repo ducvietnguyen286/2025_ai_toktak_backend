@@ -380,7 +380,6 @@ class APIMakePost(Resource):
             traceback.print_exc()
             return Response(
                 message=f"Tạo {type} that bai...",
-                message_detail=str(e),
                 status=400,
             ).to_dict()
 
