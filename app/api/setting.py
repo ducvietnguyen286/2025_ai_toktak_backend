@@ -89,3 +89,13 @@ class ApiGetLog(Resource):
             "data": [batch_detail.to_dict() for batch_detail in batches.items],
         }, 200
 
+
+@ns.route("/get_config_x")
+class GetConfig(Resource):
+    def get(self):
+        setting = Setting.query.filter_by(setting_name="TWITTER_CLIENT_ID").first()
+
+        return Response(
+            data={"TWITTER_CLIENT_ID": setting.setting_value},
+            message="Get  setting",
+        ).to_dict()
