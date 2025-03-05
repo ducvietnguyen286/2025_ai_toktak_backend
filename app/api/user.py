@@ -354,6 +354,7 @@ class APIPostToLinks(Resource):
 
                 progress["upload"].append(
                     {
+                        "title": link.title,
                         "link_id": link_id,
                         "post_id": post.id,
                         "status": "PROCESSING",
