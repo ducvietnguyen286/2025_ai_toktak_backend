@@ -20,16 +20,15 @@ from moviepy.editor import VideoFileClip
 from app.extensions import redis_client
 from pydub import AudioSegment
 import subprocess
+from app.services.request_log import RequestLogService
 
 
 class VideoService:
 
     @staticmethod
     def create_video_from_images(
-        batch_id, product_name, images_url, images_slider_url, captions
+        post_id, product_name, images_url, images_slider_url, captions
     ):
-        log_make_video_message(captions)
-        log_make_video_message(images_slider_url)
         domain = request.host
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
@@ -72,7 +71,7 @@ class VideoService:
             )
 
         clips_data = VideoService.create_combined_clips(
-            batch_id,
+            post_id,
             images_url,
             images_slider_url,
             prompts,
@@ -154,6 +153,23 @@ class VideoService:
             log_make_video_message(
                 "create_video_from_images : Exception: {0}".format(str(e))
             )
+            RequestLogService.create_request_log(
+                post_id=post_id,
+                ai_type="shotstack",
+                request=json.dumps(payload),
+                response=str(e),
+                prompt_tokens="",
+                prompt_cache_tokens="",
+                prompt_audio_tokens="",
+                completion_tokens="",
+                completion_reasoning_tokens="",
+                completion_audio_tokens="",
+                completion_accepted_prediction_tokens="",
+                completion_rejected_prediction_tokens="",
+                total_tokens="",
+                status=2,
+            )
+            
             return {
                 "message": str(e),
                 "status_code": 500,
@@ -224,13 +240,13 @@ class VideoService:
         return create_video
 
     @staticmethod
-    def test_create_video_from_images(batch_id, images_url, prompts):
+    def test_create_video_from_images(post_id, images_url, prompts):
         config = VideoService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
         voice_url = "https://apitoktak.voda-play.com/voice/voice.mp3"
 
-        clips_data = test_create_combined_clips(batch_id, images_url, prompts)
+        clips_data = test_create_combined_clips(post_id, images_url, prompts)
 
         payload = {
             "timeline": {
@@ -324,7 +340,7 @@ class VideoService:
         return ""
 
     def create_combined_clips(
-        batch_id,
+        post_id,
         ai_images,
         images_slider_url,
         prompts=None,
@@ -359,7 +375,7 @@ class VideoService:
         clips.append(clip_detail)
 
         current_start += intro_length
-        file_path_srts = generate_srt(batch_id, captions)
+        file_path_srts = generate_srt(post_id, captions)
 
         if is_ai_image == "1":
 
@@ -472,7 +488,7 @@ class VideoService:
             # for srt_caption in srt_captions:
             # clips.append(srt_caption)
 
-            voice_url = create_mp3_from_srt(batch_id, url_path_srt)
+            voice_url = create_mp3_from_srt(post_id, url_path_srt)
 
             clips.append(
                 {
@@ -594,12 +610,12 @@ def get_random_videos(limit=2):
         return []
 
 
-def generate_srt(batch_id, captions):
+def generate_srt(post_id, captions):
     """
     Tạo các file transcript.srt riêng biệt cho từng caption.
     Lưu vào thư mục static/voice/caption/
     """
-    file_path = f"voice/gtts_voice/{batch_id}"
+    file_path = f"voice/gtts_voice/{post_id}"
     os.makedirs(f"static/{file_path}", exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     file_paths = []
@@ -658,7 +674,7 @@ def format_time(seconds):
     return f"{hours:02}:{minutes:02}:{sec:02},{ms:03}"
 
 def test_create_combined_clips(
-    batch_id,
+    post_id,
     ai_images,
     prompts=None,
     is_ai_image="1",
@@ -752,7 +768,7 @@ def parse_srt_to_html_assets(url_path_srt: str, start_time):
     return html_assets
 
 
-def create_mp3_from_srt(batch_id, srt_filepath):
+def create_mp3_from_srt(post_id, srt_filepath):
     """
     Đọc file SRT, trích xuất nội dung và tạo file MP3 từ nội dung đó.
 
@@ -778,7 +794,7 @@ def create_mp3_from_srt(batch_id, srt_filepath):
         [caption.content.replace("\n", "") for caption in captions]
     )
 
-    public_patch = f"/voice/gtts_voice/{batch_id}"
+    public_patch = f"/voice/gtts_voice/{post_id}"
     voice_dir = f"static/{public_patch}"
     os.makedirs(voice_dir, exist_ok=True)
 
