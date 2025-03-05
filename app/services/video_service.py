@@ -517,12 +517,12 @@ class VideoService:
                             "lineHeight": 1,
                             "family": "Jalnan 2 Regular",
                             "color": "#ffffff",
-                            "size": 30,
+                            "size": 46,
                             "stroke": "#000000",
                             "strokeWidth": 1.5,
                         },
                     },
-                    "start": start_slider_time,
+                    "start": start_slider_time + 0.01,
                     "length": time_show_image,
                 },
             )
@@ -534,7 +534,7 @@ class VideoService:
                             "src": voice_url,
                             "volume": 1,
                         },
-                        "start": start_slider_time,
+                        "start": start_slider_time + 0.01,
                         "length": time_show_image,
                     }
                 )
@@ -805,7 +805,6 @@ def create_mp3_from_srt(post_id, srt_filepath):
         srt_content = f.read()
 
     # Phân tích file SRT thành danh sách caption
-    log_make_video_message(f"---------------srt_content: {srt_content}")
     captions = list(srt.parse(srt_content))
 
     # Ghép nội dung tất cả các caption, thay dòng mới bằng dấu cách
@@ -904,7 +903,7 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
             "type": "text",
             "text": caption_text,
             "font": {
-                "family": "Pretendard SemiBold",
+                "family": "Jalnan 2 Regular",
                 "color": "#ffffff",
                 "opacity": 0.8,
                 "size": 46,
