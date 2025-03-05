@@ -350,9 +350,11 @@ class FacebookService(BaseService):
 
             result = get_response.json()
 
-            log_social_message(f"get upload status: {result}")
+            log_social_message(f"FACEBOOK: get upload status: {result}")
 
             status = result["status"]
+
+            time.sleep(1)
 
             if count <= 6:
                 self.save_uploading(20 + (count * 10))
