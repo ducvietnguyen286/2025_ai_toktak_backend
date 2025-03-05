@@ -5,6 +5,8 @@ import time
 import traceback
 import requests
 
+from app.services.video_service import VideoService
+
 from app.lib.logger import log_social_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
@@ -21,8 +23,9 @@ TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
 class TwitterTokenService:
     def __init__(self):
-        self.client_id = os.environ.get("X_CLIENT_KEY")
-        self.client_secret = os.environ.get("X_CLIENT_SECRET")
+        config = VideoService.get_settings()
+        self.client_id = config["TWITTER_CLIENT_ID"]
+        self.client_secret = config["TWITTER_CLIENT_SECRET"]
         self.redirect_uri = os.environ.get("X_REDIRECT_URI")
 
     def fetch_user_info(self, user_link):
