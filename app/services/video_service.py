@@ -473,7 +473,6 @@ class VideoService:
             # clips.append(srt_caption)
 
             voice_url = create_mp3_from_srt(batch_id, url_path_srt)
-            
 
             clips.append(
                 {
@@ -615,12 +614,13 @@ def generate_srt(batch_id, captions):
         end = format_time(start_time + 5)
         let_step = 1
         duration_per_caption = 5
-        
+
         text = text.replace("\\", "")
         text = text.replace("…", "\n")
         text = text.replace("...", "\n")
+        text = text.strip()
         with open(file_path_srt, "w", encoding="utf-8") as f:
-            
+
             segments = text.split("\n")
 
             if len(segments) == 1:
@@ -631,6 +631,7 @@ def generate_srt(batch_id, captions):
                 duration_per_caption = 2.25
                 for segment in segments:
                     segment = segment.replace('"', "")
+                    segment = segment.strip()
                     end_time = start_time + duration_per_caption
                     f.write(f"{let_step}\n")
                     f.write(f"{format_time(start_time)} --> {format_time(end_time)}\n")
@@ -767,7 +768,7 @@ def create_mp3_from_srt(batch_id, srt_filepath):
         srt_content = f.read()
 
     # Phân tích file SRT thành danh sách caption
-    
+    log_make_video_message(f"---------------srt_content: {srt_content}")
     captions = list(srt.parse(srt_content))
 
     # Ghép nội dung tất cả các caption, thay dòng mới bằng dấu cách
@@ -780,10 +781,10 @@ def create_mp3_from_srt(batch_id, srt_filepath):
     os.makedirs(voice_dir, exist_ok=True)
 
     uuid_str = uuid.uuid4().hex
-    
-    text_to_speak= text_to_speak.strip()
+
+    text_to_speak = text_to_speak.strip()
     if text_to_speak != "":
-        
+
         # create voice Google TTS
         tts = gTTS(text=text_to_speak, lang="ko")
         file_name = f"template_voice_sub_caption_{uuid_str}_1.mp3"
