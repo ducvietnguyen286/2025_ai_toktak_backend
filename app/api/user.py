@@ -26,7 +26,12 @@ from app.services.link import LinkService
 from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.tiktok import TiktokTokenService
 from app.third_parties.twitter import TwitterTokenService
-from app.rabbitmq.producer import send_message
+from app.rabbitmq.producer import (
+    send_facebook_message,
+    send_tiktok_message,
+    send_twitter_message,
+    send_youtube_message,
+)
 from app.third_parties.youtube import YoutubeTokenService
 
 ns = Namespace(name="user", description="User API")
@@ -133,6 +138,13 @@ class APINewLink(Resource):
 
                     code = args.get("Code")
                     is_active = TwitterTokenService().fetch_token(code, user_link)
+                    if is_active:
+                        data = TwitterTokenService().fetch_user_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
 
                 if link.type == "FACEBOOK":
                     user_link.status = 0
@@ -142,6 +154,13 @@ class APINewLink(Resource):
                     is_active = FacebookTokenService().exchange_token(
                         access_token=access_token, user_link=user_link
                     )
+                    if is_active:
+                        data = FacebookTokenService().fetch_user_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
 
                 if link.type == "YOUTUBE":
                     user_link.status = 0
@@ -151,6 +170,13 @@ class APINewLink(Resource):
                     is_active = YoutubeTokenService().exchange_code_for_token(
                         code=code, user_link=user_link
                     )
+                    if is_active:
+                        data = YoutubeTokenService().fetch_channel_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
             else:
                 user_link.meta = json.dumps(info)
                 user_link.status = 1
@@ -162,6 +188,13 @@ class APINewLink(Resource):
 
                     code = args.get("Code")
                     is_active = TwitterTokenService().fetch_token(code, user_link)
+                    if is_active:
+                        data = TwitterTokenService().fetch_user_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
                 if link.type == "FACEBOOK":
                     user_link.status = 0
                     user_link.save()
@@ -171,6 +204,14 @@ class APINewLink(Resource):
                         access_token=access_token, user_link=user_link
                     )
 
+                    if is_active:
+                        data = FacebookTokenService().fetch_user_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
+
                 if link.type == "YOUTUBE":
                     user_link.status = 0
                     user_link.save()
@@ -179,6 +220,13 @@ class APINewLink(Resource):
                     is_active = YoutubeTokenService().exchange_code_for_token(
                         code=code, user_link=user_link
                     )
+                    if is_active:
+                        data = YoutubeTokenService().fetch_channel_info(user_link)
+                        if data:
+                            social_id = data.get("id") or ""
+                            name = data.get("name") or ""
+                            avatar = data.get("avatar") or ""
+                            url = data.get("url") or ""
 
             if is_active:
                 user_link.social_id = social_id
@@ -279,29 +327,48 @@ class APIPostToLinks(Resource):
             links = LinkService.get_not_json_links()
             link_pluck_by_id = {link.id: link for link in links}
 
+            posts = PostService.get_posts__by_batch_id(batch_id)
+
+            total_post = 0
+            post_checked = {}
+            for post_to_check in posts:
+                for link_id in active_links:
+                    if post_checked.get(post_to_check.id):
+                        continue
+                    link = link_pluck_by_id.get(link_id)
+                    if not link:
+                        continue
+                    if post_to_check.type == "blog" and link.social_type != "BLOG":
+                        continue
+                    if (
+                        post_to_check.type == "image" or post_to_check.type == "video"
+                    ) and link.social_type != "SOCIAL":
+                        continue
+                    if post_to_check.type == "image" and link.type == "YOUTUBE":
+                        continue
+                    post_checked[post_to_check.id] = post_to_check
+                    total_post += 1
+
             total_link = 0
             for link_id in active_links:
                 link = link_pluck_by_id.get(link_id)
                 if not link:
                     continue
-
                 if post.type == "blog" and link.social_type != "BLOG":
                     continue
-
                 if (
                     post.type == "image" or post.type == "video"
                 ) and link.social_type != "SOCIAL":
                     continue
-
                 if post.type == "image" and link.type == "YOUTUBE":
                     continue
-
                 total_link += 1
 
             progress = {
                 "batch_id": batch_id,
                 "post_id": post.id,
                 "total_link": total_link,
+                "total_post": total_post,
                 "total_percent": 0,
                 "status": "PROCESSING",
                 "upload": [],
@@ -330,6 +397,7 @@ class APIPostToLinks(Resource):
 
                 progress["upload"].append(
                     {
+                        "title": link.title,
                         "link_id": link_id,
                         "post_id": post.id,
                         "status": "PROCESSING",
@@ -348,9 +416,18 @@ class APIPostToLinks(Resource):
                         "is_all": is_all,
                     },
                 }
-                send_message(message)
+                if link.type == "FACEBOOK":
+                    send_facebook_message(message)
+                if link.type == "TIKTOK":
+                    send_tiktok_message(message)
+                if link.type == "X":
+                    send_twitter_message(message)
+                if link.type == "YOUTUBE":
+                    send_youtube_message(message)
 
-            redis_client.set(f"toktak:progress:{batch_id}", json.dumps(progress))
+            redis_client.set(
+                f"toktak:progress:{batch_id}:{post_id}", json.dumps(progress)
+            )
 
             return Response(
                 message="Tạo bài viết thành công. Vui lòng đợi trong giây lát",
@@ -578,6 +655,19 @@ class APIGetCallbackTiktok(Resource):
             else:
                 user_link.meta = json.dumps(token)
                 user_link.status = 1
+                user_link.save()
+
+            user_info = TiktokTokenService().fetch_user_info(user_link)
+            if user_info:
+                social_id = user_info.get("id") or ""
+                name = user_info.get("name") or ""
+                avatar = user_info.get("avatar") or ""
+                url = user_info.get("url") or ""
+
+                user_link.social_id = social_id
+                user_link.name = name
+                user_link.avatar = avatar
+                user_link.url = url
                 user_link.save()
 
             return redirect(PAGE_PROFILE + "?success=1")

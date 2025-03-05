@@ -16,23 +16,18 @@ from app.extensions import redis_client, db
 from app.config import configs as config
 from app.services.link import LinkService
 from app.services.post import PostService
-from app.third_parties.facebook import FacebookService
-from app.third_parties.instagram import InstagramService
-from app.third_parties.thread import ThreadService
-from app.third_parties.tiktok import TiktokService
-from app.third_parties.twitter import TwitterService
 from app.third_parties.youtube import YoutubeService
 
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST") or "localhost"
 RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT") or 5672
 RABBITMQ_USER = os.environ.get("RABBITMQ_USER") or "guest"
 RABBITMQ_PASSWORD = os.environ.get("RABBITMQ_PASSWORD") or "guest"
-RABBITMQ_QUEUE = os.environ.get("RABBITMQ_QUEUE") or "hello"
+RABBITMQ_QUEUE_YOUTUBE = os.environ.get("RABBITMQ_QUEUE_YOUTUBE") or "hello"
 
 
 def __config_logging(app):
     app.logger.setLevel(logging.DEBUG)
-    app.logger.info("Start Consumer...")
+    app.logger.info("Start YOUTUBE Consumer...")
 
 
 def __init_app(app):
@@ -62,9 +57,7 @@ def action_send_post_to_link(message):
         link_id = message.get("link_id")
         post_id = message.get("post_id")
         user_id = message.get("user_id")
-        page_id = message.get("page_id")
         social_post_id = message.get("social_post_id")
-        is_all = message.get("is_all")
 
         link = LinkService.find_link(link_id)
         post = PostService.find_post(post_id)
@@ -77,23 +70,8 @@ def action_send_post_to_link(message):
             return False
 
         if link.social_type == "SOCIAL":
-            if link.type == "FACEBOOK":
-                FacebookService().send_post(
-                    post, link, user_id, social_post_id, page_id, is_all
-                )
-            elif link.type == "TELEGRAM":
-                # Xử lý cho Telegram nếu cần
-                pass
-            elif link.type == "X":
-                TwitterService().send_post(post, link, user_id, social_post_id)
-            elif link.type == "INSTAGRAM":
-                InstagramService().send_post(post, link, user_id, social_post_id)
-            elif link.type == "YOUTUBE":
+            if link.type == "YOUTUBE":
                 YoutubeService().send_post(post, link, user_id, social_post_id)
-            elif link.type == "TIKTOK":
-                TiktokService().send_post(post, link, user_id, social_post_id)
-            elif link.type == "THREAD":
-                ThreadService().send_post(post, link, user_id, social_post_id)
         return True
     except Exception as e:
         logger.error(f"Error send post to link: {str(e)}")
@@ -151,7 +129,7 @@ async def main():
     app = create_app()
     connection = await connect_robust(RABBITMQ_URL)
     channel = await connection.channel()
-    queue = await channel.declare_queue(RABBITMQ_QUEUE, durable=False)
+    queue = await channel.declare_queue(RABBITMQ_QUEUE_YOUTUBE, durable=False)
 
     logger.info("Đang chờ message. Nhấn CTRL+C để dừng.")
     await queue.consume(partial(on_message, app=app), no_ack=False)

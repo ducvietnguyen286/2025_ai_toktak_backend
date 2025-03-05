@@ -108,6 +108,46 @@ class FacebookTokenService:
             return None
 
     @staticmethod
+    def fetch_user_info(user_link):
+        try:
+            log_social_message(
+                "------------------  GET FACEBOOK USER INFO BY TOKEN  ------------------"
+            )
+            user_link = UserService.find_user_link(
+                link_id=user_link.id, user_id=user_link.user_id
+            )
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("access_token")
+            if not access_token:
+                log_social_message("Token not found")
+                return None
+
+            USER_URL = f"https://graph.facebook.com/v22.0/me?access_token={access_token}&fields=id,name,email,picture"
+            response = requests.get(USER_URL)
+            data = response.json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="FACEBOOK",
+                social_post_id=0,
+                user_id=user_link.user_id,
+                type="get_user_info_by_token",
+                request=json.dumps({"access_token": access_token}),
+                response=json.dumps(data),
+            )
+
+            log_social_message(f"User info: {data}")
+            return {
+                "id": data.get("id") or "",
+                "name": data.get("name") or "",
+                "avatar": data.get("picture").get("data").get("url") or "",
+                "url": f"https://facebook.com/profile.php?id={data.get('id')}" or "",
+            }
+
+        except Exception as e:
+            log_social_message(e)
+            return None
+
+    @staticmethod
     def exchange_token(access_token, user_link):
         try:
             log_social_message(
@@ -166,7 +206,6 @@ class FacebookTokenService:
         except Exception as e:
             traceback.print_exc()
             log_social_message(e)
-            print(e)
             return False
 
 
@@ -207,11 +246,11 @@ class FacebookService(BaseService):
         )
 
         if not is_all and not token_page:
-            self.save_errors("ERRORED", "Can't get page token")
+            self.save_errors("ERRORED", "SEND POST ERROR NOT ALL: Can't get page token")
             return False
         else:
             if not token_page:
-                self.save_errors("ERRORED", "Can't get page token")
+                self.save_errors("ERRORED", "SEND POST ERROR ALL: Can't get page token")
                 return False
             response_token = token_page
             page_id = response_token.get("id")
@@ -233,7 +272,7 @@ class FacebookService(BaseService):
             if post.type == "video":
                 self.send_post_video(post, link)
         except Exception as e:
-            self.save_errors("ERRORED", f"Error send post to FACEBOOK: {str(e)}")
+            self.save_errors("ERRORED", f"SEND POST: {str(e)}")
             return False
 
     def send_post_video(self, post, link):
@@ -262,22 +301,29 @@ class FacebookService(BaseService):
             reels = self.get_reel_uploaded(
                 page_id=page_id, access_token=page_access_token
             )
+            if not reels:
+                self.save_publish("PUBLISHED", "profile")
+                return True
+
             reel_data = reels.get("data")
             reel_id = reel_data[0].get("id")
             permalink = f"https://www.facebook.com/reel/{reel_id}"
 
             self.save_publish("PUBLISHED", permalink)
+            return True
         else:
             log_social_message(f"Upload video error: {result_status}")
             video_status = result_status.get("video_status")
             uploading_phase = result_status.get("uploading_phase")
 
             if video_status == "error":
-                self.save_errors("ERRORED", "Video is error. Can't upload video")
+                self.save_errors(
+                    "ERRORED", "SEND POST VIDEO: Video is error. Can't upload video"
+                )
             if uploading_phase == "error":
                 error_message = uploading_phase.get("error").get("message")
-                self.save_errors("ERRORED", error_message)
-        return True
+                self.save_errors("ERRORED", f"SEND POST VIDEO: {error_message}")
+            return False
 
     def start_session_upload_reel(self, page_id, page_access_token):
         URL_UPLOAD = f"https://graph.facebook.com/v22.0/{page_id}/video_reels"
@@ -287,8 +333,8 @@ class FacebookService(BaseService):
         try:
             post_response = requests.post(URL_UPLOAD, data=post_data, headers=headers)
         except Exception as e:
-            self.save_errors("ERRORED", str(e))
-            raise ValueError("Access token invalid")
+            self.save_errors("ERRORED", f"START SESSION UPLOAD REEL: {str(e)}")
+            return False
 
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
@@ -313,8 +359,8 @@ class FacebookService(BaseService):
         try:
             post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers)
         except Exception as e:
-            self.save_errors("ERRORED", str(e))
-            raise ValueError("Access token invalid")
+            self.save_errors("ERRORED", f"UPLOAD VIDEO: {str(e)}")
+            return False
 
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
@@ -336,20 +382,25 @@ class FacebookService(BaseService):
             try:
                 get_response = requests.get(URL_CHECK_STATUS)
             except Exception as e:
-                self.save_errors("ERRORED", str(e))
-                raise ValueError("Access token invalid")
+                self.save_errors("ERRORED", f"GET UPLOAD STATUS: {str(e)}")
+                return {
+                    "status": "error",
+                    "error": str(e),
+                }
 
             result = get_response.json()
 
-            log_social_message(f"get upload status: {result}")
+            log_social_message(f"FACEBOOK: get upload status: {result}")
 
             status = result["status"]
+
+            time.sleep(1)
 
             if count <= 6:
                 self.save_uploading(20 + (count * 10))
 
         except Exception as e:
-            self.save_errors("ERRORED", str(e))
+            self.save_errors("ERRORED", f"GET UPLOAD STATUS - EROROR: {str(e)}")
             return {
                 "status": "error",
                 "error": str(e),
@@ -380,7 +431,7 @@ class FacebookService(BaseService):
             "video_id": video_id,
             "access_token": access_token,
             "video_state": "PUBLISHED",
-            "description": post.content + " " + post.hashtag,
+            "description": post.description + " " + post.hashtag,
         }
 
         final_url = (
@@ -389,8 +440,8 @@ class FacebookService(BaseService):
         try:
             post_response = requests.post(final_url)
         except Exception as e:
-            self.save_errors("ERRORED", str(e))
-            raise ValueError("Access token invalid")
+            self.save_errors("ERRORED", f"PUBLISH THE REEL: {str(e)}")
+            return False
 
         result = post_response.json()
         RequestSocialLogService.create_request_social_log(
@@ -411,8 +462,8 @@ class FacebookService(BaseService):
         try:
             get_response = requests.get(URL_REEL)
         except Exception as e:
-            self.save_errors("ERRORED", str(e))
-            raise ValueError("Access token invalid")
+            self.save_errors("ERRORED", f"GET REEL UPLOADED: {str(e)}")
+            return False
 
         result = get_response.json()
         RequestSocialLogService.create_request_social_log(
@@ -441,13 +492,15 @@ class FacebookService(BaseService):
         photo_ids = self.unpublish_images(
             images=images, page_id=page_id, page_access_token=page_access_token
         )
+        if not photo_ids:
+            return False
 
         attached_media = [{"media_fbid": pid} for pid in photo_ids]
 
         log_social_message(f"Attached media: {attached_media}")
 
         post_data = {
-            "message": post.content + " " + post.hashtag,
+            "message": post.description + " " + post.hashtag,
             "attached_media": json.dumps(attached_media),
             "access_token": page_access_token,
         }
@@ -456,8 +509,8 @@ class FacebookService(BaseService):
         try:
             post_response = requests.post(FEED_URL, data=post_data)
         except Exception as e:
-            self.save_errors("ERRORED", str(e))
-            raise ValueError("Access token invalid")
+            self.save_errors("ERRORED", f"SEND POST IMAGE - REQUEST FEED URL: {str(e)}")
+            return False
         result = post_response.json()
 
         RequestSocialLogService.create_request_social_log(
@@ -474,7 +527,7 @@ class FacebookService(BaseService):
         if "id" not in result:
             error = result.get("error", {})
             error_message = error.get("message", "Error")
-            self.save_errors("ERRORED", error_message)
+            self.save_errors("ERRORED", f"SEND POST IMAGE: {error_message}")
 
             return False
         post_id = photo_ids[0]
@@ -503,8 +556,8 @@ class FacebookService(BaseService):
             try:
                 response = requests.post(UNPUBLISH_URL, data=data)
             except Exception as e:
-                self.save_errors("ERRORED", str(e))
-                raise ValueError("Access token invalid")
+                self.save_errors("ERRORED", f"UNPUBLISH IMAGES: {str(e)}")
+                return False
 
             result = response.json()
 

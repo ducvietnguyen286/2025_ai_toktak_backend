@@ -24,6 +24,46 @@ CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET") or ""
 
 class YoutubeTokenService:
 
+    def fetch_channel_info(self, user_link):
+        try:
+            PAGE_URL = (
+                f"https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true"
+            )
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("access_token")
+            if not access_token:
+                log_social_message("Error fetch_channel_info: access_token not found")
+                return None
+
+            response = requests.get(
+                PAGE_URL, headers={"Authorization": f"Bearer {access_token}"}
+            ).json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="YOUTUBE",
+                social_post_id=0,
+                user_id=user_link.user_id,
+                type="fetch_channel_info",
+                request=json.dumps({}),
+                response=json.dumps(response),
+            )
+
+            if "items" not in response:
+                log_social_message(f"Error fetch_channel_info: {response}")
+                return None
+
+            item = response["items"][0]
+
+            return {
+                "id": item["id"] or "",
+                "name": item["snippet"]["title"] or "",
+                "avatar": item["snippet"]["thumbnails"]["default"]["url"] or "",
+                "url": f"https://www.youtube.com/{item['snippet']['customUrl']}" or "",
+            }
+        except Exception as e:
+            log_social_message(f"Error fetch_channel_info: {str(e)}")
+            return None
+
     def exchange_code_for_token(self, code, user_link):
         try:
             REDIRECT_URI = os.environ.get("YOUTUBE_REDIRECT_URI") or ""
@@ -94,7 +134,7 @@ class YoutubeService(BaseService):
             if post.type == "video":
                 self.send_post_video(post)
         except Exception as e:
-            self.save_errors("ERRORED", str(e))
+            self.save_errors("ERRORED", f"SEND POST: {str(e)}")
             return False
 
     def get_youtube_service_from_token(self, user_link):
@@ -138,7 +178,7 @@ class YoutubeService(BaseService):
                     user_link.status = 0
                     user_link.save()
 
-                    self.save_errors("ERRORED", str(e))
+                    self.save_errors("ERRORED", f"GET SERVICE - EXPIRED: {str(e)}")
 
                     return None
 
@@ -148,8 +188,8 @@ class YoutubeService(BaseService):
 
             return build("youtube", "v3", credentials=credentials)
         except HttpError as e:
-            self.save_errors("ERRORED", str(e))
-            return None
+            self.save_errors("ERRORED", f"GET SERVICE: {str(e)}")
+            return False
 
     def send_post_video(self, post):
         log_social_message(
@@ -161,11 +201,13 @@ class YoutubeService(BaseService):
                 log_social_message(
                     "----------------------- ERROR: SEND YOUTUBE ERROR ---------------------------"
                 )
-                self.save_errors("ERRORED", "Can't get youtube service")
-                return None
+                self.save_errors(
+                    "ERRORED", "SEND POST VIDEO: Can't get youtube service"
+                )
+                return False
 
             post_title = post.title
-            post_description = post.content + " " + post.hashtag + " #shorts"
+            post_description = post.description + " " + post.hashtag + " #shorts"
             tags = post.hashtag
             tags = tags.split(" ") if tags else []
 
@@ -199,11 +241,8 @@ class YoutubeService(BaseService):
                     part="snippet,status", body=body, media_body=media
                 )
             except Exception as e:
-                log_social_message(
-                    f"----------------------- YOUTUBE ERROR SEND : {post_title} -> {str(e)}  ---------------------------"
-                )
-                self.save_errors("ERRORED", str(e))
-                raise e
+                self.save_errors("ERRORED", f"SEND POST VIDEO - REQUEST SEND: {str(e)}")
+                return False
 
             self.save_uploading(10)
 
@@ -222,8 +261,8 @@ class YoutubeService(BaseService):
                         self.save_uploading(10 + (i * 10))
                     i += 1
             except Exception as e:
-                self.save_errors("ERRORED", str(e))
-                raise e
+                self.save_errors("ERRORED", f"SEND POST VIDEO - UPLOAD CHUNK: {str(e)}")
+                return False
 
             log_social_message(
                 "----------------------- YOUTUBE UPLOADED : VIDEO ID {}  ---------------------------".format(
@@ -241,7 +280,11 @@ class YoutubeService(BaseService):
             )
 
             if "error" in response:
-                self.save_errors("ERRORED", response["error"]["message"])
+                message_error = response["error"]["message"]
+                self.save_errors(
+                    "ERRORED", f"SEND POST VIDEO - GET RESPONSE ERROR: {message_error}"
+                )
+                return False
             else:
                 video_id = ""
                 try:
@@ -250,12 +293,14 @@ class YoutubeService(BaseService):
                     try:
                         video_id = response.get("id")
                     except Exception as e:
-                        self.save_errors("ERRORED", str(e))
-                        return None
+                        self.save_errors(
+                            "ERRORED", f"SEND POST VIDEO - GET VIDEO ID: {str(e)}"
+                        )
+                        return False
 
                 if not video_id:
-                    self.save_errors("ERRORED", "Can't get video id")
-                    return None
+                    self.save_errors("ERRORED", "SEND POST VIDEO - GET VIDEO ID}")
+                    return False
 
                 permalink = f"https://www.youtube.com/watch?v={video_id}"
 
@@ -263,5 +308,5 @@ class YoutubeService(BaseService):
 
             return response
         except Exception as e:
-            self.save_errors("ERRORED", str(e))
-            return None
+            self.save_errors("ERRORED", f"SEND POST VIDEO - ERROR: {str(e)}")
+            return False
