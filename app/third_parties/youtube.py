@@ -207,7 +207,7 @@ class YoutubeService(BaseService):
                 return False
 
             post_title = post.title
-            post_description = post.content + " " + post.hashtag + " #shorts"
+            post_description = post.description + " " + post.hashtag + " #shorts"
             tags = post.hashtag
             tags = tags.split(" ") if tags else []
 

@@ -431,7 +431,7 @@ class FacebookService(BaseService):
             "video_id": video_id,
             "access_token": access_token,
             "video_state": "PUBLISHED",
-            "description": post.content + " " + post.hashtag,
+            "description": post.description + " " + post.hashtag,
         }
 
         final_url = (
