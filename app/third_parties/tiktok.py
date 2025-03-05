@@ -342,7 +342,7 @@ class TiktokService(BaseService):
             },
         }
 
-        log_social_message(f"Payload: {payload}")
+        log_social_message(f"TIKTOK UPLOAD VIDEO INIT Payload: {payload}")
         try:
             upload_response = requests.post(
                 URL_VIDEO_UPLOAD, headers=headers, data=json.dumps(payload)
