@@ -14,6 +14,7 @@ class Post(db.Model, BaseModel):
     title = db.Column(db.String(500), nullable=False, default="")
     subtitle = db.Column(db.String(500), nullable=False, default="")
     content = db.Column(db.Text, nullable=False, default="")
+    description = db.Column(db.Text, default="")
     hashtag = db.Column(db.Text, nullable=True)
     video_url = db.Column(db.String(255), nullable=False, default="")
     type = db.Column(db.String(10), default="video", index=True)
