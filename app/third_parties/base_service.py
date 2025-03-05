@@ -40,14 +40,14 @@ class BaseService:
 
     def save_errors(self, status, message):
         redis_key = f"toktak:has_error:boundio:{self.post_id}:{self.link_id}"
-        is_has_error = redis_client.get(redis_key)
+        # is_has_error = redis_client.get(redis_key)
         save_message = f"{self.service}: {message}"
         self.publish_redis_channel(status, 100)
         log_social_message(save_message)
-        if is_has_error:
-            return
+        # if is_has_error:
+        #     return
         self.save_social_post_error(status, save_message)
-        redis_client.set(redis_key, 1, ex=10)
+        # redis_client.set(redis_key, 1, ex=10)
 
     def save_publish(self, status, social_link):
         self.save_social_post_publish(status, social_link)
