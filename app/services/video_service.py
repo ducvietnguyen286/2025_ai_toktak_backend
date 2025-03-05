@@ -473,6 +473,7 @@ class VideoService:
             # clips.append(srt_caption)
 
             voice_url = create_mp3_from_srt(batch_id, url_path_srt)
+            
 
             clips.append(
                 {
@@ -492,17 +493,18 @@ class VideoService:
                     "length": time_show_image,
                 },
             )
-            clips.append(
-                {
-                    "asset": {
-                        "type": "audio",
-                        "src": voice_url,
-                        "volume": 1,
-                    },
-                    "start": start_slider_time,
-                    "length": time_show_image,
-                }
-            )
+            if voice_url != "":
+                clips.append(
+                    {
+                        "asset": {
+                            "type": "audio",
+                            "src": voice_url,
+                            "volume": 1,
+                        },
+                        "start": start_slider_time,
+                        "length": time_show_image,
+                    }
+                )
             # clips.append(
             #     {
             #         "asset": {
@@ -602,6 +604,7 @@ def generate_srt(batch_id, captions):
     os.makedirs(f"static/{file_path}", exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     file_paths = []
+    log_make_video_message(f"captions: {captions}")
 
     for i, text in enumerate(captions):
         file_name = f"transcript_{timestamp}_{i}.srt"
@@ -612,9 +615,12 @@ def generate_srt(batch_id, captions):
         end = format_time(start_time + 5)
         let_step = 1
         duration_per_caption = 5
+        
+        text = text.replace("\\", "")
+        text = text.replace("…", "\n")
+        text = text.replace("...", "\n")
         with open(file_path_srt, "w", encoding="utf-8") as f:
-            text = text.replace("…", "\n")
-            text = text.replace("...", "\n")
+            
             segments = text.split("\n")
 
             if len(segments) == 1:
@@ -761,11 +767,12 @@ def create_mp3_from_srt(batch_id, srt_filepath):
         srt_content = f.read()
 
     # Phân tích file SRT thành danh sách caption
+    
     captions = list(srt.parse(srt_content))
 
     # Ghép nội dung tất cả các caption, thay dòng mới bằng dấu cách
     text_to_speak = " ".join(
-        [caption.content.replace("\n", " ") for caption in captions]
+        [caption.content.replace("\n", "") for caption in captions]
     )
 
     public_patch = f"/voice/gtts_voice/{batch_id}"
@@ -773,24 +780,28 @@ def create_mp3_from_srt(batch_id, srt_filepath):
     os.makedirs(voice_dir, exist_ok=True)
 
     uuid_str = uuid.uuid4().hex
+    
+    text_to_speak= text_to_speak.strip()
+    if text_to_speak != "":
+        
+        # create voice Google TTS
+        tts = gTTS(text=text_to_speak, lang="ko")
+        file_name = f"template_voice_sub_caption_{uuid_str}_1.mp3"
+        file_path = f"{voice_dir}/{file_name}"
 
-    # create voice Google TTS
-    tts = gTTS(text=text_to_speak, lang="ko")
-    file_name = f"template_voice_sub_caption_{uuid_str}_1.mp3"
-    file_path = f"{voice_dir}/{file_name}"
+        tts.save(file_path)
 
-    tts.save(file_path)
+        CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
+        voice_url = f"{CURRENT_DOMAIN}/{public_patch}/{file_name}"
 
-    CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "localhost"
-    voice_url = f"{CURRENT_DOMAIN}/{public_patch}/{file_name}"
+        new_file_name = f"template_voice_sub_caption_{uuid_str}_3.mp3"
+        new_voice_dir = f"{voice_dir}/{new_file_name}"
 
-    new_file_name = f"template_voice_sub_caption_{uuid_str}_3.mp3"
-    new_voice_dir = f"{voice_dir}/{new_file_name}"
+        change_speed_ffmpeg(file_path, new_voice_dir, speed=1.5)
 
-    change_speed_ffmpeg(file_path, new_voice_dir, speed=1.5)
-
-    new_voice_url = f"{CURRENT_DOMAIN}/{public_patch}/{new_file_name}"
-    return new_voice_url
+        new_voice_url = f"{CURRENT_DOMAIN}/{public_patch}/{new_file_name}"
+        return new_voice_url
+    return ""
 
 
 def create_html_caption(caption_text, start=0, length=0, add_time=0):
