@@ -345,7 +345,7 @@ class APIMakePost(Resource):
 
             else:
                 return Response(
-                    message="Tạo post that bai",
+                    message=f"Tạo {type} that bai.!",
                     status=400,
                 ).to_dict()
 
@@ -373,27 +373,13 @@ class APIMakePost(Resource):
 
             return Response(
                 data=post._to_json(),
-                message="Tạo post thành công",
+                message=f"Tạo {type} thành công",
             ).to_dict()
         except Exception as e:
-            if type == "video":
-                message = "Tạo video that bai"
-            elif type == "image":
-                message = "Tạo image that bai"
-            elif type == "blog":
-                message = "Tạo blog that bai"
-
-            logger.error(f"Exception:  {message} :  {str(e)}")
+            logger.error(f"Exception: Tạo {type} that bai  :  {str(e)}")
             traceback.print_exc()
-            if type == "video":
-                message = "Tạo video that bai"
-            elif type == "image":
-                message = "Tạo image that bai"
-            elif type == "blog":
-                message = "Tạo blog that bai"
-
             return Response(
-                message=message,
+                message=f"Tạo {type} that bai...",
                 message_detail=str(e),
                 status=400,
             ).to_dict()
