@@ -140,6 +140,24 @@ class VideoService:
                 result["status_code"] = 200
 
                 log_make_video_message(f"render_id : : {result}")
+
+                RequestLogService.create_request_log(
+                    post_id=post_id,
+                    ai_type="shotstack",
+                    request=json.dumps(payload),
+                    response=json.dumps(result),
+                    prompt_tokens=0,
+                    prompt_cache_tokens=0,
+                    prompt_audio_tokens=0,
+                    completion_tokens=0,
+                    completion_reasoning_tokens=0,
+                    completion_audio_tokens=0,
+                    completion_accepted_prediction_tokens=0,
+                    completion_rejected_prediction_tokens=0,
+                    total_tokens=0,
+                    status=1,
+                )
+
                 return result
             else:
                 result = response.json()
@@ -158,18 +176,18 @@ class VideoService:
                 ai_type="shotstack",
                 request=json.dumps(payload),
                 response=str(e),
-                prompt_tokens="",
-                prompt_cache_tokens="",
-                prompt_audio_tokens="",
-                completion_tokens="",
-                completion_reasoning_tokens="",
-                completion_audio_tokens="",
-                completion_accepted_prediction_tokens="",
-                completion_rejected_prediction_tokens="",
-                total_tokens="",
+                prompt_tokens=0,
+                prompt_cache_tokens=0,
+                prompt_audio_tokens=0,
+                completion_tokens=0,
+                completion_reasoning_tokens=0,
+                completion_audio_tokens=0,
+                completion_accepted_prediction_tokens=0,
+                completion_rejected_prediction_tokens=0,
+                total_tokens=0,
                 status=2,
             )
-            
+
             return {
                 "message": str(e),
                 "status_code": 500,
@@ -615,11 +633,11 @@ def generate_srt(post_id, captions):
     Tạo các file transcript.srt riêng biệt cho từng caption.
     Lưu vào thư mục static/voice/caption/
     """
-    file_path = f"voice/gtts_voice/{post_id}"
+    date_create = datetime.datetime.now().strftime("%Y_%m_%d")
+    file_path = f"voice/gtts_voice/{date_create}/{post_id}"
     os.makedirs(f"static/{file_path}", exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     file_paths = []
-    log_make_video_message(f"captions: {captions}")
 
     for i, text in enumerate(captions):
         file_name = f"transcript_{timestamp}_{i}.srt"
@@ -672,6 +690,7 @@ def format_time(seconds):
     # Tính phần mili giây
     ms = int(round((seconds - int(seconds)) * 1000)) + 1
     return f"{hours:02}:{minutes:02}:{sec:02},{ms:03}"
+
 
 def test_create_combined_clips(
     post_id,
@@ -794,7 +813,9 @@ def create_mp3_from_srt(post_id, srt_filepath):
         [caption.content.replace("\n", "") for caption in captions]
     )
 
-    public_patch = f"/voice/gtts_voice/{post_id}"
+    date_create = datetime.datetime.now().strftime("%Y_%m_%d")
+
+    public_patch = f"/voice/gtts_voice/{date_create}/{post_id}"
     voice_dir = f"static/{public_patch}"
     os.makedirs(voice_dir, exist_ok=True)
 
