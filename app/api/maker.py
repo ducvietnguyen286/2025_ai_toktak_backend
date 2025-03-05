@@ -121,6 +121,7 @@ class APICreateBatch(Resource):
             return Response(
                 message="Tạo batch that bai",
                 status=400,
+                code=201,
             ).to_dict()
 
 
@@ -180,7 +181,8 @@ class APITestCreateVideo(Resource):
             logger.error("Exception: {0}".format(str(e)))
             return Response(
                 message="Tạo video that bai",
-                status=400,
+                status=200,
+                code=201,
             ).to_dict()
 
 
@@ -194,19 +196,19 @@ class APIMakePost(Resource):
             if not post:
                 return Response(
                     message="Post không tồn tại",
-                    status=404,
+                    status=201,
                 ).to_dict()
             batch = BatchService.find_batch(post.batch_id)
             if not batch:
                 return Response(
                     message="Batch không tồn tại",
-                    status=404,
+                    status=201,
                 ).to_dict()
 
             if batch.status == 1 or post.status == 1:
                 return Response(
                     message="Post đã được tạo",
-                    status=400,
+                    status=201,
                 ).to_dict()
 
             data = json.loads(batch.content)
@@ -351,7 +353,8 @@ class APIMakePost(Resource):
             else:
                 return Response(
                     message=f"Tạo {type} that bai.!",
-                    status=400,
+                    status=200,
+                    code=201,
                 ).to_dict()
 
             post = PostService.update_post(
@@ -381,11 +384,12 @@ class APIMakePost(Resource):
                 message=f"Tạo {type} thành công",
             ).to_dict()
         except Exception as e:
-            logger.error(f"Exception: Tạo {type} that bai  :  {str(e)}")
+            logger.error(f"Exception: create {type} that bai  :  {str(e)}")
             traceback.print_exc()
             return Response(
-                message=f"Tạo {type} that bai...",
-                status=400,
+                message=f"create {type} that bai...",
+                status=200,
+                code=201,
             ).to_dict()
 
 
