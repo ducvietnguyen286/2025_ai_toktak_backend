@@ -383,7 +383,7 @@ class TwitterService(BaseService):
         if "data" not in res_json:
             self.save_errors("ERRORED", "UPLOAD MEDIA INIT: Error Get Data")
             return False
-        if "media_id" not in res_json["data"]:
+        if "id" not in res_json["data"]:
             self.save_errors("ERRORED", "UPLOAD MEDIA INIT: Error Get Media ID")
             return False
         media_id = res_json["data"]["id"]
