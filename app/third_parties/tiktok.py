@@ -138,6 +138,9 @@ class TiktokService(BaseService):
 
         try:
             self.save_uploading(0)
+            log_tiktok_message(
+                f"------------ READY TO SEND POST: {post} ----------------"
+            )
             if post.type == "video":
                 self.upload_video(post.video_url)
             if post.type == "image":
@@ -256,7 +259,13 @@ class TiktokService(BaseService):
         try:
             log_tiktok_message("Upload video to Tiktok")
             # FILE INFO
-            response = requests.get(media)
+            try:
+                response = requests.get(media, timeout=20)
+            except Exception as e:
+                self.save_errors(
+                    "ERRORED", f"UPLOAD VIDEO - REQUEST URL VIDEO {media}: {str(e)}"
+                )
+                return False
 
             upload_info = self.upload_video_init(response)
             if not upload_info:

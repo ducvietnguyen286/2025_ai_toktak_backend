@@ -205,6 +205,9 @@ class TwitterService(BaseService):
 
         try:
             self.save_uploading(0)
+            log_twitter_message(
+                f"------------ READY TO SEND POST: {post} ----------------"
+            )
             if post.type == "image":
                 self.send_post_social(post, link)
             if post.type == "video":
@@ -296,7 +299,13 @@ class TwitterService(BaseService):
     def upload_media(self, media, is_video=False):
         log_twitter_message(f"Upload media {media}")
 
-        response = requests.get(media)
+        try:
+            response = requests.get(media, timeout=20)
+        except Exception as e:
+            self.save_errors(
+                "ERRORED", f"UPLOAD VIDEO - REQUEST URL VIDEO {media}: {str(e)}"
+            )
+            return False
 
         total_bytes = int(response.headers.get("content-length", 0))
         media_type = response.headers.get("content-type")

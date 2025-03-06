@@ -259,15 +259,12 @@ class FacebookService(BaseService):
         self.page_id = page_id
         self.page_token = token_page
 
-        log_facebook_message(
-            f"--------------------FACEBOOK PAGE ID: {page_id}------------------------"
-        )
-        log_facebook_message(
-            f"--------------------FACEBOOK PAGE TOKEN: {token_page}------------------------"
-        )
-
         try:
             self.save_uploading(0)
+            log_facebook_message(
+                f"------------ READY TO SEND POST: {post} ----------------"
+            )
+
             if post.type == "image":
                 self.send_post_image(post, link)
             if post.type == "video":
