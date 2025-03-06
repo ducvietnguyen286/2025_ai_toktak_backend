@@ -206,7 +206,7 @@ class TwitterService(BaseService):
         try:
             self.save_uploading(0)
             log_twitter_message(
-                f"------------ READY TO SEND POST: {post} ----------------"
+                f"------------ READY TO SEND POST: {post._to_json()} ----------------"
             )
             if post.type == "image":
                 self.send_post_social(post, link)
