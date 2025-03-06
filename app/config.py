@@ -19,6 +19,12 @@ class Config(object):
         db=os.environ.get("SQLALCHEMY_DATABASE") or "<your sql database>",
     )
 
+    MONGODB_DB = os.environ.get("MONGODB_DB") or "toktak"
+    MONGODB_HOST = os.environ.get("MONGODB_HOST") or "localhost"
+    MONGODB_PORT = int(os.environ.get("MONGODB_PORT") or "27017")
+    MONGODB_USERNAME = os.environ.get("MONGODB_USERNAME") or ""
+    MONGODB_PASSWORD = os.environ.get("MONGODB_PASSWORD") or ""
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or "secret"

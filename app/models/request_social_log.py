@@ -1,15 +1,16 @@
-from datetime import datetime
-from app.models.base import BaseModel
-from app.extensions import db
+from app.models.base_mongo import BaseDocument
+from mongoengine import StringField, IntField
 
 
-class RequestSocialLog(db.Model, BaseModel):
-    __tablename__ = "request_social_logs"
+class RequestSocialLog(BaseDocument):
+    meta = {
+        "collection": "request_social_logs",
+        "indexes": ["social", "type"],
+    }
 
-    id = db.Column(db.Integer, primary_key=True)
-    social = db.Column(db.String(50), index=True, nullable=False)
-    social_post_id = db.Column(db.Integer, nullable=True)
-    user_id = db.Column(db.Integer, index=True, nullable=False)
-    type = db.Column(db.String(50), nullable=False)
-    request = db.Column(db.Text, nullable=False)
-    response = db.Column(db.Text, default=1)
+    social = StringField(required=True, max_length=50)
+    social_post_id = IntField(required=True, default=0)
+    user_id = IntField(required=True, default=0)
+    type = StringField(required=True, max_length=50)
+    request = StringField()
+    response = StringField()
