@@ -41,7 +41,7 @@ class YoutubeTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="YOUTUBE",
-                social_post_id=0,
+                social_post_id="",
                 user_id=user_link.user_id,
                 type="fetch_channel_info",
                 request=json.dumps({}),
@@ -81,7 +81,7 @@ class YoutubeTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="YOUTUBE",
-                social_post_id=0,
+                social_post_id="",
                 user_id=user_link.user_id,
                 type="exchange_code_for_token",
                 request=json.dumps(data),
@@ -115,7 +115,7 @@ class YoutubeService(BaseService):
         self.link_id = None
         self.post_id = None
         self.batch_id = None
-        self.social_post_id = None
+        self.social_post_id = ""
         self.service = "YOUTUBE"
 
     def send_post(self, post, link, user_id, social_post_id):
@@ -128,7 +128,7 @@ class YoutubeService(BaseService):
         self.link_id = link.id
         self.post_id = post.id
         self.batch_id = post.batch_id
-        self.social_post_id = self.social_post.id
+        self.social_post_id = str(self.social_post.id)
 
         try:
             if post.type == "video":
@@ -266,9 +266,7 @@ class YoutubeService(BaseService):
                 return False
 
             log_youtube_message(
-                "----------------------- YOUTUBE UPLOADED : VIDEO ID {}  ---------------------------".format(
-                    response.get("id")
-                )
+                f"----------------------- YOUTUBE UPLOADED {self.post_id}  : RES {response}  ---------------------------"
             )
 
             RequestSocialLogService.create_request_social_log(

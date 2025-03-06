@@ -14,59 +14,21 @@ class SocialPostService:
 
     @staticmethod
     def find_social_post(id):
-        return SocialPost.query.get(id)
-
-    @staticmethod
-    def get_social_posts():
-        social_posts = SocialPost.query.where(SocialPost.status == 1).all()
-        return [social_post._to_json() for social_post in social_posts]
+        return SocialPost.objects.get(id=id)
 
     def get_all_by_post_ids(post_ids):
-        social_posts = SocialPost.query.where(SocialPost.post_id.in_(post_ids)).all()
+        social_posts = SocialPost.objects(post_id__in=post_ids)
         return social_posts
 
     @staticmethod
-    def get_latest_social_post_by_post_ids(post_ids):
-        subq = (
-            db.session.query(
-                SocialPost.post_id, func.max(SocialPost.created_at).label("max_created")
-            )
-            .filter(SocialPost.post_id.in_(post_ids))
-            .group_by(SocialPost.post_id)
-            .subquery()
-        )
-        query = db.session.query(SocialPost).join(
-            subq,
-            and_(
-                SocialPost.post_id == subq.c.post_id,
-                SocialPost.created_at == subq.c.max_created,
-            ),
-        )
-        results = query.all()
-        return results
-
-    @staticmethod
     def by_post_id_get_latest_social_posts(post_id):
-        subq = (
-            db.session.query(
-                SocialPost.post_id,
-                SocialPost.link_id,
-                func.max(SocialPost.created_at).label("max_created"),
-            )
-            .filter(SocialPost.post_id == post_id)
-            .group_by(SocialPost.post_id, SocialPost.link_id)
-            .subquery()
+        social_post = (
+            SocialPost.objects(post_id=post_id).order_by("-created_at").first()
         )
-
-        query = db.session.query(SocialPost).join(
-            subq,
-            and_(
-                SocialPost.post_id == subq.c.post_id,
-                SocialPost.link_id == subq.c.link_id,
-                SocialPost.created_at == subq.c.max_created,
-            ),
-        )
-        results = query.all()
+        if not social_post:
+            return []
+        session_key = social_post.session_key
+        results = SocialPost.objects(session_key=session_key)
 
         link_ids = [result.link_id for result in results]
         links = Link.query.filter(Link.id.in_(link_ids)).all()
@@ -76,7 +38,7 @@ class SocialPostService:
         for social_post in results:
             link = link_dict.get(social_post.link_id)
             post_data = {
-                "id": social_post.id,
+                "id": str(social_post.id),
                 "title": link.title,
                 "status": social_post.status,
                 "link_id": social_post.link_id,

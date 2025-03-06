@@ -36,7 +36,7 @@ class FacebookTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="FACEBOOK",
-                social_post_id=0,
+                social_post_id="",
                 user_id=user_link.user_id,
                 type="fetch_page_token",
                 request=json.dumps({"access_token": access_token}),
@@ -74,7 +74,7 @@ class FacebookTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="FACEBOOK",
-                social_post_id=0,
+                social_post_id="",
                 user_id=user_link.user_id,
                 type="fetch_page_token",
                 request=json.dumps({"access_token": access_token}),
@@ -128,7 +128,7 @@ class FacebookTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="FACEBOOK",
-                social_post_id=0,
+                social_post_id="",
                 user_id=user_link.user_id,
                 type="get_user_info_by_token",
                 request=json.dumps({"access_token": access_token}),
@@ -171,7 +171,7 @@ class FacebookTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="FACEBOOK",
-                social_post_id=0,
+                social_post_id="",
                 user_id=user_link.user_id,
                 type="refresh_token",
                 request=json.dumps(params),
@@ -226,7 +226,7 @@ class FacebookService(BaseService):
         self.link_id = None
         self.post_id = None
         self.batch_id = None
-        self.social_post_id = None
+        self.social_post_id = ""
         self.service = "FACEBOOK"
 
     def send_post(self, post, link, user_id, social_post_id, page_id, is_all=None):
@@ -239,7 +239,7 @@ class FacebookService(BaseService):
         self.link_id = link.id
         self.post_id = post.id
         self.batch_id = post.batch_id
-        self.social_post_id = self.social_post.id
+        self.social_post_id = str(self.social_post.id)
 
         token_page = FacebookTokenService.fetch_page_token_backend(
             self.user_link, page_id, is_all

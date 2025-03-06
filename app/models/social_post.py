@@ -1,18 +1,19 @@
-from app.extensions import db
-from app.models.base import BaseModel
+from app.models.base_mongo import BaseDocument
+from mongoengine import StringField, IntField
 
 
-class SocialPost(db.Model, BaseModel):
-    __tablename__ = "social_posts"
+class SocialPost(BaseDocument):
+    meta = {
+        "collection": "social_posts",
+        "indexes": ["session_key"],
+    }
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    link_id = db.Column(db.Integer, db.ForeignKey("links.id"), nullable=False)
-    post_id = db.Column(db.Integer, db.ForeignKey("posts.id"), nullable=False)
-    social_link = db.Column(db.String(700), nullable=True, default="")
-    status = db.Column(db.String(50), nullable=False, default="")
-    error_message = db.Column(db.Text, nullable=True)
-    process_number = db.Column(db.Integer, nullable=True)
-    
-    # Nếu cần thiết, bạn có thể thêm relationship
-    link = db.relationship('Link', backref=db.backref('social_posts', lazy=True))
+    user_id = IntField(required=True, default=0)
+    link_id = IntField(required=True, default=0)
+    post_id = IntField(required=True, default=0)
+    batch_id = IntField(required=True, default=0)
+    session_key = StringField(max_length=100)
+    social_link = StringField(max_length=700)
+    status = StringField(required=True, max_length=50)
+    error_message = StringField()
+    process_number = IntField()
