@@ -45,6 +45,7 @@ class SocialPostService:
                 "post_id": social_post.post_id,
                 "session_key": social_post.session_key,
                 "process_number": social_post.process_number,
+                "error_message": social_post.error_message,
             }
             data.append(post_data)
 
