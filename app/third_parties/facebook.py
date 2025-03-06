@@ -424,7 +424,7 @@ class FacebookService(BaseService):
                     "ERRORED",
                     error_message,
                 )
-                return False
+                return {"status": "error", "error": error_message}
 
             status = result["status"] if "status" in result else None
             if not status:
