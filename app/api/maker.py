@@ -50,7 +50,7 @@ class APICreateBatch(Resource):
             if not data:
                 return Response(
                     message="Can't get data from url",
-                    status=400,
+                    code=201,
                 ).to_dict()
 
             images = data.get("images", [])
@@ -242,6 +242,7 @@ class APIMakePost(Resource):
                 if response:
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
+                    logger.info("parse_response: {0}".format(parse_response))
 
                     caption = parse_response.get("caption", [])
                     hooking = parse_response.get("hooking", [])
@@ -281,6 +282,8 @@ class APIMakePost(Resource):
                                 product_name=product_name,
                                 images_url=json.dumps(image_renders),
                                 description="",
+                                origin_caption=caption,
+                                captions=json.dumps(caption_sliders),
                                 post_id=post.id,
                             )
                         else:
