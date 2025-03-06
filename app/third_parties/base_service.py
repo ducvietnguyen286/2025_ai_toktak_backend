@@ -18,6 +18,7 @@ class BaseService:
         self.post_id = None
         self.social_post = None
         self.service = None
+        self.key_log = ""
 
     def publish_redis_channel(self, status, value):
         redis_client.publish(
@@ -69,7 +70,9 @@ class BaseService:
     def save_publish(self, status, social_link):
         self.save_social_post_publish(status, social_link)
         self.publish_redis_channel(status, 100)
-        self.log_social_message(f"---- {self.service} --- PUBLISHED ----")
+        self.log_social_message(
+            f"---- {self.service} --- {self.key_log} --- PUBLISHED ----"
+        )
 
     def save_uploading(self, value):
         self.publish_redis_channel("UPLOADING", value)
