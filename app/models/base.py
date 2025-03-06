@@ -1,5 +1,5 @@
 # coding: utf8
-from datetime import datetime, timezone
+from datetime import datetime
 import json
 import os
 
