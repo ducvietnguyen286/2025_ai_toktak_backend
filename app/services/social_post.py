@@ -43,6 +43,7 @@ class SocialPostService:
                 "status": social_post.status,
                 "link_id": social_post.link_id,
                 "post_id": social_post.post_id,
+                "session_key": social_post.session_key,
                 "process_number": social_post.process_number,
             }
             data.append(post_data)
