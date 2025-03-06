@@ -228,7 +228,7 @@ class TiktokService(BaseService):
                     link_id=self.link.id, user_id=self.user.id
                 )
                 self.meta = json.loads(self.user_link.meta)
-                return self.upload_image(medias=medias, retry=retry + 1)
+                return self.upload_image(medias=json.dumps(medias), retry=retry + 1)
             elif error and error_code != "ok":
                 error_message = error.get("message") or "Upload image error"
                 self.save_errors("ERRORED", f"UPLOAD IMAGE: {error_message}")
