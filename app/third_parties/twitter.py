@@ -7,7 +7,7 @@ import requests
 
 from app.services.video_service import VideoService
 
-from app.lib.logger import log_social_message
+from app.lib.logger import log_twitter_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
@@ -30,7 +30,7 @@ class TwitterTokenService:
 
     def fetch_user_info(self, user_link):
         try:
-            log_social_message(
+            log_twitter_message(
                 "------------------  FETCH TWITTER USER INFO  ------------------"
             )
             meta = json.loads(user_link.meta)
@@ -54,7 +54,7 @@ class TwitterTokenService:
                 response=json.dumps(user_data),
             )
 
-            log_social_message(f"Fetch user info response: {user_data}")
+            log_twitter_message(f"Fetch user info response: {user_data}")
 
             data = user_data.get("data")
 
@@ -66,7 +66,7 @@ class TwitterTokenService:
             }
         except Exception as e:
             traceback.print_exc()
-            log_social_message(e)
+            log_twitter_message(e)
             return None
 
     def fetch_token(self, code, user_link):
@@ -118,7 +118,7 @@ class TwitterTokenService:
             return True
         except Exception as e:
             traceback.print_exc()
-            log_social_message(e)
+            log_twitter_message(e)
             return False
 
     def refresh_token(self, link, user):
@@ -147,7 +147,7 @@ class TwitterTokenService:
             response = requests.post(TOKEN_URL, headers=headers, data=r_data)
             data = response.json()
 
-            log_social_message(data)
+            log_twitter_message(data)
 
             RequestSocialLogService.create_request_social_log(
                 social="X",
@@ -174,7 +174,7 @@ class TwitterTokenService:
             return data
         except Exception as e:
             traceback.print_exc()
-            log_social_message(e)
+            log_twitter_message(e)
             return False
 
 
@@ -190,7 +190,7 @@ class TwitterService(BaseService):
         self.post_id = None
         self.batch_id = None
         self.social_post_id = None
-        self.service = "X (TWITTER)"
+        self.service = "X-TWITTER"
 
     def send_post(self, post, link, user_id, social_post_id):
         self.user = UserService.find_user(user_id)
@@ -208,12 +208,13 @@ class TwitterService(BaseService):
                 self.send_post_social(post, link)
             if post.type == "video":
                 self.send_post_video(post, link)
+            return True
         except Exception as e:
             self.save_errors("ERRORED", f"SEND POST: {str(e)}")
-            return False
+            return True
 
     def send_post_social(self, post, link):
-        log_social_message(f"Send post Social to Twitter {post.id}")
+        log_twitter_message(f"Send post Social to Twitter {post.id}")
         if post.status != 1 or post.thumbnail == "" or post.thumbnail is None:
             return
         images = post.images
@@ -224,29 +225,29 @@ class TwitterService(BaseService):
         else:
             image = post.thumbnail
         self.send_post_to_x(image, post, link)
-        log_social_message(f"Send post Social to Twitter {post.id} successfully")
+        log_twitter_message(f"Send post Social to Twitter {post.id} successfully")
 
     def send_post_video(self, post, link):
-        log_social_message(f"Send post Video to Twitter {post.id}")
+        log_twitter_message(f"Send post Video to Twitter {post.id}")
         if post.status != 1 or post.video_url == "" or post.video_url is None:
             return
         self.send_post_to_x(post.video_url, post, link, is_video=True)
-        log_social_message(f"Send post Video to Twitter {post.id} successfully")
+        log_twitter_message(f"Send post Video to Twitter {post.id} successfully")
 
     def send_post_to_x(self, media, post, link, is_video=False, media_id=None, retry=0):
         try:
-            log_social_message(f"Send post to X {post.id}")
+            log_twitter_message(f"Send post to X {post.id}")
             access_token = self.meta.get("access_token")
             if not media_id:
                 media_id = self.upload_media(media, is_video)
-            log_social_message(f"media_id: {media_id}")
+            log_twitter_message(f"media_id: {media_id}")
             if not media_id:
                 return False
             data = {
                 "text": post.title,
                 "media": {"media_ids": [media_id]},
             }
-            log_social_message(data)
+            log_twitter_message(data)
             headers = {
                 "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json",
@@ -259,7 +260,7 @@ class TwitterService(BaseService):
                 self.save_errors("ERRORED", f"SEND POST TO X - REQUEST URL: {str(e)}")
                 return False
             parsed_response = response.json()
-            log_social_message(parsed_response)
+            log_twitter_message(parsed_response)
             status = parsed_response.get("status")
             if status == 401:
                 if retry > 0:
@@ -284,7 +285,7 @@ class TwitterService(BaseService):
                 return False
             else:
                 data = parsed_response.get("data")
-                log_social_message(data)
+                log_twitter_message(data)
                 permalink = data.get("id")
                 self.save_publish("PUBLISHED", permalink)
                 return True
@@ -294,7 +295,7 @@ class TwitterService(BaseService):
             return False
 
     def upload_media(self, media, is_video=False):
-        log_social_message(f"Upload media {media}")
+        log_twitter_message(f"Upload media {media}")
 
         response = requests.get(media)
 
@@ -314,11 +315,11 @@ class TwitterService(BaseService):
         final = self.upload_finalize(media_id)
         if not final:
             return False
-        log_social_message(f"Upload media {media} done")
+        log_twitter_message(f"Upload media {media} done")
         return media_id
 
     def upload_media_init(self, media_type, total_bytes, is_video=False, retry=0):
-        log_social_message("Upload Media INIT")
+        log_twitter_message("Upload Media INIT")
         access_token = self.meta.get("access_token")
 
         headers = {
@@ -333,7 +334,7 @@ class TwitterService(BaseService):
             "media_category": "tweet_video" if is_video else "tweet_image",
         }
 
-        log_social_message(request_data)
+        log_twitter_message(request_data)
 
         try:
             req = requests.post(
@@ -375,7 +376,7 @@ class TwitterService(BaseService):
                 retry=retry + 1,
             )
 
-        log_social_message(
+        log_twitter_message(
             f"------------------X INIT RESPONSE: {req.json()}-----------------"
         )
 
@@ -402,7 +403,7 @@ class TwitterService(BaseService):
         while bytes_sent < total_bytes:
             chunk = content[bytes_sent : bytes_sent + chunk_size]
 
-            log_social_message("APPEND")
+            log_twitter_message("APPEND")
 
             files = {"media": ("chunk", chunk, "application/octet-stream")}
 
@@ -470,16 +471,16 @@ class TwitterService(BaseService):
             segment_id += 1
             bytes_sent += len(chunk)
 
-            log_social_message(f"{bytes_sent} of {total_bytes} bytes uploaded")
+            log_twitter_message(f"{bytes_sent} of {total_bytes} bytes uploaded")
 
-        log_social_message("Upload chunks complete.")
+        log_twitter_message("Upload chunks complete.")
         return True
 
     def upload_finalize(self, media_id, retry=0):
         access_token = self.meta.get("access_token")
 
         # Finalizes uploads and starts video processing
-        log_social_message("FINALIZE")
+        log_twitter_message("FINALIZE")
 
         headers = {
             "Authorization": "Bearer {}".format(access_token),
@@ -527,7 +528,7 @@ class TwitterService(BaseService):
         else:
             try:
                 response_json = req.json()
-                log_social_message(f"FINALIZE Res: {response_json}")
+                log_twitter_message(f"FINALIZE Res: {response_json}")
                 if "data" in response_json:
                     data = response_json.get("data", None)
                     if "processing_info" in data:
@@ -558,7 +559,7 @@ class TwitterService(BaseService):
 
         state = self.processing_info["state"]
 
-        log_social_message("Media processing status is %s " % state)
+        log_twitter_message("Media processing status is %s " % state)
 
         if state == "succeeded":
             return True
@@ -568,10 +569,10 @@ class TwitterService(BaseService):
 
         check_after_secs = self.processing_info["check_after_secs"]
 
-        log_social_message("Checking after %s seconds" % str(check_after_secs))
+        log_twitter_message("Checking after %s seconds" % str(check_after_secs))
         time.sleep(check_after_secs)
 
-        log_social_message("STATUS")
+        log_twitter_message("STATUS")
 
         request_params = {"command": "STATUS", "media_id": media_id}
 

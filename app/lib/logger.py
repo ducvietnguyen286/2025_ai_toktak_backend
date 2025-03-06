@@ -35,14 +35,62 @@ logger.addHandler(handler)
 logger.addHandler(errorLogHandler)
 
 
-def log_social_message(message):
+def log_facebook_message(message):
     custom_handler = handlers.RotatingFileHandler(
-        "logs/social-{0}.log".format(filename), backupCount=14, encoding="utf-8"
+        "logs/facebook-{0}.log".format(filename), backupCount=14, encoding="utf-8"
     )
     custom_handler.setLevel(logging.INFO)
     custom_handler.setFormatter(formatter)
 
-    custom_logger = logging.getLogger("SocialLogger")
+    custom_logger = logging.getLogger("FacebookLogger")
+    custom_logger.setLevel(logging.INFO)
+    custom_logger.addHandler(custom_handler)
+
+    custom_logger.info(message)
+    custom_logger.removeHandler(custom_handler)
+    custom_handler.close()
+
+
+def log_twitter_message(message):
+    custom_handler = handlers.RotatingFileHandler(
+        "logs/twitter-{0}.log".format(filename), backupCount=14, encoding="utf-8"
+    )
+    custom_handler.setLevel(logging.INFO)
+    custom_handler.setFormatter(formatter)
+
+    custom_logger = logging.getLogger("TwitterLogger")
+    custom_logger.setLevel(logging.INFO)
+    custom_logger.addHandler(custom_handler)
+
+    custom_logger.info(message)
+    custom_logger.removeHandler(custom_handler)
+    custom_handler.close()
+
+
+def log_tiktok_message(message):
+    custom_handler = handlers.RotatingFileHandler(
+        "logs/tiktok-{0}.log".format(filename), backupCount=14, encoding="utf-8"
+    )
+    custom_handler.setLevel(logging.INFO)
+    custom_handler.setFormatter(formatter)
+
+    custom_logger = logging.getLogger("TiktokLogger")
+    custom_logger.setLevel(logging.INFO)
+    custom_logger.addHandler(custom_handler)
+
+    custom_logger.info(message)
+    custom_logger.removeHandler(custom_handler)
+    custom_handler.close()
+
+
+def log_youtube_message(message):
+    custom_handler = handlers.RotatingFileHandler(
+        "logs/youtube-{0}.log".format(filename), backupCount=14, encoding="utf-8"
+    )
+    custom_handler.setLevel(logging.INFO)
+    custom_handler.setFormatter(formatter)
+
+    custom_logger = logging.getLogger("YoutubeLogger")
     custom_logger.setLevel(logging.INFO)
     custom_logger.addHandler(custom_handler)
 
