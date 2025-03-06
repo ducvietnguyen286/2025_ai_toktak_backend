@@ -3,7 +3,7 @@ import json
 import os
 
 import requests
-from app.lib.logger import log_social_message
+from app.lib.logger import log_youtube_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
@@ -32,7 +32,7 @@ class YoutubeTokenService:
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
             if not access_token:
-                log_social_message("Error fetch_channel_info: access_token not found")
+                log_youtube_message("Error fetch_channel_info: access_token not found")
                 return None
 
             response = requests.get(
@@ -49,7 +49,7 @@ class YoutubeTokenService:
             )
 
             if "items" not in response:
-                log_social_message(f"Error fetch_channel_info: {response}")
+                log_youtube_message(f"Error fetch_channel_info: {response}")
                 return None
 
             item = response["items"][0]
@@ -61,7 +61,7 @@ class YoutubeTokenService:
                 "url": f"https://www.youtube.com/{item['snippet']['customUrl']}" or "",
             }
         except Exception as e:
-            log_social_message(f"Error fetch_channel_info: {str(e)}")
+            log_youtube_message(f"Error fetch_channel_info: {str(e)}")
             return None
 
     def exchange_code_for_token(self, code, user_link):
@@ -89,7 +89,7 @@ class YoutubeTokenService:
             )
 
             if "access_token" not in response_data:
-                log_social_message(f"Error exchange_code_for_token: {response_data}")
+                log_youtube_message(f"Error exchange_code_for_token: {response_data}")
                 return None
 
             meta = json.loads(user_link.meta)
@@ -100,7 +100,7 @@ class YoutubeTokenService:
 
             return True
         except Exception as e:
-            log_social_message(f"Error exchange_code_for_token: {str(e)}")
+            log_youtube_message(f"Error exchange_code_for_token: {str(e)}")
             return False
 
 
@@ -133,12 +133,13 @@ class YoutubeService(BaseService):
         try:
             if post.type == "video":
                 self.send_post_video(post)
+            return True
         except Exception as e:
             self.save_errors("ERRORED", f"SEND POST: {str(e)}")
-            return False
+            return True
 
     def get_youtube_service_from_token(self, user_link):
-        log_social_message(
+        log_youtube_message(
             "----------------------- GET YOUTUBE SERVICE ---------------------------"
         )
         try:
@@ -182,7 +183,7 @@ class YoutubeService(BaseService):
 
                     return None
 
-            log_social_message(
+            log_youtube_message(
                 "----------------------- END GET YOUTUBE SERVICE ---------------------------"
             )
 
@@ -192,13 +193,13 @@ class YoutubeService(BaseService):
             return False
 
     def send_post_video(self, post):
-        log_social_message(
+        log_youtube_message(
             "----------------------- SEND VIDEO TO YOUTUBE ---------------------------"
         )
         try:
             youtube = self.get_youtube_service_from_token(self.user_link)
             if not youtube:
-                log_social_message(
+                log_youtube_message(
                     "----------------------- ERROR: SEND YOUTUBE ERROR ---------------------------"
                 )
                 self.save_errors(
@@ -229,7 +230,7 @@ class YoutubeService(BaseService):
                 },
             }
 
-            log_social_message(
+            log_youtube_message(
                 f"----------------------- YOUTUBE START: {post_title}  ---------------------------"
             )
 
@@ -252,7 +253,7 @@ class YoutubeService(BaseService):
                 while response is None:
                     status, response = request.next_chunk()
                     if status:
-                        log_social_message(
+                        log_youtube_message(
                             "YOUTUBE Đang upload: {}%".format(
                                 int(status.progress() * 100)
                             )
@@ -264,7 +265,7 @@ class YoutubeService(BaseService):
                 self.save_errors("ERRORED", f"SEND POST VIDEO - UPLOAD CHUNK: {str(e)}")
                 return False
 
-            log_social_message(
+            log_youtube_message(
                 "----------------------- YOUTUBE UPLOADED : VIDEO ID {}  ---------------------------".format(
                     response.get("id")
                 )

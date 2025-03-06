@@ -10,7 +10,7 @@ from werkzeug.exceptions import default_exceptions
 
 load_dotenv(override=False)
 
-from app.lib.logger import logger
+from app.lib.logger import log_facebook_message
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db
 from app.config import configs as config
@@ -64,11 +64,10 @@ def action_send_post_to_link(message):
         link = LinkService.find_link(link_id)
         post = PostService.find_post(post_id)
 
-        logger.info(f"Send post {post_id} to link {link_id}")
-        logger.info(f"Send post to {link.type} of {link.social_type}")
+        log_facebook_message(f"Received message: {message}")
 
         if not link or not post:
-            logger.error("Link or post not found")
+            log_facebook_message("Link or post not found")
             return False
 
         if link.social_type == "SOCIAL":
@@ -78,7 +77,7 @@ def action_send_post_to_link(message):
                 )
         return True
     except Exception as e:
-        logger.error(f"Error send post to link: {str(e)}")
+        log_facebook_message(f"Error send post to link: {str(e)}")
         return False
 
 
@@ -91,13 +90,13 @@ def process_message_sync(body, app):
         decoded_body = json.loads(body)
         action = decoded_body.get("action")
         if action == "SEND_POST_TO_LINK":
-            logger.info(f"Processing SEND_POST_TO_LINK action {decoded_body}")
+            log_facebook_message(f"Processing SEND_POST_TO_LINK action {decoded_body}")
             message = decoded_body.get("message")
             with app.app_context():
                 result = action_send_post_to_link(message)
                 return result
     except Exception as e:
-        logger.error(f"Error processing message: {str(e)}")
+        log_facebook_message(f"ERROR: Error processing message: {str(e)}")
         return False
 
 
@@ -108,7 +107,7 @@ async def process_message_async(body, app):
     loop = asyncio.get_running_loop()
     result = await loop.run_in_executor(None, process_message_sync, body, app)
     if not result:
-        logger.error("Message processing failed")
+        log_facebook_message("ERROR: Message processing failed")
     return result
 
 
@@ -120,7 +119,7 @@ async def on_message(message: IncomingMessage, app):
 
     async with message.process():
         body = message.body.decode()
-        logger.info(f"Received message: {body}")
+        log_facebook_message(f"Received message: {body}")
         # Tạo task nền để xử lý message, không chặn việc nhận message mới
         asyncio.create_task(process_message_async(body, app))
 
@@ -135,7 +134,7 @@ async def main():
     channel = await connection.channel()
     queue = await channel.declare_queue(RABBITMQ_QUEUE_FACEBOOK, durable=False)
 
-    logger.info("Đang chờ message. Nhấn CTRL+C để dừng.")
+    log_facebook_message("Đang chờ message. Nhấn CTRL+C để dừng.")
     await queue.consume(partial(on_message, app=app), no_ack=False)
     return connection
 
@@ -147,7 +146,7 @@ if __name__ == "__main__":
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        logger.info("Consumer stopped by user")
+        log_facebook_message("Consumer stopped by user")
     finally:
         loop.run_until_complete(connection.close())
         loop.close()

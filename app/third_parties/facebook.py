@@ -5,7 +5,7 @@ import time
 import traceback
 import requests
 
-from app.lib.logger import log_social_message
+from app.lib.logger import log_facebook_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
@@ -19,14 +19,14 @@ class FacebookTokenService:
     @staticmethod
     def fetch_page_token(user_link):
         try:
-            log_social_message(
+            log_facebook_message(
                 "------------------  FETCH FACEBOOK PAGE TOKEN  ------------------"
             )
 
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
             if not access_token:
-                log_social_message("Token not found")
+                log_facebook_message("Token not found")
                 return None
 
             PAGE_URL = f"https://graph.facebook.com/v22.0/me/accounts?access_token={access_token}&fields=id,name,picture,access_token,tasks"
@@ -51,20 +51,20 @@ class FacebookTokenService:
             return data.get("data")
 
         except Exception as e:
-            log_social_message(e)
+            log_facebook_message(e)
             return None
 
     @staticmethod
     def fetch_page_token_backend(user_link, page_id, is_all=None):
         try:
-            log_social_message(
+            log_facebook_message(
                 "------------------  FETCH FACEBOOK PAGE TOKEN  ------------------"
             )
 
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
             if not access_token:
-                log_social_message("Token not found")
+                log_facebook_message("Token not found")
                 return None
 
             PAGE_URL = f"https://graph.facebook.com/v22.0/me/accounts?access_token={access_token}&fields=id,name,picture,access_token,tasks"
@@ -86,16 +86,16 @@ class FacebookTokenService:
                 user_link.save()
                 return None
 
-            log_social_message(
+            log_facebook_message(
                 f"------------------  FACEBOOK PAGES ------------------ : {data}"
             )
 
-            log_social_message(
+            log_facebook_message(
                 f"------------------  FACEBOOK PAGE ID INPUT ------------------ : {page_id}"
             )
             if is_all:
                 first_page = data.get("data")[0]
-                log_social_message(
+                log_facebook_message(
                     f"------------------  FACEBOOK PAGE ------------------ : {first_page}"
                 )
                 return first_page
@@ -104,13 +104,13 @@ class FacebookTokenService:
                     return page.get("access_token")
 
         except Exception as e:
-            log_social_message(e)
+            log_facebook_message(e)
             return None
 
     @staticmethod
     def fetch_user_info(user_link):
         try:
-            log_social_message(
+            log_facebook_message(
                 "------------------  GET FACEBOOK USER INFO BY TOKEN  ------------------"
             )
             user_link = UserService.find_user_link(
@@ -119,7 +119,7 @@ class FacebookTokenService:
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
             if not access_token:
-                log_social_message("Token not found")
+                log_facebook_message("Token not found")
                 return None
 
             USER_URL = f"https://graph.facebook.com/v22.0/me?access_token={access_token}&fields=id,name,email,picture"
@@ -135,7 +135,7 @@ class FacebookTokenService:
                 response=json.dumps(data),
             )
 
-            log_social_message(f"User info: {data}")
+            log_facebook_message(f"User info: {data}")
             return {
                 "id": data.get("id") or "",
                 "name": data.get("name") or "",
@@ -144,13 +144,13 @@ class FacebookTokenService:
             }
 
         except Exception as e:
-            log_social_message(e)
+            log_facebook_message(e)
             return None
 
     @staticmethod
     def exchange_token(access_token, user_link):
         try:
-            log_social_message(
+            log_facebook_message(
                 "------------------  EXCHANGE FACEBOOK TOKEN  ------------------"
             )
 
@@ -178,7 +178,7 @@ class FacebookTokenService:
                 response=json.dumps(data),
             )
 
-            log_social_message(f"Exchange token response: {data}")
+            log_facebook_message(f"Exchange token response: {data}")
 
             if "access_token" in data:
                 meta = user_link.meta
@@ -200,12 +200,12 @@ class FacebookTokenService:
                 user_link.status = 0
                 user_link.save()
 
-                log_social_message(f"Error exchanging token: {data}")
+                log_facebook_message(f"Error exchanging token: {data}")
                 return False
 
         except Exception as e:
             traceback.print_exc()
-            log_social_message(e)
+            log_facebook_message(e)
             return False
 
 
@@ -247,11 +247,11 @@ class FacebookService(BaseService):
 
         if not is_all and not token_page:
             self.save_errors("ERRORED", "SEND POST ERROR NOT ALL: Can't get page token")
-            return False
+            return True
         else:
             if not token_page:
                 self.save_errors("ERRORED", "SEND POST ERROR ALL: Can't get page token")
-                return False
+                return True
             response_token = token_page
             page_id = response_token.get("id")
             token_page = response_token.get("access_token")
@@ -259,10 +259,10 @@ class FacebookService(BaseService):
         self.page_id = page_id
         self.page_token = token_page
 
-        log_social_message(
+        log_facebook_message(
             f"--------------------FACEBOOK PAGE ID: {page_id}------------------------"
         )
-        log_social_message(
+        log_facebook_message(
             f"--------------------FACEBOOK PAGE TOKEN: {token_page}------------------------"
         )
 
@@ -271,9 +271,10 @@ class FacebookService(BaseService):
                 self.send_post_image(post, link)
             if post.type == "video":
                 self.send_post_video(post, link)
+            return True
         except Exception as e:
             self.save_errors("ERRORED", f"SEND POST: {str(e)}")
-            return False
+            return True
 
     def send_post_video(self, post, link):
         page_id = self.page_id
@@ -312,7 +313,7 @@ class FacebookService(BaseService):
             self.save_publish("PUBLISHED", permalink)
             return True
         else:
-            log_social_message(f"Upload video error: {result_status}")
+            log_facebook_message(f"Upload video error: {result_status}")
             video_status = result_status.get("video_status")
             uploading_phase = result_status.get("uploading_phase")
 
@@ -372,7 +373,7 @@ class FacebookService(BaseService):
             response=json.dumps(result),
         )
         self.save_uploading(20)
-        log_social_message(f"Upload video: {result}")
+        log_facebook_message(f"Upload video: {result}")
 
     def get_upload_status(self, video_id, access_token, count=1):
         status = None
@@ -390,7 +391,7 @@ class FacebookService(BaseService):
 
             result = get_response.json()
 
-            log_social_message(f"FACEBOOK: get upload status: {result}")
+            log_facebook_message(f"FACEBOOK: get upload status: {result}")
 
             status = result["status"]
 
@@ -474,15 +475,15 @@ class FacebookService(BaseService):
             request=json.dumps({"page_id": page_id}),
             response=json.dumps(result),
         )
-        log_social_message(f"Get reel: {result}")
+        log_facebook_message(f"Get reel: {result}")
         return result
 
     def send_post_image(self, post, link):
         page_id = self.page_id
         page_access_token = self.page_token
 
-        log_social_message(f"page_id: {page_id}")
-        log_social_message(f"page_access_token: {page_access_token}")
+        log_facebook_message(f"page_id: {page_id}")
+        log_facebook_message(f"page_access_token: {page_access_token}")
 
         FEED_URL = f"https://graph.facebook.com/v22.0/{page_id}/feed"
 
@@ -497,7 +498,7 @@ class FacebookService(BaseService):
 
         attached_media = [{"media_fbid": pid} for pid in photo_ids]
 
-        log_social_message(f"Attached media: {attached_media}")
+        log_facebook_message(f"Attached media: {attached_media}")
 
         post_data = {
             "message": post.description + " " + post.hashtag,
@@ -505,7 +506,7 @@ class FacebookService(BaseService):
             "access_token": page_access_token,
         }
 
-        log_social_message(f"post_data: {post_data}")
+        log_facebook_message(f"post_data: {post_data}")
         try:
             post_response = requests.post(FEED_URL, data=post_data)
         except Exception as e:
@@ -522,7 +523,7 @@ class FacebookService(BaseService):
             response=json.dumps(result),
         )
 
-        log_social_message(f"result: {result}")
+        log_facebook_message(f"result: {result}")
 
         if "id" not in result:
             error = result.get("error", {})
@@ -577,5 +578,5 @@ class FacebookService(BaseService):
             if "id" in result:
                 photo_ids.append(result["id"])
             else:
-                log_social_message(f"Lỗi upload ảnh: {result}")
+                log_facebook_message(f"Lỗi upload ảnh: {result}")
         return photo_ids

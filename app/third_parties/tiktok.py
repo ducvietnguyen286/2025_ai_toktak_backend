@@ -7,8 +7,7 @@ import requests
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
-from app.lib.logger import log_social_message
-from app.extensions import redis_client
+from app.lib.logger import log_tiktok_message
 from app.third_parties.base_service import BaseService
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
@@ -19,7 +18,7 @@ class TiktokTokenService:
     @staticmethod
     def fetch_user_info(user_link):
         try:
-            log_social_message(
+            log_tiktok_message(
                 "------------------  FETCH TIKTOK USER INFO  ------------------"
             )
             meta = json.loads(user_link.meta)
@@ -41,7 +40,7 @@ class TiktokTokenService:
                 response=json.dumps(user_data),
             )
 
-            log_social_message(f"Fetch user info response: {user_data}")
+            log_tiktok_message(f"Fetch user info response: {user_data}")
 
             return {
                 "id": user_data.get("open_id") or "",
@@ -51,13 +50,13 @@ class TiktokTokenService:
             }
         except Exception as e:
             traceback.print_exc()
-            log_social_message(e)
+            log_tiktok_message(e)
             return None
 
     @staticmethod
     def refresh_token(link, user):
         try:
-            log_social_message(
+            log_tiktok_message(
                 "------------------  REFRESH TIKTOK TOKEN  ------------------"
             )
             user_link = UserService.find_user_link(link_id=link.id, user_id=user.id)
@@ -81,7 +80,7 @@ class TiktokTokenService:
             except Exception as e:
                 return f"Error parsing response: {e}", 500
 
-            log_social_message(f"Refresh token response: {token_data}")
+            log_tiktok_message(f"Refresh token response: {token_data}")
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
@@ -103,7 +102,7 @@ class TiktokTokenService:
             return token_data
         except Exception as e:
             traceback.print_exc()
-            log_social_message(e)
+            log_tiktok_message(e)
             return None
 
 
@@ -143,13 +142,14 @@ class TiktokService(BaseService):
                 self.upload_video(post.video_url)
             if post.type == "image":
                 self.upload_image(post.images)
+            return True
         except Exception as e:
             self.save_errors("ERRORED", f"SEND POST: {str(e)}")
-            return False
+            return True
 
     def upload_image(self, medias, retry=0):
         try:
-            log_social_message("Upload image to Tiktok")
+            log_tiktok_message("Upload image to Tiktok")
             access_token = self.meta.get("access_token")
             medias = json.loads(medias)
 
@@ -162,7 +162,7 @@ class TiktokService(BaseService):
                 "Content-Type": "application/json; charset=UTF-8",
             }
 
-            log_social_message(headers)
+            log_tiktok_message(headers)
 
             payload = {
                 "post_info": {
@@ -185,7 +185,7 @@ class TiktokService(BaseService):
                 "media_type": "PHOTO",
             }
 
-            log_social_message(f"Payload: {payload}")
+            log_tiktok_message(f"Payload: {payload}")
 
             try:
                 upload_response = requests.post(
@@ -211,7 +211,7 @@ class TiktokService(BaseService):
                 response=json.dumps(parsed_response),
             )
 
-            log_social_message(f"Upload image to Tiktok response: {parsed_response}")
+            log_tiktok_message(f"Upload image to Tiktok response: {parsed_response}")
 
             error = parsed_response.get("error")
             error_code = error.get("code")
@@ -238,7 +238,7 @@ class TiktokService(BaseService):
             status_result = self.check_status(publish_id)
             status = status_result.get("status")
             if status:
-                log_social_message("Upload image success")
+                log_tiktok_message("Upload image success")
 
                 self.save_publish("PUBLISHED", "profile")
                 return True
@@ -254,22 +254,22 @@ class TiktokService(BaseService):
 
     def upload_video(self, media):
         try:
-            log_social_message("Upload video to Tiktok")
+            log_tiktok_message("Upload video to Tiktok")
             # FILE INFO
             response = requests.get(media)
 
             upload_info = self.upload_video_init(response)
             if not upload_info:
                 return False
-            log_social_message(f"Upload video info: {upload_info}")
-            log_social_message(f"Upload video to Tiktok: {media}")
+            log_tiktok_message(f"Upload video info: {upload_info}")
+            log_tiktok_message(f"Upload video to Tiktok: {media}")
             info_data = upload_info.get("data")
             publish_id = info_data.get("publish_id")
 
             status_result = self.check_status(publish_id)
             status = status_result.get("status")
             if status:
-                log_social_message("Upload video success")
+                log_tiktok_message("Upload video success")
                 self.save_publish("PUBLISHED", "profile")
                 return True
             else:
@@ -297,7 +297,7 @@ class TiktokService(BaseService):
             return False
         res_json = response.json()
 
-        log_social_message(f"TIKTOK: Check status: {res_json}")
+        log_tiktok_message(f"TIKTOK: Check status: {res_json}")
 
         error = res_json.get("error")
         error_code = error.get("code")
@@ -340,7 +340,7 @@ class TiktokService(BaseService):
         return self.check_status(publish_id, count=count + 1, retry=retry)
 
     def upload_video_init(self, media, retry=0):
-        log_social_message("Upload video to Tiktok INIT")
+        log_tiktok_message("Upload video to Tiktok INIT")
         access_token = self.meta.get("access_token")
         media_size = int(media.headers.get("content-length"))
         media_type = media.headers.get("content-type")
@@ -352,7 +352,7 @@ class TiktokService(BaseService):
             "Content-Type": "application/json; charset=UTF-8",
         }
 
-        log_social_message(headers)
+        log_tiktok_message(headers)
 
         chunk_size = 0
 
@@ -382,7 +382,7 @@ class TiktokService(BaseService):
             },
         }
 
-        log_social_message(f"TIKTOK UPLOAD VIDEO INIT Payload: {payload}")
+        log_tiktok_message(f"TIKTOK UPLOAD VIDEO INIT Payload: {payload}")
         try:
             upload_response = requests.post(
                 URL_VIDEO_UPLOAD, headers=headers, data=json.dumps(payload)
@@ -406,7 +406,7 @@ class TiktokService(BaseService):
             response=json.dumps(parsed_response),
         )
 
-        log_social_message(f"Upload video to Tiktok INIT response: {parsed_response}")
+        log_tiktok_message(f"Upload video to Tiktok INIT response: {parsed_response}")
 
         error = parsed_response.get("error")
         error_code = error.get("code")
@@ -434,8 +434,8 @@ class TiktokService(BaseService):
         info_data = parsed_response.get("data")
         upload_url = info_data.get("upload_url")
 
-        log_social_message(f"Chunk size: {chunk_size}")
-        log_social_message(f"Total chunk: {total_chunk}")
+        log_tiktok_message(f"Chunk size: {chunk_size}")
+        log_tiktok_message(f"Total chunk: {total_chunk}")
 
         progress_per_chunk = 20 // total_chunk
         left_over = 20 % total_chunk
@@ -445,7 +445,7 @@ class TiktokService(BaseService):
 
             is_last_chunk = i == total_chunk - 1
 
-            log_social_message(f"Upload video to Tiktok APPEND {i}")
+            log_tiktok_message(f"Upload video to Tiktok APPEND {i}")
             if is_last_chunk:
                 start_bytes = i * chunk_size
                 end_bytes = media_size - 1
@@ -490,7 +490,7 @@ class TiktokService(BaseService):
         retry=0,
     ):
         try:
-            log_social_message("Upload video to Tiktok APPEND")
+            log_tiktok_message("Upload video to Tiktok APPEND")
 
             headers = {
                 "Content-Range": f"bytes {start_bytes}-{end_bytes}/{total_bytes}",
@@ -517,7 +517,7 @@ class TiktokService(BaseService):
             )
 
             if response.status_code in (201, 206):
-                log_social_message(
+                log_tiktok_message(
                     f"Chunk {start_bytes}-{end_bytes}/{total_bytes} tải lên thành công. Status code: {response.status_code}"
                 )
                 return True
