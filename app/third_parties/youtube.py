@@ -207,6 +207,8 @@ class YoutubeService(BaseService):
                 )
                 return False
 
+            self.save_uploading(0)
+
             post_title = post.title
             post_description = post.description + " " + post.hashtag + " #shorts"
             tags = post.hashtag

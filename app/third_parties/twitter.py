@@ -204,6 +204,7 @@ class TwitterService(BaseService):
         self.social_post_id = str(self.social_post.id)
 
         try:
+            self.save_uploading(0)
             if post.type == "image":
                 self.send_post_social(post, link)
             if post.type == "video":
@@ -224,15 +225,13 @@ class TwitterService(BaseService):
             image = images[0]
         else:
             image = post.thumbnail
-        self.send_post_to_x(image, post, link)
-        log_twitter_message(f"Send post Social to Twitter {post.id} successfully")
+        return self.send_post_to_x(image, post, link)
 
     def send_post_video(self, post, link):
         log_twitter_message(f"Send post Video to Twitter {post.id}")
         if post.status != 1 or post.video_url == "" or post.video_url is None:
             return
-        self.send_post_to_x(post.video_url, post, link, is_video=True)
-        log_twitter_message(f"Send post Video to Twitter {post.id} successfully")
+        return self.send_post_to_x(post.video_url, post, link, is_video=True)
 
     def send_post_to_x(self, media, post, link, is_video=False, media_id=None, retry=0):
         try:
