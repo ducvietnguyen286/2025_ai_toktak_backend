@@ -393,7 +393,11 @@ class FacebookService(BaseService):
 
     def get_upload_status(self, video_id, access_token, count=1):
         status = None
-
+        if not video_id:
+            return {
+                "status": "error",
+                "error": "Video id is not found",
+            }
         try:
             URL_CHECK_STATUS = f"https://graph.facebook.com/v22.0/{video_id}?fields=status&access_token={access_token}"
             try:
@@ -411,7 +415,23 @@ class FacebookService(BaseService):
 
             log_facebook_message(f"POST {self.key_log}: get upload status: {result}")
 
-            status = result["status"]
+            if "error" in result:
+                error = result.get("error", {})
+                error_message = error.get(
+                    "message", f"POST {self.key_log}: Error CHECK STATUS"
+                )
+                self.save_errors(
+                    "ERRORED",
+                    error_message,
+                )
+                return {"status": "error", "error": error_message}
+
+            status = result["status"] if "status" in result else None
+            if not status:
+                return {
+                    "status": "error",
+                    "error": "Status is not found",
+                }
 
             time.sleep(1)
 
