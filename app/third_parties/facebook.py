@@ -281,7 +281,13 @@ class FacebookService(BaseService):
         result = self.start_session_upload_reel(
             page_id=page_id, page_access_token=page_access_token
         )
-        video_id = result["video_id"]
+        video_id = result["video_id"] if "video_id" in result else None
+        if not video_id:
+            error = result.get("error", {})
+            error_message = error.get(
+                "message", "Can't Start Start Session Upload Reel"
+            )
+            self.save_errors("ERRORED", f"SEND POST VIDEO: {error_message}")
 
         self.upload_video(
             video_id=video_id,
