@@ -389,7 +389,7 @@ class FacebookService(BaseService):
             response=json.dumps(result),
         )
         self.save_uploading(20)
-        log_facebook_message(f"Upload video: {result}")
+        log_facebook_message(f"POST {self.key_log} Upload video: {result}")
 
     def get_upload_status(self, video_id, access_token, count=1):
         status = None
