@@ -42,7 +42,7 @@ def send_message(queue, message):
     try:
         connection = pika.BlockingConnection(connection_params)
         channel = connection.channel()
-        channel.queue_declare(queue=queue, durable=False)
+        channel.queue_declare(queue=queue, durable=True)
 
         message_body = json.dumps(message)
 

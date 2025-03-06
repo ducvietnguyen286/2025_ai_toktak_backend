@@ -128,7 +128,7 @@ async def main():
     app = create_app()
     connection = await connect_robust(RABBITMQ_URL)
     channel = await connection.channel()
-    queue = await channel.declare_queue(RABBITMQ_QUEUE_TWITTER, durable=False)
+    queue = await channel.declare_queue(RABBITMQ_QUEUE_TWITTER, durable=True)
 
     log_twitter_message("Đang chờ message. Nhấn CTRL+C để dừng.")
     await queue.consume(partial(on_message, app=app), no_ack=False)
