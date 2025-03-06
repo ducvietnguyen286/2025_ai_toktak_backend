@@ -228,6 +228,7 @@ class FacebookService(BaseService):
         self.batch_id = None
         self.social_post_id = ""
         self.service = "FACEBOOK"
+        self.key_log = ""
 
     def send_post(self, post, link, user_id, social_post_id, page_id, is_all=None):
         self.user = UserService.find_user(user_id)
@@ -240,6 +241,7 @@ class FacebookService(BaseService):
         self.post_id = post.id
         self.batch_id = post.batch_id
         self.social_post_id = str(self.social_post.id)
+        self.key_log = f"{self.post_id} - {self.social_post.session_key}"
 
         token_page = FacebookTokenService.fetch_page_token_backend(
             self.user_link, page_id, is_all
@@ -271,7 +273,7 @@ class FacebookService(BaseService):
                 self.send_post_video(post, link)
             return True
         except Exception as e:
-            self.save_errors("ERRORED", f"SEND POST: {str(e)}")
+            self.save_errors("ERRORED", f"SEND POST {self.key_log}: {str(e)}")
             return True
 
     def send_post_video(self, post, link):
@@ -285,9 +287,12 @@ class FacebookService(BaseService):
         if not video_id:
             error = result.get("error", {})
             error_message = error.get(
-                "message", "Can't Start Start Session Upload Reel"
+                "message",
+                f"POST {self.key_log} : Can't Start Start Session Upload Reel",
             )
-            self.save_errors("ERRORED", f"SEND POST VIDEO: {error_message}")
+            self.save_errors(
+                "ERRORED", f"SEND POST {self.key_log} VIDEO: {error_message}"
+            )
 
         self.upload_video(
             video_id=video_id,
@@ -317,17 +322,22 @@ class FacebookService(BaseService):
             self.save_publish("PUBLISHED", permalink)
             return True
         else:
-            log_facebook_message(f"Upload video error: {result_status}")
+            log_facebook_message(
+                f"POST: {self.key_log} Upload video error: {result_status}"
+            )
             video_status = result_status.get("video_status")
             uploading_phase = result_status.get("uploading_phase")
 
             if video_status == "error":
                 self.save_errors(
-                    "ERRORED", "SEND POST VIDEO: Video is error. Can't upload video"
+                    "ERRORED",
+                    f"SEND POST {self.key_log} VIDEO: Video is error. Can't upload video",
                 )
             if uploading_phase == "error":
                 error_message = uploading_phase.get("error").get("message")
-                self.save_errors("ERRORED", f"SEND POST VIDEO: {error_message}")
+                self.save_errors(
+                    "ERRORED", f"SEND POST {self.key_log} VIDEO: {error_message}"
+                )
             return False
 
     def start_session_upload_reel(self, page_id, page_access_token):
@@ -338,7 +348,9 @@ class FacebookService(BaseService):
         try:
             post_response = requests.post(URL_UPLOAD, data=post_data, headers=headers)
         except Exception as e:
-            self.save_errors("ERRORED", f"START SESSION UPLOAD REEL: {str(e)}")
+            self.save_errors(
+                "ERRORED", f"POST {self.key_log} : START SESSION UPLOAD REEL: {str(e)}"
+            )
             return False
 
         result = post_response.json()
@@ -364,7 +376,7 @@ class FacebookService(BaseService):
         try:
             post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers)
         except Exception as e:
-            self.save_errors("ERRORED", f"UPLOAD VIDEO: {str(e)}")
+            self.save_errors("ERRORED", f"POST {self.key_log}: UPLOAD VIDEO: {str(e)}")
             return False
 
         result = post_response.json()
@@ -387,7 +399,9 @@ class FacebookService(BaseService):
             try:
                 get_response = requests.get(URL_CHECK_STATUS)
             except Exception as e:
-                self.save_errors("ERRORED", f"GET UPLOAD STATUS: {str(e)}")
+                self.save_errors(
+                    "ERRORED", f"POST {self.key_log}: GET UPLOAD STATUS: {str(e)}"
+                )
                 return {
                     "status": "error",
                     "error": str(e),
@@ -395,7 +409,7 @@ class FacebookService(BaseService):
 
             result = get_response.json()
 
-            log_facebook_message(f"FACEBOOK: get upload status: {result}")
+            log_facebook_message(f"POST {self.key_log}: get upload status: {result}")
 
             status = result["status"]
 
@@ -405,7 +419,9 @@ class FacebookService(BaseService):
                 self.save_uploading(20 + (count * 10))
 
         except Exception as e:
-            self.save_errors("ERRORED", f"GET UPLOAD STATUS - EROROR: {str(e)}")
+            self.save_errors(
+                "ERRORED", f"POST {self.key_log}: GET UPLOAD STATUS - EROROR: {str(e)}"
+            )
             return {
                 "status": "error",
                 "error": str(e),
@@ -445,7 +461,9 @@ class FacebookService(BaseService):
         try:
             post_response = requests.post(final_url)
         except Exception as e:
-            self.save_errors("ERRORED", f"PUBLISH THE REEL: {str(e)}")
+            self.save_errors(
+                "ERRORED", f"POST {self.key_log}: PUBLISH THE REEL: {str(e)}"
+            )
             return False
 
         result = post_response.json()
@@ -467,7 +485,9 @@ class FacebookService(BaseService):
         try:
             get_response = requests.get(URL_REEL)
         except Exception as e:
-            self.save_errors("ERRORED", f"GET REEL UPLOADED: {str(e)}")
+            self.save_errors(
+                "ERRORED", f"POST {self.key_log}: GET REEL UPLOADED: {str(e)}"
+            )
             return False
 
         result = get_response.json()
@@ -502,7 +522,7 @@ class FacebookService(BaseService):
 
         attached_media = [{"media_fbid": pid} for pid in photo_ids]
 
-        log_facebook_message(f"Attached media: {attached_media}")
+        log_facebook_message(f"POST {self.key_log}: Attached media: {attached_media}")
 
         post_data = {
             "message": post.description + " " + post.hashtag,
@@ -510,11 +530,14 @@ class FacebookService(BaseService):
             "access_token": page_access_token,
         }
 
-        log_facebook_message(f"post_data: {post_data}")
+        log_facebook_message(f"POST {self.key_log}: post_data: {post_data}")
         try:
             post_response = requests.post(FEED_URL, data=post_data)
         except Exception as e:
-            self.save_errors("ERRORED", f"SEND POST IMAGE - REQUEST FEED URL: {str(e)}")
+            self.save_errors(
+                "ERRORED",
+                f"SEND POST {self.key_log} IMAGE - REQUEST FEED URL: {str(e)}",
+            )
             return False
         result = post_response.json()
 
@@ -527,12 +550,14 @@ class FacebookService(BaseService):
             response=json.dumps(result),
         )
 
-        log_facebook_message(f"result: {result}")
+        log_facebook_message(f"POST {self.key_log} result: {result}")
 
         if "id" not in result:
             error = result.get("error", {})
             error_message = error.get("message", "Error")
-            self.save_errors("ERRORED", f"SEND POST IMAGE: {error_message}")
+            self.save_errors(
+                "ERRORED", f"SEND POST {self.key_log} IMAGE: {error_message}"
+            )
 
             return False
         post_id = photo_ids[0]
@@ -558,7 +583,9 @@ class FacebookService(BaseService):
             try:
                 response = requests.post(UNPUBLISH_URL, data=data)
             except Exception as e:
-                self.save_errors("ERRORED", f"UNPUBLISH IMAGES: {str(e)}")
+                self.save_errors(
+                    "ERRORED", f"POST {self.key_log} UNPUBLISH IMAGES: {str(e)}"
+                )
                 return False
 
             result = response.json()
@@ -582,6 +609,7 @@ class FacebookService(BaseService):
                 error = result.get("error", {})
                 error_message = error.get("message", "Error")
                 self.save_errors(
-                    "ERRORED", f"UNPUBLISH IMAGES - GET ERROR: {error_message}"
+                    "ERRORED",
+                    f"POST {self.key_log} UNPUBLISH IMAGES - GET ERROR: {error_message}",
                 )
         return photo_ids
