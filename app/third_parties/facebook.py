@@ -267,6 +267,7 @@ class FacebookService(BaseService):
         )
 
         try:
+            self.save_uploading(0)
             if post.type == "image":
                 self.send_post_image(post, link)
             if post.type == "video":
@@ -542,9 +543,6 @@ class FacebookService(BaseService):
         UNPUBLISH_URL = f"https://graph.facebook.com/v22.0/{page_id}/photos"
         photo_ids = []
 
-        self.social_post.status = "UPLOADING"
-        self.social_post.save()
-
         progress = 0
         progress_per_image = 80 / len(images)
 
@@ -578,5 +576,9 @@ class FacebookService(BaseService):
             if "id" in result:
                 photo_ids.append(result["id"])
             else:
-                log_facebook_message(f"Lỗi upload ảnh: {result}")
+                error = result.get("error", {})
+                error_message = error.get("message", "Error")
+                self.save_errors(
+                    "ERRORED", f"UNPUBLISH IMAGES - GET ERROR: {error_message}"
+                )
         return photo_ids

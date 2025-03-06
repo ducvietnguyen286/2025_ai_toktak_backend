@@ -137,7 +137,7 @@ class TiktokService(BaseService):
         self.social_post_id = str(self.social_post.id)
 
         try:
-
+            self.save_uploading(0)
             if post.type == "video":
                 self.upload_video(post.video_url)
             if post.type == "image":
