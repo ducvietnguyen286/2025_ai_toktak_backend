@@ -9,7 +9,7 @@ class RequestSocialLog(BaseDocument):
     }
 
     social = StringField(required=True, max_length=50)
-    social_post_id = IntField(required=True, default=0)
+    social_post_id = StringField(required=True, default="")
     user_id = IntField(required=True, default=0)
     type = StringField(required=True, max_length=50)
     request = StringField()

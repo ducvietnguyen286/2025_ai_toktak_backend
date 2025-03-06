@@ -33,7 +33,7 @@ class TiktokTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
-                social_post_id=0,
+                social_post_id="",
                 user_id=user_link.user_id,
                 type="fetch_user_info",
                 request={},
@@ -84,7 +84,7 @@ class TiktokTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
-                social_post_id=0,
+                social_post_id="",
                 user_id=user_link.user_id,
                 type="refresh_token",
                 request=json.dumps(r_data),
@@ -120,7 +120,7 @@ class TiktokService(BaseService):
         self.progress = 10
         self.batch_id = None
         self.link_id = None
-        self.social_post_id = None
+        self.social_post_id = ""
         self.service = "TIKTOK"
 
     def send_post(self, post, link, user_id, social_post_id):
@@ -134,7 +134,7 @@ class TiktokService(BaseService):
         self.link_id = link.id
         self.post_id = post.id
         self.batch_id = post.batch_id
-        self.social_post_id = self.social_post.id
+        self.social_post_id = str(self.social_post.id)
 
         try:
 

@@ -2,8 +2,10 @@
 import datetime
 import json
 import os
+import time
 import traceback
 from urllib.parse import urlencode
+import uuid
 from flask import redirect
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
@@ -374,6 +376,11 @@ class APIPostToLinks(Resource):
                 "upload": [],
             }
 
+            timestamp = int(time.time())
+            unique_id = uuid.uuid4().hex
+
+            session_key = f"{timestamp}_{unique_id}"
+
             for link_id in active_links:
                 link = link_pluck_by_id.get(link_id)
                 if not link:
@@ -392,8 +399,12 @@ class APIPostToLinks(Resource):
                     link_id=link_id,
                     user_id=current_user.id,
                     post_id=post.id,
+                    batch_id=batch_id,
+                    session_key=session_key,
                     status="PROCESSING",
                 )
+
+                print("Social post:", social_post)
 
                 progress["upload"].append(
                     {
@@ -411,11 +422,14 @@ class APIPostToLinks(Resource):
                         "link_id": link_id,
                         "post_id": post.id,
                         "user_id": current_user.id,
-                        "social_post_id": social_post.id,
+                        "social_post_id": str(social_post.id),
                         "page_id": page_id,
                         "is_all": is_all,
                     },
                 }
+
+                print("Message:", message)
+
                 if link.type == "FACEBOOK":
                     send_facebook_message(message)
                 if link.type == "TIKTOK":
