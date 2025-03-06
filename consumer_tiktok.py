@@ -116,7 +116,7 @@ async def on_message(message: IncomingMessage, app):
 
     async with message.process():
         body = message.body.decode()
-        log_tiktok_message(f"ERRPR: Received message: {body}")
+        log_tiktok_message(f"Received message: {body}")
         # Tạo task nền để xử lý message, không chặn việc nhận message mới
         asyncio.create_task(process_message_async(body, app))
 

@@ -131,6 +131,10 @@ class YoutubeService(BaseService):
         self.social_post_id = str(self.social_post.id)
 
         try:
+            self.save_uploading(0)
+            log_youtube_message(
+                f"------------ READY TO SEND POST: {post} ----------------"
+            )
             if post.type == "video":
                 self.send_post_video(post)
             return True
@@ -207,15 +211,19 @@ class YoutubeService(BaseService):
                 )
                 return False
 
-            self.save_uploading(0)
-
             post_title = post.title
             post_description = post.description + " " + post.hashtag + " #shorts"
             tags = post.hashtag
             tags = tags.split(" ") if tags else []
 
             video_url = post.video_url
-            video_content = requests.get(video_url).content
+            try:
+                video_content = requests.get(video_url, timeout=20).content
+            except Exception as e:
+                self.save_errors(
+                    "ERRORED", f"UPLOAD VIDEO - REQUEST URL VIDEO {media}: {str(e)}"
+                )
+                return False
 
             video_io = BytesIO(video_content)
             video_io.seek(0)
@@ -264,6 +272,7 @@ class YoutubeService(BaseService):
                         self.save_uploading(10 + (i * 10))
                     i += 1
             except Exception as e:
+
                 self.save_errors("ERRORED", f"SEND POST VIDEO - UPLOAD CHUNK: {str(e)}")
                 return False
 
