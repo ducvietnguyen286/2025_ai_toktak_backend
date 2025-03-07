@@ -89,6 +89,12 @@ class VideoService:
                         "src": "http://admin.lang.canvasee.com/fonts/Jalnan2/Jalnan2TTF.ttf"
                     },
                     {"src": "http://admin.lang.canvasee.com/fonts/Jalnan2/Jalnan2.otf"},
+                    {
+                        "src": "http://admin.lang.canvasee.com/fonts/Jalnan2/JalnanGothicTTF.ttf"
+                    },
+                    {
+                        "src": "http://admin.lang.canvasee.com/fonts/Jalnan2/JalnanGothic.otf"
+                    },
                 ],
                 "background": "#FFFFFF",
                 "tracks": [
@@ -427,7 +433,7 @@ class VideoService:
                             },
                             "font": {
                                 "lineHeight": 0.8,
-                                "family": "Jalnan 2 Regular",
+                                "family": "JalnanGothic",
                                 "color": "#ff0505",
                                 "size": 50,
                             },
@@ -515,7 +521,7 @@ class VideoService:
                         "src": url_path_srt,
                         "font": {
                             "lineHeight": 1,
-                            "family": "Jalnan 2 Regular",
+                            "family": "JalnanGothic",
                             "color": "#ffffff",
                             "size": 46,
                             "stroke": "#000000",
@@ -542,8 +548,8 @@ class VideoService:
             #     {
             #         "asset": {
             #             "type": "html",
-            #             "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'Jalnan 2 Regular', sans-serif;'>잠시만요. <span style='font-weight: bold;'>10</span>초 뒤에 더<br> 놀라운 영상이 이어집니다.</div>",
-            #             "css": "div {   font-family: 'Jalnan 2 Regular', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
+            #             "html": "<div style='font-size: 40px; color: #080000;  text-align: center; font-family: 'JalnanGothic', sans-serif;'>잠시만요. <span style='font-weight: bold;'>10</span>초 뒤에 더<br> 놀라운 영상이 이어집니다.</div>",
+            #             "css": "div {   font-family: 'JalnanGothic', sans-serif; background: #FFD600 ;  border-radius: 40px;}",
             #         },
             #         "start": start_slider_time + 0.01,
             #         "length": time_show_image,
@@ -583,7 +589,7 @@ class VideoService:
             #     "asset": {
             #         "type": "html",
             #         "html": "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Wait a minute.</div>",
-            #         "css": "div { font-weight: bold; font-family: 'Jalnan 2 Regular', sans-serif; border-radius: 40px; }",
+            #         "css": "div { font-weight: bold; font-family: 'JalnanGothic', sans-serif; border-radius: 40px; }",
             #         "width": 500,
             #         "height": 200,
             #         "background": "#FFD600",
@@ -755,7 +761,7 @@ def parse_srt_to_html_assets(url_path_srt: str, start_time):
         # "asset": {
         #     "type": "html",
         #     "html": "<div style='font-size: 60px; color: #000000; padding: 10px; text-align: center;'>Wait a minute.</div>",
-        #     "css": "div { font-weight: bold; font-family: 'Jalnan 2 Regular', sans-serif; border-radius: 40px; }",
+        #     "css": "div { font-weight: bold; font-family: 'JalnanGothic', sans-serif; border-radius: 40px; }",
         #     "width": 500,
         #     "height": 200,
         #     "background": "#FFD600",
@@ -775,7 +781,7 @@ def parse_srt_to_html_assets(url_path_srt: str, start_time):
                 "height": 400,
                 "background": "#80ffffff",
                 # "html": html_text,
-                # "css": '.large-div { background-color: #030303;color: #ffffff;font-family: "Jalnan 2 Regular", sans-serif;      font-size: 60px;  text-align: center;padding: 40px;border-radius: 40px;box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);       height : 400;   }',
+                # "css": '.large-div { background-color: #030303;color: #ffffff;font-family: "JalnanGothic", sans-serif;      font-size: 60px;  text-align: center;padding: 40px;border-radius: 40px;box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);       height : 400;   }',
             },
             "start": start_play,
             "length": length_seconds,
@@ -847,11 +853,11 @@ def create_html_caption(caption_text, start=0, length=0, add_time=0):
     """
     Tạo HTML cho caption text.
     """
-    # html = f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'Jalnan 2 Regular', sans-serif; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; -webkit-text-stroke: 2px #000000; '> <span style='font-weight: bold;'>{caption_text}</span> </div>"
-    # css = "div {  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; -webkit-text-stroke: 2px #000000; font-family: 'Jalnan 2 Regular', sans-serif;    border-radius: 40px;}"
+    # html = f"<div style='font-size: 60px; color: #ffffff;  text-align: center; font-family: 'JalnanGothic', sans-serif; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; -webkit-text-stroke: 2px #000000; '> <span style='font-weight: bold;'>{caption_text}</span> </div>"
+    # css = "div {  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; -webkit-text-stroke: 2px #000000; font-family: 'JalnanGothic', sans-serif;    border-radius: 40px;}"
 
     html = f"<table border='0' width='1000'><tr><td bgcolor='#FF0000' width='10'>&nbsp;</td><td width='990'><p>{caption_text}</p></td></tr></table>"
-    css = "table { background-color: #77000000; } td { padding-top: 16px; padding-bottom: 16px; } p { color: #FFFFFF; font-size: 34px; font-family: 'Jalnan 2 Regular' sans-serif; font-weight: bold; margin: 20px; }"
+    css = "table { background-color: #77000000; } td { padding-top: 16px; padding-bottom: 16px; } p { color: #FFFFFF; font-size: 34px; font-family: 'JalnanGothic' sans-serif; font-weight: bold; margin: 20px; }"
 
     return {
         "html": html,
@@ -903,7 +909,7 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
             "type": "text",
             "text": caption_text,
             "font": {
-                "family": "Jalnan 2 Regular",
+                "family": "JalnanGothic",
                 "color": "#ffffff",
                 "opacity": 0.8,
                 "size": 46,
