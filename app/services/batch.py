@@ -1,7 +1,6 @@
 from app.models.batch import Batch
 
 
-
 class BatchService:
 
     @staticmethod
@@ -28,10 +27,15 @@ class BatchService:
     @staticmethod
     def delete_batch(id):
         return Batch.query.get(id).delete()
-    
+
     @staticmethod
-    def get_all_batches(page , per_page):
-        pagination = Batch.query.order_by(Batch.id.desc()).paginate(
+    def get_all_batches(page, per_page, user_id=None):
+
+        query = Batch.query
+        if user_id is not None:
+            query = query.filter(Batch.user_id == user_id)
+
+        pagination = query.order_by(Batch.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
-        return pagination 
+        return pagination
