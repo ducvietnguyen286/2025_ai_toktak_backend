@@ -314,13 +314,16 @@ class TwitterService(BaseService):
         log_twitter_message(f"Upload media {media}")
 
         try:
-            response = requests.get(media, timeout=20)
+            response = requests.get(media, timeout=30)
         except Exception as e:
-            self.save_errors(
-                "ERRORED",
-                f"POST {self.key_log} UPLOAD VIDEO - REQUEST URL VIDEO {media}: {str(e)}",
-            )
-            return False
+            try:
+                response = requests.get(media, timeout=30)
+            except Exception as e:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} UPLOAD VIDEO - REQUEST URL VIDEO {media}: {str(e)}",
+                )
+                return False
 
         total_bytes = int(response.headers.get("content-length", 0))
         media_type = response.headers.get("content-type")
