@@ -29,7 +29,7 @@ class TiktokTokenService:
             response = requests.get(
                 URL_USER_INFO, headers={"Authorization": f"Bearer {access_token}"}
             )
-            user_data = response.json()
+            data = response.json()
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
@@ -37,10 +37,12 @@ class TiktokTokenService:
                 user_id=user_link.user_id,
                 type="fetch_user_info",
                 request="{}",
-                response=json.dumps(user_data),
+                response=json.dumps(data),
             )
 
-            log_tiktok_message(f"Fetch user info response: {user_data}")
+            log_tiktok_message(f"Fetch user info response: {data}")
+
+            user_data = data.get("user")
 
             return {
                 "id": user_data.get("open_id") or "",
