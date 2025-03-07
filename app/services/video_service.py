@@ -1427,11 +1427,10 @@ def generate_caption_from_audio(
     :param audio_duration: Thời gian của file MP3 (lấy từ ffmpeg)
     :param disk_path: Thư mục lưu file SRT
     :param start_time: Thời gian bắt đầu caption (tính bằng giây)
-    :return: Đường dẫn file SRT hoặc thông báo lỗi
+    :return: URL của file SRT hoặc thông báo lỗi
     """
     try:
         output_caption_file = os.path.join(disk_path, "output.srt")
-
         os.makedirs(disk_path, exist_ok=True)
 
         if not os.path.exists(audio_file):
@@ -1447,6 +1446,8 @@ def generate_caption_from_audio(
         words = transcript.split()
         captions = []
         temp_caption = ""
+
+        # Chia văn bản thành từng đoạn khoảng 20 ký tự
         for word in words:
             if len(temp_caption) + len(word) + 1 > 20:
                 captions.append(temp_caption)
@@ -1457,6 +1458,7 @@ def generate_caption_from_audio(
         if temp_caption:
             captions.append(temp_caption)
 
+        # Tính thời lượng mỗi caption
         caption_duration = audio_duration / len(captions) if captions else 0
 
         with open(output_caption_file, "w", encoding="utf-8") as f:
@@ -1466,16 +1468,16 @@ def generate_caption_from_audio(
                 end_time = current_time + caption_duration
                 end_timestamp = format_time_caption(end_time)
 
-                
-                f.write(f"{i+1}\n")
+                # Ghi vào file SRT
                 f.write(f"{start_timestamp} --> {end_timestamp}\n")
                 f.write(f"{caption}\n\n")
-                f.write("\n")
 
-                current_time = end_time
+                # Cập nhật thời gian bắt đầu cho caption tiếp theo (+0.01 giây)
+                current_time = end_time + 0.01
 
         log_make_video_message(f"Đã tạo file caption: {output_caption_file}")
 
+        # Chuyển đường dẫn thành URL để trả về
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
         output_caption_file = output_caption_file.replace("static/", "").replace(
             "\\", "/"
@@ -1486,7 +1488,6 @@ def generate_caption_from_audio(
     except Exception as e:
         log_make_video_message(f"Exception: {str(e)}")
         return ""
-
 
 def google_speech_to_text(audio_file, config=None):
     """
