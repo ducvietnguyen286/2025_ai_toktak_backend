@@ -664,7 +664,7 @@ class APIGetCallbackTiktok(Resource):
                 token = token_data
 
             if not user_link:
-                UserService.create_user_link(
+                user_link = UserService.create_user_link(
                     user_id=int_user_id,
                     link_id=int_link_id,
                     status=1,

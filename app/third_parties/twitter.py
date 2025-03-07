@@ -50,7 +50,7 @@ class TwitterTokenService:
                 social_post_id="",
                 user_id=user_link.user_id,
                 type="fetch_user_info",
-                request={},
+                request="{}",
                 response=json.dumps(user_data),
             )
 

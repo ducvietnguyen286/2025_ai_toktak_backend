@@ -107,14 +107,10 @@ class FacebookTokenService:
             log_facebook_message(e)
             return None
 
-    @staticmethod
-    def fetch_user_info(user_link):
+    def fetch_user_info(self, user_link):
         try:
             log_facebook_message(
                 "------------------  GET FACEBOOK USER INFO BY TOKEN  ------------------"
-            )
-            user_link = UserService.find_user_link(
-                link_id=user_link.id, user_id=user_link.user_id
             )
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
