@@ -270,7 +270,17 @@ class APIMakePost(Resource):
 
                         product_name = data["name"]
 
-                        result = VideoService.create_video_from_images(
+                        # tạo từ gtts
+                        # result = VideoService.create_video_from_images(
+                        #     post.id,
+                        #     origin_caption,
+                        #     image_renders,
+                        #     image_renders_sliders,
+                        #     caption_sliders,
+                        # )
+                        
+                        # Tạo từ google
+                        result = VideoService.create_video_from_images_v2(
                             post.id,
                             origin_caption,
                             image_renders,

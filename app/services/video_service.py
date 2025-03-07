@@ -25,6 +25,7 @@ from app.services.request_log import RequestLogService
 from mutagen.mp3 import MP3
 from google.cloud import texttospeech
 import base64
+import wave
 
 
 class VideoService:
@@ -75,12 +76,6 @@ class VideoService:
                 + prompts[: len(images_url) % len(prompts)]
             )
 
-        date_create = datetime.datetime.now().strftime("%Y_%m_%d")
-        dir_path = f"static/voice/gtts_voice/{date_create}/{post_id}"
-
-        # text_to_speech(origin_caption, "test", dir_path)
-        text_to_speech_kr(origin_caption, dir_path , config)
-
         clips_data = VideoService.create_combined_clips(
             post_id,
             images_url,
@@ -120,6 +115,217 @@ class VideoService:
                                     "volume": MUSIC_BACKGROUP_VOLUMN,
                                 },
                                 "start": clips_data["intro_length"],
+                                "length": "end",
+                            }
+                        ]
+                    },
+                ],
+            },
+            "output": {
+                "format": "mp4",
+                "quality": "veryhigh",
+                # "resolution": "hd",
+                # "aspectRatio": "16:9",
+                "size": {"width": video_size["width"], "height": video_size["height"]},
+                # "size": video_size,
+            },
+            "callback": f"{current_domain}/api/v1/video_maker/shotstack_webhook",
+        }
+
+        log_make_video_message(
+            f"++++++++++++++++++++++++++++++payload_dumps:\n\n {json.dumps(payload)} \n\n"
+        )
+
+        # Header với API Key
+        headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
+
+        try:
+            # Gửi yêu cầu POST đến Shotstack API
+            response = requests.post(
+                SHOTSTACK_URL, headers=headers, data=json.dumps(payload)
+            )
+
+            # Kiểm tra trạng thái phản hồi
+            # A new resource was created successfully.
+            if response.status_code == 201:
+                result = response.json()
+                result["status_code"] = 200
+
+                log_make_video_message(f"render_id : : {result}")
+
+                RequestLogService.create_request_log(
+                    post_id=post_id,
+                    ai_type="shotstack",
+                    request=json.dumps(payload),
+                    response=json.dumps(result),
+                    prompt_tokens=0,
+                    prompt_cache_tokens=0,
+                    prompt_audio_tokens=0,
+                    completion_tokens=0,
+                    completion_reasoning_tokens=0,
+                    completion_audio_tokens=0,
+                    completion_accepted_prediction_tokens=0,
+                    completion_rejected_prediction_tokens=0,
+                    total_tokens=0,
+                    status=1,
+                )
+
+                return result
+            else:
+                result = response.json()
+                log_make_video_message("create video Failed :{0}".format(str(result)))
+                return {
+                    "message": "Failed to create video",
+                    "status_code": response.status_code,
+                }
+
+        except Exception as e:
+            log_make_video_message(
+                "create_video_from_images : Exception: {0}".format(str(e))
+            )
+            RequestLogService.create_request_log(
+                post_id=post_id,
+                ai_type="shotstack",
+                request=json.dumps(payload),
+                response=str(e),
+                prompt_tokens=0,
+                prompt_cache_tokens=0,
+                prompt_audio_tokens=0,
+                completion_tokens=0,
+                completion_reasoning_tokens=0,
+                completion_audio_tokens=0,
+                completion_accepted_prediction_tokens=0,
+                completion_rejected_prediction_tokens=0,
+                total_tokens=0,
+                status=2,
+            )
+
+            return {
+                "message": str(e),
+                "status_code": 500,
+            }
+
+    @staticmethod
+    def create_video_from_images_v2(
+        post_id, origin_caption, images_url, images_slider_url, captions
+    ):
+
+        domain = request.host
+        config = VideoService.get_settings()
+        SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
+        SHOTSTACK_URL = config["SHOTSTACK_URL"]
+        is_ai_image = config["SHOTSTACK_AI_IMAGE"]
+        MUSIC_BACKGROUP_VOLUMN = float(config["MUSIC_BACKGROUP_VOLUMN"])
+        MUSIC_VOLUMN = float(config["MUSIC_VOLUMN"])
+        video_size_json = config["VIDEO_SIZE"] or '{"width": 1200, "height": 800}'
+        video_size = json.loads(video_size_json)
+
+        key_redis = f"caption_videos_default"
+        progress_json = redis_client.get(key_redis)
+
+        if progress_json:
+            caption_videos_default = json.loads(progress_json) if progress_json else {}
+        else:
+
+            caption_videos_default = VideoService.get_caption_defaults()
+            redis_client.set(key_redis, json.dumps(caption_videos_default))
+
+        # prompt fake
+        prompts = [
+            "Slowly zoom in and out for a dramatic effect.",
+            "Add a soft fade transition between images.",
+            "Use a pan effect to make the image feel dynamic.",
+            "Apply a sepia filter for a vintage look.",
+            "Zoom in on the center of the image for emphasis.",
+        ]
+
+        # Kiểm tra nếu danh sách prompts ít hơn số lượng hình ảnh
+        if len(prompts) < len(images_url):
+            # Lặp lại prompts để đủ số lượng ảnh
+            prompts = (
+                prompts * (len(images_url) // len(prompts))
+                + prompts[: len(images_url) % len(prompts)]
+            )
+
+        date_create = datetime.datetime.now().strftime("%Y_%m_%d")
+        dir_path = f"static/voice/gtts_voice/{date_create}/{post_id}"
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+        # text_to_speech(origin_caption, "test", dir_path)
+        mp3_file, audio_duration = text_to_speech_kr(origin_caption, dir_path, config)
+
+        clips_data = create_combined_clips_v2(
+            post_id,
+            images_url,
+            images_slider_url,
+            prompts,
+            is_ai_image,
+            captions,
+            config,
+            caption_videos_default,
+        )
+
+        file_caption = generate_caption_from_audio(
+            mp3_file, audio_duration, dir_path, clips_data["intro_length"], config
+        )
+
+        clips_caption = {
+            "asset": {
+                "type": "caption",
+                "src": file_caption,
+                "font": {
+                    "lineHeight": 1,
+                    "family": "JalnanGothic",
+                    "color": "#ffffff",
+                    "size": 46,
+                    "stroke": "#000000",
+                    "strokeWidth": 1.5,
+                },
+            },
+            "start": 0,
+            "length": "end",
+        }
+
+        mp3_file = mp3_file.replace("static/", "")
+        voice_url = f"{current_domain}/{mp3_file}"
+        clips_audio_sub = {
+            "asset": {
+                "type": "audio",
+                "src": voice_url,
+                "volume": 1,
+            },
+            "start": clips_data["intro_length"],
+            "length": "end",
+        }
+
+        payload = {
+            "timeline": {
+                "fonts": [
+                    {
+                        "src": "http://admin.lang.canvasee.com/fonts/Jalnan2/Jalnan2TTF.ttf"
+                    },
+                    {"src": "http://admin.lang.canvasee.com/fonts/Jalnan2/Jalnan2.otf"},
+                    {
+                        "src": "http://admin.lang.canvasee.com/fonts/Jalnan2/JalnanGothicTTF.ttf"
+                    },
+                    {
+                        "src": "http://admin.lang.canvasee.com/fonts/Jalnan2/JalnanGothic.otf"
+                    },
+                ],
+                "background": "#FFFFFF",
+                "tracks": [
+                    {"clips": [clips_caption]},
+                    {"clips": [clips_audio_sub]},
+                    clips_data["clips"],
+                    {
+                        "clips": [
+                            {
+                                "asset": {
+                                    "type": "audio",
+                                    "src": "https://apitoktak.voda-play.com/voice/audio/ambisax.mp3",
+                                    "effect": "fadeOut",
+                                    "volume": MUSIC_BACKGROUP_VOLUMN,
+                                },
+                                "start": 0,
                                 "length": "end",
                             }
                         ]
@@ -540,6 +746,126 @@ class VideoService:
         # Kết hợp hai danh sách clip lại
         combined_clips = clips_shape + clips
         return {"intro_length": intro_length, "clips": {"clips": combined_clips}}
+
+
+def create_combined_clips_v2(
+    post_id,
+    ai_images,
+    images_slider_url,
+    prompts=None,
+    is_ai_image="0",
+    captions=None,
+    config=None,
+    caption_videos_default=None,
+):
+    video_urls = get_random_videos(2)
+    first_viral_detail = video_urls[0] or []
+    last_viral_detail = video_urls[1] or []
+    # Chọn 2 URL khác nhau một cách ngẫu nhiên
+    first_viral_url = first_viral_detail["video_url"]
+    first_duration = float(first_viral_detail["duration"] or 0)
+
+    clips = []
+    current_start = 0
+    intro_length = first_duration
+
+    clips.append(
+        {
+            "asset": {"type": "video", "src": first_viral_url},
+            "start": current_start,
+            "length": intro_length,
+        }
+    )
+    first_caption_videos_default = VideoService.filter_content_by_type(
+        caption_videos_default, 1
+    )
+
+    clip_detail = create_header_text(first_caption_videos_default, current_start, 2)
+    clips.append(clip_detail)
+
+    current_start += intro_length
+
+    start_time_caption = current_start
+    time_show_image = 5
+
+    SHOTSTACK_IMAGE_EFFECTS = config["SHOTSTACK_IMAGE_EFFECTS"] or ""
+    if SHOTSTACK_IMAGE_EFFECTS == "random":
+        effects = [
+            "zoomIn",
+            "zoomOut",
+            "slideLeft",
+            "slideRight",
+            "slideUp",
+            "slideDown",
+        ]
+    else:
+        effects = [
+            SHOTSTACK_IMAGE_EFFECTS,
+        ]
+
+    last_caption_videos_default = VideoService.filter_content_by_type(
+        caption_videos_default, 4
+    )
+
+    for j_index, url in enumerate(images_slider_url):
+
+        random_effect = random.choice(effects)
+        start_slider_time = current_start + j_index * time_show_image
+
+        clip_detail = {
+            "asset": {"type": "image", "src": url},
+            "start": start_slider_time,
+            "length": time_show_image,
+        }
+
+        if random_effect != "":
+            clip_detail["effect"] = random_effect
+        clips.append(clip_detail)
+
+        if j_index == 0:
+            first_caption_image_default = VideoService.filter_content_by_type(
+                caption_videos_default, 2
+            )
+            clip_detail = create_header_text(
+                first_caption_image_default, start_slider_time, 2
+            )
+            clips.append(clip_detail)
+        elif j_index == 2:
+            # When 3rd image start, display for 2 sec
+            first_caption_image_default = VideoService.filter_content_by_type(
+                caption_videos_default, 3
+            )
+            clip_detail = create_header_text(
+                first_caption_image_default, start_slider_time, 2
+            )
+            clips.append(clip_detail)
+
+        elif j_index == 4:
+            # When 5th image start, display for 2 sec & When start last hooking video, display for 2 sec in the middle of screen until end of video
+            clip_detail = create_header_text(
+                last_caption_videos_default, start_slider_time, 2
+            )
+            clips.append(clip_detail)
+
+    current_start += len(images_slider_url) * time_show_image
+    last_viral_url = last_viral_detail["video_url"]
+    last_duration = float(last_viral_detail["duration"] or 0)
+    clips.append(
+        {
+            "asset": {"type": "video", "src": last_viral_url},
+            "start": current_start,
+            "length": last_duration,
+        }
+    )
+
+    clip_detail = create_header_text(
+        last_caption_videos_default, current_start, last_duration
+    )
+    clips.append(clip_detail)
+
+    # Kết hợp hai danh sách clip lại
+    combined_clips = clips
+    return {"intro_length": intro_length, "clips": {"clips": combined_clips}}
 
 
 def get_random_videos(limit=2):
@@ -976,37 +1302,69 @@ def calculate_slide_durations(audio_duration: float, num_images: int) -> list:
     return durations
 
 
-def text_to_speech_kr(text, disk_path="output" , config=None):
+def get_audio_duration(audio_file):
     """
-    Chuyển đổi văn bản thành giọng nói bằng Google Cloud Text-to-Speech API.
+    Lấy thời gian (giây) của file âm thanh (MP3, FLAC, WAV) bằng ffmpeg.
+    :param audio_file: Đường dẫn file âm thanh
+    :return: Thời gian (giây) hoặc 0 nếu lỗi
+    """
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe",
+                "-i",
+                audio_file,
+                "-show_entries",
+                "format=duration",
+                "-v",
+                "quiet",
+                "-of",
+                "csv=p=0",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        duration = float(result.stdout.strip())  # Chuyển kết quả thành số thực
+        return duration
+
+    except Exception as e:
+        log_make_video_message(f"Lỗi khi lấy thời gian file âm thanh: {str(e)}")
+        return 0.0
+
+
+def text_to_speech_kr(text, disk_path="output", config=None):
+    """
+    Gọi Google Text-to-Speech API để tạo file MP3 và lấy thời gian audio bằng ffmpeg.
 
     :param text: Văn bản cần chuyển đổi
     :param disk_path: Thư mục lưu file MP3
-    :return: Đường dẫn file MP3 hoặc thông báo lỗi
+    :param config: Dictionary chứa API Key và URL
+    :return: Tuple (đường dẫn file MP3, thời gian audio)
     """
     try:
-        # Tạo thư mục nếu chưa có
-        os.makedirs(disk_path, exist_ok=True)
+        if not config:
+            log_make_video_message("Lỗi: Config không được truyền vào.")
+            return "", 0.0
 
-        # Định dạng file output
-        file_name = "output.mp3"
-        output_file = os.path.join(disk_path, file_name)
+        api_key = config.get("GOOGLE_API_TEXT_TO_SPEECH", "")
+        api_url = config.get(
+            "GOOGLE_API_TEXT_TO_URL",
+            "https://texttospeech.googleapis.com/v1/text:synthesize",
+        )
 
-        # Lấy API Key và URL từ biến môi trường
-        api_key = config['GOOGLE_API_TEXT_TO_SPEECH']
-        api_url = config['GOOGLE_API_TEXT_TO_URL']
-
-        # Kiểm tra nếu API Key hoặc URL bị thiếu
         if not api_key or not api_url:
             log_make_video_message("Lỗi: API Key hoặc API URL chưa được thiết lập.")
-            return ""
+            return "", 0.0
 
-        # Kiểm tra nếu văn bản rỗng
         if not text:
             log_make_video_message("Lỗi: Vui lòng nhập văn bản.")
-            return ""
+            return "", 0.0
 
-        # Danh sách giọng nói tiếng Hàn
+        os.makedirs(disk_path, exist_ok=True)
+        output_file = os.path.join(disk_path, "output.mp3")
+
+        # Chọn giọng nói ngẫu nhiên
         korean_voices = [
             {"name": "ko-KR-Wavenet-A", "ssmlGender": "FEMALE"},
             {"name": "ko-KR-Wavenet-B", "ssmlGender": "MALE"},
@@ -1014,7 +1372,8 @@ def text_to_speech_kr(text, disk_path="output" , config=None):
             {"name": "ko-KR-Wavenet-D", "ssmlGender": "MALE"},
         ]
         selected_voice = random.choice(korean_voices)
-        # Cấu hình giọng nói
+
+        # Payload gửi lên Google API
         payload = {
             "input": {"text": text},
             "voice": {
@@ -1030,26 +1389,178 @@ def text_to_speech_kr(text, disk_path="output" , config=None):
             f"{api_url}?key={api_key}", json=payload, headers=headers
         )
 
-        # Kiểm tra lỗi từ Google API
         if response.status_code != 200:
             log_make_video_message(f"Lỗi từ Google API: {response.text}")
-            return ""
+            return "", 0.0
 
-        # Lấy dữ liệu âm thanh từ API (Base64)
         response_json = response.json()
+
         if "audioContent" not in response_json:
             log_make_video_message("Lỗi: Không nhận được dữ liệu âm thanh từ API.")
-            return ""
+            return "", 0.0
 
+        # Giải mã Base64 và lưu file MP3
         audio_content = base64.b64decode(response_json["audioContent"])
-
-        # Ghi dữ liệu nhị phân vào file MP3
         with open(output_file, "wb") as audio_file:
             audio_file.write(audio_content)
 
-        log_make_video_message(f"Đã tạo file âm thanh: {output_file}")
-        return output_file
+        # Lấy thời gian audio bằng ffmpeg
+        audio_duration = get_audio_duration(output_file)
+
+        log_make_video_message(
+            f"Đã tạo file âm thanh ({selected_voice['name']}): {output_file} (Thời gian: {audio_duration:.2f}s)"
+        )
+        return output_file, audio_duration
+
+    except Exception as e:
+        log_make_video_message(f"Exception: {str(e)}")
+        return "", 0.0
+
+
+def generate_caption_from_audio(
+    audio_file, audio_duration, disk_path, start_time=0.0, config=None
+):
+    """
+    Tạo file caption (.srt) từ file MP3 đã tạo.
+
+    :param audio_file: Đường dẫn file MP3 đầu vào
+    :param audio_duration: Thời gian của file MP3 (lấy từ ffmpeg)
+    :param disk_path: Thư mục lưu file SRT
+    :param start_time: Thời gian bắt đầu caption (tính bằng giây)
+    :return: Đường dẫn file SRT hoặc thông báo lỗi
+    """
+    try:
+        output_caption_file = os.path.join(disk_path, "output.srt")
+
+        os.makedirs(disk_path, exist_ok=True)
+
+        if not os.path.exists(audio_file):
+            log_make_video_message("Lỗi: File âm thanh không tồn tại.")
+            return ""
+
+        transcript = google_speech_to_text(audio_file, config)
+
+        if not transcript:
+            log_make_video_message("Lỗi: Không thể nhận diện giọng nói.")
+            return ""
+
+        words = transcript.split()
+        captions = []
+        temp_caption = ""
+        for word in words:
+            if len(temp_caption) + len(word) + 1 > 20:
+                captions.append(temp_caption)
+                temp_caption = word
+            else:
+                temp_caption += " " + word if temp_caption else word
+
+        if temp_caption:
+            captions.append(temp_caption)
+
+        caption_duration = audio_duration / len(captions) if captions else 0
+
+        with open(output_caption_file, "w", encoding="utf-8") as f:
+            current_time = start_time
+            for i, caption in enumerate(captions):
+                start_timestamp = format_time_caption(current_time)
+                end_time = current_time + caption_duration
+                end_timestamp = format_time_caption(end_time)
+
+                
+                f.write(f"{i+1}\n")
+                f.write(f"{start_timestamp} --> {end_timestamp}\n")
+                f.write(f"{caption}\n\n")
+                f.write("\n")
+
+                current_time = end_time
+
+        log_make_video_message(f"Đã tạo file caption: {output_caption_file}")
+
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+        output_caption_file = output_caption_file.replace("static/", "").replace(
+            "\\", "/"
+        )
+        file_url = f"{current_domain}/{output_caption_file}"
+        return file_url
 
     except Exception as e:
         log_make_video_message(f"Exception: {str(e)}")
         return ""
+
+
+def google_speech_to_text(audio_file, config=None):
+    """
+    Sử dụng Google Speech-to-Text để chuyển file âm thanh thành văn bản.
+    :param audio_file: File MP3 đầu vào
+    :param config: Dictionary chứa API Key
+    :return: Văn bản nhận diện được
+    """
+    try:
+        # Lấy API Key từ config
+        api_key = config.get("GOOGLE_API_TEXT_TO_SPEECH", "")
+        api_url = f"https://speech.googleapis.com/v1/speech:recognize?key={api_key}"
+
+        if not api_key:
+            log_make_video_message("Lỗi: API Key chưa được thiết lập.")
+            return ""
+
+        # Chuyển file MP3 sang FLAC (Google Speech-to-Text tối ưu cho FLAC)
+        flac_file = audio_file.replace(".mp3", ".flac")
+        os.system(f"ffmpeg -i {audio_file} -ac 1 -ar 16000 {flac_file} -y")
+
+        # Đọc file FLAC dạng base64
+        with open(flac_file, "rb") as f:
+            audio_content = base64.b64encode(f.read()).decode("utf-8")
+
+        # Gửi request đến Google API
+        payload = {
+            "config": {
+                "encoding": "FLAC",
+                "sampleRateHertz": 16000,
+                "languageCode": "ko-KR",
+            },
+            "audio": {"content": audio_content},
+        }
+
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(api_url, json=payload, headers=headers)
+
+        # Xóa file FLAC sau khi gửi request
+        try:
+            os.remove(flac_file)
+        except Exception as e:
+            log_make_video_message(f"Lỗi khi xóa file FLAC: {str(e)}")
+
+        if response.status_code != 200:
+            log_make_video_message(f"Lỗi từ Google Speech API: {response.text}")
+            return ""
+
+        response_json = response.json()
+
+        # Lấy transcript từ API
+        transcript = " ".join(
+            [
+                alt["transcript"]
+                for res in response_json.get("results", [])
+                for alt in res.get("alternatives", [])
+            ]
+        )
+
+        return transcript.strip()
+
+    except Exception as e:
+        log_make_video_message(f"Exception: {str(e)}")
+        return ""
+
+
+def format_time_caption(seconds):
+    """
+    Chuyển đổi thời gian float thành định dạng SRT (hh:mm:ss,ms)
+    :param seconds: Thời gian tính bằng giây
+    :return: Chuỗi thời gian định dạng SRT
+    """
+    millisec = int((seconds % 1) * 1000)
+    seconds = int(seconds)
+    minutes = seconds // 60
+    hours = minutes // 60
+    return f"{hours:02}:{minutes%60:02}:{seconds%60:02},{millisec:03}"
