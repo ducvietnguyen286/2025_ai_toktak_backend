@@ -21,11 +21,7 @@ from app.extensions import redis_client
 from pydub import AudioSegment
 import subprocess
 from app.services.request_log import RequestLogService
-
-from mutagen.mp3 import MP3
-from google.cloud import texttospeech
 import base64
-import wave
 
 
 class VideoService:
