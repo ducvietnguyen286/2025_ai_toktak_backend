@@ -142,6 +142,7 @@ class APINewLink(Resource):
                     is_active = TwitterTokenService().fetch_token(code, user_link)
                     if is_active:
                         data = TwitterTokenService().fetch_user_info(user_link)
+                        logger.info(f"-----------TWITTER DATA: {data}-------------")
                         if data:
                             social_id = data.get("id") or ""
                             name = data.get("name") or ""
@@ -158,6 +159,7 @@ class APINewLink(Resource):
                     )
                     if is_active:
                         data = FacebookTokenService().fetch_user_info(user_link)
+                        logger.info(f"-----------FACEBOOK DATA: {data}-------------")
                         if data:
                             social_id = data.get("id") or ""
                             name = data.get("name") or ""
@@ -192,6 +194,7 @@ class APINewLink(Resource):
                     is_active = TwitterTokenService().fetch_token(code, user_link)
                     if is_active:
                         data = TwitterTokenService().fetch_user_info(user_link)
+                        logger.info(f"-----------TWITTER DATA: {data}-------------")
                         if data:
                             social_id = data.get("id") or ""
                             name = data.get("name") or ""
@@ -208,6 +211,7 @@ class APINewLink(Resource):
 
                     if is_active:
                         data = FacebookTokenService().fetch_user_info(user_link)
+                        logger.info(f"-----------FACEBOOK DATA: {data}-------------")
                         if data:
                             social_id = data.get("id") or ""
                             name = data.get("name") or ""
@@ -672,6 +676,7 @@ class APIGetCallbackTiktok(Resource):
                 user_link.save()
 
             user_info = TiktokTokenService().fetch_user_info(user_link)
+            logger.info(f"-----------TIKTOK DATA: {user_info}-------------")
             if user_info:
                 social_id = user_info.get("id") or ""
                 name = user_info.get("name") or ""
