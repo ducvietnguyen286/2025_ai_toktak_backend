@@ -159,7 +159,7 @@ class APINewLink(Resource):
                     )
                     if is_active:
                         data = FacebookTokenService().fetch_page_token_backend(
-                            user_link=user_link, is_all=True
+                            user_link=user_link, is_all=True, page_id=None
                         )
                         logger.info(f"-----------FACEBOOK DATA: {data}-------------")
                         if data:
@@ -218,7 +218,7 @@ class APINewLink(Resource):
 
                     if is_active:
                         data = FacebookTokenService().fetch_page_token_backend(
-                            user_link=user_link, is_all=True
+                            user_link=user_link, is_all=True, page_id=None
                         )
                         logger.info(f"-----------FACEBOOK DATA: {data}-------------")
                         if data:
