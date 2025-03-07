@@ -40,3 +40,4 @@ google-auth-oauthlib~=1.2.1
 google-api-python-client~=2.162.0
 requests-oauthlib~=2.0.0
 mutagen
+google-cloud-texttospeech

@@ -1,11 +1,15 @@
 import os
 import textwrap
 import time
+import datetime
 import uuid
 from PIL import Image, ImageDraw, ImageFont
 import requests
 
-UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+
+date_create = datetime.datetime.now().strftime("%Y_%m_%d")
+UPLOAD_FOLDER = os.path.join(os.getcwd(), f"uploads/{date_create}")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 FONT_FOLDER = os.path.join(os.getcwd(), "app/makers/fonts")
 CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
@@ -66,7 +70,7 @@ class ImageMaker:
         image_path = f"{UPLOAD_FOLDER}/{image_name}"
         with open(image_path, "wb") as image_file:
             image_file.write(requests.get(image_url).content)
-        image_url = f"{CURRENT_DOMAIN}/files/{image_name}"
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
         return image_url
 
     @staticmethod
@@ -115,7 +119,7 @@ class ImageMaker:
 
         image.save(image_path)
 
-        image_url = f"{CURRENT_DOMAIN}/files/{image_name}"
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
 
         return image_url
 
@@ -196,6 +200,6 @@ class ImageMaker:
             image_path = image_path.rsplit(".", 1)[0] + ".jpg"
         image.save(image_path)
 
-        image_url = f"{CURRENT_DOMAIN}/files/{image_name}"
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
 
         return image_url

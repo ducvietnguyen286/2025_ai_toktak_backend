@@ -3,6 +3,7 @@ import io
 import sys
 import tempfile
 import time
+import datetime
 import uuid
 from moviepy.editor import (
     vfx,
@@ -25,7 +26,10 @@ from pydub import AudioSegment
 import subprocess
 
 FONT_FOLDER = os.path.join(os.getcwd(), "app/makers/fonts")
-UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+
+date_create = datetime.datetime.now().strftime("%Y_%m_%d")
+UPLOAD_FOLDER = os.path.join(os.getcwd(), f"uploads/{date_create}")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 class MakerVideo:
@@ -291,7 +295,7 @@ class MakerVideo:
         del audio_path
         gc.collect()
 
-        file_url = f"{os.getenv('CURRENT_DOMAIN')}/files/{file_name}"
+        file_url = f"{os.getenv('CURRENT_DOMAIN')}/{date_create}/files/{file_name}"
         return file_url
 
     def make_audio(self, captions):
