@@ -529,7 +529,7 @@ class APITiktokLogin(Resource):
             user_id = args.get("user_id")
             link_id = args.get("link_id")
             state_token = self.generate_state_token(user_id, link_id)
-            scope = "user.info.basic,video.publish,video.upload"
+            scope = "user.info.basic,user.info.profile,video.publish,video.upload"
 
             params = {
                 "client_key": TIKTOK_CLIENT_KEY,
