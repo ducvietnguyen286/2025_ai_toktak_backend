@@ -127,7 +127,7 @@ class FacebookTokenService:
                 social_post_id="",
                 user_id=user_link.user_id,
                 type="get_user_info_by_token",
-                request=json.dumps({"access_token": access_token}),
+                request="{}",
                 response=json.dumps(data),
             )
 

@@ -44,7 +44,7 @@ class YoutubeTokenService:
                 social_post_id="",
                 user_id=user_link.user_id,
                 type="fetch_channel_info",
-                request=json.dumps({}),
+                request="{}",
                 response=json.dumps(response),
             )
 
