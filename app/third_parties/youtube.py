@@ -221,13 +221,16 @@ class YoutubeService(BaseService):
 
             video_url = post.video_url
             try:
-                video_content = requests.get(video_url, timeout=20).content
+                video_content = requests.get(video_url, timeout=30).content
             except Exception as e:
-                self.save_errors(
-                    "ERRORED",
-                    f"POST {self.key_log} UPLOAD VIDEO - REQUEST URL VIDEO {media}: {str(e)}",
-                )
-                return False
+                try:
+                    video_content = requests.get(video_url, timeout=30).content
+                except Exception as e:
+                    self.save_errors(
+                        "ERRORED",
+                        f"POST {self.key_log} SEND POST VIDEO - GET VIDEO URL: {str(e)}",
+                    )
+                    return False
 
             video_io = BytesIO(video_content)
             video_io.seek(0)

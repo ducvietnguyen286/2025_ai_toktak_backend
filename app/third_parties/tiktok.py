@@ -274,16 +274,19 @@ class TiktokService(BaseService):
 
     def upload_video(self, media):
         try:
-            log_tiktok_message("POST {self.key_log} Upload video to Tiktok")
+            log_tiktok_message(f"POST {self.key_log} Upload video to Tiktok")
             # FILE INFO
             try:
-                response = requests.get(media, timeout=20)
+                response = requests.get(media, timeout=30)
             except Exception as e:
-                self.save_errors(
-                    "ERRORED",
-                    f"POST {self.key_log} UPLOAD VIDEO - REQUEST URL VIDEO {media}: {str(e)}",
-                )
-                return False
+                try:
+                    response = requests.get(media, timeout=30)
+                except Exception as e:
+                    self.save_errors(
+                        "ERRORED",
+                        f"POST {self.key_log} UPLOAD VIDEO - REQUEST URL VIDEO {media}: {str(e)}",
+                    )
+                    return False
 
             upload_info = self.upload_video_init(response)
             if not upload_info:
