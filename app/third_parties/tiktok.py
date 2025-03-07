@@ -42,7 +42,7 @@ class TiktokTokenService:
 
             log_tiktok_message(f"Fetch user info response: {res}")
 
-            data = data.get("data", {})
+            data = res.get("data", {})
             user_data = data.get("user", {})
 
             return {
