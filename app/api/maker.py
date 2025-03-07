@@ -23,13 +23,15 @@ from app.services.social_post import SocialPostService
 from app.services.video_service import VideoService
 from flask import request
 
+from flask_jwt_extended import jwt_required
+from app.services.auth import AuthService
 
 ns = Namespace(name="maker", description="Maker API")
 
 
 @ns.route("/create-batch")
 class APICreateBatch(Resource):
-
+    @jwt_required()
     @parameters(
         type="object",
         properties={
@@ -39,6 +41,8 @@ class APICreateBatch(Resource):
     )
     def post(self, args):
         try:
+            
+            current_user = AuthService.get_current_identity()
             url = args.get("url", "")
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
@@ -85,7 +89,7 @@ class APICreateBatch(Resource):
             post_types = ["video", "image", "blog"]
 
             batch = BatchService.create_batch(
-                user_id=1,
+                user_id=current_user.id,
                 url=url,
                 thumbnail=thumbnail_url,
                 thumbnails=json.dumps(thumbnails),
@@ -99,7 +103,7 @@ class APICreateBatch(Resource):
             posts = []
             for post_type in post_types:
                 post = PostService.create_post(
-                    user_id=1, batch_id=batch.id, type=post_type, status=0
+                    user_id=current_user.id, batch_id=batch.id, type=post_type, status=0
                 )
 
                 post_res = post._to_json()
@@ -127,8 +131,9 @@ class APICreateBatch(Resource):
 
 @ns.route("/test-create-video/<int:id>")
 class APITestCreateVideo(Resource):
+    
     def post(self, id):
-        try:
+        try: 
             post = PostService.find_post(id)
             batch = BatchService.find_batch(post.batch_id)
             data = json.loads(batch.content)
@@ -188,9 +193,10 @@ class APITestCreateVideo(Resource):
 
 @ns.route("/make-post/<int:id>")
 class APIMakePost(Resource):
-
+    @jwt_required()
     def post(self, id):
         try:
+            current_user = AuthService.get_current_identity()
             message = "Tạo post thành công"
             post = PostService.find_post(id)
             if not post:
@@ -278,7 +284,7 @@ class APIMakePost(Resource):
 
                             VideoService.create_create_video(
                                 render_id=render_id,
-                                user_id=1,
+                                user_id=current_user.id,
                                 product_name=product_name,
                                 images_url=json.dumps(image_renders),
                                 description="",
@@ -406,7 +412,8 @@ class APIMakePost(Resource):
 
 @ns.route("/get-batch/<int:id>")
 class APIGetBatch(Resource):
-
+    
+    @jwt_required()
     def get(self, id):
         batch = BatchService.find_batch(id)
         if not batch:
@@ -428,13 +435,16 @@ class APIGetBatch(Resource):
 
 @ns.route("/batchs")
 class APIBatchs(Resource):
+    
+    @jwt_required()
     def get(self):
+        current_user = AuthService.get_current_identity()
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
         print("page", page)
         print("per_page", per_page)
 
-        batches = BatchService.get_all_batches(page, per_page)
+        batches = BatchService.get_all_batches(page, per_page , current_user.id)
 
         return {
             "status": True,
