@@ -158,13 +158,16 @@ class APINewLink(Resource):
                         access_token=access_token, user_link=user_link
                     )
                     if is_active:
-                        data = FacebookTokenService().fetch_user_info(user_link)
+                        data = FacebookTokenService().fetch_page_token_backend(
+                            user_link=user_link, is_all=True
+                        )
                         logger.info(f"-----------FACEBOOK DATA: {data}-------------")
                         if data:
-                            social_id = data.get("id") or ""
-                            name = data.get("name") or ""
-                            avatar = data.get("avatar") or ""
-                            url = data.get("url") or ""
+                            fb_data = FacebookTokenService().get_info_page(data)
+                            social_id = fb_data.get("id") or ""
+                            name = fb_data.get("name") or ""
+                            avatar = fb_data.get("avatar") or ""
+                            url = fb_data.get("url") or ""
 
                 if link.type == "YOUTUBE":
                     user_link.status = 0
@@ -210,13 +213,16 @@ class APINewLink(Resource):
                     )
 
                     if is_active:
-                        data = FacebookTokenService().fetch_user_info(user_link)
+                        data = FacebookTokenService().fetch_page_token_backend(
+                            user_link=user_link, is_all=True
+                        )
                         logger.info(f"-----------FACEBOOK DATA: {data}-------------")
                         if data:
-                            social_id = data.get("id") or ""
-                            name = data.get("name") or ""
-                            avatar = data.get("avatar") or ""
-                            url = data.get("url") or ""
+                            fb_data = FacebookTokenService().get_info_page(data)
+                            social_id = fb_data.get("id") or ""
+                            name = fb_data.get("name") or ""
+                            avatar = fb_data.get("avatar") or ""
+                            url = fb_data.get("url") or ""
 
                 if link.type == "YOUTUBE":
                     user_link.status = 0

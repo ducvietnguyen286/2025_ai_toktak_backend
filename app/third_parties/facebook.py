@@ -55,6 +55,15 @@ class FacebookTokenService:
             return None
 
     @staticmethod
+    def get_info_page(page):
+        return {
+            "id": page.get("id") or "",
+            "name": page.get("name") or "",
+            "avatar": page.get("picture").get("data").get("url") or "",
+            "url": f"https://facebook.com/profile.php?id={page.get('id')}" or "",
+        }
+
+    @staticmethod
     def fetch_page_token_backend(user_link, page_id, is_all=None):
         try:
             log_facebook_message(
