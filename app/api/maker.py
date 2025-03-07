@@ -41,7 +41,7 @@ class APICreateBatch(Resource):
     )
     def post(self, args):
         try:
-            
+
             current_user = AuthService.get_current_identity()
             url = args.get("url", "")
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -53,7 +53,7 @@ class APICreateBatch(Resource):
 
             if not data:
                 return Response(
-                    message="Can't get data from url",
+                    message="상품의 URL을 분석할 수 없어요.",
                     code=201,
                 ).to_dict()
 
@@ -117,13 +117,13 @@ class APICreateBatch(Resource):
 
             return Response(
                 data=batch_res,
-                message="Tạo batch thành công",
+                message="제품 정보를 성공적으로 가져왔습니다.",
             ).to_dict()
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
             return Response(
-                message="Tạo batch that bai",
+                message="상품 정보를 불러올 수 없어요.(Error code : )",
                 status=400,
                 code=201,
             ).to_dict()
@@ -131,9 +131,9 @@ class APICreateBatch(Resource):
 
 @ns.route("/test-create-video/<int:id>")
 class APITestCreateVideo(Resource):
-    
+
     def post(self, id):
-        try: 
+        try:
             post = PostService.find_post(id)
             batch = BatchService.find_batch(post.batch_id)
             data = json.loads(batch.content)
@@ -179,7 +179,7 @@ class APITestCreateVideo(Resource):
                     "video_path": video_path,
                     "merged_video_path": merged_video_path,
                 },
-                message="Tạo video thành công",
+                message="비디오 생성이 성공적으로 완료되었습니다.",
             ).to_dict()
         except Exception as e:
             traceback.print_exc()
@@ -250,7 +250,8 @@ class APIMakePost(Resource):
                     parse_response = parse_caption.get("response", {})
                     logger.info("parse_response: {0}".format(parse_response))
 
-                    caption = parse_response.get("caption", [])
+                    caption = parse_response.get("caption", "")
+                    origin_caption = caption
                     hooking = parse_response.get("hooking", [])
 
                     captions = split_text_by_sentences(caption, len(process_images))
@@ -271,7 +272,7 @@ class APIMakePost(Resource):
 
                         result = VideoService.create_video_from_images(
                             post.id,
-                            product_name,
+                            origin_caption,
                             image_renders,
                             image_renders_sliders,
                             caption_sliders,
@@ -288,7 +289,7 @@ class APIMakePost(Resource):
                                 product_name=product_name,
                                 images_url=json.dumps(image_renders),
                                 description="",
-                                origin_caption=caption,
+                                origin_caption=origin_caption,
                                 captions=json.dumps(caption_sliders),
                                 post_id=post.id,
                             )
@@ -396,9 +397,16 @@ class APIMakePost(Resource):
             if batch.done_post == batch.count_post:
                 BatchService.update_batch(batch.id, status=1)
 
+            if type == "video":
+                message = "비디오 생성이 성공적으로 완료되었습니다."
+            elif type == "image":
+                message = "이미지 생성이 성공적으로 완료되었습니다."
+            elif type == "blog":
+                message = "블로그 생성이 성공적으로 완료되었습니다."
+
             return Response(
                 data=post._to_json(),
-                message=f"Tạo {type} thành công",
+                message=message,
             ).to_dict()
         except Exception as e:
             logger.error(f"Exception: create {type} that bai  :  {str(e)}")
@@ -412,7 +420,7 @@ class APIMakePost(Resource):
 
 @ns.route("/get-batch/<int:id>")
 class APIGetBatch(Resource):
-    
+
     @jwt_required()
     def get(self, id):
         batch = BatchService.find_batch(id)
@@ -435,7 +443,7 @@ class APIGetBatch(Resource):
 
 @ns.route("/batchs")
 class APIBatchs(Resource):
-    
+
     @jwt_required()
     def get(self):
         current_user = AuthService.get_current_identity()
@@ -444,7 +452,7 @@ class APIBatchs(Resource):
         print("page", page)
         print("per_page", per_page)
 
-        batches = BatchService.get_all_batches(page, per_page , current_user.id)
+        batches = BatchService.get_all_batches(page, per_page, current_user.id)
 
         return {
             "status": True,
