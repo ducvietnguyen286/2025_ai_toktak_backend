@@ -108,15 +108,18 @@ class PostService:
         return data
 
     @staticmethod
-    def get_posts_upload(page, per_page, user_id):
+    def get_posts_upload(page, per_page, status, user_id):
 
         # Xử lý giá trị page và per_page
         page = int(page) if page and int(page) > 0 else 1
         per_page = int(per_page) if per_page and int(per_page) > 0 else 10
 
         # Query cơ bản với các điều kiện
-        query = Post.query.filter(Post.user_id == user_id)
-        query = query.filter(Post.social_sns_description != "[]")
+        query = Post.query.filter(
+            Post.user_id == user_id,
+            Post.status == status,
+            Post.social_sns_description != "[]",
+        )
 
         # Áp dụng phân trang
         pagination = query.order_by(Post.id.desc()).paginate(
@@ -129,7 +132,7 @@ class PostService:
         try:
             Post.query.filter(Post.id.in_(post_ids)).delete(synchronize_session=False)
             db.session.commit()
-        except Exception as e:
+        except Exception as ex:
             db.session.rollback()
             return 0
         return 1

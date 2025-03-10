@@ -25,6 +25,7 @@ from flask import request
 
 from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
+import const
 
 ns = Namespace(name="maker", description="Maker API")
 
@@ -533,6 +534,9 @@ class APIUpdateStatusBatch(Resource):
             batch_detail = BatchService.update_batch(
                 batch.id, status=99, process_status="DRAFT"
             )
+
+            PostService.update_post_by_batch_id(batch.id, status=const.DRAFT_STATUS)
+
             return Response(
                 data=batch_detail.to_dict(),
                 message=message,
@@ -553,9 +557,10 @@ class APIHistories(Resource):
     @jwt_required()
     def get(self):
         current_user = AuthService.get_current_identity()
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 10, type=int)
-        posts = PostService.get_posts_upload(page, per_page, current_user.id)
+        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+        status = request.args.get("status", const.UPLOADED, type=int)
+        posts = PostService.get_posts_upload(page, per_page, status, current_user.id)
         return {
             "status": True,
             "message": "Success",
