@@ -6,7 +6,7 @@ class Batch(db.Model, BaseModel):
     __tablename__ = "batchs"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(db.Integer, nullable=False)
     url = db.Column(db.String(100), nullable=False)
     thumbnail = db.Column(db.String(500), nullable=True, default="")
     thumbnails = db.Column(db.Text)
@@ -18,7 +18,6 @@ class Batch(db.Model, BaseModel):
     process_status = db.Column(db.String(50), default="PENDING")
 
     to_json_filter = ("content", "thumbnails")
-    
 
     def to_dict(self):
         return {
