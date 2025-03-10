@@ -98,6 +98,7 @@ class APICreateBatch(Resource):
                 count_post=len(post_types),
                 status=0,
                 process_status="PENDING",
+                social_sns_description="[]",
             )
 
             posts = []
@@ -459,8 +460,7 @@ class APIBatchs(Resource):
         current_user = AuthService.get_current_identity()
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
-        print("page", page)
-        print("per_page", per_page)
+        print("current_user.id", current_user.id)
 
         batches = BatchService.get_all_batches(page, per_page, current_user.id)
 
@@ -535,5 +535,85 @@ class APIUpdateStatusBatch(Resource):
             return Response(
                 message="Update Batch Fail",
                 status=200,
+                code=201,
+            ).to_dict()
+
+
+@ns.route("/histories")
+class APIHistories(Resource):
+
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 10, type=int)
+        print("current_user.id", current_user.id)
+
+        batches = BatchService.get_all_batches(page, per_page, current_user.id)
+
+        data_batches = [batch_detail.to_dict() for batch_detail in batches.items]
+
+        logger.info(f"data_batches: {data_batches}")
+
+        for batch_detail in data_batches:
+            batch_id = batch_detail["id"]
+            posts = PostService.get_posts_upload(batch_id)
+            batch_detail["posts"] = posts
+
+        return {
+            "status": True,
+            "message": "Success",
+            "total": batches.total,
+            "page": batches.page,
+            "per_page": batches.per_page,
+            "total_pages": batches.pages,
+            "data": data_batches,
+        }, 200
+
+
+@ns.route("/delete_post")
+class APIDeletePostBatch(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "post_ids": {"type": "string"},
+        },
+        required=["post_ids"],
+    )
+    def post(self, args):
+        try:
+            post_ids = args.get("post_ids", "")
+            # Chuyển chuỗi post_ids thành list các integer
+            if not post_ids:
+                return Response(
+                    message="No post_ids provided",
+                    code=201,
+                ).to_dict()
+
+            # Tách chuỗi và convert sang list integer
+            id_list = [int(id.strip()) for id in post_ids.split(",")]
+
+            if not id_list:
+                return Response(
+                    message="Invalid post_ids format",
+                    code=201,
+                ).to_dict()
+
+            process_delete = PostService.delete_posts_by_ids(id_list)
+            if process_delete == 1:
+                message = "Delete Post Success"
+            else:
+                message = "Delete Post Fail"
+
+            return Response(
+                message=message,
+                code=200,
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Exception: Delete Post Fail  :  {str(e)}")
+            return Response(
+                message="Delete Post Fail",
                 code=201,
             ).to_dict()

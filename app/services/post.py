@@ -49,7 +49,6 @@ class PostService:
 
     @staticmethod
     def update_post_by_batch_id(batch_id, *args, **kwargs):
-        print(batch_id)
         updated_rows = Post.query.filter_by(batch_id=batch_id).update(
             kwargs
         )  # Cập nhật trực tiếp
@@ -107,3 +106,22 @@ class PostService:
             data.append(post_data)
 
         return data
+
+    @staticmethod
+    def get_posts_upload(batch_id):
+        query = Post.query.filter(Post.batch_id == batch_id)
+
+        query = query.filter(Post.social_sns_description != "[]")
+
+        posts = query.all()
+        return [post._to_json() for post in posts]
+
+    @staticmethod
+    def delete_posts_by_ids(post_ids):
+        try:
+            Post.query.filter(Post.id.in_(post_ids)).delete(synchronize_session=False)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return 0
+        return 1
