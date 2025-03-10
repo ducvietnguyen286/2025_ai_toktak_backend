@@ -8,6 +8,7 @@ from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
     get_jwt_identity,
+    verify_jwt_in_request,
 )
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -128,19 +129,21 @@ class AuthService:
     def get_current_identity():
         try:
             # Lấy JWT identity
+            verify_jwt_in_request(optional=True)
             subject = get_jwt_identity()
-            
+            logger.info(f" subject : {subject}")
             # Nếu không có identity (chưa login), trả về None
             if subject is None:
                 return None
-                
+
             # Convert sang integer và lấy user
             user_id = int(subject)
             user = User.query.get(user_id)
-            
+
             # Trả về user nếu tồn tại, None nếu không tìm thấy
             return user if user else None
-            
-        except Exception:
+
+        except Exception as ex:
             # Xử lý các lỗi khác (ví dụ: token không hợp lệ)
+            logger.exception(f"get_current_identity : {ex}")
             return None
