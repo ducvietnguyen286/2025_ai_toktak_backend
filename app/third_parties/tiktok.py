@@ -254,7 +254,7 @@ class TiktokService(BaseService):
             status_result = self.check_status(publish_id)
             status = status_result.get("status")
             if status:
-                log_tiktok_message("POST {self.key_log} Upload image success")
+                log_tiktok_message(f"POST {self.key_log} Upload image success")
 
                 self.save_publish("PUBLISHED", "profile")
                 return True
