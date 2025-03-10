@@ -258,8 +258,8 @@ class APINewLink(Resource):
 
             if not is_active:
                 return Response(
-                    message="Không thể kích hoạt link",
-                    status=400,
+                    message=f"We can't active {link.type}",
+                    code=201,
                 ).to_dict()
 
             return Response(
