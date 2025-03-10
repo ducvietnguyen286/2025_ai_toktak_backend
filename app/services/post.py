@@ -108,13 +108,21 @@ class PostService:
         return data
 
     @staticmethod
-    def get_posts_upload(batch_id):
-        query = Post.query.filter(Post.batch_id == batch_id)
+    def get_posts_upload(page, per_page, user_id):
 
+        # Xử lý giá trị page và per_page
+        page = int(page) if page and int(page) > 0 else 1
+        per_page = int(per_page) if per_page and int(per_page) > 0 else 10
+
+        # Query cơ bản với các điều kiện
+        query = Post.query.filter(Post.user_id == user_id)
         query = query.filter(Post.social_sns_description != "[]")
 
-        posts = query.all()
-        return [post._to_json() for post in posts]
+        # Áp dụng phân trang
+        pagination = query.order_by(Post.id.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        return pagination
 
     @staticmethod
     def delete_posts_by_ids(post_ids):

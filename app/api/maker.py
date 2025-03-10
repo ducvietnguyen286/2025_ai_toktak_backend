@@ -202,7 +202,7 @@ class APIMakePost(Resource):
             current_user = AuthService.get_current_identity() or None
             if current_user:
                 current_user_id = current_user.id
-                
+
             message = "Tạo post thành công"
             post = PostService.find_post(id)
             if not post:
@@ -462,12 +462,15 @@ class APIBatchs(Resource):
 
     def get(self):
 
-        current_user_id = 0
+        user_id_login = 0
+        current_user = AuthService.get_current_identity() or None
+        if current_user:
+            user_id_login = current_user.id
+
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
-        print("current_user.id", current_user.id)
 
-        batches = BatchService.get_all_batches(page, per_page, current_user_id)
+        batches = BatchService.get_all_batches(page, per_page, user_id_login)
 
         return {
             "status": True,
@@ -552,27 +555,15 @@ class APIHistories(Resource):
         current_user = AuthService.get_current_identity()
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
-        print("current_user.id", current_user.id)
-
-        batches = BatchService.get_all_batches(page, per_page, current_user.id)
-
-        data_batches = [batch_detail.to_dict() for batch_detail in batches.items]
-
-        logger.info(f"data_batches: {data_batches}")
-
-        for batch_detail in data_batches:
-            batch_id = batch_detail["id"]
-            posts = PostService.get_posts_upload(batch_id)
-            batch_detail["posts"] = posts
-
+        posts = PostService.get_posts_upload(page, per_page, current_user.id)
         return {
             "status": True,
             "message": "Success",
-            "total": batches.total,
-            "page": batches.page,
-            "per_page": batches.per_page,
-            "total_pages": batches.pages,
-            "data": data_batches,
+            "total": posts.total,
+            "page": posts.page,
+            "per_page": posts.per_page,
+            "total_pages": posts.pages,
+            "data": [post._to_json() for post in posts.items],
         }, 200
 
 
