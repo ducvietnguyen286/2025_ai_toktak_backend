@@ -778,6 +778,11 @@ class APICheckSNSLink(Resource):
                     message="Please login",
                     code=201,
                 ).to_dict()
+                
+
+            BatchService.update_batch(batchId, user_id=current_user.id)
+            PostService.update_post_by_batch_id(batchId, user_id=current_user.id)
+
             user_links = UserService.get_original_user_links(current_user.id)
             active_links = [link.link_id for link in user_links if link.status == 1]
 
@@ -793,9 +798,6 @@ class APICheckSNSLink(Resource):
                     message="Batch not found",
                     code=201,
                 ).to_dict()
-
-            BatchService.update_batch(batchId, user_id=current_user.id)
-            PostService.update_post_by_batch_id(batchId, user_id=current_user.id)
 
             return Response(
                 message="Check Active Link Success",
