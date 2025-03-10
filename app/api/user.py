@@ -757,3 +757,53 @@ class APIRefreshTiktokToken(Resource):
                 message="Lỗi kết nối",
                 status=400,
             ).to_dict()
+
+
+@ns.route("/check-sns-link")
+class APICheckSNSLink(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "batchId": {"type": "string"},
+        },
+        required=["batchId"],
+    )
+    def post(self, args):
+        try:
+            batchId = args.get("batchId")
+            current_user = AuthService.get_current_identity()
+            if not current_user:
+                return Response(
+                    message="Please login",
+                    code=201,
+                ).to_dict()
+            user_links = UserService.get_original_user_links(current_user.id)
+            active_links = [link.link_id for link in user_links if link.status == 1]
+
+            if not active_links:
+                return Response(
+                    message="SNS 연동이 필요해요",
+                    code=201,
+                ).to_dict()
+
+            batch_detail = BatchService.find_batch(batchId)
+            if not batch_detail:
+                return Response(
+                    message="Batch not found",
+                    code=201,
+                ).to_dict()
+
+            BatchService.update_batch(batchId, user_id=current_user.id)
+            PostService.update_post_by_batch_id(batchId, user_id=current_user.id)
+
+            return Response(
+                message="Check Active Link Success",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Check Active",
+                code=201,
+            ).to_dict()
