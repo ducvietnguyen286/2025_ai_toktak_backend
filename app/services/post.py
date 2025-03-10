@@ -112,7 +112,7 @@ class PostService:
         # Query cơ bản với các điều kiện
         query = Post.query.filter(
             Post.user_id == data_search["user_id"],
-            Post.status == data_search["user_id"],
+            Post.status == data_search["status"],
         )
         if data_search["user_id"] == 99:
             query = query.filter(Post.social_sns_description != "[]")
@@ -124,6 +124,7 @@ class PostService:
             query = query.order_by(Post.updated_at.desc())
         else:
             query = query.order_by(Post.id.desc())
+        
             
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False

@@ -131,7 +131,6 @@ class AuthService:
             # Lấy JWT identity
             verify_jwt_in_request(optional=True)
             subject = get_jwt_identity()
-            logger.info(f" subject : {subject}")
             # Nếu không có identity (chưa login), trả về None
             if subject is None:
                 return None
