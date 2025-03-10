@@ -126,7 +126,22 @@ class AuthService:
 
     @staticmethod
     def get_current_identity():
-        subject = get_jwt_identity()
-        user_id = int(subject)
-        user = User.query.get(user_id)
-        return user
+        try:
+            # Lấy JWT identity
+            subject = get_jwt_identity()
+            
+            # Nếu không có identity (chưa login), trả về None
+            if subject is None:
+                return None
+                
+            # Convert sang integer và lấy user
+            user_id = int(subject)
+            user = User.query.get(user_id)
+            
+            # Trả về user nếu tồn tại, None nếu không tìm thấy
+            return user if user else None
+            
+        except Exception:
+            # Xử lý các lỗi khác (ví dụ: token không hợp lệ)
+            return None
+    
