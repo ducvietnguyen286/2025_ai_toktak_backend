@@ -11,7 +11,6 @@ class User(db.Model, BaseModel):
     avatar = db.Column(db.String(500), nullable=True, default="")
     username = db.Column(db.String(100), nullable=True)
     password = db.Column(db.String(200), nullable=True)
-    name = db.Column(db.String(100), nullable=True)
     status = db.Column(db.Integer, default=1)
 
     print_filter = ("password",)
@@ -22,3 +21,13 @@ class User(db.Model, BaseModel):
 
     def check_password(self, password):
         return bcrypt.check_password_hash(self.password, password)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "email": self.email,
+            "name": self.name,
+            "avatar": self.avatar,
+            "username": self.username,
+            "status": self.status,
+        }

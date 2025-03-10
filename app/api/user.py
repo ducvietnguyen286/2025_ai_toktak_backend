@@ -778,7 +778,6 @@ class APICheckSNSLink(Resource):
                     message="Please login",
                     code=201,
                 ).to_dict()
-                
 
             BatchService.update_batch(batchId, user_id=current_user.id)
             PostService.update_post_by_batch_id(batchId, user_id=current_user.id)
@@ -801,6 +800,31 @@ class APICheckSNSLink(Resource):
 
             return Response(
                 message="Check Active Link Success",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Check Active",
+                code=201,
+            ).to_dict()
+
+
+@ns.route("/user_detail")
+class APIUserDetail(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            current_user = AuthService.get_current_identity()
+            if not current_user:
+                return Response(
+                    message="Please login",
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                data=current_user.to_dict(),
+                message="Check User Success",
             ).to_dict()
         except Exception as e:
             traceback.print_exc()
