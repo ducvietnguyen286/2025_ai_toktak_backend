@@ -438,7 +438,6 @@ class APIMakePost(Resource):
 @ns.route("/get-batch/<int:id>")
 class APIGetBatch(Resource):
 
-    @jwt_required()
     def get(self, id):
         batch = BatchService.find_batch(id)
         if not batch:
