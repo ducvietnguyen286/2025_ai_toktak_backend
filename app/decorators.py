@@ -2,9 +2,23 @@
 from functools import wraps
 
 from flask import request
+from flask_jwt_extended import verify_jwt_in_request
 from jsonschema import FormatChecker, validate
 from jsonschema.exceptions import ValidationError
-from app.errors.exceptions import BadRequest
+from app.errors.exceptions import BadRequest, Unauthorized
+
+
+def jwt_optional(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if request.headers.get("Authorization"):
+            try:
+                verify_jwt_in_request()
+            except Exception as e:
+                raise Unauthorized(description=str(e))
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 def parameters(**schema):

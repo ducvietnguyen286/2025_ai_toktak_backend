@@ -8,7 +8,7 @@ from app.ais.chatgpt import (
     call_chatgpt_create_blog,
     call_chatgpt_create_social,
 )
-from app.decorators import parameters
+from app.decorators import jwt_optional, parameters
 from app.lib.logger import logger
 from app.lib.response import Response
 from app.lib.string import split_text_by_sentences
@@ -31,6 +31,7 @@ ns = Namespace(name="maker", description="Maker API")
 
 @ns.route("/create-batch")
 class APICreateBatch(Resource):
+
     @parameters(
         type="object",
         properties={
@@ -98,7 +99,7 @@ class APICreateBatch(Resource):
                 type=1,
                 count_post=len(post_types),
                 status=0,
-                process_status="PENDING", 
+                process_status="PENDING",
             )
 
             posts = []
@@ -194,10 +195,14 @@ class APITestCreateVideo(Resource):
 
 @ns.route("/make-post/<int:id>")
 class APIMakePost(Resource):
-    @jwt_required()
+
     def post(self, id):
         try:
-            current_user = AuthService.get_current_identity()
+            current_user_id = 0
+            current_user = AuthService.get_current_identity() or None
+            if current_user:
+                current_user_id = current_user.id
+                
             message = "Tạo post thành công"
             post = PostService.find_post(id)
             if not post:
@@ -296,7 +301,7 @@ class APIMakePost(Resource):
 
                             VideoService.create_create_video(
                                 render_id=render_id,
-                                user_id=current_user.id,
+                                user_id=current_user_id,
                                 product_name=product_name,
                                 images_url=json.dumps(image_renders),
                                 description="",
@@ -400,7 +405,7 @@ class APIMakePost(Resource):
                 hashtag=hashtag,
                 render_id=render_id,
                 status=1,
-                social_sns_description = '[]'
+                social_sns_description="[]",
             )
             current_done_post = batch.done_post
 
@@ -456,14 +461,14 @@ class APIGetBatch(Resource):
 @ns.route("/batchs")
 class APIBatchs(Resource):
 
-    @jwt_required()
     def get(self):
-        current_user = AuthService.get_current_identity()
+
+        current_user_id = 0
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
         print("current_user.id", current_user.id)
 
-        batches = BatchService.get_all_batches(page, per_page, current_user.id)
+        batches = BatchService.get_all_batches(page, per_page, current_user_id)
 
         return {
             "status": True,
