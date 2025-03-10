@@ -21,6 +21,9 @@ class Post(db.Model, BaseModel):
     status = db.Column(db.Integer, default=1)
     process_number = db.Column(db.Integer, default=0)
     render_id = db.Column(db.String(500), nullable=False, default="")
+    
+    social_sns_description = db.Column(db.Text, nullable=True)
 
     to_json_parse = "images"
     to_json_filter = "captions"
+    

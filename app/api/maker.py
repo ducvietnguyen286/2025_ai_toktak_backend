@@ -494,6 +494,9 @@ class APIGetStatusUploadWithBatch(Resource):
                 post_id
             )
             post_detail["social_post_detail"] = social_post_detail
+            PostService.update_post(
+                post_id, social_sns_description=json.dumps(social_post_detail)
+            )
 
         batch_res = batch._to_json()
         batch_res["posts"] = posts
@@ -502,3 +505,34 @@ class APIGetStatusUploadWithBatch(Resource):
             data=batch_res,
             message="Lấy batch thành công",
         ).to_dict()
+
+
+@ns.route("/save_draft_batch/<int:id>")
+class APIUpdateStatusBatch(Resource):
+    @jwt_required()
+    def post(self, id):
+        try:
+            current_user = AuthService.get_current_identity()
+            message = "Update Batch Success"
+            batch = BatchService.find_batch(id)
+            if not batch:
+                return Response(
+                    message="Batch không tồn tại",
+                    code=201,
+                ).to_dict()
+
+            batch_detail = BatchService.update_batch(
+                batch.id, status=99, process_status="DRAFT"
+            )
+            return Response(
+                data=batch_detail.to_dict(),
+                message=message,
+                code=200,
+            ).to_dict()
+        except Exception as e:
+            logger.error(f"Exception: Update Batch Fail  :  {str(e)}")
+            return Response(
+                message="Update Batch Fail",
+                status=200,
+                code=201,
+            ).to_dict()
