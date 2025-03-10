@@ -127,6 +127,8 @@ class AuthService:
     @staticmethod
     def get_current_identity():
         subject = get_jwt_identity()
+        if not subject:
+            return None
         user_id = int(subject)
         user = User.query.get(user_id)
         return user
