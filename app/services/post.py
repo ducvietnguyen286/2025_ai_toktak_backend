@@ -4,6 +4,7 @@ from app.models.social_post import SocialPost
 from app.extensions import db
 from sqlalchemy import and_, func
 from flask import jsonify
+from datetime import datetime, timedelta
 
 
 class PostService:
@@ -120,12 +121,39 @@ class PostService:
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":
             query = query.order_by(Post.id.asc())
-        elif data_search["type_order"] == "updated_desc":
-            query = query.order_by(Post.updated_at.desc())
+        elif data_search["type_order"] == "id_desc":
+            query = query.order_by(Post.id.desc())
         else:
             query = query.order_by(Post.id.desc())
-        
-            
+
+        # Xử lý type_post
+        if data_search["type_post"] == "video":
+            query = query.filter(Post.type == "video")
+        elif data_search["type_post"] == "image":
+            query = query.filter(Post.type == "image")
+        elif data_search["type_post"] == "blog":
+            query = query.filter(Post.type == "blog")
+
+        time_range = data_search.get("time_range")  # Thêm biến time_range
+        # Lọc theo khoảng thời gian
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            query = query.filter(Post.created_at >= start_date)
+
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            query = query.filter(Post.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            query = query.filter(Post.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            query = query.filter(Post.created_at >= start_date)
+
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
