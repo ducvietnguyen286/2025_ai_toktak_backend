@@ -108,22 +108,26 @@ class PostService:
         return data
 
     @staticmethod
-    def get_posts_upload(page, per_page, status, user_id):
-
-        # Xử lý giá trị page và per_page
-        page = int(page) if page and int(page) > 0 else 1
-        per_page = int(per_page) if per_page and int(per_page) > 0 else 10
-
+    def get_posts_upload(data_search):
         # Query cơ bản với các điều kiện
         query = Post.query.filter(
-            Post.user_id == user_id,
-            Post.status == status,
-            Post.social_sns_description != "[]",
+            Post.user_id == data_search["user_id"],
+            Post.status == data_search["status"],
         )
+        if data_search["user_id"] == 99:
+            query = query.filter(Post.social_sns_description != "[]")
 
-        # Áp dụng phân trang
-        pagination = query.order_by(Post.id.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
+        # Xử lý type_order
+        if data_search["type_order"] == "id_asc":
+            query = query.order_by(Post.id.asc())
+        elif data_search["type_order"] == "updated_desc":
+            query = query.order_by(Post.updated_at.desc())
+        else:
+            query = query.order_by(Post.id.desc())
+        
+            
+        pagination = query.paginate(
+            page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
         return pagination
 
