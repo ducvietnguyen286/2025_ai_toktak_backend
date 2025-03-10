@@ -560,8 +560,18 @@ class APIHistories(Resource):
         page = request.args.get("page", const.DEFAULT_PAGE, type=int)
         per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
         status = request.args.get("status", const.UPLOADED, type=int)
-        posts = PostService.get_posts_upload(page, per_page, status, current_user.id)
+        type_order = request.args.get("type_order", "", type=str)
+        data_search = {
+            "page": page,
+            "per_page": per_page,
+            "status": status,
+            "type_order": type_order,
+            "user_id": current_user.id,
+        }
+         
+        posts = PostService.get_posts_upload(data_search)
         return {
+            "current_user": current_user.id,
             "status": True,
             "message": "Success",
             "total": posts.total,
