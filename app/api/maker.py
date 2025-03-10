@@ -41,7 +41,10 @@ class APICreateBatch(Resource):
     )
     def post(self, args):
         try:
-            current_user_id = 0
+            user_id_login = 0
+            current_user = AuthService.get_current_identity() or None
+            if current_user:
+                user_id_login = current_user.id
             url = args.get("url", "")
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
@@ -88,7 +91,7 @@ class APICreateBatch(Resource):
             post_types = ["video", "image", "blog"]
 
             batch = BatchService.create_batch(
-                user_id=current_user_id,
+                user_id=user_id_login,
                 url=url,
                 thumbnail=thumbnail_url,
                 thumbnails=json.dumps(thumbnails),
@@ -97,13 +100,12 @@ class APICreateBatch(Resource):
                 count_post=len(post_types),
                 status=0,
                 process_status="PENDING",
-                social_sns_description="[]",
             )
 
             posts = []
             for post_type in post_types:
                 post = PostService.create_post(
-                    user_id=current_user_id, batch_id=batch.id, type=post_type, status=0
+                    user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
                 )
 
                 post_res = post._to_json()
@@ -197,6 +199,10 @@ class APIMakePost(Resource):
     def post(self, id):
         try:
             current_user_id = 0
+            current_user = AuthService.get_current_identity() or None
+            if current_user:
+                current_user_id = current_user.id
+                
             message = "Tạo post thành công"
             post = PostService.find_post(id)
             if not post:
@@ -399,6 +405,7 @@ class APIMakePost(Resource):
                 hashtag=hashtag,
                 render_id=render_id,
                 status=1,
+                social_sns_description="[]",
             )
             current_done_post = batch.done_post
 
