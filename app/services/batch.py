@@ -32,6 +32,7 @@ class BatchService:
     def get_all_batches(page, per_page, user_id=None):
 
         query = Batch.query
+        query = query.filter(Batch.user_id > 0)
         if user_id is not None:
             query = query.filter(Batch.user_id == user_id)
 
