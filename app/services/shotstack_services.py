@@ -74,14 +74,22 @@ class ShotStackService:
             korean_voice, origin_caption, dir_path, config
         )
 
+        video_urls = get_random_videos(2)
+        first_viral_detail = video_urls[0] or []
+        first_duration = float(first_viral_detail["duration"] or 0)
+
+        new_image_sliders = distribute_images_over_audio(
+            images_slider_url, audio_duration, first_duration
+        )
         clips_data = create_combined_clips_v2(
-            images_slider_url,
+            new_image_sliders,
+            video_urls,
             config,
             caption_videos_default,
         )
 
         file_caption = generate_srt(
-            origin_caption, mp3_file, f"{dir_path}/test.srt", clips_data["intro_length"]
+            origin_caption, mp3_file, f"{dir_path}/test.srt", first_duration
         )
 
         clips_caption = {
@@ -277,10 +285,10 @@ class ShotStackService:
 
 def create_combined_clips_v2(
     images_slider_url,
+    video_urls,
     config=None,
     caption_videos_default=None,
 ):
-    video_urls = get_random_videos(2)
     first_viral_detail = video_urls[0] or []
     last_viral_detail = video_urls[1] or []
     # Chọn 2 URL khác nhau một cách ngẫu nhiên
@@ -328,15 +336,19 @@ def create_combined_clips_v2(
         caption_videos_default, 4
     )
 
-    for j_index, url in enumerate(images_slider_url):
-
+    end_time = current_start
+    for j_index, image_slider_detail in enumerate(images_slider_url):
+        url = image_slider_detail["url"]
+        start_time = image_slider_detail["start_time"]
+        end_time = image_slider_detail["end_time"]
+        length = image_slider_detail["length"]
         random_effect = random.choice(effects)
-        start_slider_time = current_start + j_index * time_show_image
+        start_slider_time = start_time
 
         clip_detail = {
             "asset": {"type": "image", "src": url},
             "start": start_slider_time,
-            "length": time_show_image,
+            "length": length,
         }
 
         if random_effect != "":
@@ -367,8 +379,9 @@ def create_combined_clips_v2(
                 last_caption_videos_default, start_slider_time, 2
             )
             clips.append(clip_detail)
+        # lấy thời gian cuối
+        current_start = end_time
 
-    current_start += len(images_slider_url) * time_show_image
     last_viral_url = last_viral_detail["video_url"]
     last_duration = float(last_viral_detail["duration"] or 0)
     clips.append(
@@ -416,18 +429,6 @@ def get_random_videos(limit=2):
     except Exception as e:
         log_make_video_message(f"get_random_videos: {str(e)}")
         return []
-
-
-def format_time(seconds):
-    """
-    Chuyển đổi giây (có thể là float) thành định dạng thời gian SRT (hh:mm:ss,ms).
-    """
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    sec = int(seconds % 60)
-    # Tính phần mili giây
-    ms = int(round((seconds - int(seconds)) * 1000)) + 1
-    return f"{hours:02}:{minutes:02}:{sec:02},{ms:03}"
 
 
 def parse_srt_to_html_assets(url_path_srt: str, start_time):
@@ -535,6 +536,7 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
             log_make_video_message("Lỗi: Config không được truyền vào.")
             return "", 0.0
 
+        GOOGLE_API_SPEED = float(config.get("GOOGLE_API_SPEED", 1))
         api_key = config.get("GOOGLE_API_TEXT_TO_SPEECH", "")
         api_url = config.get(
             "GOOGLE_API_TEXT_TO_URL",
@@ -560,7 +562,7 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
                 "name": korean_voice["name"],
                 "ssmlGender": korean_voice["ssmlGender"],
             },
-            "audioConfig": {"audioEncoding": "MP3"},
+            "audioConfig": {"audioEncoding": "MP3", "speakingRate": GOOGLE_API_SPEED},
         }
 
         headers = {"Content-Type": "application/json"}
@@ -771,6 +773,17 @@ def get_audio_duration(file_path):
         return 0.0
 
 
+def format_time(delta):
+    """
+    Chuyển đổi thời gian timedelta thành chuỗi định dạng hh:mm:ss,SSS (chuẩn SRT)
+    """
+    total_seconds = int(delta.total_seconds())
+    milliseconds = int((delta.total_seconds() - total_seconds) * 1000)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
+
 
 def generate_srt(text, audio_file, output_srt, start_offset=0.0):
     """
@@ -786,7 +799,7 @@ def generate_srt(text, audio_file, output_srt, start_offset=0.0):
         audio_duration = get_audio_duration(audio_file)
 
         # Tách văn bản theo dấu câu (vẫn giữ nguyên dấu câu)
-        sentences = re.split(r'([.!?])', text)
+        sentences = re.split(r"([.!?])", text)
 
         # Gộp lại để giữ nguyên dấu câu
         processed_sentences = []
@@ -805,7 +818,9 @@ def generate_srt(text, audio_file, output_srt, start_offset=0.0):
         # Chia nhỏ câu nếu dài hơn 20 ký tự
         wrapped_sentences = []
         for sentence in processed_sentences:
-            small_chunks = textwrap.wrap(sentence, width=20)  # Chia nhỏ nhưng vẫn giữ dấu câu
+            small_chunks = textwrap.wrap(
+                sentence, width=20
+            )  # Chia nhỏ nhưng vẫn giữ dấu câu
             wrapped_sentences.extend(small_chunks)
 
         # Tính tổng số ký tự để phân bổ thời gian hợp lý
@@ -819,9 +834,9 @@ def generate_srt(text, audio_file, output_srt, start_offset=0.0):
             chunk_duration = (len(chunk) / total_chars) * audio_duration
             end_time = start_time + datetime.timedelta(seconds=chunk_duration)
 
-            # Chuyển đổi thời gian sang định dạng hh:mm:ss,ms
-            start_str = str(start_time)[:-3].replace(".", ",")
-            end_str = str(end_time)[:-3].replace(".", ",")
+            # Định dạng thời gian chính xác
+            start_str = format_time(start_time)
+            end_str = format_time(end_time)
 
             # Thêm vào nội dung file SRT
             srt_content += f"{start_str} --> {end_str}\n{chunk}\n\n"
@@ -834,7 +849,7 @@ def generate_srt(text, audio_file, output_srt, start_offset=0.0):
             f.write(srt_content)
 
         print(f"✅ Đã tạo file SRT (KHÔNG có index): {output_srt}")
-        
+
         # Tạo đường dẫn file trên server
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
         output_srt = output_srt.replace("static/", "").replace("\\", "/")
@@ -847,25 +862,37 @@ def generate_srt(text, audio_file, output_srt, start_offset=0.0):
         return ""
 
 
-def distribute_images_over_audio(image_list, audio_duration):
+def distribute_images_over_audio(image_list, audio_duration, start_offset=0.0):
     """
-    Chia thời gian hiển thị ảnh sao cho khớp với thời gian audio.
+    Chia thời gian hiển thị ảnh sao cho khớp với thời gian audio, bắt đầu từ một thời điểm nhất định.
 
     :param image_list: Danh sách ảnh.
     :param audio_duration: Tổng thời gian audio.
-    :return: Danh sách thời gian tương ứng cho từng ảnh.
+    :param start_offset: Thời gian bắt đầu hiển thị ảnh (giây).
+    :return: Danh sách dictionary với key (url, start_time, end_time, length).
     """
     num_images = len(image_list)
     if num_images == 0 or audio_duration == 0:
         return []
 
-    image_duration = audio_duration / num_images
+    image_duration = round(audio_duration / num_images, 2)  # Làm tròn thời gian mỗi ảnh
     timestamps = []
 
-    start_time = 0.0
+    start_time = round(start_offset, 2)  # Làm tròn thời gian bắt đầu
     for i in range(num_images):
-        end_time = start_time + image_duration
-        timestamps.append((image_list[i], start_time, end_time))
+        end_time = round(start_time + image_duration, 2)  # Làm tròn thời gian kết thúc
+        length = round(end_time - start_time, 2)  # Tính thời gian xuất hiện của ảnh
+
+        timestamps.append(
+            {
+                "url": image_list[i],
+                "start_time": start_time,
+                "end_time": end_time,
+                "length": length,  # Thêm thông tin thời gian ảnh xuất hiện
+            }
+        )
+
         start_time = end_time  # Cập nhật thời gian bắt đầu ảnh tiếp theo
 
+    log_make_video_message(timestamps)
     return timestamps
