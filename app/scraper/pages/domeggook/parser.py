@@ -36,6 +36,7 @@ def parse_response(html):
         "thumbnails": [image["content"]],
         "price": price,
         "url": url_content,
+        "store_name": "",
         "url_crawl": url_content,
         "show_free_shipping": 0,
         "images": src_images,
