@@ -16,7 +16,8 @@ from app.services.request_log import RequestLogService
 import base64
 
 import srt
-#import ffmpeg
+
+# import ffmpeg
 import textwrap
 import re  # Thêm thư viện để xử lý dấu câu
 
@@ -765,10 +766,25 @@ def format_time_caption(seconds):
 def get_audio_duration(file_path):
     """Lấy thời gian của file MP3 bằng ffmpeg"""
     try:
-        # probe = ffmpeg.probe(file_path)
-        # duration = float(probe["format"]["duration"])
-        # return duration
-        return 0
+        result = subprocess.run(
+            [
+                "ffprobe",
+                "-i",
+                file_path,
+                "-show_entries",
+                "format=duration",
+                "-v",
+                "quiet",
+                "-of",
+                "csv=p=0",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        duration = float(result.stdout.strip())  # Chuyển kết quả thành số thực
+        return duration
+
     except Exception as e:
         print(f"Lỗi khi lấy thời gian audio: {e}")
         return 0.0
