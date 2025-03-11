@@ -126,7 +126,13 @@ class ImageMaker:
         video_width, video_height = target_size
         video_ratio = video_width / video_height
 
-        image = Image.open(image_path).convert("RGBA")
+        image = Image.open(image_path)
+        if not (
+            image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg")
+        ):
+            image = image.convert("RGBA")
+        else:
+            image = image.convert("RGB")
 
         if image.height > image.width:
             crop_height = int(image.width / video_ratio)
@@ -166,11 +172,13 @@ class ImageMaker:
         image_path = ImageMaker.save_image_url_get_path(image_url)
         image_name = image_path.split("/")[-1]
 
-        try:
-            image = Image.open(image_path).convert("RGBA")
-        except IOError:
-            print(f"Cannot identify image file {image_path}")
-            return None
+        image = Image.open(image_path)
+        if not (
+            image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg")
+        ):
+            image = image.convert("RGBA")
+        else:
+            image = image.convert("RGB")
 
         image_width, image_height = target_size
         image_ratio = image_width / image_height
