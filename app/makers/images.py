@@ -2,6 +2,7 @@ import os
 import textwrap
 import time
 import datetime
+from urllib.parse import urlparse
 import uuid
 from PIL import Image, ImageDraw, ImageFont
 import requests
@@ -78,7 +79,15 @@ class ImageMaker:
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
 
-        image_ext = image_url.split(".")[-1]
+        url_parsed = urlparse(image_url)
+        path = url_parsed.path
+        image_ext = path.split(".")[-1]
+        if "?" in image_ext:
+            image_ext = image_ext.split("?")[0]
+
+        if not image_ext:
+            image_ext = "jpg"
+
         image_name = f"{timestamp}_{unique_id}.{image_ext}"
 
         image_path = f"{UPLOAD_FOLDER}/{image_name}"
