@@ -174,7 +174,7 @@ class ImageMaker:
 
         image = Image.open(image_path)
         if not (
-            image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg")
+            image_name.lower().endswith(".jpg") or image_name.lower().endswith(".jpeg")
         ):
             image = image.convert("RGBA")
         else:
