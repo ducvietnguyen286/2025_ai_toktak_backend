@@ -7,6 +7,8 @@ import uuid
 from PIL import Image, ImageDraw, ImageFont
 import requests
 
+from app.lib.header import generate_desktop_user_agent
+
 
 date_create = datetime.datetime.now().strftime("%Y_%m_%d")
 UPLOAD_FOLDER = os.path.join(os.getcwd(), f"uploads/{date_create}")
@@ -81,7 +83,12 @@ class ImageMaker:
 
         url_parsed = urlparse(image_url)
         path = url_parsed.path
-        image_ext = path.split(".")[-1]
+
+        if "." in path:
+            image_ext = path.split(".")[-1]
+        else:
+            image_ext = "jpg"
+
         if "?" in image_ext:
             image_ext = image_ext.split("?")[0]
 
@@ -92,7 +99,20 @@ class ImageMaker:
 
         image_path = f"{UPLOAD_FOLDER}/{image_name}"
         with open(image_path, "wb") as image_file:
-            image_file.write(requests.get(image_url).content)
+            try:
+                user_agent = generate_desktop_user_agent()
+                headers = {
+                    "User-Agent": user_agent,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                    "Accept-Encoding": "gzip, deflate, br, zstd",
+                    "Accept-Language": "en,vi;q=0.9,es;q=0.8,vi-VN;q=0.7,fr-FR;q=0.6,fr;q=0.5,en-US;q=0.4",
+                }
+
+                response = requests.get(image_url, headers=headers).content
+            except Exception as e:
+                print(f"Error: {e}")
+                return None
+            image_file.write(response)
         return image_path
 
     @staticmethod
@@ -146,7 +166,11 @@ class ImageMaker:
         image_path = ImageMaker.save_image_url_get_path(image_url)
         image_name = image_path.split("/")[-1]
 
-        image = Image.open(image_path).convert("RGBA")
+        try:
+            image = Image.open(image_path).convert("RGBA")
+        except IOError:
+            print(f"Cannot identify image file {image_path}")
+            return None
 
         image_width, image_height = target_size
         image_ratio = image_width / image_height
