@@ -2,9 +2,12 @@ import os
 import textwrap
 import time
 import datetime
+from urllib.parse import urlparse
 import uuid
 from PIL import Image, ImageDraw, ImageFont
 import requests
+
+from app.lib.header import generate_desktop_user_agent
 
 
 date_create = datetime.datetime.now().strftime("%Y_%m_%d")
@@ -78,12 +81,38 @@ class ImageMaker:
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
 
-        image_ext = image_url.split(".")[-1]
+        url_parsed = urlparse(image_url)
+        path = url_parsed.path
+
+        if "." in path:
+            image_ext = path.split(".")[-1]
+        else:
+            image_ext = "jpg"
+
+        if "?" in image_ext:
+            image_ext = image_ext.split("?")[0]
+
+        if not image_ext:
+            image_ext = "jpg"
+
         image_name = f"{timestamp}_{unique_id}.{image_ext}"
 
         image_path = f"{UPLOAD_FOLDER}/{image_name}"
         with open(image_path, "wb") as image_file:
-            image_file.write(requests.get(image_url).content)
+            try:
+                user_agent = generate_desktop_user_agent()
+                headers = {
+                    "User-Agent": user_agent,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                    "Accept-Encoding": "gzip, deflate, br, zstd",
+                    "Accept-Language": "en,vi;q=0.9,es;q=0.8,vi-VN;q=0.7,fr-FR;q=0.6,fr;q=0.5,en-US;q=0.4",
+                }
+
+                response = requests.get(image_url, headers=headers).content
+            except Exception as e:
+                print(f"Error: {e}")
+                return None
+            image_file.write(response)
         return image_path
 
     @staticmethod
@@ -97,7 +126,13 @@ class ImageMaker:
         video_width, video_height = target_size
         video_ratio = video_width / video_height
 
-        image = Image.open(image_path).convert("RGBA")
+        image = Image.open(image_path)
+        if not (
+            image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg")
+        ):
+            image = image.convert("RGBA")
+        else:
+            image = image.convert("RGB")
 
         if image.height > image.width:
             crop_height = int(image.width / video_ratio)
@@ -137,7 +172,13 @@ class ImageMaker:
         image_path = ImageMaker.save_image_url_get_path(image_url)
         image_name = image_path.split("/")[-1]
 
-        image = Image.open(image_path).convert("RGBA")
+        image = Image.open(image_path)
+        if not (
+            image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg")
+        ):
+            image = image.convert("RGBA")
+        else:
+            image = image.convert("RGB")
 
         image_width, image_height = target_size
         image_ratio = image_width / image_height

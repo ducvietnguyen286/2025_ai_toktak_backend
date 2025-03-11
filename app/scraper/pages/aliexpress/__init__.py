@@ -1,7 +1,7 @@
-import hashlib
 import json
 import time
 import traceback
+import uuid
 from bs4 import BeautifulSoup
 import requests
 from app.lib.header import generate_desktop_user_agent
@@ -9,6 +9,7 @@ from app.lib.logger import logger
 from urllib.parse import urlparse, urlencode
 
 from app.scraper.pages.aliexpress.parser import Parser
+from app.extensions import redis_client
 
 
 class AliExpressScraper:
@@ -23,6 +24,25 @@ class AliExpressScraper:
 
     def run_scraper(self):
         try:
+            req_id = str(uuid.uuid4())
+            task = {
+                "req_id": req_id,
+                "url": self.url,
+                "wait_id": "product-description",
+                "wait_class": "",
+                "page": "ali",
+            }
+            redis_client.rpush("toktak:crawl_ali_queue", json.dumps(task))
+            timeout = 30  # Giây
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                result = redis_client.get(f"toktak:result-ali:{req_id}")
+                print("result", result)
+                if result:
+                    redis_client.delete(f"toktak:result-ali:{req_id}")
+                    return json.loads(result)
+                time.sleep(0.5)
+
             parsed_url = urlparse(self.url)
 
             real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path

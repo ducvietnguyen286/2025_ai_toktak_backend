@@ -20,22 +20,42 @@ class CoupangScraper:
     def run(self):
         return self.run_crawler()
 
-    def un_shortend_url(self, url):
+    def un_shortend_url(self, url, retry=0):
         try:
             cookie_jar = CookieJar()
             session = requests.Session()
             session.cookies = cookie_jar
             headers = random_mobile_header()
-            desktop_user_agent = generate_desktop_user_agent()
-            headers.update({"user-agent": desktop_user_agent})
+            user_agent = generate_desktop_user_agent()
+            headers.update({"user-agent": user_agent})
+
+            logger.info("Unshortend URL: {0}".format(url))
             response = session.get(
-                url, allow_redirects=True, headers=headers, timeout=5
+                url, allow_redirects=False, headers=headers, timeout=5
             )
-            print(response)
-            return response.url
+            # file_html = open("demo.html", "w", encoding="utf-8")
+            # file_html.write(response.content.decode("utf-8"))
+            # file_html.close()
+            logger.info("Unshortend URL AFTER: {0}".format(response.url))
+
+            # logger.info("Unshortend Text: {0}".format(response.content))
+            # print(response)
+            if "Location" in response.headers:
+                redirect_url = response.headers["Location"]
+                if not urlparse(redirect_url).netloc:
+                    redirect_url = (
+                        urlparse("https://www.coupang.com")
+                        ._replace(path=redirect_url)
+                        .geturl()
+                    )
+                return redirect_url
+            else:
+                return url
         except Exception as e:
             logger.error("Exception: {0}".format(str(e)))
             traceback.print_exc()
+            if retry < 3:
+                return self.un_shortend_url(url, retry + 1)
             return url
 
     def run_crawler(self):
