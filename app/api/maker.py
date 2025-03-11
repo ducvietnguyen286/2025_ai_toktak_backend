@@ -21,6 +21,7 @@ from app.services.batch import BatchService
 from app.services.post import PostService
 from app.services.social_post import SocialPostService
 from app.services.video_service import VideoService
+from app.services.shotstack_services import ShotStackService
 from flask import request
 
 from flask_jwt_extended import jwt_required
@@ -295,7 +296,7 @@ class APIMakePost(Resource):
                         # Tạo từ google
 
                         voice_google = batch.voice_google or 1
-                        result = VideoService.create_video_from_images_v2(
+                        result = ShotStackService.create_video_from_images_v2(
                             post.id,
                             voice_google,
                             origin_caption,
