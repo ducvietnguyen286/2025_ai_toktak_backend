@@ -1,5 +1,4 @@
 import json
-import kss
 import re
 
 
@@ -12,7 +11,7 @@ def is_json(data):
 
 
 def split_text_by_sentences(text, num_captions):
-    sentences = kss.split_sentences(text)
+    sentences = [text]
 
     if len(sentences) < num_captions:
         sentences += [""] * (num_captions - len(sentences))

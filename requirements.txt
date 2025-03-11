@@ -32,7 +32,6 @@ srt~=3.5.3
 pydub~=0.25.1
 Flask-SocketIO~=5.5.1
 gevent-websocket~=0.10.1
-kss~=6.0.4
 flask-me~=1.0.2
 
 threads-api~=1.2.0
