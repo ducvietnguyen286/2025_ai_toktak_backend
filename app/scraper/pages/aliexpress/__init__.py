@@ -43,13 +43,13 @@ class AliExpressScraper:
             #         return json.loads(result)
             #     time.sleep(0.5)
 
-            parsed_url = urlparse(self.url)
+            # parsed_url = urlparse(self.url)
 
-            real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
-            ali_data = self.get_page_html(real_url)
+            # real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
+            ali_data = self.get_page_html(self.url)
             if not ali_data:
                 return {}
-            ali_base_data = Parser(ali_data).parse(real_url)
+            ali_base_data = Parser(ali_data).parse(self.url)
 
             # file_html = open("demo.html", "w", encoding="utf-8")
             # file_html.write(str(ali_data))
