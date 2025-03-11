@@ -39,8 +39,6 @@ class APIUpdateSetting(Resource):
             if not isinstance(data, dict):
                 return {"message": "Dữ liệu phải là dictionary"}, 400
             for key, value in data.items():
-                print(key)
-                print(value)
                 setting = Setting.query.filter_by(setting_name=key).first()
                 if setting:
                     setting.setting_value = value  # Cập nhật giá trị mới
@@ -72,8 +70,6 @@ class ApiGetLog(Resource):
     def get(self):
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
-        print("page", page)
-        print("per_page", per_page)
 
         batches = RequestLog.query.order_by(RequestLog.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
