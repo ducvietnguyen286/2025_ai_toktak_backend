@@ -51,9 +51,9 @@ class AliExpressScraper:
                 return {}
             ali_base_data = Parser(ali_data).parse(real_url)
 
-            # # file_html = open("demo.html", "w", encoding="utf-8")
-            # # file_html.write(str(ali_data))
-            # # file_html.close()
+            # file_html = open("demo.html", "w", encoding="utf-8")
+            # file_html.write(str(ali_data))
+            # file_html.close()
             return ali_base_data
         except Exception as e:
             traceback.print_exc()
