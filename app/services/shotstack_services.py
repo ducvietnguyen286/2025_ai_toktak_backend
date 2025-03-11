@@ -18,6 +18,7 @@ import base64
 import srt
 import ffmpeg
 import textwrap
+import re  # Thêm thư viện để xử lý dấu câu
 
 
 class ShotStackService:
@@ -72,10 +73,6 @@ class ShotStackService:
         mp3_file, audio_duration = text_to_speech_kr(
             korean_voice, origin_caption, dir_path, config
         )
-        
-        output_srt  = generate_srt(origin_caption , mp3_file , f"{dir_path}/test.srt"  )
-        
-        return
 
         clips_data = create_combined_clips_v2(
             images_slider_url,
@@ -83,8 +80,8 @@ class ShotStackService:
             caption_videos_default,
         )
 
-        file_caption = generate_caption_from_audio(
-            mp3_file, audio_duration, dir_path, clips_data["intro_length"], config
+        file_caption = generate_srt(
+            origin_caption, mp3_file, f"{dir_path}/test.srt", clips_data["intro_length"]
         )
 
         clips_caption = {
@@ -775,52 +772,79 @@ def get_audio_duration(file_path):
 
 
 
-
-
-def generate_srt(text, audio_file, output_srt):
+def generate_srt(text, audio_file, output_srt, start_offset=0.0):
     """
-    Tạo file phụ đề SRT từ văn bản, giới hạn mỗi caption không quá 20 ký tự.
+    Tạo file phụ đề SRT từ văn bản, đảm bảo đồng bộ với voice, giữ nguyên dấu câu & bỏ index.
 
     :param text: Văn bản cần làm phụ đề.
     :param audio_file: Đường dẫn file âm thanh đã tạo.
     :param output_srt: Đường dẫn file SRT cần lưu.
+    :param start_offset: Thời gian (giây) mà phụ đề sẽ bắt đầu.
     """
     try:
         # Lấy thời gian file âm thanh
         audio_duration = get_audio_duration(audio_file)
 
-        # Tách văn bản thành các câu (dựa trên dấu câu)
-        sentences = [s.strip() for s in text.replace("?", ".").replace("!", ".").split(".") if s.strip()]
+        # Tách văn bản theo dấu câu (vẫn giữ nguyên dấu câu)
+        sentences = re.split(r'([.!?])', text)
 
-        # Chia nhỏ các câu nếu dài hơn 20 ký tự
+        # Gộp lại để giữ nguyên dấu câu
+        processed_sentences = []
+        temp_sentence = ""
+
+        for segment in sentences:
+            temp_sentence += segment  # Ghép lại phần nội dung + dấu câu
+            if segment in ".!?":  # Nếu gặp dấu câu, thì hoàn thành câu đó
+                processed_sentences.append(temp_sentence.strip())
+                temp_sentence = ""  # Reset để bắt đầu câu mới
+
+        # Nếu còn câu nào chưa được thêm (trường hợp không có dấu câu cuối)
+        if temp_sentence:
+            processed_sentences.append(temp_sentence.strip())
+
+        # Chia nhỏ câu nếu dài hơn 20 ký tự
         wrapped_sentences = []
-        for sentence in sentences:
-            small_chunks = textwrap.wrap(sentence, width=20)  # Chia nhỏ thành đoạn ≤ 20 ký tự
+        for sentence in processed_sentences:
+            small_chunks = textwrap.wrap(sentence, width=20)  # Chia nhỏ nhưng vẫn giữ dấu câu
             wrapped_sentences.extend(small_chunks)
 
-        num_segments = len(wrapped_sentences)
-        segment_duration = audio_duration / num_segments  # Chia đều thời gian
+        # Tính tổng số ký tự để phân bổ thời gian hợp lý
+        total_chars = sum(len(chunk) for chunk in wrapped_sentences)
 
-        subtitles = []
-        start_time = datetime.timedelta(seconds=0)
+        start_time = datetime.timedelta(seconds=start_offset)  # Bắt đầu từ start_offset
+        srt_content = ""  # Chuỗi chứa nội dung SRT (không có index)
 
-        for i, chunk in enumerate(wrapped_sentences):
-            end_time = start_time + datetime.timedelta(seconds=segment_duration)
-            subtitle = srt.Subtitle(index=i + 1, start=start_time, end=end_time, content=chunk)
-            subtitles.append(subtitle)
-            start_time = end_time  # Cập nhật thời gian bắt đầu cho câu tiếp theo
+        for chunk in wrapped_sentences:
+            # Tính thời gian hiển thị dựa trên số ký tự
+            chunk_duration = (len(chunk) / total_chars) * audio_duration
+            end_time = start_time + datetime.timedelta(seconds=chunk_duration)
 
-        # Ghi ra file SRT
+            # Chuyển đổi thời gian sang định dạng hh:mm:ss,ms
+            start_str = str(start_time)[:-3].replace(".", ",")
+            end_str = str(end_time)[:-3].replace(".", ",")
+
+            # Thêm vào nội dung file SRT
+            srt_content += f"{start_str} --> {end_str}\n{chunk}\n\n"
+
+            # Cập nhật thời gian bắt đầu cho caption tiếp theo
+            start_time = end_time
+
+        # Ghi ra file SRT (không có index)
         with open(output_srt, "w", encoding="utf-8") as f:
-            f.write(srt.compose(subtitles))
+            f.write(srt_content)
 
-        print(f"✅ Đã tạo file SRT: {output_srt}")
-        return output_srt
+        print(f"✅ Đã tạo file SRT (KHÔNG có index): {output_srt}")
+        
+        # Tạo đường dẫn file trên server
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+        output_srt = output_srt.replace("static/", "").replace("\\", "/")
+        file_url = f"{current_domain}/{output_srt}"
+
+        return file_url
 
     except Exception as e:
         print(f"❌ Lỗi khi tạo SRT: {e}")
         return ""
-
 
 
 def distribute_images_over_audio(image_list, audio_duration):
