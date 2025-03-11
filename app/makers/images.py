@@ -152,6 +152,15 @@ class ImageMaker:
         if image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg"):
             image = image.convert("RGB")
 
+        if not (
+            image_path.lower().endswith(".jpg")
+            or image_path.lower().endswith(".jpeg")
+            or image_path.lower().endswith(".webp")
+        ):
+            image = image.convert("RGB")
+            image_name = image_name.rsplit(".", 1)[0] + ".jpg"
+            image_path = image_path.rsplit(".", 1)[0] + ".jpg"
+
         image.save(image_path)
 
         image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
@@ -174,7 +183,7 @@ class ImageMaker:
 
         image = Image.open(image_path)
         if not (
-            image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg")
+            image_name.lower().endswith(".jpg") or image_name.lower().endswith(".jpeg")
         ):
             image = image.convert("RGBA")
         else:
