@@ -28,9 +28,12 @@ class CoupangScraper:
             headers = random_mobile_header()
             user_agent = generate_user_agent()
             headers.update({"user-agent": user_agent})
+            logger.info("Unshortend URL: {0}".format(url))
             response = session.get(
                 url, allow_redirects=True, headers=headers, timeout=5
             )
+            logger.info("Unshortend URL: {0}".format(response.url))
+            logger.info("Unshortend Text: {0}".format(response.content))
             print(response)
             return response.url
         except Exception as e:
