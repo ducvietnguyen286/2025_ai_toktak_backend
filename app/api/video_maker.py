@@ -49,8 +49,9 @@ class CreateVideo(Resource):
             if not isinstance(url, str):
                 return {"message": "Each URL must be a string"}, 400
         batch_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
+        voice_google = random.randint(1, 4)  # Chọn số nguyên từ 1 đến 4
         result = VideoService.create_video_from_images_v2(
-            batch_id, product_name, images_url, images_slider_url, captions
+            batch_id , voice_google, product_name, images_url, images_slider_url, captions
         )
 
         render_id = ""

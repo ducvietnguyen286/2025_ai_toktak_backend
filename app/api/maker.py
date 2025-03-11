@@ -37,6 +37,7 @@ class APICreateBatch(Resource):
         type="object",
         properties={
             "url": {"type": "string"},
+            "voice": {"type": ["string", "null"]},
         },
         required=["url"],
     )
@@ -47,6 +48,7 @@ class APICreateBatch(Resource):
             if current_user:
                 user_id_login = current_user.id
             url = args.get("url", "")
+            voice = args.get("voice", 1)
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
             max_count_image = os.environ.get("MAX_COUNT_IMAGE") or "8"
@@ -101,6 +103,7 @@ class APICreateBatch(Resource):
                 count_post=len(post_types),
                 status=0,
                 process_status="PENDING",
+                voice_google=voice,
             )
 
             posts = []
@@ -287,8 +290,11 @@ class APIMakePost(Resource):
                         # )
 
                         # Tạo từ google
+
+                        voice_google = batch.voice_google or 1
                         result = VideoService.create_video_from_images_v2(
                             post.id,
+                            voice_google,
                             origin_caption,
                             image_renders,
                             image_renders_sliders,
@@ -591,7 +597,7 @@ class APIDeletePostBatch(Resource):
     @parameters(
         type="object",
         properties={
-            "post_ids": {"type": "string"},
+            "post_ids": {"type": "integer"},
         },
         required=["post_ids"],
     )

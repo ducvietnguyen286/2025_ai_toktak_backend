@@ -203,7 +203,7 @@ class VideoService:
 
     @staticmethod
     def create_video_from_images_v2(
-        post_id, origin_caption, images_url, images_slider_url, captions
+        post_id, voice_google, origin_caption, images_url, images_slider_url, captions
     ):
 
         domain = request.host
@@ -247,7 +247,13 @@ class VideoService:
         dir_path = f"static/voice/gtts_voice/{date_create}/{post_id}"
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
         # text_to_speech(origin_caption, "test", dir_path)
-        mp3_file, audio_duration = text_to_speech_kr(origin_caption, dir_path, config)
+
+        # Chọn giọng nói ngẫu nhiên
+        korean_voice = get_korean_voice(voice_google)
+
+        mp3_file, audio_duration = text_to_speech_kr(
+            korean_voice, origin_caption, dir_path, config
+        )
 
         clips_data = create_combined_clips_v2(
             post_id,
@@ -1345,7 +1351,7 @@ def get_audio_duration(audio_file):
         return 0.0
 
 
-def text_to_speech_kr(text, disk_path="output", config=None):
+def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
     """
     Gọi Google Text-to-Speech API để tạo file MP3 và lấy thời gian audio bằng ffmpeg.
 
@@ -1376,22 +1382,13 @@ def text_to_speech_kr(text, disk_path="output", config=None):
         os.makedirs(disk_path, exist_ok=True)
         output_file = os.path.join(disk_path, "output.mp3")
 
-        # Chọn giọng nói ngẫu nhiên
-        korean_voices = [
-            {"name": "ko-KR-Wavenet-A", "ssmlGender": "FEMALE"},
-            {"name": "ko-KR-Wavenet-B", "ssmlGender": "MALE"},
-            {"name": "ko-KR-Wavenet-C", "ssmlGender": "FEMALE"},
-            {"name": "ko-KR-Wavenet-D", "ssmlGender": "MALE"},
-        ]
-        selected_voice = random.choice(korean_voices)
-
         # Payload gửi lên Google API
         payload = {
             "input": {"text": text},
             "voice": {
                 "languageCode": "ko-KR",
-                "name": selected_voice["name"],
-                "ssmlGender": selected_voice["ssmlGender"],
+                "name": korean_voice["name"],
+                "ssmlGender": korean_voice["ssmlGender"],
             },
             "audioConfig": {"audioEncoding": "MP3"},
         }
@@ -1420,7 +1417,7 @@ def text_to_speech_kr(text, disk_path="output", config=None):
         audio_duration = get_audio_duration(output_file)
 
         log_make_video_message(
-            f"Đã tạo file âm thanh ({selected_voice['name']}): {output_file} (Thời gian: {audio_duration:.2f}s)"
+            f"Đã tạo file âm thanh ({korean_voice['name']}): {output_file} (Thời gian: {audio_duration:.2f}s)"
         )
         return output_file, audio_duration
 
@@ -1578,3 +1575,16 @@ def format_time_caption(seconds):
     minutes = seconds // 60
     hours = minutes // 60
     return f"{hours:02}:{minutes%60:02}:{seconds%60:02},{millisec:03}"
+
+
+def get_korean_voice(index):
+    korean_voices = [
+        {"name": "ko-KR-Wavenet-A", "ssmlGender": "FEMALE"},
+        {"name": "ko-KR-Wavenet-B", "ssmlGender": "MALE"},
+        {"name": "ko-KR-Wavenet-C", "ssmlGender": "FEMALE"},
+        {"name": "ko-KR-Wavenet-D", "ssmlGender": "MALE"},
+    ]
+
+    # Điều chỉnh index để luôn nằm trong phạm vi hợp lệ
+    adjusted_index = (index - 1) % len(korean_voices)
+    return korean_voices[adjusted_index]
