@@ -78,6 +78,7 @@ class ImageMaker:
 
     @staticmethod
     def save_image_url_get_path(image_url):
+        print(f"Downloading image from {image_url}")
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
 
@@ -128,7 +129,7 @@ class ImageMaker:
 
         image = Image.open(image_path)
         if not (
-            image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg")
+            image_name.lower().endswith(".jpg") or image_name.lower().endswith(".jpeg")
         ):
             image = image.convert("RGBA")
         else:
@@ -149,7 +150,7 @@ class ImageMaker:
             background.paste(resized_image, (0, top))
             image = background
 
-        if image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg"):
+        if image_path.lower().endswith(".jpg") or image_path.lower().endswith(".jpeg"):
             image = image.convert("RGB")
 
         image.save(image_path)
@@ -172,9 +173,16 @@ class ImageMaker:
         image_path = ImageMaker.save_image_url_get_path(image_url)
         image_name = image_path.split("/")[-1]
 
-        image = Image.open(image_path)
+        while not os.path.exists(image_path):
+            time.sleep(0.5)
+
+        try:
+            image = Image.open(image_path)
+        except IOError:
+            print(f"Cannot identify image file {image_path}")
+            return f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
         if not (
-            image_url.lower().endswith(".jpg") or image_url.lower().endswith(".jpeg")
+            image_name.lower().endswith(".jpg") or image_name.lower().endswith(".jpeg")
         ):
             image = image.convert("RGBA")
         else:

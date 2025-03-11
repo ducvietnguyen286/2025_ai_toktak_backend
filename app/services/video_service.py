@@ -1390,7 +1390,7 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
                 "name": korean_voice["name"],
                 "ssmlGender": korean_voice["ssmlGender"],
             },
-            "audioConfig": {"audioEncoding": "MP3"},
+            "audioConfig": {"audioEncoding": "MP3", "speakingRate": 1.4},
         }
 
         headers = {"Content-Type": "application/json"}

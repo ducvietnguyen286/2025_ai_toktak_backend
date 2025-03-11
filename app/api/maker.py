@@ -238,7 +238,10 @@ class APIMakePost(Resource):
             if process_images and len(process_images) < need_count:
                 current_length = len(process_images)
                 need_length = need_count - current_length
-                process_images = process_images + images[:need_length]
+                if len(images) > need_length:
+                    process_images = process_images + images[:need_length]
+                else:
+                    process_images = process_images + images
             elif process_images and len(process_images) >= need_count:
                 process_images = process_images[:need_count]
             else:
@@ -334,12 +337,12 @@ class APIMakePost(Resource):
                     parse_response = parse_caption.get("response", {})
                     captions = parse_response.get("caption", "")
 
-                    for index, image_url in enumerate(process_images):
-                        image_caption = captions[index] if index < len(captions) else ""
-                        image_url = ImageMaker.save_image_and_write_text(
-                            image_url, image_caption, font_size=80
-                        )
-                        maker_images.append(image_url)
+                for index, image_url in enumerate(process_images):
+                    image_caption = captions[index] if index < len(captions) else ""
+                    image_url = ImageMaker.save_image_and_write_text(
+                        image_url, image_caption, font_size=80
+                    )
+                    maker_images.append(image_url)
 
                 logger.info(
                     "-------------------- PROCESSED CREATE IMAGES -------------------"
