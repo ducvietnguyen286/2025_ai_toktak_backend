@@ -31,7 +31,7 @@ class CoupangScraper:
 
             logger.info("Unshortend URL: {0}".format(url))
             response = session.get(
-                url, allow_redirects=True, headers=headers, timeout=5
+                url, allow_redirects=False, headers=headers, timeout=5
             )
             # file_html = open("demo.html", "w", encoding="utf-8")
             # file_html.write(response.content.decode("utf-8"))
@@ -40,7 +40,17 @@ class CoupangScraper:
 
             # logger.info("Unshortend Text: {0}".format(response.content))
             # print(response)
-            return response.url
+            if "Location" in response.headers:
+                redirect_url = response.headers["Location"]
+                if not urlparse(redirect_url).netloc:
+                    redirect_url = (
+                        urlparse("https://www.coupang.com")
+                        ._replace(path=redirect_url)
+                        .geturl()
+                    )
+                return redirect_url
+            else:
+                return url
         except Exception as e:
             logger.error("Exception: {0}".format(str(e)))
             traceback.print_exc()
@@ -58,7 +68,6 @@ class CoupangScraper:
 
             if netloc == "link.coupang.com":
                 real_url = self.un_shortend_url(real_url)
-                print("Real URL: ", real_url)
                 parsed_url = urlparse(real_url)
 
             path = parsed_url.path
