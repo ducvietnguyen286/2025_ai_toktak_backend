@@ -15,6 +15,7 @@ class Batch(db.Model, BaseModel):
     count_post = db.Column(db.Integer, default=0)
     done_post = db.Column(db.Integer, default=0)
     status = db.Column(db.Integer, default=1)
+    voice_google = db.Column(db.Integer, default=1)
     process_status = db.Column(db.String(50), default="PENDING")
 
     to_json_filter = ("content", "thumbnails")
@@ -31,6 +32,7 @@ class Batch(db.Model, BaseModel):
             "done_post": self.done_post,
             "status": self.status,
             "process_status": self.process_status,
+            "voice_google": self.voice_google,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
