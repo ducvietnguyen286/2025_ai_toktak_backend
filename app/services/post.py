@@ -115,8 +115,11 @@ class PostService:
             Post.user_id == data_search["user_id"],
             Post.status == data_search["status"],
         )
-        if data_search["user_id"] == 99:
+        if data_search["status"] == 99:
             query = query.filter(Post.social_sns_description != "[]")
+        # NHững thằng bắn lên SNS thì có status_sns = 1
+        if data_search["status"] == 1:
+            query = query.filter(Post.status_sns == 1)
 
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":
