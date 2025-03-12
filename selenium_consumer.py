@@ -112,15 +112,15 @@ def create_driver_instance():
     chrome_options.add_argument("--window-size=1920x1080")
 
     # Tạo user-data-dir độc nhất cho mỗi instance
-    unique_dir = os.path.join(
-        tempfile.gettempdir(), f"chrome_profile_{uuid.uuid4().hex}"
-    )
-    if os.path.exists(unique_dir):
-        shutil.rmtree(unique_dir)
+    # unique_dir = os.path.join(
+    #     tempfile.gettempdir(), f"chrome_profile_{uuid.uuid4().hex}"
+    # )
+    # if os.path.exists(unique_dir):
+    #     shutil.rmtree(unique_dir)
 
-    os.makedirs(unique_dir, exist_ok=True)
-    clear_profile_lock(unique_dir)
-    chrome_options.add_argument(f"--user-data-dir={unique_dir}")
+    # os.makedirs(unique_dir, exist_ok=True)
+    # clear_profile_lock(unique_dir)
+    # chrome_options.add_argument(f"--user-data-dir={unique_dir}")
 
     # Thêm một số option bổ sung để tránh lỗi
     chrome_options.add_argument("--no-first-run")
@@ -166,6 +166,8 @@ def worker_instance():
     # Mở trang cơ sở để làm tab gốc (base tab)
     browser.get("https://ko.aliexpress.com/")
     base_tab = browser.current_window_handle
+
+    logger.info("Worker started")
 
     while not stop_event.is_set():
         try:
@@ -316,10 +318,11 @@ def process_task_on_tab(browser, task):
 def start_selenium_consumer():
     create_app()
     workers = []
-    for _ in range(3):
+    for i in range(3):
         t = threading.Thread(target=worker_instance)
         t.start()
         workers.append(t)
+        logger.info(f"Worker {i+1} started.")
     for t in workers:
         t.join()
 
