@@ -114,6 +114,7 @@ def create_driver_instance():
         "--disable-blink-features=BlockCredentialedSubresources"
     )
     chrome_options.add_argument("--enable-unsafe-swiftshader")
+    chrome_options.add_argument("--remote-debugging-port=9222")
     chrome_options.add_argument("--window-size=1920x1080")
 
     # Tạo user-data-dir độc nhất cho mỗi instance
