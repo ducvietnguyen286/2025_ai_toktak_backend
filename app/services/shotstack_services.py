@@ -739,10 +739,10 @@ def google_speech_to_text(audio_file, config=None):
 
 def get_korean_voice(index):
     korean_voices = [
-        {"name": "ko-KR-Wavenet-A", "ssmlGender": "FEMALE"},
         {"name": "ko-KR-Wavenet-B", "ssmlGender": "MALE"},
-        {"name": "ko-KR-Wavenet-C", "ssmlGender": "FEMALE"},
         {"name": "ko-KR-Wavenet-D", "ssmlGender": "MALE"},
+        {"name": "ko-KR-Wavenet-A", "ssmlGender": "FEMALE"},
+        {"name": "ko-KR-Wavenet-C", "ssmlGender": "FEMALE"},
     ]
 
     # Điều chỉnh index để luôn nằm trong phạm vi hợp lệ

@@ -137,3 +137,35 @@ class APIMe(Resource):
             data=user._to_json(),
             message="Lấy thông tin người dùng thành công",
         ).to_dict()
+
+
+@ns.route("/login_by_input")
+class APILoginByInput(Resource):
+
+    @parameters(
+        type="object",
+        properties={
+            "email": {"type": "string"},
+            "password": {"type": "string"},
+        },
+        required=["email", "password"],
+    )
+    def post(self, args):
+        email = args.get("email", "")
+        password = args.get("password", "")
+
+        user = AuthService.login(email, password)
+        tokens = AuthService.generate_token(user)
+        tokens.update(
+            {
+                "type": "Bearer",
+                "expires_in": 7200,
+                "user": user._to_json(),
+            }
+        )
+
+        return Response(
+            data=tokens,
+            message="Đăng nhập thành công",
+        ).to_dict()
+

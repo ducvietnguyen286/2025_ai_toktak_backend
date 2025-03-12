@@ -833,3 +833,41 @@ class APIUserDetail(Resource):
                 message="Check Active",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/delete-link-sns")
+class APIDeleteLink(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "link_id": {"type": "integer"},
+        },
+        required=["link_id"],
+    )
+    def post(self, args):
+        try:
+            current_user = AuthService.get_current_identity()
+            link_id = args.get("link_id", 0)
+
+            user_link = UserService.find_user_link(link_id, current_user.id)
+            if not user_link:
+                return Response(
+                    message="링크 삭제에 실패했습니다.",
+                    data={"user_id": current_user.id},
+                    code=201,
+                ).to_dict()
+            else:
+                user_link.delete()
+
+            return Response(
+                data={},
+                message="링크 삭제에 성공했습니다.",
+            ).to_dict()
+        except Exception as ex:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(ex)))
+            return Response(
+                message="링크 삭제에 실패했습니다.",
+                code=202,
+            ).to_dict()
