@@ -283,9 +283,9 @@ def process_task_on_tab(browser, task):
 
             logger.info("[Wait Done]")
 
-            # file_html = open("demo2.html", "w", encoding="utf-8")
-            # file_html.write(browser.page_source)
-            # file_html.close()
+            file_html = open("demo2.html", "w", encoding="utf-8")
+            file_html.write(browser.page_source)
+            file_html.close()
 
             browser_cookie = browser.get_cookies()
             formatted_cookies = []
