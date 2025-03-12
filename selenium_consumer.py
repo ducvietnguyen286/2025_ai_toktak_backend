@@ -259,10 +259,6 @@ def process_task_on_tab(browser, task):
             except Exception as e:
                 print("Error: ", str(e))
 
-            # file_html = open("demo1.html", "w", encoding="utf-8")
-            # file_html.write(browser.page_source)
-            # file_html.close()
-
             time.sleep(1)
 
             browser.execute_script("window.scrollBy(0, 700);")
@@ -271,6 +267,10 @@ def process_task_on_tab(browser, task):
 
             browser.execute_script("window.scrollBy(700, 1600);")
             logger.info("[Scroll Down 2]")
+
+            file_html = open("demo1.html", "w", encoding="utf-8")
+            file_html.write(browser.page_source)
+            file_html.close()
 
             if wait_id != "":
                 WebDriverWait(browser, 10).until(
@@ -283,9 +283,9 @@ def process_task_on_tab(browser, task):
 
             logger.info("[Wait Done]")
 
-            file_html = open("demo2.html", "w", encoding="utf-8")
-            file_html.write(browser.page_source)
-            file_html.close()
+            # file_html = open("demo2.html", "w", encoding="utf-8")
+            # file_html.write(browser.page_source)
+            # file_html.close()
 
             browser_cookie = browser.get_cookies()
             formatted_cookies = []
