@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
 import json
 import os
@@ -177,7 +177,7 @@ def worker_instance():
     browser.get("https://ko.aliexpress.com/")
     base_tab = browser.current_window_handle
 
-    logger.info("Worker started")
+    print("Worker started")
 
     while not stop_event.is_set():
         try:
@@ -202,6 +202,8 @@ def worker_instance():
         except Exception as e:
             logger.error(f"Error in worker_instance loop: {str(e)}")
             print("Error in worker_instance loop:", e)
+
+    print("Worker stopped")
     browser.quit()
 
 
@@ -329,14 +331,17 @@ def process_task_on_tab(browser, task):
 
 def start_selenium_consumer():
     create_app()
-    workers = []
-    for i in range(3):
-        t = threading.Thread(target=worker_instance)
-        t.start()
-        workers.append(t)
-        logger.info(f"Worker {i+1} started.")
-    for t in workers:
-        t.join()
+    workers = 3
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        # Submit worker_instance trong mỗi tiến trình
+        futures = [executor.submit(worker_instance) for _ in range(workers)]
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                print("Worker kết thúc với kết quả:", result)
+            except Exception as exc:
+                logger.error(f"Worker generated an exception: {exc}")
+                print("Worker exception:", exc)
 
 
 if __name__ == "__main__":
