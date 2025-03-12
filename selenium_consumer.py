@@ -155,13 +155,13 @@ def create_driver_instance():
     for header, value in headers.items():
         chrome_options.add_argument(f"--{header.lower()}={value}")
 
-    # driver_version = None
+    driver_version = None
     if config_name == "production":
         chrome_options.binary_location = "/usr/bin/google-chrome-stable"
-        # driver_version = "134.0.6998.88"
+        driver_version = "134.0.6998.88"
 
     driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
+        service=Service(ChromeDriverManager(driver_version=driver_version).install()),
         options=chrome_options,
     )
     return driver
