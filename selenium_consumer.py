@@ -94,6 +94,11 @@ def create_driver_instance():
     os.makedirs(unique_dir, exist_ok=True)
     chrome_options.add_argument(f"--user-data-dir={unique_dir}")
 
+    # Thêm một số option bổ sung để tránh lỗi
+    chrome_options.add_argument("--no-first-run")
+    chrome_options.add_argument("--no-default-browser-check")
+    chrome_options.add_argument("--disable-extensions")
+
     no_gui = os.environ.get("SELENIUM_NO_GUI", "false") == "true"
     proxy = os.environ.get("SELENIUM_PROXY", None)
 
