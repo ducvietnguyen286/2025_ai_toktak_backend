@@ -207,6 +207,7 @@ def worker_instance():
 
 def process_task_on_tab(browser, task):
     try:
+        COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
         logger.info("[Open Tab]")
         try:
             url = task["url"]
