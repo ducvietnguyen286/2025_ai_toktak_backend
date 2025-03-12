@@ -27,7 +27,6 @@ from bs4 import BeautifulSoup
 from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
 import threading
-from app.extensions import redis_client
 from app.scraper.pages.aliexpress.parser import Parser as AliExpressParser
 
 from werkzeug.exceptions import default_exceptions
@@ -172,40 +171,42 @@ def worker_instance():
     Mỗi worker có một instance của trình duyệt.
     Khi có task, worker mở một tab mới, xử lý xong đóng tab đó và quay về tab cơ sở.
     """
-    browser = create_driver_instance()
-    # Mở trang cơ sở để làm tab gốc (base tab)
-    browser.get("https://ko.aliexpress.com/")
-    base_tab = browser.current_window_handle
+    app = create_app()
+    with app.app_context():
+        browser = create_driver_instance()
+        # Mở trang cơ sở để làm tab gốc (base tab)
+        browser.get("https://ko.aliexpress.com/")
+        base_tab = browser.current_window_handle
 
-    print("Worker started (PID:", os.getpid(), ")")
+        print("Worker started (PID:", os.getpid(), ")")
 
-    while not stop_event.is_set():
-        try:
-            task_item = redis_client.blpop("toktak:crawl_ali_queue", timeout=10)
-            if task_item:
-                _, task_json = task_item
-                task = json.loads(task_json)
-                # Mở tab mới để xử lý task
-                browser.execute_script("window.open('about:blank', '_blank');")
-                new_tab_handle = browser.window_handles[-1]
-                browser.switch_to.window(new_tab_handle)
-                process_task_on_tab(browser, task)
+        while not stop_event.is_set():
+            try:
+                task_item = redis_client.blpop("toktak:crawl_ali_queue", timeout=10)
+                if task_item:
+                    _, task_json = task_item
+                    task = json.loads(task_json)
+                    # Mở tab mới để xử lý task
+                    browser.execute_script("window.open('about:blank', '_blank');")
+                    new_tab_handle = browser.window_handles[-1]
+                    browser.switch_to.window(new_tab_handle)
+                    process_task_on_tab(browser, task)
 
-                logger.info("[Close Tab]")
-                browser.close()
-                time.sleep(1)
+                    logger.info("[Close Tab]")
+                    browser.close()
+                    time.sleep(1)
 
-                # Quay lại tab cơ sở
-                browser.switch_to.window(base_tab)
-            else:
-                time.sleep(1)
-        except Exception as e:
-            logger.error(f"Error in worker_instance loop: {str(e)}")
-            print("Error in worker_instance loop:", e)
+                    # Quay lại tab cơ sở
+                    browser.switch_to.window(base_tab)
+                else:
+                    time.sleep(1)
+            except Exception as e:
+                logger.error(f"Error in worker_instance loop: {str(e)}")
+                print("Error in worker_instance loop:", e)
 
-    print("Worker stopped (PID:", os.getpid(), ")")
-    browser.quit()
-    return True
+        print("Worker stopped (PID:", os.getpid(), ")")
+        browser.quit()
+        return True
 
 
 def process_task_on_tab(browser, task):
@@ -331,7 +332,6 @@ def process_task_on_tab(browser, task):
 
 
 def start_selenium_consumer():
-    create_app()
     workers = 3
     with ProcessPoolExecutor(max_workers=workers) as executor:
         # Submit worker_instance trong mỗi tiến trình
