@@ -41,7 +41,6 @@ stop_event = threading.Event()
 def clear_profile_lock(profile_dir):
     """
     Xóa các tệp khóa trong thư mục profile.
-
     :param profile_dir: Đường dẫn đến thư mục profile.
     """
     if not os.path.exists(profile_dir):
@@ -58,6 +57,13 @@ def clear_profile_lock(profile_dir):
             print(f"Không thể xóa {lock_file}: {e}")
         except Exception as e:
             print(f"Lỗi không mong đợi khi xóa {lock_file}: {e}")
+
+    # Kiểm tra lại thư mục profile
+    remaining = glob.glob(os.path.join(profile_dir, "*lock*"))
+    if remaining:
+        print("Vẫn còn file khóa:", remaining)
+    else:
+        print("Đã xóa hết các file khóa trong", profile_dir)
 
 
 def signal_handler(sig, frame):
@@ -114,7 +120,7 @@ def create_driver_instance():
     # Tạo user-data-dir độc nhất cho mỗi instance
     unique_dir = os.path.join(
         tempfile.gettempdir(),
-        f"chrome_profile_{uuid.uuid4().hex}_{int(time.time() * 1000)}",
+        f"chrome_profile_{uuid.uuid4().hex}",
     )
     print(f"Unique dir: {unique_dir}")
 
@@ -123,6 +129,7 @@ def create_driver_instance():
 
     os.makedirs(unique_dir, exist_ok=True)
     clear_profile_lock(unique_dir)
+    time.sleep(1)
     chrome_options.add_argument(f"--user-data-dir={unique_dir}")
 
     # Thêm một số option bổ sung để tránh lỗi
@@ -183,8 +190,11 @@ def worker_instance():
                 new_tab_handle = browser.window_handles[-1]
                 browser.switch_to.window(new_tab_handle)
                 process_task_on_tab(browser, task)
-                # Đóng tab sau khi xử lý xong
+
+                logger.info("[Close Tab]")
                 browser.close()
+                time.sleep(1)
+
                 # Quay lại tab cơ sở
                 browser.switch_to.window(base_tab)
             else:
@@ -310,12 +320,11 @@ def process_task_on_tab(browser, task):
 
             redis_client.set(f"toktak:result-ali:{req_id}", json.dumps(data))
         finally:
-            logger.info("[Close Tab]")
-            browser.close()
+            return True
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         print("Error: ", e)
-        return {}
+        return False
 
 
 def start_selenium_consumer():
