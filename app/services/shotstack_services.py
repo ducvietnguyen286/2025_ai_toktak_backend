@@ -143,14 +143,12 @@ class ShotStackService:
                             {
                                 "asset": {
                                     "type": "image",
-                                    "src": "https://admin.lang.canvasee.com/img/watermarker.png",
+                                    "src": "https://admin.lang.canvasee.com/img/watermarker2.png",
                                 },
                                 "start": 0,
                                 "length": "end",
                                 "fit": "none",
-                                "position": "center",
-                                "offset": {"x": 0.35, "y": 0.4},
-                                "scale": 0.65,
+                                "position": "center" 
                             }
                         ]
                     },
