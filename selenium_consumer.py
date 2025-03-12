@@ -213,6 +213,7 @@ def process_task_on_tab(browser, task):
             url = task["url"]
             wait_id = task["wait_id"]
             wait_class = task["wait_class"]
+            wait_script = task["wait_script"]
             req_id = task["req_id"]
             page = task["page"]
 
@@ -257,6 +258,7 @@ def process_task_on_tab(browser, task):
 
                     browser.switch_to.default_content()
             except Exception as e:
+                logger.error(f"Error: {str(e)}")
                 print("Error: ", str(e))
 
             time.sleep(1)
@@ -268,9 +270,14 @@ def process_task_on_tab(browser, task):
             browser.execute_script("window.scrollBy(700, 1600);")
             logger.info("[Scroll Down 2]")
 
-            file_html = open("demo1.html", "w", encoding="utf-8")
-            file_html.write(browser.page_source)
-            file_html.close()
+            # file_html = open("demo1.html", "w", encoding="utf-8")
+            # file_html.write(browser.page_source)
+            # file_html.close()
+
+            if wait_script != "":
+                WebDriverWait(browser, 10).until(
+                    EC.presence_of_element_located((By.XPATH, wait_script))
+                )
 
             if wait_id != "":
                 WebDriverWait(browser, 10).until(
