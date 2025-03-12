@@ -334,11 +334,7 @@ class APIPostToLinks(Resource):
                     status=400,
                 ).to_dict()
 
-            if post.status != 1:
-                return Response(
-                    message="Bài viết chưa được tạo",
-                    status=400,
-                ).to_dict()
+
 
             post = PostService.find_post(post_id)
 
