@@ -114,23 +114,23 @@ def create_driver_instance():
         "--disable-blink-features=BlockCredentialedSubresources"
     )
     chrome_options.add_argument("--enable-unsafe-swiftshader")
-    chrome_options.add_argument("--remote-debugging-port=9222")
+    # chrome_options.add_argument("--remote-debugging-port=9222")
     chrome_options.add_argument("--window-size=1920x1080")
 
     # Tạo user-data-dir độc nhất cho mỗi instance
-    unique_dir = os.path.join(
-        tempfile.gettempdir(),
-        f"chrome_profile_{uuid.uuid4().hex}",
-    )
-    print(f"Unique dir: {unique_dir}")
+    # unique_dir = os.path.join(
+    #     tempfile.gettempdir(),
+    #     f"chrome_profile_{uuid.uuid4().hex}",
+    # )
+    # print(f"Unique dir: {unique_dir}")
 
-    if os.path.exists(unique_dir):
-        shutil.rmtree(unique_dir)
+    # if os.path.exists(unique_dir):
+    #     shutil.rmtree(unique_dir)
 
-    os.makedirs(unique_dir, exist_ok=True)
-    clear_profile_lock(unique_dir)
-    time.sleep(1)
-    chrome_options.add_argument(f"--user-data-dir={unique_dir}")
+    # os.makedirs(unique_dir, exist_ok=True)
+    # clear_profile_lock(unique_dir)
+    # time.sleep(1)
+    # chrome_options.add_argument(f"--user-data-dir={unique_dir}")
 
     # Thêm một số option bổ sung để tránh lỗi
     chrome_options.add_argument("--no-first-run")
@@ -155,14 +155,19 @@ def create_driver_instance():
     for header, value in headers.items():
         chrome_options.add_argument(f"--{header.lower()}={value}")
 
-    driver_version = None
-    if config_name == "production":
-        chrome_options.binary_location = "/usr/bin/google-chrome"
-        driver_version = "134.0.6998.88"
+    # driver_version = None
+    # if config_name == "production":
+    #     chrome_options.binary_location = "/usr/bin/google-chrome"
+    #     driver_version = "134.0.6998.88"
 
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager(driver_version=driver_version).install()),
-        options=chrome_options,
+    # chrome_options.add_experimental_option("debuggerAddress", "localhost:9222")
+
+    # driver = webdriver.Chrome(
+    #     service=Service(ChromeDriverManager(driver_version=driver_version).install()),
+    #     options=chrome_options,
+    # )
+    driver = webdriver.Remote(
+        command_executor="http://localhost:4567/wd/hub", options=chrome_options
     )
     return driver
 

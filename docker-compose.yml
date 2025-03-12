@@ -1,7 +1,7 @@
 version: "3.8"
 services:
-  toktak-chrome:
-    build: .
+  selenium-chrome:
+    image: selenium/standalone-chrome:latest
     ports:
-      - "9222:9222"
+      - "4567:4444"
     restart: always
