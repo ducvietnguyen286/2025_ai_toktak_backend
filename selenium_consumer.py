@@ -219,7 +219,7 @@ def process_task_on_tab(browser, task):
             time.sleep(1)
 
             browser.get(url)
-
+            logger.info(f"[Open URL] {url}")
             try:
                 elements = browser.find_elements(
                     By.CSS_SELECTOR, "div.J_MIDDLEWARE_FRAME_WIDGET"
@@ -266,10 +266,11 @@ def process_task_on_tab(browser, task):
             time.sleep(1)
 
             browser.execute_script("window.scrollBy(0, 700);")
-
+            logger.info("[Scroll Down 1]")
             time.sleep(1)
 
             browser.execute_script("window.scrollBy(700, 1600);")
+            logger.info("[Scroll Down 2]")
 
             if wait_id != "":
                 WebDriverWait(browser, 10).until(
@@ -279,6 +280,8 @@ def process_task_on_tab(browser, task):
                 WebDriverWait(browser, 10).until(
                     EC.presence_of_element_located((By.CLASS_NAME, wait_class))
                 )
+
+            logger.info("[Wait Done]")
 
             # file_html = open("demo2.html", "w", encoding="utf-8")
             # file_html.write(browser.page_source)
@@ -310,6 +313,9 @@ def process_task_on_tab(browser, task):
             data = parser.parse(url)
 
             redis_client.set(f"toktak:result-ali:{req_id}", json.dumps(data))
+        except Exception as e:
+            logger.error(f"Error in process_task_on_tab: {str(e)}")
+            print("Error in process_task_on_tab:", e)
         finally:
             return True
     except Exception as e:
