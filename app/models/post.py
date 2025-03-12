@@ -19,15 +19,15 @@ class Post(db.Model, BaseModel):
     video_url = db.Column(db.String(255), nullable=False, default="")
     type = db.Column(db.String(10), default="video", index=True)
     status = db.Column(db.Integer, default=1)
-    status_sns = db.Column(db.Integer, default=1)
+    status_sns = db.Column(db.Integer, default=0)
     process_number = db.Column(db.Integer, default=0)
     render_id = db.Column(db.String(500), nullable=False, default="")
-    
+
     social_sns_description = db.Column(db.Text, nullable=True)
 
     to_json_parse = "images"
     to_json_filter = "captions"
-    
+
     def to_dict(self):
         return {
             "id": self.id,
