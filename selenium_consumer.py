@@ -177,7 +177,7 @@ def worker_instance():
     browser.get("https://ko.aliexpress.com/")
     base_tab = browser.current_window_handle
 
-    print("Worker started")
+    print("Worker started (PID:", os.getpid(), ")")
 
     while not stop_event.is_set():
         try:
@@ -203,8 +203,9 @@ def worker_instance():
             logger.error(f"Error in worker_instance loop: {str(e)}")
             print("Error in worker_instance loop:", e)
 
-    print("Worker stopped")
+    print("Worker stopped (PID:", os.getpid(), ")")
     browser.quit()
+    return True
 
 
 def process_task_on_tab(browser, task):
