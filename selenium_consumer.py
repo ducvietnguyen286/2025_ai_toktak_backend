@@ -211,24 +211,28 @@ def process_task_on_tab(browser, task):
         logger.info("[Open Tab]")
         try:
             url = task["url"]
-            wait_id = task["wait_id"]
-            wait_class = task["wait_class"]
-            wait_script = task["wait_script"]
+            # wait_id = task["wait_id"]
+            # wait_class = task["wait_class"]
+            # wait_script = task["wait_script"]
             req_id = task["req_id"]
-            page = task["page"]
+            # page = task["page"]
 
             time.sleep(1)
 
             browser.get(url)
+
             logger.info(f"[Open URL] {url}")
             try:
                 elements = browser.find_elements(
                     By.CSS_SELECTOR, "div.J_MIDDLEWARE_FRAME_WIDGET"
                 )
-                finded_id = browser.find_element(By.ID, wait_id)
-                finded_class = browser.find_element(By.CLASS_NAME, wait_class)
-                if elements and not finded_id and not finded_class:
-                    print("Found J_MIDDLEWARE_FRAME_WIDGET")
+                finded_script = browser.find_elements(
+                    By.XPATH, "//script[@type='application/ld+json']"
+                )
+                if elements and not finded_script:
+                    print(
+                        "Found J_MIDDLEWARE_FRAME_WIDGET and script with type application/ld+json"
+                    )
 
                     outer_frame = browser.find_element(
                         By.CSS_SELECTOR, "div.J_MIDDLEWARE_FRAME_WIDGET iframe"
@@ -258,7 +262,6 @@ def process_task_on_tab(browser, task):
 
                     browser.switch_to.default_content()
             except Exception as e:
-                logger.error(f"Error: {str(e)}")
                 print("Error: ", str(e))
 
             time.sleep(1)
@@ -274,19 +277,21 @@ def process_task_on_tab(browser, task):
             # file_html.write(browser.page_source)
             # file_html.close()
 
-            if wait_script != "":
-                WebDriverWait(browser, 10).until(
-                    EC.presence_of_element_located((By.XPATH, wait_script))
+            WebDriverWait(browser, 10).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//script[@type='application/ld+json']")
                 )
+            )
+            # logger.info("[Wait for script tag with type application/ld+json]")
 
-            if wait_id != "":
-                WebDriverWait(browser, 10).until(
-                    EC.presence_of_element_located((By.ID, wait_id))
-                )
-            if wait_class != "":
-                WebDriverWait(browser, 10).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, wait_class))
-                )
+            # if wait_id != "":
+            #     WebDriverWait(browser, 10).until(
+            #         EC.presence_of_element_located((By.ID, wait_id))
+            #     )
+            # if wait_class != "":
+            #     WebDriverWait(browser, 10).until(
+            #         EC.presence_of_element_located((By.CLASS_NAME, wait_class))
+            #     )
 
             logger.info("[Wait Done]")
 
@@ -314,9 +319,7 @@ def process_task_on_tab(browser, task):
 
             html = BeautifulSoup(browser.page_source, "html.parser")
 
-            parser = None
-            if page == "ali":
-                parser = AliExpressParser(html)
+            parser = AliExpressParser(html)
             data = parser.parse(url)
 
             redis_client.set(f"toktak:result-ali:{req_id}", json.dumps(data))
