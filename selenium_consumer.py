@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 import glob
 import json
 import os
+import shutil
 import signal
 import sys
 import tempfile
@@ -38,11 +39,25 @@ stop_event = threading.Event()
 
 
 def clear_profile_lock(profile_dir):
+    """
+    Xóa các tệp khóa trong thư mục profile.
+
+    :param profile_dir: Đường dẫn đến thư mục profile.
+    """
+    if not os.path.exists(profile_dir):
+        print(f"Thư mục {profile_dir} không tồn tại.")
+        return
+
     for lock_file in glob.glob(os.path.join(profile_dir, "*lock*")):
         try:
             os.remove(lock_file)
-        except Exception as e:
+            print(f"Đã xóa tệp khóa: {lock_file}")
+        except PermissionError:
+            print(f"Không đủ quyền để xóa {lock_file}.")
+        except OSError as e:
             print(f"Không thể xóa {lock_file}: {e}")
+        except Exception as e:
+            print(f"Lỗi không mong đợi khi xóa {lock_file}: {e}")
 
 
 def signal_handler(sig, frame):
@@ -100,6 +115,9 @@ def create_driver_instance():
     unique_dir = os.path.join(
         tempfile.gettempdir(), f"chrome_profile_{uuid.uuid4().hex}"
     )
+    if os.path.exists(unique_dir):
+        shutil.rmtree(unique_dir)
+
     os.makedirs(unique_dir, exist_ok=True)
     clear_profile_lock(unique_dir)
     chrome_options.add_argument(f"--user-data-dir={unique_dir}")
