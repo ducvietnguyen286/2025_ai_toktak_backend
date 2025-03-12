@@ -28,10 +28,6 @@ class AliExpressScraper:
             task = {
                 "req_id": req_id,
                 "url": self.url,
-                "wait_id": "",
-                "wait_class": "",
-                "wait_script": "//script[@type='application/ld+json']",
-                "page": "ali",
             }
             redis_client.rpush("toktak:crawl_ali_queue", json.dumps(task))
             timeout = 30  # Giây
