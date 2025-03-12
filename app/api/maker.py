@@ -601,7 +601,7 @@ class APIDeletePostBatch(Resource):
     @parameters(
         type="object",
         properties={
-            "post_ids": {"type": "integer"},
+            "post_ids": {"type": "string"},
         },
         required=["post_ids"],
     )
