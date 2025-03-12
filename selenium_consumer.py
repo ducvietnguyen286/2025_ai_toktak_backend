@@ -1,5 +1,8 @@
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
+import signal
+import sys
 import time
 from dotenv import load_dotenv
 
@@ -27,6 +30,17 @@ from werkzeug.exceptions import default_exceptions
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db, db_mongo
 from app.config import configs as config
+
+stop_event = threading.Event()
+
+
+def signal_handler(sig, frame):
+    print("Received shutdown signal. Stopping worker...")
+    stop_event.set()
+
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 
 def __config_logging(app):
@@ -57,11 +71,8 @@ def create_app():
     return app
 
 
-def start_selenium_consumer():
-    create_app()
-
+def create_driver_instance():
     config_name = os.environ.get("FLASK_CONFIG") or "develop"
-
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--ignore-certificate-errors")
@@ -89,165 +100,191 @@ def start_selenium_consumer():
         "User-Agent": user_agent,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     }
-
     for header, value in headers.items():
-        header = header.lower()
-        chrome_options.add_argument(f"--{header}={value}")
+        chrome_options.add_argument(f"--{header.lower()}={value}")
 
     driver_version = None
-
     if config_name == "production":
         chrome_options.binary_location = "/usr/bin/google-chrome"
         driver_version = "123.0.6312.58"
 
-    browser = webdriver.Chrome(
+    driver = webdriver.Chrome(
         service=Service(ChromeDriverManager(driver_version=driver_version).install()),
         options=chrome_options,
     )
+    return driver
 
+
+def worker_instance():
+    """
+    Mỗi worker có một instance của trình duyệt.
+    Khi có task, worker mở một tab mới, xử lý xong đóng tab đó và quay về tab cơ sở.
+    """
+    browser = create_driver_instance()
+    # Mở trang cơ sở để làm tab gốc (base tab)
     browser.get("https://ko.aliexpress.com/")
+    base_tab = browser.current_window_handle
 
-    def process_url(task):
+    while not stop_event.is_set():
         try:
-            logger.info("[Open Tab]")
-            try:
-                COOKIE_FOLDER = os.path.join(
-                    os.getcwd(), "app/scraper/pages/aliexpress"
-                )
-
-                cookies = json.load(open(os.path.join(COOKIE_FOLDER, "cookies.json")))
-                for cookie in cookies:
-                    browser.add_cookie(cookie)
-
-                url = task["url"]
-                wait_id = task["wait_id"]
-                wait_class = task["wait_class"]
-                req_id = task["req_id"]
-                page = task["page"]
-
-                browser.execute_script("window.open('');")
-                browser.switch_to.window(browser.window_handles[-1])
-
-                time.sleep(1)
-
-                browser.get(url)
-
-                try:
-                    elements = browser.find_elements(
-                        By.CSS_SELECTOR, "div.J_MIDDLEWARE_FRAME_WIDGET"
-                    )
-                    finded_id = browser.find_element(By.ID, wait_id)
-                    finded_class = browser.find_element(By.CLASS_NAME, wait_class)
-                    if elements and not finded_id and not finded_class:
-                        print("Found J_MIDDLEWARE_FRAME_WIDGET")
-
-                        outer_frame = browser.find_element(
-                            By.CSS_SELECTOR, "div.J_MIDDLEWARE_FRAME_WIDGET iframe"
-                        )
-                        browser.switch_to.frame(outer_frame)
-
-                        print("Switch To Outer Frame")
-
-                        middle_frame = browser.find_element(By.XPATH, "//iframe[1]")
-                        browser.switch_to.frame(middle_frame)
-
-                        print("Switch To Middle Frame")
-
-                        inner_frame = browser.find_element(By.XPATH, "//iframe[1]")
-                        browser.switch_to.frame(inner_frame)
-
-                        print("Switch To Captcha Frame")
-
-                        # file_html = open("demo.html", "w", encoding="utf-8")
-                        # file_html.write(browser.page_source)
-                        # file_html.close()
-
-                        checkbox = WebDriverWait(browser, 10).until(
-                            EC.element_to_be_clickable((By.ID, "recaptcha-anchor"))
-                        )
-                        checkbox.click()
-
-                        browser.switch_to.default_content()
-                except Exception as e:
-                    print("Error: ", str(e))
-
-                # file_html = open("demo1.html", "w", encoding="utf-8")
-                # file_html.write(browser.page_source)
-                # file_html.close()
-
-                time.sleep(1)
-
-                browser.execute_script("window.scrollBy(0, 2000);")
-
-                if wait_id != "":
-                    WebDriverWait(browser, 10).until(
-                        EC.presence_of_element_located((By.ID, wait_id))
-                    )
-                if wait_class != "":
-                    WebDriverWait(browser, 10).until(
-                        EC.presence_of_element_located((By.CLASS_NAME, wait_class))
-                    )
-
-                # file_html = open("demo2.html", "w", encoding="utf-8")
-                # file_html.write(browser.page_source)
-                # file_html.close()
-
-                browser_cookie = browser.get_cookies()
-                formatted_cookies = []
-                for cookie in browser_cookie:
-                    formatted_cookie = {
-                        "name": cookie.get("name"),
-                        "value": cookie.get("value"),
-                        "domain": cookie.get("domain"),
-                        "path": cookie.get("path", "/"),
-                        "expires": cookie.get("expiry", -1),
-                        "httpOnly": cookie.get("httpOnly", False),
-                        "secure": cookie.get("secure", False),
-                    }
-                    formatted_cookies.append(formatted_cookie)
-                with open(
-                    os.path.join(COOKIE_FOLDER, "cookies.json"), "w", encoding="utf-8"
-                ) as file:
-                    json.dump(formatted_cookies, file, ensure_ascii=False, indent=4)
-
-                html = BeautifulSoup(browser.page_source, "html.parser")
-
-                parser = None
-                if page == "ali":
-                    parser = AliExpressParser(html)
-                data = parser.parse(url)
-
-                redis_client.set(f"toktak:result-ali:{req_id}", json.dumps(data))
-            finally:
-                logger.info("[Close Tab]")
-                browser.close()
-                browser.switch_to.window(browser.window_handles[0])
-        except Exception as e:
-            logger.error(f"Error: {str(e)}")
-            print("Error: ", e)
-            return {}
-
-    def worker():
-        """
-        Worker liên tục chờ các task từ Redis queue 'toktak:crawl_ali_queue'
-        và xử lý từng task khi có.
-        """
-        print("Start worker NOW...")
-        while True:
             task_item = redis_client.blpop("toktak:crawl_ali_queue", timeout=10)
             if task_item:
                 _, task_json = task_item
                 task = json.loads(task_json)
-                process_url(task)
+                # Mở tab mới để xử lý task
+                browser.execute_script("window.open('about:blank', '_blank');")
+                new_tab_handle = browser.window_handles[-1]
+                browser.switch_to.window(new_tab_handle)
+                process_task_on_tab(browser, task)
+                # Đóng tab sau khi xử lý xong
+                browser.close()
+                # Quay lại tab cơ sở
+                browser.switch_to.window(base_tab)
             else:
                 time.sleep(1)
+        except Exception as e:
+            logger.error(f"Error in worker_instance loop: {str(e)}")
+            print("Error in worker_instance loop:", e)
+    browser.quit()
 
+
+def process_task_on_tab(browser, task):
     try:
-        worker_thread = threading.Thread(target=worker)
-        worker_thread.start()
+        logger.info("[Open Tab]")
+        try:
+            COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
+            try:
+                cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
+                if os.path.exists(cookie_file):
+                    cookies = json.load(open(cookie_file, "r", encoding="utf-8"))
+                    for cookie in cookies:
+                        browser.add_cookie(cookie)
+            except Exception as e:
+                logger.info("Không load được cookie hoặc file không tồn tại: " + str(e))
+
+            url = task["url"]
+            wait_id = task["wait_id"]
+            wait_class = task["wait_class"]
+            req_id = task["req_id"]
+            page = task["page"]
+
+            time.sleep(1)
+
+            browser.get(url)
+
+            try:
+                elements = browser.find_elements(
+                    By.CSS_SELECTOR, "div.J_MIDDLEWARE_FRAME_WIDGET"
+                )
+                finded_id = browser.find_element(By.ID, wait_id)
+                finded_class = browser.find_element(By.CLASS_NAME, wait_class)
+                if elements and not finded_id and not finded_class:
+                    print("Found J_MIDDLEWARE_FRAME_WIDGET")
+
+                    outer_frame = browser.find_element(
+                        By.CSS_SELECTOR, "div.J_MIDDLEWARE_FRAME_WIDGET iframe"
+                    )
+                    browser.switch_to.frame(outer_frame)
+
+                    print("Switch To Outer Frame")
+
+                    middle_frame = browser.find_element(By.XPATH, "//iframe[1]")
+                    browser.switch_to.frame(middle_frame)
+
+                    print("Switch To Middle Frame")
+
+                    inner_frame = browser.find_element(By.XPATH, "//iframe[1]")
+                    browser.switch_to.frame(inner_frame)
+
+                    print("Switch To Captcha Frame")
+
+                    # file_html = open("demo.html", "w", encoding="utf-8")
+                    # file_html.write(browser.page_source)
+                    # file_html.close()
+
+                    checkbox = WebDriverWait(browser, 10).until(
+                        EC.element_to_be_clickable((By.ID, "recaptcha-anchor"))
+                    )
+                    checkbox.click()
+
+                    browser.switch_to.default_content()
+            except Exception as e:
+                print("Error: ", str(e))
+
+            # file_html = open("demo1.html", "w", encoding="utf-8")
+            # file_html.write(browser.page_source)
+            # file_html.close()
+
+            time.sleep(1)
+
+            browser.execute_script("window.scrollBy(0, 700);")
+
+            time.sleep(1)
+
+            browser.execute_script("window.scrollBy(700, 1600);")
+
+            if wait_id != "":
+                WebDriverWait(browser, 10).until(
+                    EC.presence_of_element_located((By.ID, wait_id))
+                )
+            if wait_class != "":
+                WebDriverWait(browser, 10).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, wait_class))
+                )
+
+            # file_html = open("demo2.html", "w", encoding="utf-8")
+            # file_html.write(browser.page_source)
+            # file_html.close()
+
+            browser_cookie = browser.get_cookies()
+            formatted_cookies = []
+            for cookie in browser_cookie:
+                formatted_cookie = {
+                    "name": cookie.get("name"),
+                    "value": cookie.get("value"),
+                    "domain": cookie.get("domain"),
+                    "path": cookie.get("path", "/"),
+                    "expires": cookie.get("expiry", -1),
+                    "httpOnly": cookie.get("httpOnly", False),
+                    "secure": cookie.get("secure", False),
+                }
+                formatted_cookies.append(formatted_cookie)
+            with open(
+                os.path.join(COOKIE_FOLDER, "cookies.json"), "w", encoding="utf-8"
+            ) as file:
+                json.dump(formatted_cookies, file, ensure_ascii=False, indent=4)
+
+            html = BeautifulSoup(browser.page_source, "html.parser")
+
+            parser = None
+            if page == "ali":
+                parser = AliExpressParser(html)
+            data = parser.parse(url)
+
+            redis_client.set(f"toktak:result-ali:{req_id}", json.dumps(data))
+        finally:
+            logger.info("[Close Tab]")
+            browser.close()
     except Exception as e:
         logger.error(f"Error: {str(e)}")
+        print("Error: ", e)
+        return {}
+
+
+def start_selenium_consumer():
+    create_app()
+    workers = []
+    for _ in range(3):
+        t = threading.Thread(target=worker_instance)
+        t.start()
+        workers.append(t)
+    for t in workers:
+        t.join()
 
 
 if __name__ == "__main__":
-    start_selenium_consumer()
+    try:
+        start_selenium_consumer()
+    except Exception as e:
+        logger.error(f"Main error: {str(e)}")
+        sys.exit(1)
