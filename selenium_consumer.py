@@ -5,6 +5,7 @@ import signal
 import sys
 import tempfile
 import time
+import uuid
 from dotenv import load_dotenv
 
 load_dotenv(override=False)
@@ -85,8 +86,13 @@ def create_driver_instance():
     )
     chrome_options.add_argument("--enable-unsafe-swiftshader")
     chrome_options.add_argument("--window-size=1920x1080")
-    user_data_dir = tempfile.mkdtemp()
-    chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
+
+    # Tạo user-data-dir độc nhất cho mỗi instance
+    unique_dir = os.path.join(
+        tempfile.gettempdir(), f"chrome_profile_{uuid.uuid4().hex}"
+    )
+    os.makedirs(unique_dir, exist_ok=True)
+    chrome_options.add_argument(f"--user-data-dir={unique_dir}")
 
     no_gui = os.environ.get("SELENIUM_NO_GUI", "false") == "true"
     proxy = os.environ.get("SELENIUM_PROXY", None)
@@ -108,7 +114,7 @@ def create_driver_instance():
 
     driver_version = None
     if config_name == "production":
-        chrome_options.binary_location = "/usr/bin/google-chrome"
+        chrome_options.binary_location = "/usr/bin/google-chrome-stable"
         driver_version = "134.0.6998.88"
 
     driver = webdriver.Chrome(
