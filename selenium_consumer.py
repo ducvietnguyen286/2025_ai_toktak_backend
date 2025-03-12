@@ -112,15 +112,18 @@ def create_driver_instance():
     chrome_options.add_argument("--window-size=1920x1080")
 
     # Tạo user-data-dir độc nhất cho mỗi instance
-    # unique_dir = os.path.join(
-    #     tempfile.gettempdir(), f"chrome_profile_{uuid.uuid4().hex}"
-    # )
-    # if os.path.exists(unique_dir):
-    #     shutil.rmtree(unique_dir)
+    unique_dir = os.path.join(
+        tempfile.gettempdir(),
+        f"chrome_profile_{uuid.uuid4().hex}_{int(time.time() * 1000)}",
+    )
+    print(f"Unique dir: {unique_dir}")
 
-    # os.makedirs(unique_dir, exist_ok=True)
-    # clear_profile_lock(unique_dir)
-    # chrome_options.add_argument(f"--user-data-dir={unique_dir}")
+    if os.path.exists(unique_dir):
+        shutil.rmtree(unique_dir)
+
+    os.makedirs(unique_dir, exist_ok=True)
+    clear_profile_lock(unique_dir)
+    chrome_options.add_argument(f"--user-data-dir={unique_dir}")
 
     # Thêm một số option bổ sung để tránh lỗi
     chrome_options.add_argument("--no-first-run")
