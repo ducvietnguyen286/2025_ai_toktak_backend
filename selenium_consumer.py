@@ -273,9 +273,9 @@ def process_task_on_tab(browser, task):
             browser.execute_script("window.scrollBy(700, 1600);")
             logger.info("[Scroll Down 2]")
 
-            # file_html = open("demo1.html", "w", encoding="utf-8")
-            # file_html.write(browser.page_source)
-            # file_html.close()
+            file_html = open("demo1.html", "w", encoding="utf-8")
+            file_html.write(browser.page_source)
+            file_html.close()
 
             WebDriverWait(browser, 10).until(
                 EC.presence_of_element_located(
