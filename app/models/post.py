@@ -27,3 +27,14 @@ class Post(db.Model, BaseModel):
     to_json_parse = "images"
     to_json_filter = "captions"
     
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "post_id": self.post_id,
+            "ai_type": self.ai_type,
+            "request": self.request,
+            "response": self.response,
+            "status": self.status,
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+        }

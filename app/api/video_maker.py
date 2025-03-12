@@ -3,6 +3,7 @@ import json
 from flask_restx import Namespace, Resource
 from flask import request
 from app.services.video_service import VideoService
+from app.services.shotstack_services import ShotStackService
 from app.services.post import PostService
 from app.services.batch import BatchService
 import random
@@ -50,7 +51,8 @@ class CreateVideo(Resource):
                 return {"message": "Each URL must be a string"}, 400
         batch_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
         voice_google = random.randint(1, 4)  # Chọn số nguyên từ 1 đến 4
-        result = VideoService.create_video_from_images_v2(
+        
+        result = ShotStackService.create_video_from_images_v2(
             batch_id , voice_google, product_name, images_url, images_slider_url, captions
         )
 
@@ -64,6 +66,7 @@ class CreateVideo(Resource):
                 render_id=render_id,
                 user_id=0,
                 product_name=product_name,
+                origin_caption=product_name,
                 images_url=json.dumps(images_url),
                 description="",
             )
@@ -72,6 +75,7 @@ class CreateVideo(Resource):
             message = result["message"]
 
         return {
+            "batch_id": batch_id,
             "status": status,
             "message": message,
             "render_id": render_id,

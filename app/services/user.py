@@ -34,7 +34,7 @@ class UserService:
         user_link = (
             UserLink.query.where(UserLink.user_id == user_id)
             .where(UserLink.link_id == link_id)
-            .where(UserLink.status == 1)
+            # .where(UserLink.status == 1)
             .first()
         )
         return user_link
