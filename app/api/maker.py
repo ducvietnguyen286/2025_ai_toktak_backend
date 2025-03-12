@@ -514,9 +514,18 @@ class APIGetStatusUploadWithBatch(Resource):
                 post_id
             )
             post_detail["social_post_detail"] = social_post_detail
-            PostService.update_post(
-                post_id, social_sns_description=json.dumps(social_post_detail)
-            )
+
+            status_check_sns = 0
+            for social_post_each in social_post_detail:
+                status = social_post_each["status"]
+                if status == "PUBLISHED" or status == "UPLOADING":
+                    status_check_sns = 1
+
+            update_data = {"social_sns_description": json.dumps(social_post_detail)}
+            if status_check_sns == 1:
+                update_data["status_check_sns"] = 1
+
+            PostService.update_post(post_id, **update_data)
 
         batch_res = batch._to_json()
         batch_res["posts"] = posts

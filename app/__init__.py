@@ -11,6 +11,7 @@ from .extensions import redis_client, db, bcrypt, jwt, db_mongo
 
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
+
 def create_app(config_app):
     app = Flask(__name__)
     # CORS(app)
@@ -49,6 +50,15 @@ def __config_error_handlers(app):
     for exp in default_exceptions:
         app.register_error_handler(exp, api_error_handler)
     app.register_error_handler(Exception, api_error_handler)
+
+    @app.errorhandler(NoAuthorizationError)
+    def handle_auth_error(e):
+        return (
+            jsonify(
+                {"status": 401, "sub_status": 44, "msg": "Missing Authorization Header"}
+            ),
+            401,
+        )
 
     @jwt.expired_token_loader
     def expired_token_callback(callback):
