@@ -19,6 +19,7 @@ class Post(db.Model, BaseModel):
     video_url = db.Column(db.String(255), nullable=False, default="")
     type = db.Column(db.String(10), default="video", index=True)
     status = db.Column(db.Integer, default=1)
+    status_sns = db.Column(db.Integer, default=1)
     process_number = db.Column(db.Integer, default=0)
     render_id = db.Column(db.String(500), nullable=False, default="")
     
@@ -35,6 +36,7 @@ class Post(db.Model, BaseModel):
             "request": self.request,
             "response": self.response,
             "status": self.status,
+            "status_sns": self.status_sns,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
