@@ -118,22 +118,22 @@ def create_driver_instance():
     chrome_options.add_argument("--window-size=1920x1080")
 
     # Tạo user-data-dir độc nhất cho mỗi instance
-    # unique_dir = os.path.join(
-    #     tempfile.gettempdir(),
-    #     f"chrome_profile_{uuid.uuid4().hex}",
-    # )
-    # print(f"Unique dir: {unique_dir}")
+    unique_dir = os.path.join(
+        tempfile.gettempdir(),
+        f"chrome_profile_{uuid.uuid4().hex}",
+    )
+    print(f"Unique dir: {unique_dir}")
 
-    # if os.path.exists(unique_dir):
-    #     shutil.rmtree(unique_dir)
+    if os.path.exists(unique_dir):
+        shutil.rmtree(unique_dir)
 
-    # os.makedirs(unique_dir, exist_ok=True)
-    # clear_profile_lock(unique_dir)
-    # time.sleep(1)
-    # chrome_options.add_argument(f"--user-data-dir={unique_dir}")
+    os.makedirs(unique_dir, exist_ok=True)
+    clear_profile_lock(unique_dir)
+    time.sleep(1)
+    chrome_options.add_argument(f"--user-data-dir={unique_dir}")
 
     # Thêm một số option bổ sung để tránh lỗi
-    # chrome_options.add_argument("--no-first-run")
+    chrome_options.add_argument("--no-first-run")
     chrome_options.add_argument("--no-default-browser-check")
     chrome_options.add_argument("--disable-extensions")
 
@@ -141,7 +141,7 @@ def create_driver_instance():
     proxy = os.environ.get("SELENIUM_PROXY", None)
 
     if no_gui or config_name == "production":
-        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--disable-gpu")
 
     if proxy:
@@ -155,7 +155,7 @@ def create_driver_instance():
     for header, value in headers.items():
         chrome_options.add_argument(f"--{header.lower()}={value}")
 
-    driver_version = None
+    # driver_version = None
     if config_name == "production":
         chrome_options.binary_location = "/usr/bin/google-chrome"
         # driver_version = "134.0.6998.88"
