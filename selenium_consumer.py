@@ -106,7 +106,7 @@ def create_driver_instance():
     driver_version = None
     if config_name == "production":
         chrome_options.binary_location = "/usr/bin/google-chrome"
-        driver_version = "123.0.6312.58"
+        driver_version = "134.0.6998.88"
 
     driver = webdriver.Chrome(
         service=Service(ChromeDriverManager(driver_version=driver_version).install()),
