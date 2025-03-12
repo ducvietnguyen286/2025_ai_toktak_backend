@@ -39,6 +39,8 @@ class Config(object):
     RABBITMQ_PASSWORD = os.environ.get("RABBITMQ_PASSWORD") or "guest"
     RABBITMQ_QUEUE = os.environ.get("RABBITMQ_QUEUE") or "hello"
 
+    PROPAGATE_EXCEPTIONS = os.environ.get("FLASK_CONFIG") == "production"
+
 
 class TestingConfig(Config):
     TESTING = True
