@@ -9,6 +9,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from .extensions import redis_client, db, bcrypt, jwt, db_mongo
 
+from flask_jwt_extended.exceptions import NoAuthorizationError
 
 def create_app(config_app):
     app = Flask(__name__)
