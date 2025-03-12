@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+import glob
 import json
 import os
 import signal
@@ -34,6 +35,14 @@ from app.extensions import redis_client, db, db_mongo
 from app.config import configs as config
 
 stop_event = threading.Event()
+
+
+def clear_profile_lock(profile_dir):
+    for lock_file in glob.glob(os.path.join(profile_dir, "*lock*")):
+        try:
+            os.remove(lock_file)
+        except Exception as e:
+            print(f"Không thể xóa {lock_file}: {e}")
 
 
 def signal_handler(sig, frame):
@@ -92,6 +101,7 @@ def create_driver_instance():
         tempfile.gettempdir(), f"chrome_profile_{uuid.uuid4().hex}"
     )
     os.makedirs(unique_dir, exist_ok=True)
+    clear_profile_lock(unique_dir)
     chrome_options.add_argument(f"--user-data-dir={unique_dir}")
 
     # Thêm một số option bổ sung để tránh lỗi
