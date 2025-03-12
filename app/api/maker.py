@@ -523,7 +523,7 @@ class APIGetStatusUploadWithBatch(Resource):
 
             update_data = {"social_sns_description": json.dumps(social_post_detail)}
             if status_check_sns == 1:
-                update_data["status_check_sns"] = 1
+                update_data["status_sns"] = 1
 
             PostService.update_post(post_id, **update_data)
 
