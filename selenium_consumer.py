@@ -3,6 +3,7 @@ import json
 import os
 import signal
 import sys
+import tempfile
 import time
 from dotenv import load_dotenv
 
@@ -84,6 +85,8 @@ def create_driver_instance():
     )
     chrome_options.add_argument("--enable-unsafe-swiftshader")
     chrome_options.add_argument("--window-size=1920x1080")
+    user_data_dir = tempfile.mkdtemp()
+    chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
 
     no_gui = os.environ.get("SELENIUM_NO_GUI", "false") == "true"
     proxy = os.environ.get("SELENIUM_PROXY", None)
