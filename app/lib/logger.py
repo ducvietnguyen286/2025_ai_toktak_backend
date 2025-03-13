@@ -53,6 +53,42 @@ def log_facebook_message(message):
     custom_handler.close()
 
 
+def log_instagram_message(message):
+    now_date = datetime.datetime.now()
+    new_filename = now_date.strftime("%d-%m-%Y")
+    custom_handler = handlers.RotatingFileHandler(
+        "logs/instagram-{0}.log".format(new_filename), backupCount=14, encoding="utf-8"
+    )
+    custom_handler.setLevel(logging.INFO)
+    custom_handler.setFormatter(formatter)
+
+    custom_logger = logging.getLogger("InstagramLogger")
+    custom_logger.setLevel(logging.INFO)
+    custom_logger.addHandler(custom_handler)
+
+    custom_logger.info(message)
+    custom_logger.removeHandler(custom_handler)
+    custom_handler.close()
+
+
+def log_thread_message(message):
+    now_date = datetime.datetime.now()
+    new_filename = now_date.strftime("%d-%m-%Y")
+    custom_handler = handlers.RotatingFileHandler(
+        "logs/thread-{0}.log".format(new_filename), backupCount=14, encoding="utf-8"
+    )
+    custom_handler.setLevel(logging.INFO)
+    custom_handler.setFormatter(formatter)
+
+    custom_logger = logging.getLogger("ThreadLogger")
+    custom_logger.setLevel(logging.INFO)
+    custom_logger.addHandler(custom_handler)
+
+    custom_logger.info(message)
+    custom_logger.removeHandler(custom_handler)
+    custom_handler.close()
+
+
 def log_twitter_message(message):
     now_date = datetime.datetime.now()
     new_filename = now_date.strftime("%d-%m-%Y")

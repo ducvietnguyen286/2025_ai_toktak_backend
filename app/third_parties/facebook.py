@@ -216,7 +216,8 @@ class FacebookTokenService:
 
 class FacebookService(BaseService):
 
-    def __init__(self):
+    def __init__(self, sync_id=""):
+        self.sync_id = sync_id
         self.pages = []
         self.photo_ids = []
         self.video_id = ""

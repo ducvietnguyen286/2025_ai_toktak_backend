@@ -38,6 +38,16 @@ def send_youtube_message(message):
     send_message(RABBITMQ_QUEUE_YOUTUBE, message)
 
 
+def send_thread_message(message):
+    RABBITMQ_QUEUE_THREAD = os.environ.get("RABBITMQ_QUEUE_THREAD", "hello")
+    send_message(RABBITMQ_QUEUE_THREAD, message)
+
+
+def send_instagram_message(message):
+    RABBITMQ_QUEUE_INSTAGRAM = os.environ.get("RABBITMQ_QUEUE_INSTAGRAM", "hello")
+    send_message(RABBITMQ_QUEUE_INSTAGRAM, message)
+
+
 def send_message(queue, message):
     try:
         connection = pika.BlockingConnection(connection_params)

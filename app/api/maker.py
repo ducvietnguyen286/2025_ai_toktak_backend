@@ -494,6 +494,33 @@ class APIBatchs(Resource):
         }, 200
 
 
+@ns.route("/get-status-upload-by-sync-id/<string:id>")
+class APIGetStatusUploadBySyncId(Resource):
+
+    def get(self, id):
+        try:
+            social_sync = SocialPostService.find_social_sync(id)
+            if not social_sync:
+                return Response(
+                    message="Sync không tồn tại",
+                    status=404,
+                ).to_dict()
+            sync_status = SocialPostService.get_status_social_sycns__by_id(
+                social_sync.id
+            )
+            return Response(
+                data=sync_status,
+                message="Lấy sync thành công",
+            ).to_dict()
+        except Exception as e:
+            logger.error(f"Exception: get status upload by sync id fail  :  {str(e)}")
+            return Response(
+                message="Lấy trạng thái upload theo sync id thất bại",
+                status=200,
+                code=201,
+            ).to_dict()
+
+
 @ns.route("/get-status-upload-with-batch-id/<int:id>")
 class APIGetStatusUploadWithBatch(Resource):
 
@@ -524,7 +551,7 @@ class APIGetStatusUploadWithBatch(Resource):
             update_data = {"social_sns_description": json.dumps(social_post_detail)}
             if status_check_sns == 1:
                 update_data["status_sns"] = 1
-                
+
             logger.info(update_data)
 
             PostService.update_post(post_id, **update_data)

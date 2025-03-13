@@ -59,6 +59,7 @@ def action_send_post_to_link(message):
         post_id = message.get("post_id")
         user_id = message.get("user_id")
         page_id = message.get("page_id")
+        sync_id = message.get("sync_id")
         social_post_id = message.get("social_post_id")
         is_all = message.get("is_all")
 
@@ -73,7 +74,7 @@ def action_send_post_to_link(message):
 
         if link.social_type == "SOCIAL":
             if link.type == "FACEBOOK":
-                FacebookService().send_post(
+                FacebookService(sync_id=sync_id).send_post(
                     post, link, user_id, social_post_id, page_id, is_all
                 )
         return True

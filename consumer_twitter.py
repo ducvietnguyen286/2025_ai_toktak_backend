@@ -59,6 +59,7 @@ def action_send_post_to_link(message):
         post_id = message.get("post_id")
         user_id = message.get("user_id")
         social_post_id = message.get("social_post_id")
+        sync_id = message.get("sync_id")
 
         link = LinkService.find_link(link_id)
         post = PostService.find_post(post_id)
@@ -71,7 +72,9 @@ def action_send_post_to_link(message):
 
         if link.social_type == "SOCIAL":
             if link.type == "X":
-                TwitterService().send_post(post, link, user_id, social_post_id)
+                TwitterService(sync_id=sync_id).send_post(
+                    post, link, user_id, social_post_id
+                )
         return True
     except Exception as e:
         log_twitter_message(f"ERROR: Error send post to link: {str(e)}")

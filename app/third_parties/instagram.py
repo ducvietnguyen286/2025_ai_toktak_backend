@@ -1,5 +1,9 @@
-class InstagramService:
-    def __init__(self):
+from app.third_parties.base_service import BaseService
+
+
+class InstagramService(BaseService):
+    def __init__(self, sync_id=""):
+        self.sync_id = sync_id
         self.user_link = None
         self.user = None
         self.link = None
