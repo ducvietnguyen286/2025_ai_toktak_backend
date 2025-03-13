@@ -740,26 +740,26 @@ def get_korean_voice(index):
         {
             "index": 1,
             "type": "Standard",
-            "name": "ko-KR-Standard-A",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 2,
-            "type": "Standard",
-            "name": "ko-KR-Standard-B",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 3,
-            "type": "Standard",
             "name": "ko-KR-Standard-C",
             "ssmlGender": "MALE",
         },
         {
-            "index": 4,
+            "index": 2,
             "type": "Standard",
             "name": "ko-KR-Standard-D",
             "ssmlGender": "MALE",
+        },
+        {
+            "index": 3,
+            "type": "Standard",
+            "name": "ko-KR-Standard-A",
+            "ssmlGender": "FEMALE",
+        },
+        {
+            "index": 4,
+            "type": "Standard",
+            "name": "ko-KR-Standard-B",
+            "ssmlGender": "FEMALE",
         },
         {
             "index": 5,
