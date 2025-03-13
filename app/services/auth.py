@@ -146,3 +146,9 @@ class AuthService:
             # Xử lý các lỗi khác (ví dụ: token không hợp lệ)
             logger.exception(f"get_current_identity : {ex}")
             return None
+
+    @staticmethod
+    def update(id, *args, **kwargs):
+        user = User.query.get(id)
+        user.update(**kwargs)
+        return user

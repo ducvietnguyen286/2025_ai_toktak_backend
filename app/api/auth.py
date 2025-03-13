@@ -3,6 +3,10 @@ from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
 from app.decorators import parameters
 from app.lib.response import Response
+from app.services.user import UserService
+
+from app.lib.logger import logger
+import json
 
 from app.services.auth import AuthService
 
@@ -169,3 +173,129 @@ class APILoginByInput(Resource):
             message="Đăng nhập thành công",
         ).to_dict()
 
+
+@ns.route("/update_user")
+class APIMeUpdate(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "name": {"type": "string"},
+            "phone": {"type": "string"},
+            "contact": {"type": "string"},
+            "company_name": {"type": "string"},
+        },
+        required=[],
+    )
+    def post(self, args):
+        name = args.get("name", "")
+        phone = args.get("phone", "")
+        contact = args.get("contact", "")
+        company_name = args.get("company_name", "")
+        user_login = AuthService.get_current_identity()
+        user_login = AuthService.update(
+            user_login.id,
+            name=name,
+            phone=phone,
+            contact=contact,
+            company_name=company_name,
+        )
+
+        return Response(
+            data=user_login._to_json(),
+            message="Update thông tin thành công",
+        ).to_dict()
+
+
+@ns.route("/user_profile")
+class APIUserProfile(Resource):
+
+    @jwt_required()
+    def get(self):
+        user = AuthService.get_current_identity()
+        level = user.level
+        total_link = UserService.get_user_links(user.id)
+        if level != len(total_link):
+            level = len(total_link)
+            level_info = get_level_images(level)
+            user = AuthService.update(
+                user.id,
+                level=level,
+                level_info=json.dumps(level_info),
+            )
+
+        return Response(
+            data=user._to_json(),
+            message="Lấy thông tin người dùng thành công",
+        ).to_dict()
+
+
+def get_level_images(level):
+    """
+    Trả về danh sách ảnh theo cấp độ với một ảnh ngẫu nhiên được đánh dấu active.
+    """
+    base_url = "https://admin.lang.canvasee.com/img/level/"
+    images = []
+
+    if level == 0:
+        images = [
+            {"url": f"{base_url}level_0.png", "active": ""},
+            {"url": f"{base_url}level_0_next.png", "active": ""},
+        ]
+    elif level == 1:
+        images = [
+            {"url": f"{base_url}level_1.png", "active": ""},
+            {"url": f"{base_url}level_1_next.png", "active": "active"},
+        ]
+    elif level == 2:
+        images = [
+            {"url": f"{base_url}level_1.png", "active": ""},
+            {"url": f"{base_url}level_2.png", "active": ""},
+            {"url": f"{base_url}level_2_next.png", "active": "active"},
+        ]
+    elif level == 3:
+        images = [
+            {"url": f"{base_url}level_1.png", "active": ""},
+            {"url": f"{base_url}level_2.png", "active": ""},
+            {"url": f"{base_url}level_3.png", "active": ""},
+            {"url": f"{base_url}level_3_next.png", "active": "active"},
+        ]
+    elif level == 4:
+        images = [
+            {"url": f"{base_url}level_1.png", "active": ""},
+            {"url": f"{base_url}level_2.png", "active": ""},
+            {"url": f"{base_url}level_3.png", "active": ""},
+            {"url": f"{base_url}level_4.png", "active": ""},
+            {"url": f"{base_url}level_4_next.png", "active": "active"},
+        ]
+    elif level == 5:
+        images = [
+            {"url": f"{base_url}level_1.png", "active": ""},
+            {"url": f"{base_url}level_2.png", "active": ""},
+            {"url": f"{base_url}level_3.png", "active": ""},
+            {"url": f"{base_url}level_4.png", "active": ""},
+            {"url": f"{base_url}level_5.png", "active": ""},
+            {"url": f"{base_url}level_5_next.png", "active": "active"},
+        ]
+    elif level == 6:
+        images = [
+            {"url": f"{base_url}level_1.png", "active": ""},
+            {"url": f"{base_url}level_2.png", "active": ""},
+            {"url": f"{base_url}level_3.png", "active": ""},
+            {"url": f"{base_url}level_4.png", "active": ""},
+            {"url": f"{base_url}level_5.png", "active": ""},
+            {"url": f"{base_url}level_6.png", "active": ""},
+            {"url": f"{base_url}level_6_next.png", "active": "active"},
+        ]
+    elif level == 7:
+        images = [
+            {"url": f"{base_url}level_1.png", "active": ""},
+            {"url": f"{base_url}level_2.png", "active": ""},
+            {"url": f"{base_url}level_3.png", "active": ""},
+            {"url": f"{base_url}level_4.png", "active": ""},
+            {"url": f"{base_url}level_5.png", "active": ""},
+            {"url": f"{base_url}level_6.png", "active": ""},
+            {"url": f"{base_url}level_7.png", "active": "active"},
+        ]
+
+    return images
