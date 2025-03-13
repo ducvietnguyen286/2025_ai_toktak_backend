@@ -27,15 +27,16 @@ def process_redis_message(message):
 
         sync_id = data.get("sync_id", "")
         batch_id = data.get("batch_id")
+        user_id = data.get("user_id")
         value = data.get("value")
         link_id = data.get("link_id")
         post_id = data.get("post_id")
         status = data.get("status")
 
-        room = sync_id if sync_id != "" else batch_id
+        room = sync_id if sync_id != "" else batch_id + "_" + user_id
 
         if sync_id == "":
-            redis_key = f"toktak:progress:{batch_id}:{post_id}"
+            redis_key = f"toktak:progress:{room}:{post_id}"
 
             progress_json = redis_client.get(redis_key)
             progress = json.loads(progress_json) if progress_json else {}
