@@ -228,6 +228,9 @@ class YoutubeService(BaseService):
             try:
                 video_content = requests.get(video_url, timeout=30).content
             except Exception as e:
+                log_youtube_message(
+                    f"----------------------- {self.key_log} TIMEOUT GET VIDEO ---------------------------"
+                )
                 try:
                     video_content = requests.get(video_url, timeout=30).content
                 except Exception as e:
