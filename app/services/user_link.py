@@ -45,8 +45,8 @@ class UserLinkService:
         user_link.name = info.get("name")
         user_link.avatar = info.get("avatar")
         user_link.url = info.get("url")
-        user_link.save()
         user_link.status = 1
+        user_link.save()
         return user_link
 
     @staticmethod
