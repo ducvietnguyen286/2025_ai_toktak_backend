@@ -215,6 +215,10 @@ class YoutubeService(BaseService):
                 )
                 return False
 
+            log_youtube_message(
+                f"----------------------- {self.key_log} START CREATE VIDEO TO YOUTUBE ---------------------------"
+            )
+
             post_title = post.title
             post_description = post.description + " " + post.hashtag + " #shorts"
             tags = post.hashtag
@@ -224,6 +228,9 @@ class YoutubeService(BaseService):
             try:
                 video_content = requests.get(video_url, timeout=30).content
             except Exception as e:
+                log_youtube_message(
+                    f"----------------------- {self.key_log} TIMEOUT GET VIDEO ---------------------------"
+                )
                 try:
                     video_content = requests.get(video_url, timeout=30).content
                 except Exception as e:
@@ -235,6 +242,8 @@ class YoutubeService(BaseService):
 
             video_io = BytesIO(video_content)
             video_io.seek(0)
+
+            self.save_uploading(10)
 
             body = {
                 "snippet": {
@@ -266,7 +275,7 @@ class YoutubeService(BaseService):
                 )
                 return False
 
-            self.save_uploading(10)
+            self.save_uploading(20)
 
             try:
                 response = None
@@ -279,7 +288,7 @@ class YoutubeService(BaseService):
                                 int(status.progress() * 100)
                             )
                         )
-                    if i <= 7:
+                    if i <= 6:
                         self.save_uploading(10 + (i * 10))
                     i += 1
             except Exception as e:
