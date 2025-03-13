@@ -1,5 +1,6 @@
 from app.lib.logger import logger
 from app.third_parties.facebook import FacebookTokenService
+from app.third_parties.instagram import InstagramTokenService
 from app.third_parties.thread import ThreadTokenService
 from app.third_parties.twitter import TwitterTokenService
 from app.third_parties.youtube import YoutubeTokenService
@@ -36,6 +37,13 @@ class UserLinkService:
 
             code = args.get("Code")
             is_active = UserLinkService.save_link_thread(user_link, code)
+
+        if link.type == "INSTAGRAM":
+            user_link.status = 0
+            user_link.save()
+
+            code = args.get("Code")
+            is_active = UserLinkService.save_link_instagram(user_link, code)
 
         return is_active
 
@@ -108,6 +116,22 @@ class UserLinkService:
             is_active = ThreadTokenService().exchange_long_live_token(user_link)
             if is_active:
                 data = ThreadTokenService().get_info(user_link)
+                if data:
+                    UserLinkService.update_info_user_link(
+                        user_link,
+                        data,
+                    )
+        return is_active
+
+    @staticmethod
+    def save_link_instagram(user_link, code):
+        is_active = InstagramTokenService().exchange_code(
+            code=code, user_link=user_link
+        )
+        if is_active:
+            is_active = InstagramTokenService().exchange_long_live_token(user_link)
+            if is_active:
+                data = InstagramTokenService().get_info(user_link)
                 if data:
                     UserLinkService.update_info_user_link(
                         user_link,

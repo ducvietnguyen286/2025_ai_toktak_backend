@@ -27,7 +27,7 @@ class ThreadTokenService:
             CLIENT_SECRET = os.environ.get("THREAD_APP_SECRET") or ""
             REDIRECT_URL = os.environ.get("THREAD_REDIRECT_URL") or ""
 
-            data = {
+            body = {
                 "grant_type": "authorization_code",
                 "client_id": CLIENT_ID,
                 "client_secret": CLIENT_SECRET,
@@ -35,7 +35,7 @@ class ThreadTokenService:
                 "code": code,
             }
 
-            response = requests.post(EXCHANGE_URL, data=data)
+            response = requests.post(EXCHANGE_URL, data=body)
             data = response.json()
 
             RequestSocialLogService.create_request_social_log(
@@ -43,7 +43,7 @@ class ThreadTokenService:
                 social_post_id="",
                 user_id=user_link.user_id,
                 type="authorization_code",
-                request=json.dumps(data),
+                request=json.dumps(body),
                 response=json.dumps(data),
             )
 
@@ -278,35 +278,40 @@ class ThreadService(BaseService):
     def send_post_image(self, post):
         try:
             text = (
-                post.description
-                if post.description and post.description != ""
-                else post.title
+                (
+                    post.description
+                    if post.description and post.description != ""
+                    else post.title
+                )
+                + " "
+                + post.hashtag
             )
             images = json.loads(post.images)
             media_ids = []
             for index, image in enumerate(images):
-                media_id = self.upload_media(image, text, is_video=False, index=index)
-                if media_id:
-                    is_uploaded = self.get_upload_status(media_id)
-                    if is_uploaded:
-                        media_ids.append(media_id)
-                    else:
-                        return False
-                else:
+                media_id = self.upload_media(
+                    image, text, is_video=False, index=index + 1
+                )
+                if not media_id:
                     return False
+                is_uploaded = self.get_upload_status(media_id)
+                if not is_uploaded:
+                    return False
+                media_ids.append(media_id)
+
             carousel_id = self.upload_carousel(media_ids)
-            if carousel_id:
-                publish_id = self.publish_post(carousel_id)
-                if publish_id:
-                    self.save_publish(
-                        "PUBLISHED",
-                        f"https://www.threads.net/@{self.thread_user_id}/post/{publish_id}",
-                    )
-                    return True
-                else:
-                    return False
-            else:
+            if not carousel_id:
                 return False
+
+            publish_id = self.publish_post(carousel_id)
+            if not publish_id:
+                return False
+
+            self.save_publish(
+                "PUBLISHED",
+                f"https://www.threads.net/@{self.thread_user_id}/post/{publish_id}",
+            )
+            return True
         except Exception as e:
             self.save_errors("ERRORED", f"SEND POST IMAGE {self.key_log}: {str(e)}")
             return False
@@ -314,28 +319,31 @@ class ThreadService(BaseService):
     def send_post_video(self, post):
         try:
             text = (
-                post.description
-                if post.description and post.description != ""
-                else post.title
+                (
+                    post.description
+                    if post.description and post.description != ""
+                    else post.title
+                )
+                + " "
+                + post.hashtag
             )
             video = post.video_url
             media_id = self.upload_media(video, text, is_video=True)
-            if media_id:
-                is_uploaded = self.get_upload_status(media_id)
-                if is_uploaded:
-                    publish_id = self.publish_post(media_id)
-                    if publish_id:
-                        self.save_publish(
-                            "PUBLISHED",
-                            f"https://www.threads.net/@{self.thread_user_id}/post/{publish_id}",
-                        )
-                        return True
-                    else:
-                        return False
-                else:
-                    return False
-            else:
+            if not media_id:
                 return False
+
+            is_uploaded = self.get_upload_status(media_id)
+            if not is_uploaded:
+                return False
+
+            publish_id = self.publish_post(media_id)
+            if not publish_id:
+                return False
+            self.save_publish(
+                "PUBLISHED",
+                f"https://www.threads.net/@{self.thread_user_id}/post/{publish_id}",
+            )
+            return True
         except Exception as e:
             self.save_errors("ERRORED", f"SEND POST VIDEO {self.key_log}: {str(e)}")
             return False
@@ -454,7 +462,7 @@ class ThreadService(BaseService):
             log_thread_message(
                 f"------------ PUBLISH POST: {self.key_log} ----------------"
             )
-            UPLOAD_URL = (
+            PUBLISH = (
                 f"https://graph.threads.net/v1.0/{self.thread_user_id}/threads_publish"
             )
             upload_data = {
@@ -466,7 +474,7 @@ class ThreadService(BaseService):
 
             try:
                 post_response = requests.post(
-                    UPLOAD_URL, data=upload_data, headers=headers
+                    PUBLISH, data=upload_data, headers=headers
                 )
             except Exception as e:
                 self.save_errors(
