@@ -25,6 +25,7 @@ from app.services.social_post import SocialPostService
 from app.services.tiktok_callback import TiktokCallbackService
 from app.services.user import UserService
 from app.services.link import LinkService
+from app.services.user_link import UserLinkService
 from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.tiktok import TiktokTokenService
 from app.third_parties.twitter import TwitterTokenService
@@ -126,14 +127,14 @@ class APINewLink(Resource):
                     status=1,
                 )
 
-                is_active = UserService.update_user_link(link, user_link, args)
+                is_active = UserLinkService.update_user_link(link, user_link, args)
 
             else:
                 user_link.meta = json.dumps(info)
                 user_link.status = 1
                 user_link.save()
 
-                is_active = UserService.update_user_link(link, user_link, args)
+                is_active = UserLinkService.update_user_link(link, user_link, args)
 
             if not is_active:
                 return Response(
