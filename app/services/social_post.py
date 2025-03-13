@@ -1,7 +1,7 @@
+import traceback
 from app.models.link import Link
 from app.models.post import Post
 from app.models.social_post import SocialPost
-from app.extensions import db
 from app.models.social_sync import SocialSync
 from app.models.user_link import UserLink
 
@@ -89,52 +89,58 @@ class SocialPostService:
 
     @staticmethod
     def get_status_social_sycns__by_id(id):
-        social_sync = SocialSync.objects.get(id=id).to_dict()
-        if not social_sync:
+        try:
+            social_sync = SocialSync.objects.get(id=id)
+            if not social_sync:
+                return {}
+            social_posts = SocialPost.objects(sync_id=str(id))
+
+            post_ids = social_sync.post_ids
+
+            user_links = UserLink.query.filter(
+                UserLink.user_id == social_sync.user_id
+            ).all()
+            link_ids = [user_link.link_id for user_link in user_links]
+
+            links = Link.query.filter(Link.id.in_(link_ids)).all()
+            link_dict = {link.id: link for link in links}
+
+            posts = Post.query.filter(Post.id.in_(post_ids)).all()
+
+            data = {}
+            post_dict = {post.id: post for post in posts}
+
+            for social_post in social_posts:
+                post = post_dict.get(social_post.post_id)
+                if not post:
+                    continue
+                post = post._to_json()
+                link = link_dict.get(social_post.link_id)
+
+                post_social = {
+                    "id": str(social_post.id),
+                    "title": link.title,
+                    "status": social_post.status,
+                    "link_id": social_post.link_id,
+                    "post_id": social_post.post_id,
+                    "session_key": social_post.session_key,
+                    "process_number": social_post.process_number,
+                    "error_message": social_post.error_message,
+                }
+
+                if "social_posts" not in post:
+                    post["social_posts"] = []
+                post["social_posts"].append(post_social)
+                data[post.get("id")] = post
+
+            post_data = []
+            for key in data:
+                post_data.append(data[key])
+
+            social_sync_data = social_sync.to_json()
+            social_sync_data["posts"] = post_data
+            return social_sync_data
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
             return {}
-        social_posts = SocialPost.objects(sync_id=social_sync.get("id")).all().to_dict()
-
-        post_ids = [social_post.get("post_id") for social_post in social_posts]
-
-        user_links = UserLink.query.filter(
-            UserLink.user_id == social_sync.get("user_id")
-        ).all()
-        link_ids = [user_link.link_id for user_link in user_links]
-
-        links = Link.query.filter(Link.id.in_(link_ids)).all()
-        link_dict = {link.id: link for link in links}
-
-        posts = Post.query.filter(Post.id.in_(post_ids)).all()
-
-        data = {}
-        post_dict = {post.id: post for post in posts}
-
-        for social_post in social_posts:
-            post = post_dict.get(social_post.get("post_id"))
-            if not post:
-                continue
-            post = post._to_json()
-            link = link_dict.get(social_post.get("link_id"))
-
-            post_social = {
-                "id": str(social_post.get("id")),
-                "title": link.title,
-                "status": social_post.get("status"),
-                "link_id": social_post.get("link_id"),
-                "post_id": social_post.get("post_id"),
-                "session_key": social_post.get("session_key"),
-                "process_number": social_post.get("process_number"),
-                "error_message": social_post.get("error_message"),
-            }
-
-            if "social_posts" not in post:
-                post["social_posts"] = []
-            post["social_posts"].append(post_social)
-            data[post.get("id")] = post
-
-        post_data = []
-        for key in data:
-            post_data.append(data[key])
-
-        social_sync["posts"] = post_data
-        return social_sync

@@ -196,7 +196,7 @@ class APISendPosts(Resource):
                 status="PROCESSING",
             )
 
-            sync_id = social_sync.id
+            sync_id = str(social_sync.id)
 
             social_post_ids = []
             upload = []
@@ -239,6 +239,7 @@ class APISendPosts(Resource):
                             "post_id": post.id,
                             "status": "PROCESSING",
                             "value": 0,
+                            "self_value": 0,
                         }
                     )
 
@@ -271,7 +272,7 @@ class APISendPosts(Resource):
             progress = {
                 "sync_id": sync_id,
                 "post_ids": post_ids,
-                "total_post": posts.count(),
+                "total_post": len(posts),
                 "total_percent": 0,
                 "status": "PROCESSING",
                 "upload": upload,

@@ -41,7 +41,7 @@ class UserLinkService:
 
     @staticmethod
     def update_info_user_link(user_link, info):
-        user_link.social_id = info.get("social_id")
+        user_link.social_id = info.get("id")
         user_link.name = info.get("name")
         user_link.avatar = info.get("avatar")
         user_link.url = info.get("url")
