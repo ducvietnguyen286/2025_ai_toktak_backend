@@ -465,6 +465,8 @@ class ThreadService(BaseService):
 
             result = post_response.json()
 
+            self.save_request_log("publish_post", upload_data, result)
+
             if "id" in result:
                 return result["id"]
             elif "error" in result:
@@ -472,13 +474,13 @@ class ThreadService(BaseService):
                 error_message = error["message"]
                 self.save_errors(
                     "ERRORED",
-                    f"PUBLISH POST {self.key_log}: {error_message}",
+                    f"ERROR PUBLISH POST {self.key_log}: {error_message}",
                 )
                 return False
             else:
                 self.save_errors(
                     "ERRORED",
-                    f"PUBLISH POST {self.key_log}: {str(result)}",
+                    f"ERROR PUBLISH POST {self.key_log}: {str(result)}",
                 )
                 return False
         except Exception as e:
