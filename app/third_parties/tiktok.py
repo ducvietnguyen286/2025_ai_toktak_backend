@@ -280,6 +280,9 @@ class TiktokService(BaseService):
             try:
                 response = requests.get(media, timeout=30)
             except Exception as e:
+                log_tiktok_message(
+                    f"------------------POST {self.key_log} Timeout To Get Video--------------------"
+                )
                 try:
                     response = requests.get(media, timeout=30)
                 except Exception as e:
