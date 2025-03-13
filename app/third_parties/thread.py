@@ -287,7 +287,13 @@ class ThreadService(BaseService):
             for index, image in enumerate(images):
                 media_id = self.upload_media(image, text, is_video=False, index=index)
                 if media_id:
-                    media_ids.append(media_id)
+                    is_uploaded = self.get_upload_status(media_id)
+                    if is_uploaded:
+                        media_ids.append(media_id)
+                    else:
+                        return False
+                else:
+                    return False
             carousel_id = self.upload_carousel(media_ids)
             if carousel_id:
                 publish_id = self.publish_post(carousel_id)
@@ -315,15 +321,21 @@ class ThreadService(BaseService):
             video = post.video_url
             media_id = self.upload_media(video, text, is_video=True)
             if media_id:
-                publish_id = self.publish_post(media_id)
-                if publish_id:
-                    self.save_publish(
-                        "PUBLISHED",
-                        f"https://www.threads.net/@{self.thread_user_id}/post/{publish_id}",
-                    )
-                    return True
+                is_uploaded = self.get_upload_status(media_id)
+                if is_uploaded:
+                    publish_id = self.publish_post(media_id)
+                    if publish_id:
+                        self.save_publish(
+                            "PUBLISHED",
+                            f"https://www.threads.net/@{self.thread_user_id}/post/{publish_id}",
+                        )
+                        return True
+                    else:
+                        return False
                 else:
                     return False
+            else:
+                return False
         except Exception as e:
             self.save_errors("ERRORED", f"SEND POST VIDEO {self.key_log}: {str(e)}")
             return False
@@ -481,6 +493,54 @@ class ThreadService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"ERROR PUBLISH POST {self.key_log}: {str(result)}",
+                )
+                return False
+        except Exception as e:
+            self.save_errors("ERRORED", f"PUBLISH POST {self.key_log}: {str(e)}")
+            return False
+
+    def get_upload_status(self, media_id):
+        try:
+            log_thread_message(
+                f"------------ GET UPLOAD STATUS: {self.key_log} ----------------"
+            )
+            GET_STATUS_URL = f"https://graph.threads.net/v1.0/{media_id}"
+            params = {
+                "access_token": self.access_token,
+                "fields": "status,error_message",
+            }
+
+            try:
+                status_response = requests.get(GET_STATUS_URL, params=params)
+            except Exception as e:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} : PUBLISH POST: {str(e)}",
+                )
+                return False
+
+            result = status_response.json()
+
+            self.save_request_log("get_upload_status", params, result)
+
+            if "status" in result:
+                status = result["status"]
+                if status == "FINISHED":
+                    return True
+                elif status == "ERROR":
+                    error_message = result["error_message"]
+                    self.save_errors(
+                        "ERRORED",
+                        f"ERROR GET UPLOAD STATUS {self.key_log}: {error_message}",
+                    )
+                    return False
+                else:
+                    time.sleep(1.5)
+                    return self.get_upload_status(media_id)
+            else:
+                self.save_errors(
+                    "ERRORED",
+                    f"ERROR GET UPLOAD STATUS {self.key_log}: {str(result)}",
                 )
                 return False
         except Exception as e:
