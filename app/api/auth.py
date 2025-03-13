@@ -215,6 +215,7 @@ class APIUserProfile(Resource):
         user = AuthService.get_current_identity()
         level = user.level
         total_link = UserService.get_user_links(user.id)
+        logger.info(  f"level : {level} total_link :  {len(total_link)} "  )
         if level != len(total_link):
             level = len(total_link)
             level_info = get_level_images(level)

@@ -75,9 +75,5 @@ class UserService:
 
     @staticmethod
     def get_original_user_links(user_id=0):
-        user_links = (
-            UserLink.query.where(UserLink.status == 1)
-            .where(UserLink.user_id == user_id)
-            .all()
-        )
+        user_links = UserLink.query.where(UserLink.user_id == user_id).all()
         return user_links
