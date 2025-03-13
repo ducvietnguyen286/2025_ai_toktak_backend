@@ -7,7 +7,8 @@ class Batch(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=False)
-    url = db.Column(db.String(100), nullable=False)
+    url = db.Column(db.String(500), nullable=False)
+    shorten_link = db.Column(db.String(200), nullable=True)
     thumbnail = db.Column(db.String(500), nullable=True, default="")
     thumbnails = db.Column(db.Text)
     content = db.Column(db.Text, nullable=True)

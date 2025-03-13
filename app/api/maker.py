@@ -9,6 +9,7 @@ from app.ais.chatgpt import (
     call_chatgpt_create_social,
 )
 from app.decorators import jwt_optional, parameters
+from app.lib.caller import get_shorted_link_coupang
 from app.lib.logger import logger
 from app.lib.response import Response
 from app.lib.string import split_text_by_sentences
@@ -51,7 +52,6 @@ class APICreateBatch(Resource):
             url = args.get("url", "")
             voice = args.get("voice", 1)
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
-            UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
             max_count_image = os.environ.get("MAX_COUNT_IMAGE") or "8"
             max_count_image = int(max_count_image)
 
@@ -62,6 +62,13 @@ class APICreateBatch(Resource):
                     message="상품의 URL을 분석할 수 없어요.",
                     code=201,
                 ).to_dict()
+
+            shorten_link = ""
+
+            # if "coupang.com" in url and "link.coupang.com" not in url:
+            #     shorten_link = get_shorted_link_coupang(url)
+            # elif "link.coupang.com" in url:
+            #     shorten_link = url
 
             images = data.get("images", [])
 
@@ -77,26 +84,12 @@ class APICreateBatch(Resource):
             if "iframes" not in data:
                 data["iframes"] = []
 
-            # TODO: Save images
-            # image_paths = []
-            # for index, image_url in enumerate(images):
-            #     timestamp = int(time.time())
-            #     unique_id = uuid.uuid4().hex
-            #     image_ext = image_url.split(".")[-1]
-
-            #     file_name = f"{timestamp}_{unique_id}.{image_ext}"
-
-            #     image_path = f"{UPLOAD_FOLDER}/{file_name}"
-            #     with open(image_path, "wb") as image_file:
-            #         image_file.write(requests.get(image_url).content)
-            #     image_paths.append(f"{current_domain}/files/{file_name}")
-            # data["images"] = image_paths
-
             post_types = ["video", "image", "blog"]
 
             batch = BatchService.create_batch(
                 user_id=user_id_login,
                 url=url,
+                shorten_link=shorten_link,
                 thumbnail=thumbnail_url,
                 thumbnails=json.dumps(thumbnails),
                 content=json.dumps(data),
