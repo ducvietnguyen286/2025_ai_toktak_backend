@@ -22,7 +22,7 @@ RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST") or "localhost"
 RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT") or 5672
 RABBITMQ_USER = os.environ.get("RABBITMQ_USER") or "guest"
 RABBITMQ_PASSWORD = os.environ.get("RABBITMQ_PASSWORD") or "guest"
-RABBITMQ_QUEUE_FACEBOOK = os.environ.get("RABBITMQ_QUEUE_FACEBOOK") or "hello"
+RABBITMQ_QUEUE_INSTAGRAM = os.environ.get("RABBITMQ_QUEUE_INSTAGRAM") or "hello"
 
 
 def __config_logging(app):
@@ -132,7 +132,7 @@ async def main():
     app = create_app()
     connection = await connect_robust(RABBITMQ_URL)
     channel = await connection.channel()
-    queue = await channel.declare_queue(RABBITMQ_QUEUE_FACEBOOK, durable=True)
+    queue = await channel.declare_queue(RABBITMQ_QUEUE_INSTAGRAM, durable=True)
 
     log_instagram_message("Đang chờ message. Nhấn CTRL+C để dừng.")
     await queue.consume(partial(on_message, app=app), no_ack=False)
