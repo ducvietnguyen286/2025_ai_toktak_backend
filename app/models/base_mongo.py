@@ -11,6 +11,8 @@ class BaseDocument(db_mongo.Document):
     created_at = DateTimeField(default=datetime.utcnow)
     updated_at = DateTimeField(default=datetime.utcnow)
 
+    to_json_filter = ()
+
     def save(self, *args, **kwargs):
         self.updated_at = datetime.utcnow()
         return super(BaseDocument, self).save(*args, **kwargs)
@@ -22,4 +24,15 @@ class BaseDocument(db_mongo.Document):
         return self.to_mongo().to_dict()
 
     def to_json(self):
-        return self.to_dict()
+        response = {}
+        for column, value in self.to_dict().items():
+            if column in self.to_json_filter:
+                continue
+            if column == "_id":
+                response["id"] = str(value)
+            elif column == "created_at" or column == "updated_at":
+                response[column] = value.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                response[column] = value
+
+        return response

@@ -196,7 +196,7 @@ class APISendPosts(Resource):
                 status="PROCESSING",
             )
 
-            sync_id = social_sync.id
+            sync_id = str(social_sync.id)
 
             social_post_ids = []
             upload = []
@@ -239,6 +239,7 @@ class APISendPosts(Resource):
                             "post_id": post.id,
                             "status": "PROCESSING",
                             "value": 0,
+                            "self_value": 0,
                         }
                     )
 
@@ -271,7 +272,8 @@ class APISendPosts(Resource):
             progress = {
                 "sync_id": sync_id,
                 "post_ids": post_ids,
-                "total_post": posts.count(),
+                "user_id": current_user.id,
+                "total_post": len(posts),
                 "total_percent": 0,
                 "status": "PROCESSING",
                 "upload": upload,
@@ -404,6 +406,7 @@ class APIPostToLinks(Resource):
             progress = {
                 "batch_id": batch_id,
                 "post_id": post.id,
+                "user_id": current_user.id,
                 "total_link": total_link,
                 "total_post": total_post,
                 "total_percent": 0,
@@ -479,8 +482,11 @@ class APIPostToLinks(Resource):
                 if link.type == "INSTAGRAM":
                     send_instagram_message(message)
 
+            key_progress = f"{batch_id}_{current_user.id}"
+
             redis_client.set(
-                f"toktak:progress:{batch_id}:{post_id}", json.dumps(progress)
+                f"toktak:progress:{key_progress}:{post_id}",
+                json.dumps(progress),
             )
 
             return Response(
