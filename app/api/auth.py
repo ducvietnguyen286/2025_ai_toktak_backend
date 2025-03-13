@@ -214,21 +214,13 @@ class APIUserProfile(Resource):
     def get(self):
         user = AuthService.get_current_identity()
         level = user.level
-
         total_link = UserService.get_user_links(user.id)
-
-        level = 7
-        level_info = get_level_images(level)
-        user = AuthService.update(
-            user.id,
-            level=level,
-            level_info=json.dumps(level_info),
-        )
-
         if level != len(total_link):
+            level = len(total_link)
+            level_info = get_level_images(level)
             user = AuthService.update(
                 user.id,
-                level=len(total_link),
+                level=level,
                 level_info=json.dumps(level_info),
             )
 
