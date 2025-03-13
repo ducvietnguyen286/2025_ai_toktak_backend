@@ -312,11 +312,14 @@ class TwitterService(BaseService):
             return False
 
     def upload_media(self, media, is_video=False):
-        log_twitter_message(f"Upload media {media}")
+        log_twitter_message(f"{self.key_log} Upload media {media}")
 
         try:
             response = requests.get(media, timeout=30)
         except Exception as e:
+            log_twitter_message(
+                f"------------------{self.key_log} Get Media Timeout-------------------------"
+            )
             try:
                 response = requests.get(media, timeout=30)
             except Exception as e:
