@@ -105,7 +105,8 @@ class YoutubeTokenService:
 
 
 class YoutubeService(BaseService):
-    def __init__(self):
+    def __init__(self, sync_id=""):
+        self.sync_id = sync_id
         self.user_link = None
         self.user = None
         self.link = None

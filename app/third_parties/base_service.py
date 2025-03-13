@@ -2,17 +2,20 @@ import json
 import os
 from app.extensions import redis_client
 from app.lib.logger import (
+    log_thread_message,
     log_youtube_message,
     log_facebook_message,
     log_twitter_message,
     log_tiktok_message,
 )
+from app.services.request_social_log import RequestSocialLogService
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
 
 class BaseService:
     def __init__(self):
+        self.sync_id = ""
         self.batch_id = None
         self.link_id = None
         self.post_id = None
@@ -20,11 +23,22 @@ class BaseService:
         self.service = None
         self.key_log = ""
 
+    def save_request_log(self, type, request, response):
+        RequestSocialLogService.create_request_social_log(
+            social=self.service,
+            social_post_id=self.social_post_id,
+            user_id=self.user.id,
+            type=type,
+            request=json.dumps(request),
+            response=json.dumps(response),
+        )
+
     def publish_redis_channel(self, status, value):
         redis_client.publish(
             PROGRESS_CHANNEL,
             json.dumps(
                 {
+                    "sync_id": self.sync_id,
                     "batch_id": self.batch_id,
                     "link_id": self.link_id,
                     "post_id": self.post_id,
@@ -55,6 +69,8 @@ class BaseService:
             log_youtube_message(message)
         elif self.service == "TIKTOK":
             log_tiktok_message(message)
+        elif self.service == "THREAD":
+            log_thread_message(message)
 
     def save_errors(self, status, message):
         # redis_key = f"toktak:has_error:boundio:{self.post_id}:{self.link_id}"

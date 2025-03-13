@@ -30,6 +30,8 @@ from app.third_parties.tiktok import TiktokTokenService
 from app.third_parties.twitter import TwitterTokenService
 from app.rabbitmq.producer import (
     send_facebook_message,
+    send_instagram_message,
+    send_thread_message,
     send_tiktok_message,
     send_twitter_message,
     send_youtube_message,
@@ -82,23 +84,13 @@ class APINewLink(Resource):
     @jwt_required()
     @parameters(
         type="object",
-        properties={
-            "link_id": {"type": "integer"},
-            "social_id": {"type": "string"},
-            "name": {"type": "string"},
-            "avatar": {"type": "string"},
-            "url": {"type": "string"},
-        },
+        properties={"link_id": {"type": "integer"}},
         required=["link_id"],
     )
     def post(self, args):
         try:
             current_user = AuthService.get_current_identity()
             link_id = args.get("link_id", 0)
-            social_id = args.get("social_id", "")
-            name = args.get("name", "")
-            avatar = args.get("avatar", "")
-            url = args.get("url", "")
             link = LinkService.find_link(link_id)
 
             if not link:
@@ -134,127 +126,14 @@ class APINewLink(Resource):
                     status=1,
                 )
 
-                if link.type == "X":
-                    user_link.status = 0
-                    user_link.save()
+                is_active = UserService.update_user_link(link, user_link, args)
 
-                    code = args.get("Code")
-                    is_active = TwitterTokenService().fetch_token(code, user_link)
-                    if is_active:
-                        data = TwitterTokenService().fetch_user_info(user_link)
-                        logger.info(f"-----------TWITTER DATA: {data}-------------")
-                        if data:
-                            social_id = data.get("id") or ""
-                            name = data.get("name") or ""
-                            avatar = data.get("avatar") or ""
-                            url = data.get("url") or ""
-
-                if link.type == "FACEBOOK":
-                    user_link.status = 0
-                    user_link.save()
-
-                    access_token = args.get("AccessToken")
-                    is_active = FacebookTokenService().exchange_token(
-                        access_token=access_token, user_link=user_link
-                    )
-                    if is_active:
-                        data = FacebookTokenService().fetch_page_token_backend(
-                            user_link=user_link, is_all=True, page_id=None
-                        )
-                        logger.info(f"-----------FACEBOOK DATA: {data}-------------")
-                        if data:
-                            tasks = data.get("tasks")
-                            if "CREATE_CONTENT" in tasks:
-                                fb_data = FacebookTokenService().get_info_page(data)
-                                social_id = fb_data.get("id") or ""
-                                name = fb_data.get("name") or ""
-                                avatar = fb_data.get("avatar") or ""
-                                url = fb_data.get("url") or ""
-                            else:
-                                is_active = False
-
-                if link.type == "YOUTUBE":
-                    user_link.status = 0
-                    user_link.save()
-
-                    code = args.get("Code")
-                    is_active = YoutubeTokenService().exchange_code_for_token(
-                        code=code, user_link=user_link
-                    )
-                    if is_active:
-                        data = YoutubeTokenService().fetch_channel_info(user_link)
-                        if data:
-                            social_id = data.get("id") or ""
-                            name = data.get("name") or ""
-                            avatar = data.get("avatar") or ""
-                            url = data.get("url") or ""
             else:
                 user_link.meta = json.dumps(info)
                 user_link.status = 1
                 user_link.save()
 
-                if link.type == "X":
-                    user_link.status = 0
-                    user_link.save()
-
-                    code = args.get("Code")
-                    is_active = TwitterTokenService().fetch_token(code, user_link)
-                    if is_active:
-                        data = TwitterTokenService().fetch_user_info(user_link)
-                        logger.info(f"-----------TWITTER DATA: {data}-------------")
-                        if data:
-                            social_id = data.get("id") or ""
-                            name = data.get("name") or ""
-                            avatar = data.get("avatar") or ""
-                            url = data.get("url") or ""
-                if link.type == "FACEBOOK":
-                    user_link.status = 0
-                    user_link.save()
-
-                    access_token = args.get("AccessToken")
-                    is_active = FacebookTokenService().exchange_token(
-                        access_token=access_token, user_link=user_link
-                    )
-
-                    if is_active:
-                        data = FacebookTokenService().fetch_page_token_backend(
-                            user_link=user_link, is_all=True, page_id=None
-                        )
-                        logger.info(f"-----------FACEBOOK DATA: {data}-------------")
-                        if data:
-                            tasks = data.get("tasks")
-                            if "CREATE_CONTENT" in tasks:
-                                fb_data = FacebookTokenService().get_info_page(data)
-                                social_id = fb_data.get("id") or ""
-                                name = fb_data.get("name") or ""
-                                avatar = fb_data.get("avatar") or ""
-                                url = fb_data.get("url") or ""
-                            else:
-                                is_active = False
-
-                if link.type == "YOUTUBE":
-                    user_link.status = 0
-                    user_link.save()
-
-                    code = args.get("Code")
-                    is_active = YoutubeTokenService().exchange_code_for_token(
-                        code=code, user_link=user_link
-                    )
-                    if is_active:
-                        data = YoutubeTokenService().fetch_channel_info(user_link)
-                        if data:
-                            social_id = data.get("id") or ""
-                            name = data.get("name") or ""
-                            avatar = data.get("avatar") or ""
-                            url = data.get("url") or ""
-
-            if is_active:
-                user_link.social_id = social_id
-                user_link.name = name
-                user_link.avatar = avatar
-                user_link.url = url
-                user_link.status = 1
-                user_link.save()
+                is_active = UserService.update_user_link(link, user_link, args)
 
             if not is_active:
                 return Response(
@@ -271,6 +150,149 @@ class APINewLink(Resource):
             logger.error("Exception: {0}".format(str(e)))
             return Response(
                 message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
+
+
+@ns.route("/send-posts")
+class APISendPosts(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "post_ids": {"type": "array", "items": {"type": "integer"}},
+        },
+        required=["post_ids"],
+    )
+    def post(self, args):
+        try:
+            current_user = AuthService.get_current_identity()
+            id_posts = args.get("post_ids", [])
+            active_links = []
+            user_links = UserService.get_original_user_links(current_user.id)
+            active_links = [link.link_id for link in user_links if link.status == 1]
+            if not active_links:
+                return Response(
+                    message="Không có link nào được kích hoạt",
+                    status=400,
+                ).to_dict()
+            posts = PostService.get_posts__by_ids(id_posts)
+            if not posts:
+                return Response(
+                    message="Không tìm thấy bài viết",
+                    status=400,
+                ).to_dict()
+            links = LinkService.get_not_json_links()
+            link_pluck_by_id = {link.id: link for link in links}
+
+            post_ids = [post.id for post in posts]
+
+            social_sync = SocialPostService.create_social_sync(
+                user_id=current_user.id,
+                in_post_ids=id_posts,
+                post_ids=post_ids,
+                status="PROCESSING",
+            )
+
+            sync_id = social_sync.id
+
+            social_post_ids = []
+            upload = []
+            for post in posts:
+                batch_id = post.batch_id
+                timestamp = int(time.time())
+                unique_id = uuid.uuid4().hex
+
+                session_key = f"{timestamp}_{unique_id}"
+
+                for link_id in active_links:
+                    link = link_pluck_by_id.get(link_id)
+                    if not link:
+                        continue
+                    if post.type == "blog" and link.social_type != "BLOG":
+                        continue
+                    if (
+                        post.type == "image" or post.type == "video"
+                    ) and link.social_type != "SOCIAL":
+                        continue
+                    if post.type == "image" and link.type == "YOUTUBE":
+                        continue
+
+                    social_post = SocialPostService.create_social_post(
+                        link_id=link_id,
+                        user_id=current_user.id,
+                        post_id=post.id,
+                        batch_id=batch_id,
+                        session_key=session_key,
+                        sync_id=sync_id,
+                        status="PROCESSING",
+                    )
+
+                    social_post_ids.append(social_post.id)
+
+                    upload.append(
+                        {
+                            "title": link.title,
+                            "link_id": link_id,
+                            "post_id": post.id,
+                            "status": "PROCESSING",
+                            "value": 0,
+                        }
+                    )
+
+                    message = {
+                        "action": "SEND_POST_TO_LINK",
+                        "message": {
+                            "sync_id": sync_id,
+                            "link_id": link_id,
+                            "post_id": post.id,
+                            "user_id": current_user.id,
+                            "social_post_id": str(social_post.id),
+                            "page_id": "",
+                            "is_all": 1,
+                        },
+                    }
+
+                    if link.type == "FACEBOOK":
+                        send_facebook_message(message)
+                    if link.type == "TIKTOK":
+                        send_tiktok_message(message)
+                    if link.type == "X":
+                        send_twitter_message(message)
+                    if link.type == "YOUTUBE":
+                        send_youtube_message(message)
+                    if link.type == "THREAD":
+                        send_thread_message(message)
+                    if link.type == "INSTAGRAM":
+                        send_instagram_message(message)
+
+            progress = {
+                "sync_id": sync_id,
+                "post_ids": post_ids,
+                "total_post": posts.count(),
+                "total_percent": 0,
+                "status": "PROCESSING",
+                "upload": upload,
+            }
+
+            social_sync.social_post_ids = social_post_ids
+            social_sync.save()
+
+            redis_client.set(f"toktak:progress-sync:{sync_id}", json.dumps(progress))
+
+            return Response(
+                data={
+                    "sync_id": sync_id,
+                    "upload": upload,
+                },
+                message="Tạo bài viết thành công. Vui lòng đợi trong giây lát",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Tạo bài viết that bai",
                 status=400,
             ).to_dict()
 
@@ -333,8 +355,6 @@ class APIPostToLinks(Resource):
                     message="Không tìm thấy bài viết",
                     status=400,
                 ).to_dict()
-
-
 
             post = PostService.find_post(post_id)
 
@@ -433,6 +453,7 @@ class APIPostToLinks(Resource):
                 message = {
                     "action": "SEND_POST_TO_LINK",
                     "message": {
+                        "sync_id": "",
                         "link_id": link_id,
                         "post_id": post.id,
                         "user_id": current_user.id,
@@ -452,6 +473,10 @@ class APIPostToLinks(Resource):
                     send_twitter_message(message)
                 if link.type == "YOUTUBE":
                     send_youtube_message(message)
+                if link.type == "THREAD":
+                    send_thread_message(message)
+                if link.type == "INSTAGRAM":
+                    send_instagram_message(message)
 
             redis_client.set(
                 f"toktak:progress:{batch_id}:{post_id}", json.dumps(progress)

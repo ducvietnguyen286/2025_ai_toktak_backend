@@ -10,24 +10,24 @@ from werkzeug.exceptions import default_exceptions
 
 load_dotenv(override=False)
 
-from app.lib.logger import log_tiktok_message
+from app.lib.logger import log_thread_message
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db, db_mongo
 from app.config import configs as config
 from app.services.link import LinkService
 from app.services.post import PostService
-from app.third_parties.tiktok import TiktokService
+from app.third_parties.thread import ThreadService
 
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST") or "localhost"
 RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT") or 5672
 RABBITMQ_USER = os.environ.get("RABBITMQ_USER") or "guest"
 RABBITMQ_PASSWORD = os.environ.get("RABBITMQ_PASSWORD") or "guest"
-RABBITMQ_QUEUE_TIKTOK = os.environ.get("RABBITMQ_QUEUE_TIKTOK") or "hello"
+RABBITMQ_QUEUE_FACEBOOK = os.environ.get("RABBITMQ_QUEUE_FACEBOOK") or "hello"
 
 
 def __config_logging(app):
     app.logger.setLevel(logging.DEBUG)
-    app.logger.info("Start TIKTOK Consumer...")
+    app.logger.info("Start THREAD Consumer...")
 
 
 def __init_app(app):
@@ -64,20 +64,20 @@ def action_send_post_to_link(message):
         link = LinkService.find_link(link_id)
         post = PostService.find_post(post_id)
 
-        log_tiktok_message(f"Received message: {message}")
+        log_thread_message(f"Received message: {message}")
 
         if not link or not post:
-            log_tiktok_message("ERROR: Link or post not found")
+            log_thread_message("Link or post not found")
             return False
 
         if link.social_type == "SOCIAL":
-            if link.type == "TIKTOK":
-                TiktokService(sync_id=sync_id).send_post(
+            if link.type == "THREAD":
+                ThreadService(sync_id=sync_id).send_post(
                     post, link, user_id, social_post_id
                 )
         return True
     except Exception as e:
-        log_tiktok_message(f"ERROR: Error send post to link: {str(e)}")
+        log_thread_message(f"Error send post to link: {str(e)}")
         return False
 
 
@@ -90,13 +90,13 @@ def process_message_sync(body, app):
         decoded_body = json.loads(body)
         action = decoded_body.get("action")
         if action == "SEND_POST_TO_LINK":
-            log_tiktok_message(f"Processing SEND_POST_TO_LINK action {decoded_body}")
+            log_thread_message(f"Processing SEND_POST_TO_LINK action {decoded_body}")
             message = decoded_body.get("message")
             with app.app_context():
                 result = action_send_post_to_link(message)
                 return result
     except Exception as e:
-        log_tiktok_message(f"ERROR: Error processing message: {str(e)}")
+        log_thread_message(f"ERROR: Error processing message: {str(e)}")
         return False
 
 
@@ -107,7 +107,7 @@ async def process_message_async(body, app):
     loop = asyncio.get_running_loop()
     result = await loop.run_in_executor(None, process_message_sync, body, app)
     if not result:
-        log_tiktok_message("ERROR: Message processing failed")
+        log_thread_message("ERROR: Message processing failed")
     return result
 
 
@@ -119,7 +119,7 @@ async def on_message(message: IncomingMessage, app):
 
     async with message.process():
         body = message.body.decode()
-        log_tiktok_message(f"Received message: {body}")
+        log_thread_message(f"Received message: {body}")
         # Tạo task nền để xử lý message, không chặn việc nhận message mới
         asyncio.create_task(process_message_async(body, app))
 
@@ -132,9 +132,9 @@ async def main():
     app = create_app()
     connection = await connect_robust(RABBITMQ_URL)
     channel = await connection.channel()
-    queue = await channel.declare_queue(RABBITMQ_QUEUE_TIKTOK, durable=True)
+    queue = await channel.declare_queue(RABBITMQ_QUEUE_FACEBOOK, durable=True)
 
-    log_tiktok_message("Đang chờ message. Nhấn CTRL+C để dừng.")
+    log_thread_message("Đang chờ message. Nhấn CTRL+C để dừng.")
     await queue.consume(partial(on_message, app=app), no_ack=False)
     return connection
 
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        log_tiktok_message("ERROR: Consumer stopped by user")
+        log_thread_message("Consumer stopped by user")
     finally:
         loop.run_until_complete(connection.close())
         loop.close()

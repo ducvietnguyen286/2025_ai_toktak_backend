@@ -13,6 +13,7 @@ class SocialPost(BaseDocument):
     post_id = IntField(required=True, default=0)
     batch_id = IntField(required=True, default=0)
     session_key = StringField(required=True, max_length=100)
+    sync_id = StringField(required=False, max_length=100)
     social_link = StringField(max_length=700, default="")
     status = StringField(required=True, max_length=50)
     error_message = StringField(default="")

@@ -24,6 +24,11 @@ class PostService:
         posts = Post.query.where(Post.status == 1).all()
         return [post._to_json() for post in posts]
 
+    @staticmethod
+    def get_posts__by_ids(ids):
+        posts = Post.query.where(Post.id.in_(ids)).where(Post.status == 1).all()
+        return posts
+
     def get_posts_by_batch(batch_id):
         posts = Post.query.where(Post.batch_id == batch_id).all()
         return posts
