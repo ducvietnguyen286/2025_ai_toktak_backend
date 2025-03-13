@@ -357,7 +357,8 @@ class APIPostToLinks(Resource):
                     status=400,
                 ).to_dict()
 
-            post = PostService.find_post(post_id)
+            # Update to Uploads
+            PostService.update_post(post_id, status=1, status_sns=1)
 
             batch_id = post.batch_id
 
