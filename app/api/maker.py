@@ -580,10 +580,12 @@ class APIUpdateStatusBatch(Resource):
                 ).to_dict()
 
             batch_detail = BatchService.update_batch(
-                batch.id, status=99, process_status="DRAFT"
+                batch.id, status=99, process_status="DRAFT", user_id=current_user.id
             )
 
-            PostService.update_post_by_batch_id(batch.id, status=const.DRAFT_STATUS)
+            PostService.update_post_by_batch_id(
+                batch.id, status=const.DRAFT_STATUS, user_id=current_user.id
+            )
 
             return Response(
                 data=batch_detail.to_dict(),
