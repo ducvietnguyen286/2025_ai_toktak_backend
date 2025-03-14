@@ -314,7 +314,6 @@ class TwitterService(BaseService):
                 else:
                     permalink = f"https://x.com/{username}/status/{x_post_id}"
 
-                permalink = f"https://x.com/i/status/{x_post_id}"
                 self.save_publish("PUBLISHED", permalink)
                 return True
         except Exception as e:
