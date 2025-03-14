@@ -232,6 +232,7 @@ class TwitterService(BaseService):
             images = json.loads(images)
         else:
             images = [post.thumbnail]
+        images = images[:4]
 
         media_ids = []
         for img in images:
