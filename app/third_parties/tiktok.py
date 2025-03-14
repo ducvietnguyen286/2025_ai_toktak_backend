@@ -150,7 +150,7 @@ class TiktokService(BaseService):
                 f"------------ READY TO SEND POST: {post._to_json()} ----------------"
             )
             if post.type == "video":
-                self.upload_video(post.video_url)
+                self.upload_video_by_url(post.video_url)
             if post.type == "image":
                 self.upload_image(post.images)
             return True
@@ -298,6 +298,92 @@ class TiktokService(BaseService):
             if not upload_info:
                 return False
             info_data = upload_info.get("data")
+            publish_id = info_data.get("publish_id")
+
+            status_result = self.check_status(publish_id)
+            status = status_result.get("status")
+            if status:
+                log_tiktok_message(f"POST {self.key_log} Upload video success")
+                permalink = self.user_link.url
+                self.save_publish("PUBLISHED", permalink)
+                return True
+            else:
+                error_message = status.get("message")
+                self.save_errors(
+                    "ERRORED", f"POST {self.key_log} UPLOAD VIDEO: {error_message}"
+                )
+                return False
+        except Exception as e:
+            self.save_errors("ERRORED", f"POST {self.key_log} UPLOAD VIDEO: {str(e)}")
+            return False
+
+    def upload_video_by_url(self, media_url, retry=0):
+        try:
+            log_tiktok_message(f"POST {self.key_log} Upload video to Tiktok")
+            URL_VIDEO_UPLOAD = "https://open.tiktokapis.com/v2/post/publish/video/init/"
+            access_token = self.meta.get("access_token")
+
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json; charset=UTF-8",
+            }
+
+            payload = {
+                "post_info": {
+                    "title": self.post.description + "  #tiktok " + self.post.hashtag,
+                    "privacy_level": "SELF_ONLY",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
+                    "disable_duet": False,
+                    "disable_comment": False,
+                    "disable_stitch": False,
+                    "video_cover_timestamp_ms": 1000,
+                },
+                "source_info": {"source": "PULL_FROM_URL", "video_url": media_url},
+            }
+            try:
+                upload_response = requests.post(
+                    URL_VIDEO_UPLOAD, headers=headers, data=json.dumps(payload)
+                )
+            except Exception as e:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} UPLOAD VIDEO INIT - REQUEST URL VIDEO: {str(e)}",
+                )
+                return False
+
+            parsed_response = upload_response.json()
+
+            self.save_uploading(self.progress)
+
+            self.save_request_log("upload_video_by_url_init", payload, parsed_response)
+
+            error = parsed_response.get("error")
+            error_code = error.get("code")
+            if error_code == "access_token_invalid":
+                if retry > 0:
+                    self.user_link.status = 0
+                    self.user_link.save()
+                    self.save_errors(
+                        "ERRORED",
+                        f"POST {self.key_log} UPLOAD VIDEO INIT: Access token invalid",
+                    )
+
+                    return False
+
+                TiktokTokenService.refresh_token(link=self.link, user=self.user)
+                self.user_link = UserService.find_user_link(
+                    link_id=self.link.id, user_id=self.user.id
+                )
+                self.meta = json.loads(self.user_link.meta)
+                return self.upload_video_init(media_url=media_url, retry=retry + 1)
+            elif error and error_code != "ok":
+                error_message = error.get("message") or "Upload video INIT error"
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} UPLOAD VIDEO INIT - GET ERROR: {error_message}",
+                )
+                return False
+
+            info_data = parsed_response.get("data")
             publish_id = info_data.get("publish_id")
 
             status_result = self.check_status(publish_id)
