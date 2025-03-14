@@ -722,11 +722,13 @@ class APIGetCallbackTiktok(Resource):
             logger.info(f"-----------TIKTOK DATA: {user_info}-------------")
             if user_info:
                 social_id = user_info.get("id") or ""
+                username = user_info.get("username") or ""
                 name = user_info.get("name") or ""
                 avatar = user_info.get("avatar") or ""
                 url = user_info.get("url") or ""
 
                 user_link.social_id = social_id
+                user_link.username = username
                 user_link.name = name
                 user_link.avatar = avatar
                 user_link.url = url
