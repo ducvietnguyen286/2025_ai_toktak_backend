@@ -305,10 +305,11 @@ class InstagramService(BaseService):
             if not publish_id:
                 return False
 
-            self.save_publish(
-                "PUBLISHED",
-                f"https://www.instagram.com/p/{publish_id}/",
-            )
+            permalink = self.get_permalink_instagram(publish_id)
+            if not permalink:
+                return False
+
+            self.save_publish("PUBLISHED", permalink)
             return True
         except Exception as e:
             self.save_errors("ERRORED", f"SEND POST IMAGE {self.key_log}: {str(e)}")
@@ -328,13 +329,38 @@ class InstagramService(BaseService):
             if not publish_id:
                 return False
 
-            self.save_publish(
-                "PUBLISHED",
-                f"https://www.instagram.com/p/{publish_id}/",
-            )
+            permalink = self.get_permalink_instagram(publish_id)
+            if not permalink:
+                return False
+
+            self.save_publish("PUBLISHED", permalink)
             return True
         except Exception as e:
             self.save_errors("ERRORED", f"SEND POST REEL {self.key_log}: {str(e)}")
+            return False
+
+    def get_permalink_instagram(self, media_id):
+        try:
+            PERMALINK_URL = f"https://graph.instagram.com/v22.0/{media_id}"
+            params = {
+                "fields": "permalink",
+                "access_token": self.access_token,
+            }
+            response = requests.get(PERMALINK_URL, params=params)
+            result = response.json()
+            self.save_request_log("get_permalink_instagram", params, result)
+            if "permalink" in result:
+                return result["permalink"]
+            elif "error" in result:
+                error = result["error"]
+                error_message = error["message"]
+                self.save_errors(
+                    "ERRORED",
+                    f"GET PERMALINK {self.key_log}: {error_message}",
+                )
+                return False
+        except Exception as e:
+            self.save_errors("ERRORED", f"GET PERMALINK {self.key_log}: {str(e)}")
             return False
 
     def upload_image(self, media, index=1):
