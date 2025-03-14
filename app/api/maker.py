@@ -545,8 +545,6 @@ class APIGetStatusUploadWithBatch(Resource):
             if status_check_sns == 1:
                 update_data["status_sns"] = 1
 
-            logger.info(update_data)
-
             PostService.update_post(post_id, **update_data)
 
         batch_res = batch._to_json()
