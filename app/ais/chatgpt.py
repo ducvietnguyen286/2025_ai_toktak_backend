@@ -472,19 +472,87 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
     return call_chatgpt(content, response_schema, post_id)
 
 
+def call_chatgpt_clear_product_name(name):
+    prompt = """Clean and refine product names from the provided list by removing unnecessary details and standardizing the format.
+
+### Key Steps
+
+1. Identify and analyze the product names provided, focusing on the essential elements that define each product.
+2. Remove any extraneous details such as quantities, sizes, and detailed specifications that do not directly contribute to the uniqueness of the product name.
+3. Maintain vital information that distinguishes the product from others, such as brand names and key features.
+4. Concisely reformat each product name for clarity and simplicity.
+
+# Output Format
+
+- Provide a list of cleaned and refined product names in bullet point format, with each name on a separate line.
+
+# Examples
+
+- **Input:** 펩티드 AtoZ 탄력 주름개선 에센스50ml 6개
+  **Output:** 펩티드 AtoZ 탄력 주름개선 에센스
+
+- **Input:** 에스로체 전면 오픈 기내용 캐리어 20인치 24인치 28인치 캐리어
+  **Output:** 에스로체 전면 오픈 기내용 캐리어
+
+- **Input:** 바세린 바디 프로텍팅 젤리 알로에, 100ml, 1개
+  **Output:** 바세린 바디 프로텍팅 젤리 알로에
+
+- **Input:**  TORSO 토르소 T76 발리오스 멀티 다이아몬드 워치 남자 메탈 시계 (가죽 스트랩 증정)
+  **Output:** 토르소 발리오스 멀티 다이아몬드 워치
+
+- **Input:**  갸스비 셋&킵 헤어스프레이 슈퍼하드 263ml 2개, 263ml, 2개
+  **Output:**  갸스비 셋&킵 헤어스프레이 슈퍼하드
+
+# Notes
+
+- Ensure that the output still retains the ability to be distinguished from similar products by including essential attributes and brand names.
+- Handle special cases where a piece of information appears to be necessary for differentiation, and include it when needed."""
+
+    content = [{"type": "text", "text": f"Product Name: {name}"}]
+
+    response_schema = {
+        "name": "response_schema",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "response": {
+                    "type": "object",
+                    "properties": {
+                        "product_name": {
+                            "type": "string",
+                            "description": "New Product name",
+                        },
+                    },
+                    "required": ["product_name"],
+                    "additionalProperties": False,
+                }
+            },
+            "required": ["response"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    }
+    return call_chatgpt(content, response_schema, 0, prompt)
+
+
 def replace_prompt_with_data(prompt, data):
     prompt = prompt.format(**data)
     return prompt
 
 
-def call_chatgpt(content, response_schema, post_id=0):
+def call_chatgpt(content, response_schema, post_id=0, base_prompt=None):
     client = OpenAI(api_key=chatgpt_api_key)
     model = "gpt-4o-mini"
+
+    messages = []
+    if base_prompt:
+        messages.append({"role": "system", "content": base_prompt})
+    messages.append({"role": "user", "content": content})
 
     request_log = json.dumps(
         {
             "model": model,
-            "messages": [{"role": "user", "content": content}],
+            "messages": messages,
             "response_format": {
                 "type": "json_schema",
                 "json_schema": response_schema,
