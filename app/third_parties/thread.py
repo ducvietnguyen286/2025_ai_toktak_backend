@@ -221,6 +221,7 @@ class ThreadTokenService:
             username = data.get("username") or ""
             return {
                 "id": data.get("id") or "",
+                "username": username,
                 "name": data.get("name") or "",
                 "avatar": data.get("threads_profile_picture_url") or "",
                 "url": f"https://www.threads.net/@{username}" or "",
