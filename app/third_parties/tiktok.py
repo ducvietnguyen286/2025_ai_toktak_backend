@@ -250,20 +250,7 @@ class TiktokService(BaseService):
             status = status_result.get("status")
             if status:
                 log_tiktok_message(f"POST {self.key_log} Upload image success")
-                publicaly_available_post_id = status_result.get(
-                    "publicaly_available_post_id"
-                )
-                post_id = (
-                    publicaly_available_post_id[0]
-                    if publicaly_available_post_id
-                    else ""
-                )
-                username = self.user_link.username
-                if username == "" or not username:
-                    user_url = self.user_link.url
-                    permalink = f"{user_url}/video/{post_id}"
-                else:
-                    permalink = f"https://www.tiktok.com/@{username}/video/{post_id}"
+                permalink = self.user_link.url
                 self.save_publish("PUBLISHED", permalink)
                 return True
             else:
@@ -310,20 +297,7 @@ class TiktokService(BaseService):
             status = status_result.get("status")
             if status:
                 log_tiktok_message(f"POST {self.key_log} Upload video success")
-                publicaly_available_post_id = status_result.get(
-                    "publicaly_available_post_id"
-                )
-                post_id = (
-                    publicaly_available_post_id[0]
-                    if publicaly_available_post_id
-                    else ""
-                )
-                username = self.user_link.username
-                if username == "" or not username:
-                    user_url = self.user_link.url
-                    permalink = f"{user_url}/video/{post_id}"
-                else:
-                    permalink = f"https://www.tiktok.com/@{username}/video/{post_id}"
+                permalink = self.user_link.url
                 self.save_publish("PUBLISHED", permalink)
                 return True
             else:
