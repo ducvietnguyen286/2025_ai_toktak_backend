@@ -5,6 +5,7 @@ import time
 import traceback
 import requests
 
+from app.lib.header import generate_desktop_user_agent
 from app.services.video_service import VideoService
 
 from app.lib.logger import log_twitter_message
@@ -408,16 +409,21 @@ class TwitterService(BaseService):
 
     def upload_media(self, media, is_video=False):
         log_twitter_message(f"{self.key_log} Upload media {media}")
-
+        headers = {"User-Agent": generate_desktop_user_agent()}
+        if is_video:
+            headers["Range"] = "bytes=0-"
+            headers["Accept"] = "video/mp4"
+        else:
+            headers["Accept"] = "image/*"
         try:
-            response = requests.get(media, timeout=20)
+            response = requests.get(media, headers=headers, timeout=20)
         except Exception as e:
             log_twitter_message(
                 f"------------------{self.key_log} Get Media Timeout-------------------------"
             )
             self.save_uploading(5)
             try:
-                response = requests.get(media, timeout=20)
+                response = requests.get(media, headers=headers, timeout=20)
             except Exception as e:
                 self.save_errors(
                     "ERRORED",

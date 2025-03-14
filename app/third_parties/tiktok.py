@@ -4,6 +4,7 @@ import time
 import traceback
 
 import requests
+from app.lib.header import generate_desktop_user_agent
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
@@ -270,16 +271,22 @@ class TiktokService(BaseService):
     def upload_video(self, media):
         try:
             log_tiktok_message(f"POST {self.key_log} Upload video to Tiktok")
+
+            headers = {
+                "Accept": "video/mp4",
+                "User-Agent": generate_desktop_user_agent(),
+                "Range": "bytes=0-",
+            }
             # FILE INFO
             try:
-                response = requests.get(media, timeout=20)
+                response = requests.get(media, headers=headers, timeout=20)
             except Exception as e:
                 log_tiktok_message(
                     f"------------------POST {self.key_log} Timeout To Get Video--------------------"
                 )
                 self.save_uploading(5)
                 try:
-                    response = requests.get(media, timeout=20)
+                    response = requests.get(media, headers=headers, timeout=20)
                 except Exception as e:
                     self.save_errors(
                         "ERRORED",
