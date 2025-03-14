@@ -258,12 +258,7 @@ class TiktokService(BaseService):
                     if publicaly_available_post_id
                     else ""
                 )
-                username = self.user_link.username
-                if username == "" or not username:
-                    user_url = self.user_link.url
-                    permalink = f"{user_url}/video/{post_id}"
-                else:
-                    permalink = f"https://www.tiktok.com/@{username}/video/{post_id}"
+                permalink = self.user_link.url
                 self.save_publish("PUBLISHED", permalink)
                 return True
             else:
@@ -318,12 +313,7 @@ class TiktokService(BaseService):
                     if publicaly_available_post_id
                     else ""
                 )
-                username = self.user_link.username
-                if username == "" or not username:
-                    user_url = self.user_link.url
-                    permalink = f"{user_url}/video/{post_id}"
-                else:
-                    permalink = f"https://www.tiktok.com/@{username}/video/{post_id}"
+                permalink = self.user_link.url
                 self.save_publish("PUBLISHED", permalink)
                 return True
             else:
