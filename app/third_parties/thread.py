@@ -308,10 +308,11 @@ class ThreadService(BaseService):
             if not publish_id:
                 return False
 
-            self.save_publish(
-                "PUBLISHED",
-                f"https://www.threads.net/@{self.thread_user_id}/post/{publish_id}",
-            )
+            permalink = self.get_permalink_thread(publish_id)
+            if not permalink:
+                return False
+
+            self.save_publish("PUBLISHED", permalink)
             return True
         except Exception as e:
             self.save_errors("ERRORED", f"SEND POST IMAGE {self.key_log}: {str(e)}")
@@ -340,13 +341,40 @@ class ThreadService(BaseService):
             publish_id = self.publish_post(media_id)
             if not publish_id:
                 return False
-            self.save_publish(
-                "PUBLISHED",
-                f"https://www.threads.net/@{self.thread_user_id}/post/{publish_id}",
-            )
+
+            permalink = self.get_permalink_thread(publish_id)
+            if not permalink:
+                return False
+
+            self.save_publish("PUBLISHED", permalink)
             return True
         except Exception as e:
             self.save_errors("ERRORED", f"SEND POST VIDEO {self.key_log}: {str(e)}")
+            return False
+
+    def get_permalink_thread(self, media_id):
+        try:
+            PERMALINK_URL = f"https://graph.threads.net/v1.0/{media_id}"
+            params = {
+                "fields": "id,permalink",
+                "access_token": self.access_token,
+            }
+            response = requests.get(PERMALINK_URL, params=params)
+            result = response.json()
+            self.save_request_log("get_permalink_thread", params, result)
+
+            if "permalink" in result:
+                return result["permalink"]
+            elif "error" in result:
+                error = result["error"]
+                error_message = error["message"]
+                self.save_errors(
+                    "ERRORED",
+                    f"GET PERMALINK {self.key_log}: {error_message}",
+                )
+                return False
+        except Exception as e:
+            self.save_errors("ERRORED", f"GET PERMALINK {self.key_log}: {str(e)}")
             return False
 
     def upload_media(self, media, text, is_video=False, index=1):
