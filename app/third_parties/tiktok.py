@@ -150,7 +150,7 @@ class TiktokService(BaseService):
                 f"------------ READY TO SEND POST: {post._to_json()} ----------------"
             )
             if post.type == "video":
-                self.upload_video_by_url(post.video_url)
+                self.upload_video(post.video_url)
             if post.type == "image":
                 self.upload_image(post.images)
             return True
@@ -275,9 +275,7 @@ class TiktokService(BaseService):
             headers = {
                 "Accept": "video/mp4",
                 "User-Agent": generate_desktop_user_agent(),
-                "Range": "bytes=0-",
             }
-            # FILE INFO
             try:
                 response = requests.get(media, headers=headers, timeout=20)
             except Exception as e:
