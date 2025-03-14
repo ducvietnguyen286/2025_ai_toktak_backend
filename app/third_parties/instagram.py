@@ -343,7 +343,7 @@ class InstagramService(BaseService):
                 f"------------ UPLOAD MEDIA: {self.key_log} ----------------"
             )
             UPLOAD_URL = (
-                f"https://graph.facebook.com/v22.0/{self.istagram_user_id}/media"
+                f"https://graph.instagram.com/v22.0/{self.istagram_user_id}/media"
             )
             params = {
                 "image_url": media,
@@ -397,7 +397,7 @@ class InstagramService(BaseService):
             )
 
             UPLOAD_URL = (
-                f"https://graph.facebook.com/v22.0/{self.istagram_user_id}/media"
+                f"https://graph.instagram.com/v22.0/{self.istagram_user_id}/media"
             )
             upload_data = {
                 "access_token": self.access_token,
@@ -449,7 +449,7 @@ class InstagramService(BaseService):
             log_instagram_message(
                 f"------------ GET UPLOAD STATUS: {self.key_log} ----------------"
             )
-            GET_STATUS_URL = f"https://graph.facebook.com/v22.0/{media_id}"
+            GET_STATUS_URL = f"https://graph.instagram.com/v22.0/{media_id}"
             params = {
                 "access_token": self.access_token,
                 "fields": "status,status_code",
@@ -497,7 +497,7 @@ class InstagramService(BaseService):
             log_instagram_message(
                 f"------------ PUBLISH POST: {self.key_log} ----------------"
             )
-            PUBLISH = f"https://graph.facebook.com/v22.0/{self.istagram_user_id}/media_publish"
+            PUBLISH = f"https://graph.instagram.com/v22.0/{self.istagram_user_id}/media_publish"
             upload_data = {
                 "access_token": self.access_token,
                 "creation_id": media_id,
@@ -546,7 +546,7 @@ class InstagramService(BaseService):
                 f"------------ UPLOAD REEL POST: {self.key_log} ----------------"
             )
             UPLOAD_URL = (
-                f"https://graph.facebook.com/v22.0/{self.istagram_user_id}/media"
+                f"https://graph.instagram.com/v22.0/{self.istagram_user_id}/media"
             )
 
             text = (
