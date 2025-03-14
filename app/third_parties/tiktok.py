@@ -270,9 +270,14 @@ class TiktokService(BaseService):
 
     def upload_video(self, media):
         try:
-            log_tiktok_message(f"POST {self.key_log} Upload video to Tiktok")
+            log_tiktok_message(
+                f"------------POST {self.key_log} UPLOAD VIDEO TO TIKTOK----------------"
+            )
 
             try:
+                log_tiktok_message(
+                    f"------------POST {self.key_log} GET VIDEO FROM SHOTSTACK----------------"
+                )
                 response = requests.get(media, timeout=20)
             except Exception as e:
                 log_tiktok_message(
