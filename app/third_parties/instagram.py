@@ -21,7 +21,7 @@ class InstagramTokenService:
                 "------------------  EXCHANGE INSTAGRAM CODE  ------------------"
             )
 
-            EXCHANGE_URL = f"https://graph.instagram.com/oauth/access_token"
+            EXCHANGE_URL = f"https://api.instagram.com/oauth/access_token"
 
             CLIENT_ID = os.environ.get("INSTAGRAM_APP_ID") or ""
             CLIENT_SECRET = os.environ.get("INSTAGRAM_APP_SECRET") or ""
