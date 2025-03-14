@@ -60,6 +60,7 @@ class TwitterTokenService:
 
             return {
                 "id": data.get("id") or "",
+                "username": data.get("username") or "",
                 "name": data.get("name") or "",
                 "avatar": data.get("profile_image_url") or "",
                 "url": f"https://x.com/{data.get('username')}" or "",
@@ -270,6 +271,9 @@ class TwitterService(BaseService):
                 )
                 return False
             parsed_response = response.json()
+
+            self.save_request_log("send_post_to_x", data, parsed_response)
+
             log_twitter_message(parsed_response)
             status = parsed_response.get("status")
             if status == 401:
@@ -301,7 +305,8 @@ class TwitterService(BaseService):
             else:
                 data = parsed_response.get("data")
                 log_twitter_message(data)
-                permalink = data.get("id")
+                x_post_id = data.get("id")
+                permalink = f"https://x.com/i/status/{x_post_id}"
                 self.save_publish("PUBLISHED", permalink)
                 return True
         except Exception as e:
@@ -315,13 +320,14 @@ class TwitterService(BaseService):
         log_twitter_message(f"{self.key_log} Upload media {media}")
 
         try:
-            response = requests.get(media, timeout=30)
+            response = requests.get(media, timeout=20)
         except Exception as e:
             log_twitter_message(
                 f"------------------{self.key_log} Get Media Timeout-------------------------"
             )
+            self.save_uploading(5)
             try:
-                response = requests.get(media, timeout=30)
+                response = requests.get(media, timeout=20)
             except Exception as e:
                 self.save_errors(
                     "ERRORED",
@@ -377,14 +383,7 @@ class TwitterService(BaseService):
             )
             return False
 
-        RequestSocialLogService.create_request_social_log(
-            social="X",
-            social_post_id=self.social_post_id,
-            user_id=self.user.id,
-            type="upload_media_init",
-            request=json.dumps(request_data),
-            response=json.dumps(req.json()),
-        )
+        self.save_request_log("upload_media_init", request_data, req.json())
 
         self.save_uploading(10)
 
@@ -469,14 +468,7 @@ class TwitterService(BaseService):
                 )
                 return False
 
-            RequestSocialLogService.create_request_social_log(
-                social="X",
-                social_post_id=self.social_post_id,
-                user_id=self.user.id,
-                type="upload_media_append",
-                request=json.dumps(data),
-                response=req.text,
-            )
+            self.save_request_log("upload_media_append", data, {"text": req.text})
 
             self.save_uploading(10 + (progress_by_chunk * (segment_id + 1)))
 
@@ -543,14 +535,7 @@ class TwitterService(BaseService):
             )
             return False
 
-        RequestSocialLogService.create_request_social_log(
-            social="X",
-            social_post_id=self.social_post_id,
-            user_id=self.user.id,
-            type="upload_media_finalize",
-            request=json.dumps(request_data),
-            response=json.dumps(req.json()),
-        )
+        self.save_request_log("upload_media_finalize", request_data, req.json())
 
         status_code = req.status_code
         if status_code == 401:
@@ -632,6 +617,8 @@ class TwitterService(BaseService):
                 f"POST {self.key_log} UPLOAD MEDIA STATUS - REQUEST URL: {str(e)}",
             )
             return False
+
+        self.save_request_log("check_status", request_params, req.json())
 
         status_code = req.status_code
         if status_code == 401:

@@ -47,6 +47,7 @@ class TiktokTokenService:
 
             return {
                 "id": user_data.get("open_id") or "",
+                "username": user_data.get("username") or "",
                 "name": user_data.get("display_name") or "",
                 "avatar": user_data.get("avatar_url") or "",
                 "url": f"https://www.tiktok.com/@{user_data.get('username')}" or "",
@@ -212,14 +213,7 @@ class TiktokService(BaseService):
 
             self.save_uploading(self.progress)
 
-            RequestSocialLogService.create_request_social_log(
-                social="TIKTOK",
-                social_post_id=self.social_post_id,
-                user_id=self.user_id,
-                type="upload_image",
-                request=json.dumps(payload),
-                response=json.dumps(parsed_response),
-            )
+            self.save_request_log("upload_image", payload, parsed_response)
 
             log_tiktok_message(
                 f"POST {self.key_log} Upload image to Tiktok response: {parsed_response}"
@@ -256,8 +250,17 @@ class TiktokService(BaseService):
             status = status_result.get("status")
             if status:
                 log_tiktok_message(f"POST {self.key_log} Upload image success")
-
-                self.save_publish("PUBLISHED", "profile")
+                publicaly_available_post_id = status_result.get(
+                    "publicaly_available_post_id"
+                )
+                post_id = (
+                    publicaly_available_post_id[0]
+                    if publicaly_available_post_id
+                    else ""
+                )
+                username = self.user_link.username
+                permalink = f"https://www.tiktok.com/@{username}/video/{post_id}"
+                self.save_publish("PUBLISHED", permalink)
                 return True
             else:
                 error_message = status.get("message")
@@ -278,13 +281,14 @@ class TiktokService(BaseService):
             log_tiktok_message(f"POST {self.key_log} Upload video to Tiktok")
             # FILE INFO
             try:
-                response = requests.get(media, timeout=30)
+                response = requests.get(media, timeout=20)
             except Exception as e:
                 log_tiktok_message(
                     f"------------------POST {self.key_log} Timeout To Get Video--------------------"
                 )
+                self.save_uploading(5)
                 try:
-                    response = requests.get(media, timeout=30)
+                    response = requests.get(media, timeout=20)
                 except Exception as e:
                     self.save_errors(
                         "ERRORED",
@@ -302,7 +306,17 @@ class TiktokService(BaseService):
             status = status_result.get("status")
             if status:
                 log_tiktok_message(f"POST {self.key_log} Upload video success")
-                self.save_publish("PUBLISHED", "profile")
+                publicaly_available_post_id = status_result.get(
+                    "publicaly_available_post_id"
+                )
+                post_id = (
+                    publicaly_available_post_id[0]
+                    if publicaly_available_post_id
+                    else ""
+                )
+                username = self.user_link.username
+                permalink = f"https://www.tiktok.com/@{username}/video/{post_id}"
+                self.save_publish("PUBLISHED", permalink)
                 return True
             else:
                 error_message = status.get("message")
@@ -331,8 +345,13 @@ class TiktokService(BaseService):
                 "ERRORED",
                 f"POST {self.key_log} CHECK STATUS - REQUEST URL VIDEO: {str(e)}",
             )
-            return False
+            return {
+                "status": False,
+                "message": str(e),
+            }
         res_json = response.json()
+
+        self.save_request_log("check_status", payload, res_json)
 
         log_tiktok_message(f"TIKTOK: Check status: {res_json}")
 
@@ -372,7 +391,13 @@ class TiktokService(BaseService):
             return False
         status = res_json.get("data").get("status")
         if status == "PUBLISH_COMPLETE":
-            return {"status": True}
+            publicaly_available_post_id = res_json.get("data").get(
+                "publicaly_available_post_id"
+            )
+            return {
+                "status": True,
+                "publicaly_available_post_id": publicaly_available_post_id,
+            }
         if status == "FAILED":
             return {
                 "status": False,
@@ -439,14 +464,7 @@ class TiktokService(BaseService):
 
         self.save_uploading(self.progress)
 
-        RequestSocialLogService.create_request_social_log(
-            social="TIKTOK",
-            social_post_id=self.social_post_id,
-            user_id=self.user_id,
-            type="upload_video_init",
-            request=json.dumps(payload),
-            response=json.dumps(parsed_response),
-        )
+        self.save_request_log("upload_video_init", payload, parsed_response)
 
         error = parsed_response.get("error")
         error_code = error.get("code")
@@ -551,14 +569,7 @@ class TiktokService(BaseService):
 
             response_put = response.json()
 
-            RequestSocialLogService.create_request_social_log(
-                social="TIKTOK",
-                social_post_id=self.social_post_id,
-                user_id=self.user_id,
-                type="upload_video_chunk",
-                request=json.dumps(headers),
-                response=json.dumps(response_put),
-            )
+            self.save_request_log("upload_video_chunk", headers, response_put)
 
             if response.status_code in (201, 206):
                 log_tiktok_message(
