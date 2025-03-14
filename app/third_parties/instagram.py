@@ -198,7 +198,7 @@ class InstagramTokenService:
             INFO_URL = f"https://graph.instagram.com/v22.0/me"
 
             params = {
-                "fields": "id,username,profile_pic_url,permalink",
+                "fields": "id,username,profile_pic,permalink",
                 "access_token": access_token,
             }
 
