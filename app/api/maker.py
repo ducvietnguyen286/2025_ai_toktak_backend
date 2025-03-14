@@ -75,7 +75,8 @@ class APICreateBatch(Resource):
             product_name_cleared = call_chatgpt_clear_product_name(product_name)
             if product_name_cleared:
                 product_name_cleared = json.loads(product_name_cleared)
-                data["name"] = product_name_cleared.get("product_name", "")
+                res_product_name = product_name_cleared.get("response", "")
+                data["name"] = res_product_name.get("product_name", "")
 
             images = data.get("images", [])
 
