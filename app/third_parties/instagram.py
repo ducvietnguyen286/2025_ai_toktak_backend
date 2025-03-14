@@ -215,6 +215,7 @@ class InstagramTokenService:
 
             return {
                 "id": data.get("id") or "",
+                "username": "",
                 "name": data.get("username") or "",
                 "avatar": data.get("profile_pic_url") or "",
                 "url": data.get("permalink") or "",

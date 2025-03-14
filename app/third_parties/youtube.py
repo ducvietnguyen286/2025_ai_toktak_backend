@@ -56,6 +56,7 @@ class YoutubeTokenService:
 
             return {
                 "id": item["id"] or "",
+                "username": item["snippet"]["customUrl"] or "",
                 "name": item["snippet"]["title"] or "",
                 "avatar": item["snippet"]["thumbnails"]["default"]["url"] or "",
                 "url": f"https://www.youtube.com/{item['snippet']['customUrl']}" or "",
@@ -165,15 +166,10 @@ class YoutubeService(BaseService):
                 scopes=SCOPES,
             )
 
-            RequestSocialLogService.create_request_social_log(
-                social="YOUTUBE",
-                social_post_id=self.social_post_id,
-                user_id=user_link.user_id,
-                type="get_youtube_service_from_token",
-                request=json.dumps(
-                    {"access_token": access_token, "refresh_token": refresh_token}
-                ),
-                response=json.dumps(json.loads(credentials.to_json())),
+            self.save_request_log(
+                "get_youtube_service_from_token",
+                {"access_token": access_token, "refresh_token": refresh_token},
+                json.loads(credentials.to_json()),
             )
 
             if credentials.expired:
@@ -226,13 +222,14 @@ class YoutubeService(BaseService):
 
             video_url = post.video_url
             try:
-                video_content = requests.get(video_url, timeout=30).content
+                video_content = requests.get(video_url, timeout=20).content
             except Exception as e:
                 log_youtube_message(
                     f"----------------------- {self.key_log} TIMEOUT GET VIDEO ---------------------------"
                 )
+                self.save_uploading(5)
                 try:
-                    video_content = requests.get(video_url, timeout=30).content
+                    video_content = requests.get(video_url, timeout=20).content
                 except Exception as e:
                     self.save_errors(
                         "ERRORED",
@@ -283,10 +280,9 @@ class YoutubeService(BaseService):
                 while response is None:
                     status, response = request.next_chunk()
                     if status:
+                        progress = int(status.progress() * 100)
                         log_youtube_message(
-                            "YOUTUBE Đang upload: {}%".format(
-                                int(status.progress() * 100)
-                            )
+                            f"YOUTUBE {self.key_log} UPLOADING: {progress}%"
                         )
                     if i <= 6:
                         self.save_uploading(10 + (i * 10))
@@ -302,6 +298,8 @@ class YoutubeService(BaseService):
             log_youtube_message(
                 f"----------------------- YOUTUBE UPLOADED {self.key_log}  : RES {response}  ---------------------------"
             )
+
+            self.save_request_log("upload_video", body, response)
 
             RequestSocialLogService.create_request_social_log(
                 social="YOUTUBE",

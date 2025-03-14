@@ -143,6 +143,7 @@ class FacebookTokenService:
             log_facebook_message(f"User info: {data}")
             return {
                 "id": data.get("id") or "",
+                "username": "",
                 "name": data.get("name") or "",
                 "avatar": data.get("picture").get("data").get("url") or "",
                 "url": f"https://facebook.com/profile.php?id={data.get('id')}" or "",
@@ -360,14 +361,7 @@ class FacebookService(BaseService):
             return False
 
         result = post_response.json()
-        RequestSocialLogService.create_request_social_log(
-            social="FACEBOOK",
-            social_post_id=self.social_post_id,
-            user_id=self.user.id,
-            type="start_session_upload_reel",
-            request=json.dumps(post_data),
-            response=json.dumps(result),
-        )
+        self.save_request_log("start_session_upload_reel", post_data, result)
 
         self.save_uploading(10)
 
@@ -386,14 +380,8 @@ class FacebookService(BaseService):
             return False
 
         result = post_response.json()
-        RequestSocialLogService.create_request_social_log(
-            social="FACEBOOK",
-            social_post_id=self.social_post_id,
-            user_id=self.user.id,
-            type="upload_video",
-            request=json.dumps(headers),
-            response=json.dumps(result),
-        )
+        self.save_request_log("upload_video", headers, result)
+
         self.save_uploading(20)
         log_facebook_message(f"POST {self.key_log} Upload video: {result}")
 
@@ -418,6 +406,7 @@ class FacebookService(BaseService):
                 }
 
             result = get_response.json()
+            self.save_request_log("get_upload_status", {"video_id": video_id}, result)
 
             log_facebook_message(f"POST {self.key_log}: get upload status: {result}")
 
@@ -493,14 +482,7 @@ class FacebookService(BaseService):
             return False
 
         result = post_response.json()
-        RequestSocialLogService.create_request_social_log(
-            social="FACEBOOK",
-            social_post_id=self.social_post_id,
-            user_id=self.user.id,
-            type="publish_the_reel",
-            request=json.dumps(post_data),
-            response=json.dumps(result),
-        )
+        self.save_request_log("publish_the_reel", post_data, result)
 
         self.save_uploading(90)
 
@@ -517,14 +499,8 @@ class FacebookService(BaseService):
             return False
 
         result = get_response.json()
-        RequestSocialLogService.create_request_social_log(
-            social="FACEBOOK",
-            social_post_id=self.social_post_id,
-            user_id=self.user.id,
-            type="get_reel_uploaded",
-            request=json.dumps({"page_id": page_id}),
-            response=json.dumps(result),
-        )
+        self.save_request_log("get_reel_uploaded", {"page_id": page_id}, result)
+
         log_facebook_message(f"Get reel: {result}")
         return result
 
@@ -567,14 +543,7 @@ class FacebookService(BaseService):
             return False
         result = post_response.json()
 
-        RequestSocialLogService.create_request_social_log(
-            social="FACEBOOK",
-            social_post_id=self.social_post_id,
-            user_id=self.user.id,
-            type="send_post_image",
-            request=json.dumps(post_data),
-            response=json.dumps(result),
-        )
+        self.save_request_log("send_post_image", post_data, result)
 
         log_facebook_message(f"POST {self.key_log} result: {result}")
 
@@ -616,14 +585,7 @@ class FacebookService(BaseService):
 
             result = response.json()
 
-            RequestSocialLogService.create_request_social_log(
-                social="FACEBOOK",
-                social_post_id=self.social_post_id,
-                user_id=self.user.id,
-                type="unpublish_images",
-                request=json.dumps(data),
-                response=json.dumps(result),
-            )
+            self.save_request_log("unpublish_images", data, result)
 
             progress += progress_per_image
 

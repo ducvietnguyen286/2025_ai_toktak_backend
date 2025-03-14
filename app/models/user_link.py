@@ -9,6 +9,7 @@ class UserLink(db.Model, BaseModel):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     link_id = db.Column(db.Integer, db.ForeignKey("links.id"), nullable=False)
     social_id = db.Column(db.String(150))
+    username = db.Column(db.String(150))
     name = db.Column(db.String(500))
     avatar = db.Column(db.String(1024))
     url = db.Column(db.String(1024))
