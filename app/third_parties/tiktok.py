@@ -492,7 +492,12 @@ class TiktokService(BaseService):
             "Content-Type": "application/json; charset=UTF-8",
         }
 
-        log_tiktok_message(headers)
+        log_tiktok_message(
+            f"------------------ {self.key_log} MEDIA SIZE: {media_size}  ------------------"
+        )
+        log_tiktok_message(
+            f"------------------ {self.key_log} MEDIA TYPE: {media_type}  ------------------"
+        )
 
         chunk_size = 0
 
