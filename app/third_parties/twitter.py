@@ -223,37 +223,36 @@ class TwitterService(BaseService):
 
     def send_post_social(self, post, link):
         log_twitter_message(
-            f"POST {self.key_log} Send post Social to Twitter {post.id}"
+            f"POST {self.key_log} Send post IMAGES to Twitter {post.id}"
         )
         if post.status != 1 or post.thumbnail == "" or post.thumbnail is None:
             return
         images = post.images
-        image = ""
         if images:
             images = json.loads(images)
-            image = images[0]
         else:
-            image = post.thumbnail
-        return self.send_post_to_x(image, post, link)
+            images = [post.thumbnail]
 
-    def send_post_video(self, post, link):
-        log_twitter_message(f"POST {self.key_log} Send post Video to Twitter {post.id}")
-        if post.status != 1 or post.video_url == "" or post.video_url is None:
-            return
-        return self.send_post_to_x(post.video_url, post, link, is_video=True)
-
-    def send_post_to_x(self, media, post, link, is_video=False, media_id=None, retry=0):
-        try:
-            log_twitter_message(f"POST {self.key_log} Send post to X {post.id}")
-            access_token = self.meta.get("access_token")
-            if not media_id:
-                media_id = self.upload_media(media, is_video)
-            log_twitter_message(f"media_id: {media_id}")
+        media_ids = []
+        for img in images:
+            media_id = self.upload_media(img)
             if not media_id:
                 return False
+
+            media_ids.append(media_id)
+
+        return self.send_post_images(media_ids, post, link)
+
+    def send_post_images(self, media_ids, post, link, retry=0):
+        try:
+            log_twitter_message(f"POST {self.key_log} Send IMAGES {post.id}")
+            access_token = self.meta.get("access_token")
+            text = post.description
+            if len(text) > 280:
+                text = text[:280]
             data = {
-                "text": post.title,
-                "media": {"media_ids": [media_id]},
+                "text": text,
+                "media": {"media_ids": media_ids},
             }
             log_twitter_message(data)
             headers = {
@@ -267,12 +266,12 @@ class TwitterService(BaseService):
             except Exception as e:
                 self.save_errors(
                     "ERRORED",
-                    f"POST {self.key_log} SEND POST TO X - REQUEST URL: {str(e)}",
+                    f"POST {self.key_log} SEND POST IMAGES - REQUEST URL: {str(e)}",
                 )
                 return False
             parsed_response = response.json()
 
-            self.save_request_log("send_post_to_x", data, parsed_response)
+            self.save_request_log("send_images", data, parsed_response)
 
             log_twitter_message(parsed_response)
             status = parsed_response.get("status")
@@ -283,7 +282,7 @@ class TwitterService(BaseService):
 
                     self.save_errors(
                         "ERRORED",
-                        f"POST {self.key_log} SEND POST TO X: Access token invalid",
+                        f"POST {self.key_log} SEND POST IMAGES: Access token invalid",
                     )
 
                     return False
@@ -293,13 +292,11 @@ class TwitterService(BaseService):
                     link_id=self.link.id, user_id=self.user.id
                 )
                 self.meta = json.loads(self.user_link.meta)
-                return self.send_post_to_x(
-                    media, post, link, is_video, media_id, retry + 1
-                )
+                return self.send_post_images(media_ids, post, link, retry + 1)
             errors = parsed_response.get("errors")
             if errors:
                 self.save_errors(
-                    "ERRORED", f"POST {self.key_log} SEND POST TO X: {errors}"
+                    "ERRORED", f"POST {self.key_log} SEND POST IMAGES: {errors}"
                 )
                 return False
             else:
@@ -319,7 +316,92 @@ class TwitterService(BaseService):
         except Exception as e:
             traceback.print_exc()
             self.save_errors(
-                "ERRORED", f"POST {self.key_log} SEND POST TO X - ERROR: " + str(e)
+                "ERRORED", f"POST {self.key_log} SEND POST IMAGES - ERROR: " + str(e)
+            )
+            return False
+
+    def send_post_video(self, post, link):
+        log_twitter_message(f"POST {self.key_log} Send post Video to Twitter {post.id}")
+        if post.status != 1 or post.video_url == "" or post.video_url is None:
+            return
+        return self.send_post_video_to_x(post.video_url, post, link)
+
+    def send_post_video_to_x(self, media, post, link, media_id=None, retry=0):
+        try:
+            log_twitter_message(f"POST {self.key_log} Send VIDEO {post.id}")
+            access_token = self.meta.get("access_token")
+            if not media_id:
+                media_id = self.upload_media(media, True)
+            log_twitter_message(f"media_id: {media_id}")
+            if not media_id:
+                return False
+            data = {
+                "text": post.title,
+                "media": {"media_ids": [media_id]},
+            }
+            log_twitter_message(data)
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            }
+            try:
+                response = requests.post(
+                    X_POST_TO_X_URL, headers=headers, data=json.dumps(data)
+                )
+            except Exception as e:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} SEND POST VIDEO - REQUEST URL: {str(e)}",
+                )
+                return False
+            parsed_response = response.json()
+
+            self.save_request_log("send_video", data, parsed_response)
+
+            log_twitter_message(parsed_response)
+            status = parsed_response.get("status")
+            if status == 401:
+                if retry > 0:
+                    self.user_link.status = 0
+                    self.user_link.save()
+
+                    self.save_errors(
+                        "ERRORED",
+                        f"POST {self.key_log} SEND POST VIDEO: Access token invalid",
+                    )
+
+                    return False
+
+                TwitterTokenService().refresh_token(link=self.link, user=self.user)
+                self.user_link = UserService.find_user_link(
+                    link_id=self.link.id, user_id=self.user.id
+                )
+                self.meta = json.loads(self.user_link.meta)
+                return self.send_post_video_to_x(media, post, link, media_id, retry + 1)
+            errors = parsed_response.get("errors")
+            if errors:
+                self.save_errors(
+                    "ERRORED", f"POST {self.key_log} SEND POST VIDEO: {errors}"
+                )
+                return False
+            else:
+                data = parsed_response.get("data")
+                log_twitter_message(data)
+                x_post_id = data.get("id")
+
+                username = self.user_link.username
+                if username == "" or not username:
+                    user_url = self.user_link.url
+                    permalink = f"{user_url}/status/{x_post_id}"
+                else:
+                    permalink = f"https://x.com/{username}/status/{x_post_id}"
+
+                self.save_publish("PUBLISHED", permalink)
+                return True
+        except Exception as e:
+            traceback.print_exc()
+            self.save_errors(
+                "ERRORED", f"POST {self.key_log} SEND POST VIDEO - ERROR: " + str(e)
             )
             return False
 
