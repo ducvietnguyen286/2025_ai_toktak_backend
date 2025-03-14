@@ -272,17 +272,17 @@ class TiktokService(BaseService):
         try:
             log_tiktok_message(f"POST {self.key_log} Upload video to Tiktok")
 
-            headers = {
-                "Accept": "video/*",
-                "User-Agent": generate_desktop_user_agent(),
-            }
             try:
-                response = requests.get(media, headers=headers, timeout=20)
+                response = requests.get(media, timeout=20)
             except Exception as e:
                 log_tiktok_message(
                     f"------------------POST {self.key_log} TIMEOUT TO GET VIDEO--------------------"
                 )
                 self.save_uploading(5)
+                headers = {
+                    "Accept": "video/*",
+                    "User-Agent": generate_desktop_user_agent(),
+                }
                 try:
                     response = requests.get(media, headers=headers, timeout=20)
                 except Exception as e:
