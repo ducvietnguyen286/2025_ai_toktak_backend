@@ -198,7 +198,7 @@ class InstagramTokenService:
             INFO_URL = f"https://graph.instagram.com/v22.0/me"
 
             params = {
-                "fields": "id,username,profile_picture_url,permalink",
+                "fields": "id,username,profile_picture_url",
                 "access_token": access_token,
             }
 
@@ -216,12 +216,15 @@ class InstagramTokenService:
 
             log_instagram_message(f"Get info response: {data}")
 
+            username = data.get("username") or ""
+            profile_url = f"https://instagram.com/{username}"
+
             return {
                 "id": data.get("id") or "",
-                "username": "",
-                "name": data.get("username") or "",
+                "username": username,
+                "name": username,
                 "avatar": data.get("profile_picture_url") or "",
-                "url": data.get("permalink") or "",
+                "url": profile_url,
             }
         except Exception as e:
             traceback.print_exc()
