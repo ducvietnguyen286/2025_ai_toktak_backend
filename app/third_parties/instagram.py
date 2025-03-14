@@ -70,11 +70,14 @@ class InstagramTokenService:
             return False
 
     @staticmethod
-    def exchange_long_live_token(access_token, user_link):
+    def exchange_long_live_token(user_link):
         try:
             log_instagram_message(
                 "------------------  EXCHANGE INSTAGRAM TOKEN  ------------------"
             )
+            user_link = UserService.find_user_link_by_id(user_link.id)
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("access_token")
 
             EXCHANGE_URL = f"https://graph.instagram.com/access_token"
 
