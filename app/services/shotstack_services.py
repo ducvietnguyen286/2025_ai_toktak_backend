@@ -164,6 +164,7 @@ class ShotStackService:
                                 "length": "end",
                                 "fit": "none",
                                 "position": "bottomRight",
+                                "offset": {"x": 0, "y": 0.2},
                             }
                         ]
                     },
