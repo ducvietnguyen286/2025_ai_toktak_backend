@@ -35,6 +35,9 @@ gevent-websocket~=0.10.1
 flask-me~=1.0.2
 selenium ~= 4.18.1
 webdriver-manager ~= 4.0.1
+python-docx~=1.1.2
+pandas~=2.2.3
+openpyxl~=3.1.5
 
 threads-api~=1.2.0
 google-auth-oauthlib~=1.2.1
