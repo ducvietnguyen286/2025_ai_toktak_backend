@@ -306,6 +306,14 @@ class TwitterService(BaseService):
                 data = parsed_response.get("data")
                 log_twitter_message(data)
                 x_post_id = data.get("id")
+
+                username = self.user_link.username
+                if username == "" or not username:
+                    user_url = self.user_link.url
+                    permalink = f"{user_url}/status/{x_post_id}"
+                else:
+                    permalink = f"https://x.com/{username}/status/{x_post_id}"
+
                 permalink = f"https://x.com/i/status/{x_post_id}"
                 self.save_publish("PUBLISHED", permalink)
                 return True
