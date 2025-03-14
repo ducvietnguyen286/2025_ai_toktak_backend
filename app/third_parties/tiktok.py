@@ -374,7 +374,7 @@ class TiktokService(BaseService):
                     link_id=self.link.id, user_id=self.user.id
                 )
                 self.meta = json.loads(self.user_link.meta)
-                return self.upload_video_init(media_url=media_url, retry=retry + 1)
+                return self.upload_video_by_url(media_url=media_url, retry=retry + 1)
             elif error and error_code != "ok":
                 error_message = error.get("message") or "Upload video INIT error"
                 self.save_errors(
