@@ -117,6 +117,7 @@ class AuthService:
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
+            "user_level" : user.level
         }
 
     @staticmethod
