@@ -143,13 +143,13 @@ class ShotStackService:
                             {
                                 "asset": {
                                     "type": "image",
-                                    "src": "https://admin.lang.canvasee.com/img/watermarker3.png",
+                                    "src": "https://admin.lang.canvasee.com/img/watermarker5.png",
                                 },
                                 "start": 0,
                                 "length": 3,
                                 "fit": "none",
                                 "position": "left",
-                                "offset": {"x": 0, "y": 0},
+                                "offset": {"x": 0.05, "y": 0},
                             }
                         ]
                     },
@@ -158,13 +158,13 @@ class ShotStackService:
                             {
                                 "asset": {
                                     "type": "image",
-                                    "src": "https://admin.lang.canvasee.com/img/watermarker4.png",
+                                    "src": "https://admin.lang.canvasee.com/img/watermarker5.png",
                                 },
                                 "start": 3,
                                 "length": "end",
                                 "fit": "none",
                                 "position": "bottomRight",
-                                "offset": {"x": 0, "y": 0.22},
+                                "offset": {"x": -0.05, "y": 0.22},
                             }
                         ]
                     },
