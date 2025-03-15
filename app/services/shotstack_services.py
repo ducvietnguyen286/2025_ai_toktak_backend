@@ -149,7 +149,7 @@ class ShotStackService:
                                 "length": 3,
                                 "fit": "none",
                                 "position": "left",
-                                "offset": {"x": 0, "y": 0},
+                                "offset": {"x": 0.05, "y": 0},
                             }
                         ]
                     },
@@ -164,7 +164,7 @@ class ShotStackService:
                                 "length": "end",
                                 "fit": "none",
                                 "position": "bottomRight",
-                                "offset": {"x": 0, "y": 0.22},
+                                "offset": {"x": -0.05, "y": 0.22},
                             }
                         ]
                     },
