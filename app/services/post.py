@@ -31,6 +31,12 @@ class PostService:
         )
         return posts
 
+    @staticmethod
+    def update_posts_by_ids(ids, *args, **kwargs):
+        updated_rows = Post.query.filter(Post.id.in_(ids)).update(kwargs)
+        db.session.commit()
+        return updated_rows
+
     def get_posts_by_batch(batch_id):
         posts = Post.query.where(Post.batch_id == batch_id).all()
         return posts
