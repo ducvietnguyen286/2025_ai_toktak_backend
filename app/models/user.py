@@ -17,7 +17,7 @@ class User(db.Model, BaseModel):
     contact = db.Column(db.String(255), nullable=True)
     company_name = db.Column(db.String(255), nullable=True)
     
-    level = db.Column(db.Integer, default=1)
+    level = db.Column(db.Integer, default=0)
     level_info = db.Column(db.Text, nullable=False)
 
     print_filter = ("password",)
