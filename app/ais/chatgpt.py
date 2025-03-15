@@ -503,7 +503,9 @@ def call_chatgpt_clear_product_name(name):
 출력 결과가 유사한 제품과 구분될 수 있도록 필수 속성과 브랜드 이름을 포함하여야 합니다.
 차별화를 위해 필요한 정보가 있는 특별한 경우에는 해당 정보를 포함합니다."""
 
-    content = [{"type": "text", "text": f"Product Name: {name}"}]
+    content = [
+        {"type": "text", "text": f"아래 제품 이름을 한국어로 정리하세요: {name}"}
+    ]
 
     response_schema = {
         "name": "response_schema",
