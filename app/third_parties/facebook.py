@@ -31,7 +31,7 @@ class FacebookTokenService:
 
             PAGE_URL = f"https://graph.facebook.com/v22.0/me/accounts?access_token={access_token}&fields=id,name,picture,access_token,tasks"
 
-            response = requests.get(PAGE_URL)
+            response = requests.get(PAGE_URL, timeout=20)
             data = response.json()
 
             RequestSocialLogService.create_request_social_log(
@@ -78,7 +78,7 @@ class FacebookTokenService:
 
             PAGE_URL = f"https://graph.facebook.com/v22.0/me/accounts?access_token={access_token}&fields=id,name,picture,access_token,tasks"
 
-            response = requests.get(PAGE_URL)
+            response = requests.get(PAGE_URL, timeout=20)
             data = response.json()
 
             RequestSocialLogService.create_request_social_log(
@@ -128,7 +128,7 @@ class FacebookTokenService:
                 return None
 
             USER_URL = f"https://graph.facebook.com/v22.0/me?access_token={access_token}&fields=id,name,email,picture"
-            response = requests.get(USER_URL)
+            response = requests.get(USER_URL, timeout=20)
             data = response.json()
 
             RequestSocialLogService.create_request_social_log(
@@ -160,7 +160,7 @@ class FacebookTokenService:
                 "------------------  EXCHANGE FACEBOOK TOKEN  ------------------"
             )
 
-            EXCHANGE_URL = f"https://graph.facebook.com/v22.0/oauth/access_token"
+            EXCHANGE_URL = "https://graph.facebook.com/v22.0/oauth/access_token"
 
             CLIENT_ID = os.environ.get("FACEBOOK_APP_ID") or ""
             CLIENT_SECRET = os.environ.get("FACEBOOK_APP_SECRET") or ""
@@ -172,7 +172,7 @@ class FacebookTokenService:
                 "fb_exchange_token": access_token,
             }
 
-            response = requests.get(EXCHANGE_URL, params=params)
+            response = requests.get(EXCHANGE_URL, params=params, timeout=20)
             data = response.json()
 
             RequestSocialLogService.create_request_social_log(
@@ -353,7 +353,9 @@ class FacebookService(BaseService):
         post_data = {"upload_phase": "start", "access_token": page_access_token}
         headers = {"Content-Type": "application/json"}
         try:
-            post_response = requests.post(URL_UPLOAD, data=post_data, headers=headers)
+            post_response = requests.post(
+                URL_UPLOAD, data=post_data, headers=headers, timeout=20
+            )
         except Exception as e:
             self.save_errors(
                 "ERRORED", f"POST {self.key_log} : START SESSION UPLOAD REEL: {str(e)}"
@@ -374,7 +376,7 @@ class FacebookService(BaseService):
             "file_url": video_url,
         }
         try:
-            post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers)
+            post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers, timeout=20)
         except Exception as e:
             self.save_errors("ERRORED", f"POST {self.key_log}: UPLOAD VIDEO: {str(e)}")
             return False
@@ -395,7 +397,7 @@ class FacebookService(BaseService):
         try:
             URL_CHECK_STATUS = f"https://graph.facebook.com/v22.0/{video_id}?fields=status&access_token={access_token}"
             try:
-                get_response = requests.get(URL_CHECK_STATUS)
+                get_response = requests.get(URL_CHECK_STATUS, timeout=20)
             except Exception as e:
                 self.save_errors(
                     "ERRORED", f"POST {self.key_log}: GET UPLOAD STATUS: {str(e)}"
@@ -474,7 +476,7 @@ class FacebookService(BaseService):
             URL_PUBLISH + "?" + "&".join([f"{k}={v}" for k, v in post_data.items()])
         )
         try:
-            post_response = requests.post(final_url)
+            post_response = requests.post(final_url, timeout=20)
         except Exception as e:
             self.save_errors(
                 "ERRORED", f"POST {self.key_log}: PUBLISH THE REEL: {str(e)}"
@@ -491,7 +493,7 @@ class FacebookService(BaseService):
     def get_reel_uploaded(self, page_id, access_token):
         URL_REEL = f"https://graph.facebook.com/v22.0/{page_id}/video_reels?access_token={access_token}"
         try:
-            get_response = requests.get(URL_REEL)
+            get_response = requests.get(URL_REEL, timeout=20)
         except Exception as e:
             self.save_errors(
                 "ERRORED", f"POST {self.key_log}: GET REEL UPLOADED: {str(e)}"
@@ -534,7 +536,7 @@ class FacebookService(BaseService):
 
         log_facebook_message(f"POST {self.key_log}: post_data: {post_data}")
         try:
-            post_response = requests.post(FEED_URL, data=post_data)
+            post_response = requests.post(FEED_URL, data=post_data, timeout=20)
         except Exception as e:
             self.save_errors(
                 "ERRORED",
@@ -576,7 +578,7 @@ class FacebookService(BaseService):
                 "access_token": page_access_token,
             }
             try:
-                response = requests.post(UNPUBLISH_URL, data=data)
+                response = requests.post(UNPUBLISH_URL, data=data, timeout=20)
             except Exception as e:
                 self.save_errors(
                     "ERRORED", f"POST {self.key_log} UNPUBLISH IMAGES: {str(e)}"

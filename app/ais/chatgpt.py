@@ -473,40 +473,35 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
 
 
 def call_chatgpt_clear_product_name(name):
-    prompt = """Clean and refine product names from the provided list by removing unnecessary details and standardizing the format.
+    prompt = """제공된 목록에서 불필요한 세부 정보를 제거하고 형식을 표준화하여 제품 이름을 정리 및 개선하세요.
 
-### Key Steps
+주요 단계
+제공된 제품 이름을 식별하고 분석하며, 각 제품을 정의하는 필수 요소에 집중합니다.
+제품 이름의 고유성을 직접적으로 나타내지 않는 수량, 크기, 상세 사양 등 불필요한 세부 정보를 제거합니다.
+브랜드 이름과 주요 특징 등 제품을 다른 제품과 구분할 수 있는 중요한 정보를 유지합니다.
+명확성과 단순성을 위해 각 제품 이름을 간결하게 재구성합니다.
+출력 형식
+각 이름을 개별 항목으로 나열한 깔끔하고 정제된 제품 이름 목록을 제공합니다.
+출력 데이터는 반드시 한국어로 작성되어야 합니다.
+예시
+입력: 펩티드 AtoZ 탄력 주름개선 에센스50ml 6개
+출력: 펩티드 AtoZ 탄력 주름개선 에센스
 
-1. Identify and analyze the product names provided, focusing on the essential elements that define each product.
-2. Remove any extraneous details such as quantities, sizes, and detailed specifications that do not directly contribute to the uniqueness of the product name.
-3. Maintain vital information that distinguishes the product from others, such as brand names and key features.
-4. Concisely reformat each product name for clarity and simplicity.
+입력: 에스로체 전면 오픈 기내용 캐리어 20인치 24인치 28인치 캐리어
+출력: 에스로체 전면 오픈 기내용 캐리어
 
-# Output Format
+입력: 바세린 바디 프로텍팅 젤리 알로에, 100ml, 1개
+출력: 바세린 바디 프로텍팅 젤리 알로에
 
-- Provide a list of cleaned and refined product names in bullet point format, with each name on a separate line.
+입력: TORSO 토르소 T76 발리오스 멀티 다이아몬드 워치 남자 메탈 시계 (가죽 스트랩 증정)
+출력: 토르소 발리오스 멀티 다이아몬드 워치
 
-# Examples
+입력: 갸스비 셋&킵 헤어스프레이 슈퍼하드 263ml 2개, 263ml, 2개
+출력: 갸스비 셋&킵 헤어스프레이 슈퍼하드
 
-- **Input:** 펩티드 AtoZ 탄력 주름개선 에센스50ml 6개
-  **Output:** 펩티드 AtoZ 탄력 주름개선 에센스
-
-- **Input:** 에스로체 전면 오픈 기내용 캐리어 20인치 24인치 28인치 캐리어
-  **Output:** 에스로체 전면 오픈 기내용 캐리어
-
-- **Input:** 바세린 바디 프로텍팅 젤리 알로에, 100ml, 1개
-  **Output:** 바세린 바디 프로텍팅 젤리 알로에
-
-- **Input:**  TORSO 토르소 T76 발리오스 멀티 다이아몬드 워치 남자 메탈 시계 (가죽 스트랩 증정)
-  **Output:** 토르소 발리오스 멀티 다이아몬드 워치
-
-- **Input:**  갸스비 셋&킵 헤어스프레이 슈퍼하드 263ml 2개, 263ml, 2개
-  **Output:**  갸스비 셋&킵 헤어스프레이 슈퍼하드
-
-# Notes
-
-- Ensure that the output still retains the ability to be distinguished from similar products by including essential attributes and brand names.
-- Handle special cases where a piece of information appears to be necessary for differentiation, and include it when needed."""
+참고사항
+출력 결과가 유사한 제품과 구분될 수 있도록 필수 속성과 브랜드 이름을 포함하여야 합니다.
+차별화를 위해 필요한 정보가 있는 특별한 경우에는 해당 정보를 포함합니다."""
 
     content = [{"type": "text", "text": f"Product Name: {name}"}]
 

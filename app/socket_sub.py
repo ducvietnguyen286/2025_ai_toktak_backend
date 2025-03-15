@@ -162,7 +162,7 @@ def start_redis_subscriber(app):
             pubsub = redis_client.pubsub()
             pubsub.subscribe(PROGRESS_CHANNEL)
             log_socket_message(
-                "Started Redis subscriber on channel '%s'".format(PROGRESS_CHANNEL)
+                f"Started Redis subscriber on channel '{PROGRESS_CHANNEL}'"
             )
             for item in pubsub.listen():
                 if item.get("type") != "message":

@@ -1,12 +1,13 @@
-import os
-from dotenv import load_dotenv
 import logging
+import os
+
+from dotenv import load_dotenv
 from flask import Flask
 
 load_dotenv(override=False)
 
-from app.extensions import redis_client, socketio
 from app.config import configs as config
+from app.extensions import redis_client, socketio
 from app.socket_sub import start_redis_subscriber
 
 
