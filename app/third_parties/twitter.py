@@ -411,8 +411,7 @@ class TwitterService(BaseService):
         log_twitter_message(f"{self.key_log} Upload media {media}")
         headers = {"User-Agent": generate_desktop_user_agent()}
         if is_video:
-            headers["Range"] = "bytes=0-"
-            headers["Accept"] = "video/mp4"
+            headers["Accept"] = "video/*"
         else:
             headers["Accept"] = "image/*"
         try:
