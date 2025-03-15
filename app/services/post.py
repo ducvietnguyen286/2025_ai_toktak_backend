@@ -26,7 +26,9 @@ class PostService:
 
     @staticmethod
     def get_posts__by_ids(ids):
-        posts = Post.query.where(Post.id.in_(ids)).where(Post.status == 1).all()
+        posts = (
+            Post.query.filter(Post.id.in_(ids)).filter(Post.status.in_([1, 99])).all()
+        )
         return posts
 
     def get_posts_by_batch(batch_id):
@@ -120,7 +122,7 @@ class PostService:
             Post.user_id == data_search["user_id"],
             Post.status == data_search["status"],
         )
-        
+
         # NHững thằng bắn lên SNS thì có status_sns = 1
         if data_search["status"] == 1:
             query = query.filter(Post.status_sns == 1)
