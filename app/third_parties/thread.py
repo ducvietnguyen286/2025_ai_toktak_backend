@@ -21,7 +21,7 @@ class ThreadTokenService:
                 "------------------  EXCHANGE THREAD CODE  ------------------"
             )
 
-            EXCHANGE_URL = f"https://graph.threads.net/oauth/access_token"
+            EXCHANGE_URL = "https://graph.threads.net/oauth/access_token"
 
             CLIENT_ID = os.environ.get("THREAD_APP_ID") or ""
             CLIENT_SECRET = os.environ.get("THREAD_APP_SECRET") or ""
