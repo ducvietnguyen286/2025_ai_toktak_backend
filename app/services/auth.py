@@ -17,6 +17,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
 from app.lib.string import get_level_images
+import json
 
 
 class AuthService:
@@ -87,7 +88,7 @@ class AuthService:
                     name=name,
                     avatar=avatar,
                     level=level,
-                    level_info=level_info,
+                    level_info=json.dumps(level_info),
                 )
                 user.save()
 
