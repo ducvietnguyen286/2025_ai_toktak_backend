@@ -4,6 +4,9 @@ from app.errors.exceptions import BadRequest
 from app.lib.logger import logger
 from app.models.social_account import SocialAccount
 from app.models.user import User
+from app.models.post import Post
+from app.models.batch import Batch
+from app.models.user_link import UserLink
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -32,7 +35,7 @@ class AuthService:
         if not user:
             user = User.query.filter_by(username=email).first()
         if not user or not user.check_password(password):
-            raise BadRequest(message="Email or password is incorrect")
+            return None
         return user
 
     @staticmethod
@@ -117,7 +120,7 @@ class AuthService:
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
-            "user_level" : user.level
+            "user_level": user.level,
         }
 
     @staticmethod
@@ -153,3 +156,13 @@ class AuthService:
         user = User.query.get(id)
         user.update(**kwargs)
         return user
+
+    @staticmethod
+    def deleteAccount(id):
+
+        Post.query.filter_by(user_id=id).delete()
+        Batch.query.filter_by(user_id=id).delete()
+        SocialAccount.query.filter_by(user_id=id).delete()
+        UserLink.query.filter_by(user_id=id).delete()
+        User.query.get(id).delete()
+        return True

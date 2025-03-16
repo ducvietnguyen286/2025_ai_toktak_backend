@@ -159,6 +159,12 @@ class APILoginByInput(Resource):
         password = args.get("password", "")
 
         user = AuthService.login(email, password)
+        if not user:
+            return Response(
+                code=201,
+                message="비밀번호가 정확하지 않습니다.",
+            ).to_dict()
+
         tokens = AuthService.generate_token(user)
         tokens.update(
             {
@@ -215,7 +221,7 @@ class APIUserProfile(Resource):
         user = AuthService.get_current_identity()
         level = user.level
         total_link = UserService.get_user_links(user.id)
-        logger.info(  f"level : {level} total_link :  {len(total_link)} "  )
+        logger.info(f"level : {level} total_link :  {len(total_link)} ")
         if level != len(total_link):
             level = len(total_link)
             level_info = get_level_images(level)
@@ -300,3 +306,23 @@ def get_level_images(level):
         ]
 
     return images
+
+
+@ns.route("/delete_account")
+class APIDeleteAccount(Resource):
+    @jwt_required()
+    def post(self):
+
+        user_login = AuthService.get_current_identity()
+        if not user_login:
+            return Response(
+                message="시스템에 로그인해주세요.",
+                code=201,
+            ).to_dict()
+
+        AuthService.deleteAccount(user_login.id)
+
+        return Response(
+            data={},
+            message="계정을 성공적으로 삭제했습니다.",
+        ).to_dict()
