@@ -53,6 +53,11 @@ class APIUserLinks(Resource):
     )
     def get(self, args):
         current_user = AuthService.get_current_identity()
+        if not current_user:
+            return Response(
+                status=401,
+                message="Can't User login",
+            ).to_dict()
         links = UserService.get_user_links(current_user.id)
         return Response(
             data=links,

@@ -4,6 +4,9 @@ from app.errors.exceptions import BadRequest
 from app.lib.logger import logger
 from app.models.social_account import SocialAccount
 from app.models.user import User
+from app.models.post import Post
+from app.models.batch import Batch
+from app.models.user_link import UserLink
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -13,15 +16,18 @@ from flask_jwt_extended import (
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
+from app.lib.string import get_level_images
+import json
+
 
 class AuthService:
 
     @staticmethod
-    def register(email, password, username=""):
+    def register(email, password, username="", level_info=""):
         user = User.query.filter_by(email=email).first()
         if user:
             raise BadRequest(message="Email already exists")
-        user = User(email=email, username=username)
+        user = User(email=email, username=username, level_info=level_info)
         user.set_password(password)
         user.save()
         return user
@@ -32,7 +38,7 @@ class AuthService:
         if not user:
             user = User.query.filter_by(username=email).first()
         if not user or not user.check_password(password):
-            raise BadRequest(message="Email or password is incorrect")
+            return None
         return user
 
     @staticmethod
@@ -75,7 +81,15 @@ class AuthService:
                 user = User.query.filter_by(email=email).first()
 
             if not user and email:
-                user = User(email=email, name=name, avatar=avatar)
+                level = 0
+                level_info = get_level_images(level)
+                user = User(
+                    email=email,
+                    name=name,
+                    avatar=avatar,
+                    level=level,
+                    level_info=json.dumps(level_info),
+                )
                 user.save()
 
             social_account = SocialAccount(
@@ -117,7 +131,7 @@ class AuthService:
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
-            "user_level" : user.level
+            "user_level": user.level,
         }
 
     @staticmethod
@@ -153,3 +167,13 @@ class AuthService:
         user = User.query.get(id)
         user.update(**kwargs)
         return user
+
+    @staticmethod
+    def deleteAccount(id):
+
+        Post.query.filter_by(user_id=id).delete()
+        Batch.query.filter_by(user_id=id).delete()
+        SocialAccount.query.filter_by(user_id=id).delete()
+        UserLink.query.filter_by(user_id=id).delete()
+        User.query.get(id).delete()
+        return True

@@ -1,5 +1,6 @@
 from app.extensions import db, bcrypt
 from app.models.base import BaseModel
+from datetime import datetime
 
 
 class User(db.Model, BaseModel):
@@ -12,13 +13,17 @@ class User(db.Model, BaseModel):
     username = db.Column(db.String(100), nullable=True)
     password = db.Column(db.String(200), nullable=True)
     status = db.Column(db.Integer, default=1)
-    
+
     phone = db.Column(db.String(255), nullable=True)
     contact = db.Column(db.String(255), nullable=True)
     company_name = db.Column(db.String(255), nullable=True)
-    
+
     level = db.Column(db.Integer, default=0)
     level_info = db.Column(db.Text, nullable=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
+    last_activated = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
+    updated_at = db.Column(db.DateTime, default=datetime.now)
 
     print_filter = ("password",)
     to_json_filter = ("password",)

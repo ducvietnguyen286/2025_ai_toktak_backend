@@ -4,11 +4,13 @@ from flask_restx import Namespace, Resource
 from app.decorators import parameters
 from app.lib.response import Response
 from app.services.user import UserService
+from datetime import datetime
 
 from app.lib.logger import logger
 import json
 
 from app.services.auth import AuthService
+from app.lib.string import get_level_images
 
 ns = Namespace(name="auth", description="Auth API")
 
@@ -65,6 +67,7 @@ class APISocialLogin(Resource):
             access_token=access_token,
             person_id=person_id,
         )
+
         tokens = AuthService.generate_token(user)
         tokens.update(
             {
@@ -95,8 +98,11 @@ class APIRegister(Resource):
         username = args.get("username", "")
         email = args.get("email", "")
         password = args.get("password", "")
+        level = 0
+        level_info = get_level_images(level)
+        
 
-        user = AuthService.register(email, password, username)
+        user = AuthService.register(email, password, username , json.dumps(level_info))
         tokens = AuthService.generate_token(user)
         tokens.update(
             {
@@ -136,10 +142,20 @@ class APIMe(Resource):
 
     @jwt_required()
     def get(self):
-        user = AuthService.get_current_identity()
+        user_login = AuthService.get_current_identity()
+        if not user_login:
+            return Response(
+                status=401,
+                message="Can't User login",
+            ).to_dict()
+
+        user_login = AuthService.update(
+            user_login.id,
+            last_activated=datetime.now(),
+        )
         return Response(
-            data=user._to_json(),
-            message="Lấy thông tin người dùng thành công",
+            data=user_login._to_json(),
+            message="사용자 정보를 성공적으로 가져왔습니다.",
         ).to_dict()
 
 
@@ -159,6 +175,12 @@ class APILoginByInput(Resource):
         password = args.get("password", "")
 
         user = AuthService.login(email, password)
+        if not user:
+            return Response(
+                code=201,
+                message="비밀번호가 정확하지 않습니다.",
+            ).to_dict()
+
         tokens = AuthService.generate_token(user)
         tokens.update(
             {
@@ -215,7 +237,7 @@ class APIUserProfile(Resource):
         user = AuthService.get_current_identity()
         level = user.level
         total_link = UserService.get_user_links(user.id)
-        logger.info(  f"level : {level} total_link :  {len(total_link)} "  )
+        logger.info(f"level : {level} total_link :  {len(total_link)} ")
         if level != len(total_link):
             level = len(total_link)
             level_info = get_level_images(level)
@@ -231,72 +253,21 @@ class APIUserProfile(Resource):
         ).to_dict()
 
 
-def get_level_images(level):
-    """
-    Trả về danh sách ảnh theo cấp độ với một ảnh ngẫu nhiên được đánh dấu active.
-    """
-    base_url = "https://admin.lang.canvasee.com/img/level/"
-    images = []
+@ns.route("/delete_account")
+class APIDeleteAccount(Resource):
+    @jwt_required()
+    def post(self):
 
-    if level == 0:
-        images = [
-            {"url": f"{base_url}level_0.png", "active": ""},
-            {"url": f"{base_url}level_0_next.png", "active": ""},
-        ]
-    elif level == 1:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_1_next.png", "active": "active"},
-        ]
-    elif level == 2:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_2_next.png", "active": "active"},
-        ]
-    elif level == 3:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_3.png", "active": ""},
-            {"url": f"{base_url}level_3_next.png", "active": "active"},
-        ]
-    elif level == 4:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_3.png", "active": ""},
-            {"url": f"{base_url}level_4.png", "active": ""},
-            {"url": f"{base_url}level_4_next.png", "active": "active"},
-        ]
-    elif level == 5:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_3.png", "active": ""},
-            {"url": f"{base_url}level_4.png", "active": ""},
-            {"url": f"{base_url}level_5.png", "active": ""},
-            {"url": f"{base_url}level_5_next.png", "active": "active"},
-        ]
-    elif level == 6:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_3.png", "active": ""},
-            {"url": f"{base_url}level_4.png", "active": ""},
-            {"url": f"{base_url}level_5.png", "active": ""},
-            {"url": f"{base_url}level_6.png", "active": ""},
-            {"url": f"{base_url}level_6_next.png", "active": "active"},
-        ]
-    elif level == 7:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_3.png", "active": ""},
-            {"url": f"{base_url}level_4.png", "active": ""},
-            {"url": f"{base_url}level_5.png", "active": ""},
-            {"url": f"{base_url}level_6.png", "active": ""},
-            {"url": f"{base_url}level_7.png", "active": "active"},
-        ]
+        user_login = AuthService.get_current_identity()
+        if not user_login:
+            return Response(
+                message="시스템에 로그인해주세요.",
+                code=201,
+            ).to_dict()
 
-    return images
+        AuthService.deleteAccount(user_login.id)
+
+        return Response(
+            data={},
+            message="계정을 성공적으로 삭제했습니다.",
+        ).to_dict()
