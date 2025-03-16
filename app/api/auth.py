@@ -102,7 +102,7 @@ class APIRegister(Resource):
         level_info = get_level_images(level)
         
 
-        user = AuthService.register(email, password, username , level_info)
+        user = AuthService.register(email, password, username , json.dumps(level_info))
         tokens = AuthService.generate_token(user)
         tokens.update(
             {
