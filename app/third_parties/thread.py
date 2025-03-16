@@ -389,7 +389,6 @@ class ThreadService(BaseService):
             }
             if is_video:
                 upload_data["media_type"] = "VIDEO"
-                upload_data["is_carousel_item "] = False
                 upload_data["video_url"] = media
             else:
                 upload_data["is_carousel_item "] = True
@@ -572,7 +571,7 @@ class ThreadService(BaseService):
                     )
                     return False
                 else:
-                    time.sleep(1.5)
+                    time.sleep(2)
                     return self.get_upload_status(media_id)
             else:
                 self.save_errors(
