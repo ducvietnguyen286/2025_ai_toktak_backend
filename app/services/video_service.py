@@ -119,9 +119,8 @@ class VideoService:
             },
             "output": {
                 "format": "mp4",
-                "fps": 25,
-                "quality": "high",
-                "resolution": "hd",
+                "quality": "veryhigh",
+                # "resolution": "hd",
                 # "aspectRatio": "16:9",
                 "size": {"width": video_size["width"], "height": video_size["height"]},
                 # "size": video_size,
