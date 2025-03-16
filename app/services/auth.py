@@ -16,6 +16,8 @@ from flask_jwt_extended import (
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
+from app.lib.string import get_level_images
+
 
 class AuthService:
 
@@ -78,7 +80,15 @@ class AuthService:
                 user = User.query.filter_by(email=email).first()
 
             if not user and email:
-                user = User(email=email, name=name, avatar=avatar)
+                level = 0
+                level_info = get_level_images(level)
+                user = User(
+                    email=email,
+                    name=name,
+                    avatar=avatar,
+                    level=level,
+                    level_info=level_info,
+                )
                 user.save()
 
             social_account = SocialAccount(
