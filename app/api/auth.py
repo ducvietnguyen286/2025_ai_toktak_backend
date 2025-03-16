@@ -4,6 +4,7 @@ from flask_restx import Namespace, Resource
 from app.decorators import parameters
 from app.lib.response import Response
 from app.services.user import UserService
+from datetime import datetime
 
 from app.lib.logger import logger
 import json
@@ -136,10 +137,15 @@ class APIMe(Resource):
 
     @jwt_required()
     def get(self):
-        user = AuthService.get_current_identity()
+        user_login = AuthService.get_current_identity()
+        
+        user_login = AuthService.update(
+            user_login.id,
+            last_activated=datetime.now,
+        )
         return Response(
-            data=user._to_json(),
-            message="Lấy thông tin người dùng thành công",
+            data=user_login._to_json(),
+            message="사용자 정보를 성공적으로 가져왔습니다.",
         ).to_dict()
 
 
