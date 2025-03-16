@@ -38,7 +38,7 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
   - 총 4개의 문장을 각각 20자 이내의 텍스트로 작성 
 
 - **caption**: 
-  - 약 250글자로 caption을 생성할 것, 이모티콘 사용 절대 금지. 
+  - 약 150글자로 caption을 생성할 것, 이모티콘 사용 절대 금지. 
   - 이모티콘 사용 금지
   - 스토리텔링 형식으로 상품에 대해서 소개하는 caption 작성
   - 반드시 "[예시 출력]의 ##script"을 참고해서 작성할 것.
