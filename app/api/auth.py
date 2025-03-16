@@ -138,7 +138,12 @@ class APIMe(Resource):
     @jwt_required()
     def get(self):
         user_login = AuthService.get_current_identity()
-        
+        if not user_login:
+            return Response(
+                status=401,
+                message="Can't User login",
+            ).to_dict()
+
         user_login = AuthService.update(
             user_login.id,
             last_activated=datetime.now,
