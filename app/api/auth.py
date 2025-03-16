@@ -146,7 +146,7 @@ class APIMe(Resource):
 
         user_login = AuthService.update(
             user_login.id,
-            last_activated=datetime.now,
+            last_activated=datetime.now(),
         )
         return Response(
             data=user_login._to_json(),
