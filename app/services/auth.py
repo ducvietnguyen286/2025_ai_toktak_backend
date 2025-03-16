@@ -20,11 +20,11 @@ from google.auth.transport import requests as google_requests
 class AuthService:
 
     @staticmethod
-    def register(email, password, username=""):
+    def register(email, password, username="", level_info=""):
         user = User.query.filter_by(email=email).first()
         if user:
             raise BadRequest(message="Email already exists")
-        user = User(email=email, username=username)
+        user = User(email=email, username=username, level_info=level_info)
         user.set_password(password)
         user.save()
         return user

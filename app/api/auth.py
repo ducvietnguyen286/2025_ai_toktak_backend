@@ -10,6 +10,7 @@ from app.lib.logger import logger
 import json
 
 from app.services.auth import AuthService
+from lib.string import get_level_images
 
 ns = Namespace(name="auth", description="Auth API")
 
@@ -66,6 +67,7 @@ class APISocialLogin(Resource):
             access_token=access_token,
             person_id=person_id,
         )
+
         tokens = AuthService.generate_token(user)
         tokens.update(
             {
@@ -96,8 +98,11 @@ class APIRegister(Resource):
         username = args.get("username", "")
         email = args.get("email", "")
         password = args.get("password", "")
+        level = 0
+        level_info = get_level_images(level)
+        
 
-        user = AuthService.register(email, password, username)
+        user = AuthService.register(email, password, username , level_info)
         tokens = AuthService.generate_token(user)
         tokens.update(
             {
@@ -246,77 +251,6 @@ class APIUserProfile(Resource):
             data=user._to_json(),
             message="Lấy thông tin người dùng thành công",
         ).to_dict()
-
-
-def get_level_images(level):
-    """
-    Trả về danh sách ảnh theo cấp độ với một ảnh ngẫu nhiên được đánh dấu active.
-    """
-    base_url = "https://admin.lang.canvasee.com/img/level/"
-    images = []
-
-    if level == 0:
-        images = [
-            {"url": f"{base_url}level_0.png", "active": ""},
-            {"url": f"{base_url}level_0_next.png", "active": ""},
-        ]
-    elif level == 1:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_1_next.png", "active": "active"},
-        ]
-    elif level == 2:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_2_next.png", "active": "active"},
-        ]
-    elif level == 3:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_3.png", "active": ""},
-            {"url": f"{base_url}level_3_next.png", "active": "active"},
-        ]
-    elif level == 4:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_3.png", "active": ""},
-            {"url": f"{base_url}level_4.png", "active": ""},
-            {"url": f"{base_url}level_4_next.png", "active": "active"},
-        ]
-    elif level == 5:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_3.png", "active": ""},
-            {"url": f"{base_url}level_4.png", "active": ""},
-            {"url": f"{base_url}level_5.png", "active": ""},
-            {"url": f"{base_url}level_5_next.png", "active": "active"},
-        ]
-    elif level == 6:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_3.png", "active": ""},
-            {"url": f"{base_url}level_4.png", "active": ""},
-            {"url": f"{base_url}level_5.png", "active": ""},
-            {"url": f"{base_url}level_6.png", "active": ""},
-            {"url": f"{base_url}level_6_next.png", "active": "active"},
-        ]
-    elif level == 7:
-        images = [
-            {"url": f"{base_url}level_1.png", "active": ""},
-            {"url": f"{base_url}level_2.png", "active": ""},
-            {"url": f"{base_url}level_3.png", "active": ""},
-            {"url": f"{base_url}level_4.png", "active": ""},
-            {"url": f"{base_url}level_5.png", "active": ""},
-            {"url": f"{base_url}level_6.png", "active": ""},
-            {"url": f"{base_url}level_7.png", "active": "active"},
-        ]
-
-    return images
 
 
 @ns.route("/delete_account")
