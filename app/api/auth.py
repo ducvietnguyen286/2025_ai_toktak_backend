@@ -10,7 +10,7 @@ from app.lib.logger import logger
 import json
 
 from app.services.auth import AuthService
-from lib.string import get_level_images
+from app.lib.string import get_level_images
 
 ns = Namespace(name="auth", description="Auth API")
 
