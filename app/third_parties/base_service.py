@@ -33,7 +33,7 @@ class BaseService:
             response=json.dumps(response),
         )
 
-    def publish_redis_channel(self, status, value, social_link):
+    def publish_redis_channel(self, status, value, social_link=""):
         redis_client.publish(
             PROGRESS_CHANNEL,
             json.dumps(
