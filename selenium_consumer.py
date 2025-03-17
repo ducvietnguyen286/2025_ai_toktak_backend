@@ -157,6 +157,16 @@ def worker_instance():
         browser.get("https://ko.aliexpress.com/")
         base_tab = browser.current_window_handle
 
+        COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
+        try:
+            cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
+            if os.path.exists(cookie_file):
+                cookies = json.load(open(cookie_file, "r", encoding="utf-8"))
+                for cookie in cookies:
+                    browser.add_cookie(cookie)
+        except Exception as e:
+            logger.info("Không load được cookie hoặc file không tồn tại: " + str(e))
+
         print("Worker started (PID:", os.getpid(), ")")
 
         while not stop_event.is_set():
@@ -165,22 +175,6 @@ def worker_instance():
                 if task_item:
                     _, task_json = task_item
                     task = json.loads(task_json)
-
-                    COOKIE_FOLDER = os.path.join(
-                        os.getcwd(), "app/scraper/pages/aliexpress"
-                    )
-                    try:
-                        cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
-                        if os.path.exists(cookie_file):
-                            cookies = json.load(
-                                open(cookie_file, "r", encoding="utf-8")
-                            )
-                            for cookie in cookies:
-                                browser.add_cookie(cookie)
-                    except Exception as e:
-                        logger.info(
-                            "Không load được cookie hoặc file không tồn tại: " + str(e)
-                        )
 
                     # Mở tab mới để xử lý task
                     browser.execute_script("window.open('about:blank', '_blank');")
@@ -223,13 +217,16 @@ def process_task_on_tab(browser, task):
 
             logger.info(f"[Open URL] {url}")
             try:
-                elements = browser.find_elements(
-                    By.CSS_SELECTOR, "div.J_MIDDLEWARE_FRAME_WIDGET"
+                iframe_tag = browser.find_elements(
+                    By.XPATH,
+                    "//iframe[contains(@src, 'https://acs.aliexpress.com:443//h5/mtop.aliexpress.pdp.pc.query/1.0/_____tmd_____/punish')]",
                 )
                 finded_script = browser.find_elements(
                     By.XPATH, "//script[@type='application/ld+json']"
                 )
-                if elements and not finded_script:
+                print("iframe_tag", iframe_tag)
+                print("finded_script", finded_script)
+                if iframe_tag and not finded_script:
                     print(
                         "Found J_MIDDLEWARE_FRAME_WIDGET and script with type application/ld+json"
                     )
@@ -251,9 +248,9 @@ def process_task_on_tab(browser, task):
 
                     print("Switch To Captcha Frame")
 
-                    # file_html = open("demo.html", "w", encoding="utf-8")
-                    # file_html.write(browser.page_source)
-                    # file_html.close()
+                    file_html = open("demo.html", "w", encoding="utf-8")
+                    file_html.write(browser.page_source)
+                    file_html.close()
 
                     checkbox = WebDriverWait(browser, 10).until(
                         EC.element_to_be_clickable((By.ID, "recaptcha-anchor"))

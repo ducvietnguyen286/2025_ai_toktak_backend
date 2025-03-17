@@ -22,7 +22,7 @@ class DomeggookScraper:
             # file_html = open("demo.html", "w", encoding="utf-8")
             # file_html.write(str(domeggook_data))
             # file_html.close()
-            response = Parser(domeggook_data).parse()
+            response = Parser(domeggook_data).parse(real_url)
             return response
         except Exception as e:
             traceback.print_exc()
