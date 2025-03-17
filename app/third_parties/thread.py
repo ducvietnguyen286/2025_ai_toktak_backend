@@ -485,7 +485,7 @@ class ThreadService(BaseService):
             self.save_errors("ERRORED", f"UPLOAD CAROUSEL {self.key_log}: {str(e)}")
             return False
 
-    def publish_post(self, media_id, retry):
+    def publish_post(self, media_id, retry=0):
         try:
             log_thread_message(
                 f"------------ PUBLISH POST: {self.key_log} ----------------"
