@@ -251,4 +251,11 @@ class ImageMaker:
 
         image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
 
-        return image_url
+        file_size = os.path.getsize(image_path)
+        mime_type = "image/jpeg"
+
+        return {
+            "file_size": file_size,
+            "mime_type": mime_type,
+            "image_url": image_url,
+        }
