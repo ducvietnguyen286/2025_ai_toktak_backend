@@ -53,13 +53,14 @@ class DocxMaker:
                     except Exception as e:
                         print(f"⚠️ Lỗi tải ảnh: {e}")
             else:
-                paragraph = doc.add_paragraph()
-                last_pos = 0
-                for match in url_pattern.finditer(item):
-                    paragraph.add_run(item[last_pos : match.start()])
-                    self.add_hyperlink(paragraph, match.group())  # Thêm hyperlink
-                    last_pos = match.end()
-                paragraph.add_run(item[last_pos:])
+                # paragraph = doc.add_paragraph()
+                # last_pos = 0
+                # for match in url_pattern.finditer(item):
+                #     paragraph.add_run(item[last_pos : match.start()])
+                #     # self.add_hyperlink(paragraph, match.group())  # Thêm hyperlink
+                #     last_pos = match.end()
+                # paragraph.add_run(item[last_pos:])
+                doc.add_paragraph(item)
 
         doc.save(docx_path)
 
