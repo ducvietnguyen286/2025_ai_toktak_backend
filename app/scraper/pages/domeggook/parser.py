@@ -7,12 +7,12 @@ def get_domain(url):
     return parsed_url.netloc
 
 
-def parse_response(html):
+def parse_response(html, base_url):
     name = html.find("h1", {"id": "lInfoItemTitle"})
     description = html.find("meta", {"property": "og:description"})
     image = html.find("meta", {"property": "og:image"})
     url = html.find("meta", {"property": "og:url"})
-    url_content = url["content"]
+    url_content = url["content"] if url else ""
     domain = get_domain(url_content)
     single_price = html.find("div", {"class": "lItemPrice"})
     if single_price:
@@ -36,9 +36,9 @@ def parse_response(html):
         "thumbnails": [image["content"]],
         "price": price,
         "url": url_content,
-        "base_url": url_content,
+        "base_url": base_url,
         "store_name": "",
-        "url_crawl": url_content,
+        "url_crawl": base_url,
         "show_free_shipping": 0,
         "images": src_images,
         "text": "",
@@ -50,6 +50,6 @@ class Parser:
     def __init__(self, html):
         self.html = html
 
-    def parse(self):
-        response = parse_response(self.html)
+    def parse(self, url):
+        response = parse_response(self.html, url)
         return response

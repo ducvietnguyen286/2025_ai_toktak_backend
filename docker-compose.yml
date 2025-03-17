@@ -1,7 +1,18 @@
 version: "3.8"
 services:
-  selenium-chrome:
+  selenium-hub:
     image: selenium/standalone-chrome:latest
     ports:
       - "4567:4444"
     restart: always
+
+  chrome:
+    image: selenium/node-chrome:latest
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    volumes:
+      - /dev/shm:/dev/shm

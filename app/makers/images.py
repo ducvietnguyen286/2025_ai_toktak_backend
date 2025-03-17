@@ -127,7 +127,10 @@ class ImageMaker:
         video_width, video_height = target_size
         video_ratio = video_width / video_height
 
-        image = Image.open(image_path)
+        try:
+            image = Image.open(image_path)
+        except IOError:
+            return f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
         if not (
             image_name.lower().endswith(".jpg") or image_name.lower().endswith(".jpeg")
         ):
@@ -180,7 +183,13 @@ class ImageMaker:
             image = Image.open(image_path)
         except IOError:
             print(f"Cannot identify image file {image_path}")
-            return f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
+            file_size = os.path.getsize(image_path)
+            mime_type = "image/jpeg"
+            return {
+                "file_size": file_size,
+                "mime_type": mime_type,
+                "image_url": f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}",
+            }
         if not (
             image_name.lower().endswith(".jpg") or image_name.lower().endswith(".jpeg")
         ):
