@@ -7,7 +7,7 @@ import uuid
 from docx import Document
 from docx.shared import Inches
 from docx.oxml import parse_xml
-from docx.oxml.ns import nsdecls
+from docx.oxml.ns import nsdecls  # Fix namespace lỗi
 import requests
 
 from app.lib.header import generate_desktop_user_agent
@@ -18,7 +18,6 @@ CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
 
 class DocxMaker:
-
     def make(self, title, description, images=[]):
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
@@ -41,20 +40,23 @@ class DocxMaker:
 
         for item in description:
             if item.startswith("IMAGE_URL_"):
-                index = item.split("_")[-1]
-                image_url = images[int(index)] or ""
-                if image_url:
-                    response = requests.get(image_url, headers=headers)
-                    if response.status_code == 200:
-                        image_stream = BytesIO(response.content)
-                        doc.add_picture(image_stream, width=Inches(6.5))
+                index = int(item.split("_")[-1])
+                if 0 <= index < len(images):
+                    image_url = images[index]
+                    try:
+                        response = requests.get(image_url, headers=headers)
+                        if response.status_code == 200:
+                            image_stream = BytesIO(response.content)
+                            doc.add_picture(
+                                image_stream, width=Inches(6.5)
+                            )  # Full width
+                    except Exception as e:
+                        print(f"⚠️ Lỗi tải ảnh: {e}")
             else:
                 paragraph = doc.add_paragraph()
                 last_pos = 0
                 for match in url_pattern.finditer(item):
-                    paragraph.add_run(
-                        item[last_pos : match.start()]
-                    )  # Thêm text trước URL
+                    paragraph.add_run(item[last_pos : match.start()])
                     self.add_hyperlink(paragraph, match.group())  # Thêm hyperlink
                     last_pos = match.end()
                 paragraph.add_run(item[last_pos:])
@@ -75,12 +77,28 @@ class DocxMaker:
 
     def add_hyperlink(self, paragraph, url, text=None):
         """Chèn hyperlink vào đoạn văn bản"""
-        if text is None:
-            text = url  # Nếu không có text, dùng chính URL làm text
+        text = text or url  # Nếu không có text, dùng URL làm text
 
         part = paragraph.part
-        r_id = part.relate_to(url, "hyperlink", is_external=True)
-        hyperlink = parse_xml(
-            f'<w:hyperlink r:id="{r_id}" {nsdecls("r")}><w:r><w:rPr><w:color w:val="0000FF"/><w:u w:val="single"/></w:rPr><w:t>{text}</w:t></w:r></w:hyperlink>'
+        r_id = part.relate_to(
+            url,
+            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+            is_external=True,
         )
+
+        # XML chuẩn có namespace đúng
+        hyperlink_xml = f"""
+        <w:hyperlink r:id="{r_id}" {nsdecls('w')} {nsdecls('r')}>
+            <w:r>
+                <w:rPr>
+                    <w:color w:val="0000FF"/>
+                    <w:u w:val="single"/>
+                </w:rPr>
+                <w:t>{text}</w:t>
+            </w:r>
+        </w:hyperlink>
+        """
+
+        # Thêm Hyperlink vào đoạn văn bản
+        hyperlink = parse_xml(hyperlink_xml)
         paragraph._element.append(hyperlink)
