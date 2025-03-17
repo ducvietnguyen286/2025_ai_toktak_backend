@@ -243,6 +243,7 @@ class APISendPosts(Resource):
                             "link_id": link_id,
                             "post_id": post.id,
                             "status": "PROCESSING",
+                            "social_link": "",
                             "value": 0,
                             "self_value": 0,
                         }
@@ -458,6 +459,7 @@ class APIPostToLinks(Resource):
                         "link_id": link_id,
                         "post_id": post.id,
                         "status": "PROCESSING",
+                        "social_link": "",
                         "value": 0,
                     }
                 )

@@ -31,6 +31,7 @@ def process_redis_message(message):
         value = data.get("value")
         link_id = data.get("link_id")
         post_id = data.get("post_id")
+        social_link = data.get("social_link")
         status = data.get("status")
 
         room = sync_id if sync_id != "" else batch_id + "_" + user_id
@@ -65,6 +66,7 @@ def process_redis_message(message):
 
                     upload["status"] = status
                     upload["value"] = percent
+                    upload["social_link"] = social_link
                     total_percent += percent
 
                     if status == "PUBLISHED" or status == "ERRORED":
@@ -113,6 +115,7 @@ def process_redis_message(message):
                     upload["status"] = status
                     upload["self_value"] = int(value)
                     upload["value"] = percent
+                    upload["social_link"] = social_link
                     total_percent += percent
 
                     if status == "PUBLISHED" or status == "ERRORED":
