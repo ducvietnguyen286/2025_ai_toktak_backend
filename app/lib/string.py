@@ -1,6 +1,8 @@
 import json
 import re
 
+import hashlib
+import base64
 
 def is_json(data):
     try:
@@ -99,3 +101,10 @@ def get_level_images(level):
         ]
 
     return images
+
+
+def generate_short_code(url):
+    """Tạo mã rút gọn bằng Base62 từ hash của URL"""
+    hash_value = hashlib.md5(url.encode()).digest()
+    short_code = base64.urlsafe_b64encode(hash_value)[:6].decode("utf-8")
+    return short_code

@@ -10,6 +10,7 @@ from app.services.shorten_services import ShortenServices
 
 from app.lib.logger import logger
 from app.lib.response import Response
+from app.lib.string import generate_short_code
 
 ns = Namespace("shorten", description="URL Shortener API")
 
@@ -22,13 +23,7 @@ shorten_model = ns.model(
         )
     },
 )
-
-
-def generate_short_code(url):
-    """Tạo mã rút gọn bằng Base62 từ hash của URL"""
-    hash_value = hashlib.md5(url.encode()).digest()
-    short_code = base64.urlsafe_b64encode(hash_value)[:6].decode("utf-8")
-    return short_code
+ 
 
 
 @ns.route("/create")
