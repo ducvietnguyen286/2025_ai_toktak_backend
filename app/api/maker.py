@@ -441,7 +441,8 @@ class APIMakePost(Resource):
 
             url = batch.url
             shorten_link = batch.shorten_link
-            description = description.replace(url, shorten_link)
+            if not (url.startswith("https://link.coupang.com") or url.startswith("https://s.click.aliexpress.com")):
+                description = description.replace(url, shorten_link)
             post = PostService.update_post(
                 post.id,
                 thumbnail=thumbnail,
