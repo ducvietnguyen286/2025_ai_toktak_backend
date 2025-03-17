@@ -13,7 +13,7 @@ from app.decorators import jwt_optional, parameters
 from app.lib.caller import get_shorted_link_coupang
 from app.lib.logger import logger
 from app.lib.response import Response
-from app.lib.string import split_text_by_sentences
+from app.lib.string import split_text_by_sentences, generate_short_code
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
@@ -25,6 +25,8 @@ from app.services.post import PostService
 from app.services.social_post import SocialPostService
 from app.services.video_service import VideoService
 from app.services.shotstack_services import ShotStackService
+from app.services.shorten_services import ShortenServices
+
 from flask import request
 
 from flask_jwt_extended import jwt_required
@@ -71,6 +73,18 @@ class APICreateBatch(Resource):
             #     shorten_link = get_shorted_link_coupang(url)
             # elif "link.coupang.com" in url:
             #     shorten_link = url
+
+            # Kiểm tra nếu URL đã tồn tại trong DB
+            existing_entry = ShortenServices.get_short_by_original_url(url)
+            domain_share_url = "https://s.toktak.ai/"
+            if not existing_entry:
+                short_code = ShortenServices.make_short_url(url)
+
+                existing_entry = ShortenServices.create_shorten(
+                    original_url=url, short_code=short_code
+                )
+
+            shorten_link = f"{domain_share_url}{existing_entry.short_code}"
 
             product_name = data.get("name", "")
             product_name_cleared = call_chatgpt_clear_product_name(product_name)
@@ -425,6 +439,9 @@ class APIMakePost(Resource):
                     code=201,
                 ).to_dict()
 
+            url = batch.url
+            shorten_link = batch.shorten_link
+            description = description.replace(url, shorten_link)
             post = PostService.update_post(
                 post.id,
                 thumbnail=thumbnail,
