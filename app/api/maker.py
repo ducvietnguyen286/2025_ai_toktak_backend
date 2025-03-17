@@ -13,7 +13,7 @@ from app.decorators import jwt_optional, parameters
 from app.lib.caller import get_shorted_link_coupang
 from app.lib.logger import logger
 from app.lib.response import Response
-from app.lib.string import split_text_by_sentences, generate_short_code
+from app.lib.string import split_text_by_sentences, should_replace_shortlink
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
@@ -75,10 +75,7 @@ class APICreateBatch(Resource):
             #     shorten_link = url
 
             # Kiểm tra nếu URL đã tồn tại trong DB
-            if not (
-                url.startswith("https://link.coupang.com")
-                or url.startswith("https://s.click.aliexpress.com")
-            ):
+            if should_replace_shortlink(url):
                 existing_entry = ShortenServices.get_short_by_original_url(url)
                 domain_share_url = "https://s.toktak.ai/"
                 if not existing_entry:
@@ -444,12 +441,10 @@ class APIMakePost(Resource):
                 ).to_dict()
 
             url = batch.url
-            shorten_link = batch.shorten_link
-            if not (
-                url.startswith("https://link.coupang.com")
-                or url.startswith("https://s.click.aliexpress.com")
-            ):
+            if should_replace_shortlink(url):
+                shorten_link = batch.shorten_link
                 description = description.replace(url, shorten_link)
+
             post = PostService.update_post(
                 post.id,
                 thumbnail=thumbnail,

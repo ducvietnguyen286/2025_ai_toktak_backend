@@ -4,6 +4,7 @@ import re
 import hashlib
 import base64
 
+
 def is_json(data):
     try:
         json.loads(data)
@@ -29,7 +30,6 @@ def split_text_by_sentences(text, num_captions):
         modified_text = re.sub(r"\.(?!\s*$)", ".\n", caption)
         captions.append(modified_text)
     return captions
-
 
 
 def get_level_images(level):
@@ -108,3 +108,9 @@ def generate_short_code(url):
     hash_value = hashlib.md5(url.encode()).digest()
     short_code = base64.urlsafe_b64encode(hash_value)[:6].decode("utf-8")
     return short_code
+
+
+def should_replace_shortlink(url):
+    excluded_domains = ["https://link.coupang.com", "https://s.click.aliexpress.com"]
+
+    return not any(url.startswith(domain) for domain in excluded_domains)
