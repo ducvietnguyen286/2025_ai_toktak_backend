@@ -571,7 +571,7 @@ def replace_prompt_with_data(prompt, data):
     return prompt
 
 
-def call_chatgpt(content, response_schema, post_id=0, base_prompt=None):
+def call_chatgpt(content, response_schema, post_id=0, base_prompt=None, retry=0):
     client = OpenAI(api_key=chatgpt_api_key)
     model = "gpt-4o-mini"
 
@@ -649,6 +649,11 @@ def call_chatgpt(content, response_schema, post_id=0, base_prompt=None):
                 total_tokens=total_tokens,
                 status=status,
             )
+            if not status:
+                if retry < 2:
+                    return call_chatgpt(
+                        content, response_schema, post_id, base_prompt, retry=retry + 1
+                    )
             return content
         return None
     except Exception as e:
