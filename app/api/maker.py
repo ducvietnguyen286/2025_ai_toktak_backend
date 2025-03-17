@@ -14,6 +14,7 @@ from app.lib.caller import get_shorted_link_coupang
 from app.lib.logger import logger
 from app.lib.response import Response
 from app.lib.string import split_text_by_sentences
+from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
 from app.scraper import Scraper
@@ -256,7 +257,11 @@ class APIMakePost(Resource):
             hooking = []
             maker_images = []
             captions = []
+            blog_images = []
             thumbnail = batch.thumbnail
+            file_size = 0
+            mime_type = ""
+            docx_url = ""
 
             if type == "video":
                 response = call_chatgpt_create_caption(process_images, data, post.id)
@@ -340,9 +345,12 @@ class APIMakePost(Resource):
 
                 for index, image_url in enumerate(process_images):
                     image_caption = captions[index] if index < len(captions) else ""
-                    image_url = ImageMaker.save_image_and_write_text(
+                    img_res = ImageMaker.save_image_and_write_text(
                         image_url, image_caption, font_size=80
                     )
+                    image_url = img_res.get("image_url", "")
+                    file_size += img_res.get("file_size", 0)
+                    mime_type = img_res.get("mime_type", "")
                     maker_images.append(image_url)
 
                 logger.info(
@@ -352,7 +360,30 @@ class APIMakePost(Resource):
                 logger.info(
                     "-------------------- PROCESSING CREATE LOGS -------------------"
                 )
-                response = call_chatgpt_create_blog(process_images, data, post.id)
+
+                blog_images = images
+                if blog_images and len(blog_images) < need_count:
+                    current_length = len(blog_images)
+                    need_length = need_count - current_length
+                    blog_images = blog_images + process_images[:need_length]
+                elif blog_images and len(blog_images) >= need_count:
+                    blog_images = blog_images[:need_count]
+                else:
+                    blog_images = process_images
+                    blog_images = blog_images[:need_count]
+
+                response = call_chatgpt_create_blog(blog_images, data, post.id)
+                if response:
+                    parse_caption = json.loads(response)
+                    parse_response = parse_caption.get("response", {})
+                    docx_title = parse_response.get("title", "")
+                    docx_content = parse_response.get("docx_content", "")
+                    res_docx = DocxMaker().make(docx_title, docx_content, blog_images)
+
+                    docx_url = res_docx.get("docx_url", "")
+                    file_size = res_docx.get("file_size", 0)
+                    mime_type = res_docx.get("mime_type", "")
+
                 logger.info(
                     "-------------------- PROCESSED CREATE LOGS -------------------"
                 )
@@ -379,20 +410,11 @@ class APIMakePost(Resource):
                     subtitle = parse_response.get("summarize", "")
                 if parse_response and "hashtag" in parse_response:
                     hashtag = parse_response.get("hashtag", "")
+                if parse_response and "docx_content" in parse_response:
+                    docx = parse_response.get("docx_content", "")
+                    description = json.dumps(docx)
                 if parse_response and "content" in parse_response:
                     content = parse_response.get("content", "")
-
-                    blog_images = images
-                    if blog_images and len(blog_images) < need_count:
-                        current_length = len(blog_images)
-                        need_length = need_count - current_length
-                        blog_images = blog_images + process_images[:need_length]
-                    elif blog_images and len(blog_images) >= need_count:
-                        blog_images = blog_images[:need_count]
-                    else:
-                        blog_images = process_images
-                        blog_images = blog_images[:need_count]
-
                     for index, image_url in enumerate(blog_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
 
@@ -414,6 +436,9 @@ class APIMakePost(Resource):
                 description=description,
                 content=content,
                 video_url=video_url,
+                docx_url=docx_url,
+                file_size=file_size,
+                mime_type=mime_type,
                 hashtag=hashtag,
                 render_id=render_id,
                 status=1,

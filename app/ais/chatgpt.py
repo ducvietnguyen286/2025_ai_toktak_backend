@@ -242,6 +242,7 @@ macOS Sequoia 15.1을 통해 AI 기반 도구와 향상된 시리, 아이폰 미
 
 def call_chatgpt_create_blog(images=[], data={}, post_id=0):
     prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 **블로그 게시글**을 작성해 주세요.
+
 제품 관련 정보:
 - 제품명: {name}
 - 가격: {price}
@@ -253,13 +254,40 @@ def call_chatgpt_create_blog(images=[], data={}, post_id=0):
 조건:
 - 게시글은 약 1200자 정도로 작성해 주세요.
 - 제품에 대한 자세한 설명, 장점, 사용 방법 등을 포함하여 독자가 관심을 가질 수 있도록 친근하고 설득력 있게 작성해 주세요.
-- 블로그 게시글은 **HTML 형식**으로 작성해 주세요.
-- 게시글 상단에 사용자의 관심을 끌 수 있는 **매력적인 제목**을 작성해 주세요.
-- 제품의 이미지는 업로드된 이미지에서 선택하여 적절한 위치에 삽입해 주세요.
-- 각 이미지의 `src`는 `IMAGE_URL_index` 형태로 작성되어야 하며, `index`는 `0`부터 COUNT_IMAGE 까지의 숫자로 대체되어야 합니다.
-- 게시글 내용과 함께, 본문 내용을 요약한 **요약문**도 생성해 주세요.
-- **요약문은 300~350자 이내로 작성해 주세요. (참고: 글자 수 제한은 요약문에만 적용되며, 본문은 약 1200자 가이드라인에 따릅니다.)**
-- 요약의 내용은 반드시 한국어로 작성되어야 하며, 결과는 순수한 문자열로만 반환되어야 합니다
+- **게시글은 두 가지 형식으로 제공해야 합니다:**
+  1. **`docx_content`**: **순수한 문자열(plain text) 및 `IMAGE_URL_index`를 포함한 배열 형식**으로 제공.
+  2. **`content`**: **HTML 형식**으로 제공.
+- 게시글 상단에 사용자의 관심을 끌 수 있는 **매력적인 제목**을 포함해 주세요.
+- 제품의 이미지는 업로드된 이미지에서 선택하여, 적절한 위치에 삽입해 주세요.  
+  - **`docx_content`에서는 IMAGE_URL_index 형식(`"IMAGE_URL_0"`, `"IMAGE_URL_1"`, ...)으로 표현**  
+  - **`content`에서는 동일한 위치에 `<p>IMAGE_URL_index</p>` 형태로 표현**  
+- 본문 내용과 함께, 본문 내용을 요약한 **요약문(`summarize`)**도 생성해 주세요.
+- **요약문은 300~350자 이내로 작성해 주세요.**
+- **요약의 내용은 반드시 한국어로 작성되어야 하며, 결과는 `response_schema` 형식에 맞춰 반환되어야 합니다.**
+
+---
+
+### **🔹 Output Format (JSON)**
+```json
+{
+    "title": "블로그 게시글 제목",
+    "summarize": "요약된 내용",
+    "docx_content": [
+        "제품의 특징 및 장점에 대해 설명하는 첫 번째 단락",
+        "IMAGE_URL_0",
+        "제품 사용 방법에 대한 설명이 포함된 두 번째 단락",
+        "IMAGE_URL_1",
+        "제품을 구매하는 방법과 판매처 정보",
+        "IMAGE_URL_2"
+    ],
+    "content": "<h1>블로그 게시글 제목</h1>
+                <p>제품의 특징 및 장점에 대해 설명하는 첫 번째 단락</p>
+                <p>IMAGE_URL_0</p>
+                <p>제품 사용 방법에 대한 설명이 포함된 두 번째 단락</p>
+                <p>IMAGE_URL_1</p>
+                <p>제품을 구매하는 방법과 판매처 정보</p>
+                <p>IMAGE_URL_2</p>"
+}
 """
     prompt = prompt.replace("COUNT_IMAGE", str(len(images)))
 
@@ -285,12 +313,17 @@ def call_chatgpt_create_blog(images=[], data={}, post_id=0):
                             "type": "string",
                             "description": "A summary or brief overview of the content.",
                         },
+                        "docx_content": {
+                            "type": "array",
+                            "description": "The content will be written to the docx file.",
+                            "items": {"type": "string"},
+                        },
                         "content": {
                             "type": "string",
                             "description": "The main content of the response.",
                         },
                     },
-                    "required": ["title", "summarize", "content"],
+                    "required": ["title", "summarize", "docx_content", "content"],
                     "additionalProperties": False,
                 }
             },
@@ -533,7 +566,8 @@ def call_chatgpt_clear_product_name(name):
 
 
 def replace_prompt_with_data(prompt, data):
-    prompt = prompt.format(**data)
+    for key, value in data.items():
+        prompt = prompt.replace("{" + key + "}", str(value))
     return prompt
 
 
