@@ -47,7 +47,6 @@ class APICreateShortenURL(Resource):
                 original_url=original_url
             ).first()
 
-            logger.error(existing_entry)
             if not existing_entry:
                 # Tạo short_code ngẫu nhiên và đảm bảo nó là duy nhất
                 short_code = generate_short_code(original_url)
@@ -55,7 +54,7 @@ class APICreateShortenURL(Resource):
                     short_code = generate_short_code(original_url)
 
                 # Lưu vào Database
-                ShortenServices.create_shorten(
+                existing_entry = ShortenServices.create_shorten(
                     original_url=original_url, short_code=short_code
                 )
 
