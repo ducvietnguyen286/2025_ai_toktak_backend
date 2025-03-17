@@ -86,9 +86,10 @@ class DocxMaker:
             is_external=True,
         )
 
-        # XML chuẩn có namespace đúng
+        # XML chuẩn (Loại bỏ nsdecls gây lỗi)
         hyperlink_xml = f"""
-        <w:hyperlink r:id="{r_id}" {nsdecls('w')} {nsdecls('r')}>
+        <w:hyperlink r:id="{r_id}" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" 
+                    xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
             <w:r>
                 <w:rPr>
                     <w:color w:val="0000FF"/>
