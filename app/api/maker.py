@@ -75,16 +75,20 @@ class APICreateBatch(Resource):
             #     shorten_link = url
 
             # Kiểm tra nếu URL đã tồn tại trong DB
-            existing_entry = ShortenServices.get_short_by_original_url(url)
-            domain_share_url = "https://s.toktak.ai/"
-            if not existing_entry:
-                short_code = ShortenServices.make_short_url(url)
+            if not (
+                url.startswith("https://link.coupang.com")
+                or url.startswith("https://s.click.aliexpress.com")
+            ):
+                existing_entry = ShortenServices.get_short_by_original_url(url)
+                domain_share_url = "https://s.toktak.ai/"
+                if not existing_entry:
+                    short_code = ShortenServices.make_short_url(url)
 
-                existing_entry = ShortenServices.create_shorten(
-                    original_url=url, short_code=short_code
-                )
+                    existing_entry = ShortenServices.create_shorten(
+                        original_url=url, short_code=short_code
+                    )
 
-            shorten_link = f"{domain_share_url}{existing_entry.short_code}"
+                shorten_link = f"{domain_share_url}{existing_entry.short_code}"
 
             product_name = data.get("name", "")
             product_name_cleared = call_chatgpt_clear_product_name(product_name)
@@ -441,7 +445,10 @@ class APIMakePost(Resource):
 
             url = batch.url
             shorten_link = batch.shorten_link
-            if not (url.startswith("https://link.coupang.com") or url.startswith("https://s.click.aliexpress.com")):
+            if not (
+                url.startswith("https://link.coupang.com")
+                or url.startswith("https://s.click.aliexpress.com")
+            ):
                 description = description.replace(url, shorten_link)
             post = PostService.update_post(
                 post.id,
