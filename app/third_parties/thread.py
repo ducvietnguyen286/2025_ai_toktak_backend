@@ -577,7 +577,7 @@ class ThreadService(BaseService):
                     )
                     return False
                 else:
-                    time.sleep(2)
+                    time.sleep(3)
                     return self.get_upload_status(media_id)
             else:
                 self.save_errors(
