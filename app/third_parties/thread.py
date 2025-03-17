@@ -485,7 +485,7 @@ class ThreadService(BaseService):
             self.save_errors("ERRORED", f"UPLOAD CAROUSEL {self.key_log}: {str(e)}")
             return False
 
-    def publish_post(self, media_id):
+    def publish_post(self, media_id, retry):
         try:
             log_thread_message(
                 f"------------ PUBLISH POST: {self.key_log} ----------------"
@@ -519,6 +519,12 @@ class ThreadService(BaseService):
                 return result["id"]
             elif "error" in result:
                 error = result["error"]
+                error_type = error["type"]
+                error_subcode = error["error_subcode"]
+                if error_type == "OAuthException" and error_subcode == 2207032:
+                    time.sleep(10)
+                    if retry < 3:
+                        return self.publish_post(media_id, retry + 1)
                 error_message = error["message"]
                 self.save_errors(
                     "ERRORED",
