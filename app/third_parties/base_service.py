@@ -33,7 +33,7 @@ class BaseService:
             response=json.dumps(response),
         )
 
-    def publish_redis_channel(self, status, value):
+    def publish_redis_channel(self, status, value, social_link):
         redis_client.publish(
             PROGRESS_CHANNEL,
             json.dumps(
@@ -42,6 +42,7 @@ class BaseService:
                     "batch_id": self.batch_id,
                     "link_id": self.link_id,
                     "post_id": self.post_id,
+                    "social_link": social_link,
                     "status": status,
                     "value": value,
                 }
@@ -85,7 +86,7 @@ class BaseService:
 
     def save_publish(self, status, social_link):
         self.save_social_post_publish(status, social_link)
-        self.publish_redis_channel(status, 100)
+        self.publish_redis_channel(status, 100, social_link)
         self.log_social_message(
             f"---- {self.service} --- {self.key_log} --- PUBLISHED ----"
         )
