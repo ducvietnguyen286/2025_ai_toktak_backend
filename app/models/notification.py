@@ -6,8 +6,8 @@ class Notification(db.Model, BaseModel):
     __tablename__ = "notifications"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    batch_id = db.Column(db.Integer, db.ForeignKey("batchs.id"), nullable=False)
+    user_id = db.Column(db.Integer, nullable=False)
+    batch_id = db.Column(db.Integer, nullable=False)
     thumbnail = db.Column(db.String(500), nullable=False, default="")
     captions = db.Column(db.Text, nullable=True)
     images = db.Column(db.Text, nullable=True)

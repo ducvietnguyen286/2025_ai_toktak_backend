@@ -134,7 +134,7 @@ class ShortstackWebhook(Resource):
                 post_detail = PostService.find_post(post_id)
                 if post_detail:
                     batch_id = post_detail.batch_id or "0"
-                    post_detail = PostService.update_post_by_batch_id(
+                    PostService.update_post_by_batch_id(
                         batch_id, video_url=video_url
                     )
 
