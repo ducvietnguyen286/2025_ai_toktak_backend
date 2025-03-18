@@ -1,4 +1,5 @@
 from app.models.post import Post
+from app.models.user_video_templates import UserVideoTemplates
 from app.models.link import Link
 from app.models.social_post import SocialPost
 from app.extensions import db
@@ -183,3 +184,19 @@ class PostService:
             db.session.rollback()
             return 0
         return 1
+
+    @staticmethod
+    def get_template_video_by_user_id(user_id):
+        try:
+            user_template = UserVideoTemplates.query.filter(
+                UserVideoTemplates.user_id == user_id
+            ).first()
+        except Exception as ex:
+            return None
+        return user_template
+
+    @staticmethod
+    def create_user_template(*args, **kwargs):
+        user_template = UserVideoTemplates(*args, **kwargs)
+        user_template.save()
+        return user_template

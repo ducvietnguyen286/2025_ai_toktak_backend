@@ -144,7 +144,6 @@ class AuthService:
     def get_current_identity():
         try:
             # Lấy JWT identity
-            verify_jwt_in_request(optional=True)
             subject = get_jwt_identity()
             # Nếu không có identity (chưa login), trả về None
             if subject is None:

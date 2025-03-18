@@ -1,0 +1,97 @@
+# coding: utf8
+import time
+import json
+import os
+from flask_restx import Namespace, Resource
+from app.lib.logger import logger
+from app.lib.response import Response
+from app.services.notification import NotificationServices
+from app.decorators import parameters
+from flask import request
+
+from flask_jwt_extended import jwt_required
+from app.services.auth import AuthService
+import const
+
+ns = Namespace(name="notification", description="Notification API")
+
+
+@ns.route("/histories")
+class APINotificationHistories(Resource):
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+        status = request.args.get("status", const.UPLOADED, type=int)
+        type_order = request.args.get("type_order", "", type=str)
+        type_post = request.args.get("type_post", "", type=str)
+        time_range = request.args.get("time_range", "", type=str)
+        data_search = {
+            "page": page,
+            "per_page": per_page,
+            "status": status,
+            "type_order": type_order,
+            "type_post": type_post,
+            "time_range": time_range,
+            "user_id": current_user.id,
+        }
+        posts = NotificationServices.get_notifications(data_search)
+        return {
+            "current_user": current_user.id,
+            "status": True,
+            "message": "Success",
+            "total": posts.total,
+            "page": posts.page,
+            "per_page": posts.per_page,
+            "total_pages": posts.pages,
+            "data": [post._to_json() for post in posts.items],
+        }, 200
+
+
+@ns.route("/delete_notification")
+class APIDeleteNotification(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "post_ids": {"type": "string"},
+        },
+        required=["post_ids"],
+    )
+    def post(self, args):
+        try:
+            post_ids = args.get("post_ids", "")
+            # Chuyển chuỗi post_ids thành list các integer
+            if not post_ids:
+                return Response(
+                    message="No post_ids provided",
+                    code=201,
+                ).to_dict()
+
+            # Tách chuỗi và convert sang list integer
+            id_list = [int(id.strip()) for id in post_ids.split(",")]
+
+            if not id_list:
+                return Response(
+                    message="Invalid post_ids format",
+                    code=201,
+                ).to_dict()
+
+            process_delete = NotificationServices.delete_posts_by_ids(id_list)
+            if process_delete == 1:
+                message = "Delete Post Success"
+            else:
+                message = "Delete Post Fail"
+
+            return Response(
+                message=message,
+                code=200,
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Exception: Delete Post Fail  :  {str(e)}")
+            return Response(
+                message="Delete Post Fail",
+                code=201,
+            ).to_dict()

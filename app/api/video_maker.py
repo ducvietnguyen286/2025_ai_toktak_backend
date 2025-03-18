@@ -8,6 +8,7 @@ from app.services.post import PostService
 from app.services.batch import BatchService
 import random
 from app.lib.logger import logger
+from app.services.notification import NotificationServices
 
 ns = Namespace(name="video_maker", description="Video Maker API")
 
@@ -51,9 +52,14 @@ class CreateVideo(Resource):
                 return {"message": "Each URL must be a string"}, 400
         batch_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
         voice_google = random.randint(1, 4)  # Chọn số nguyên từ 1 đến 4
-        
+
         result = ShotStackService.create_video_from_images_v2(
-            batch_id , voice_google, product_name, images_url, images_slider_url, captions
+            batch_id,
+            voice_google,
+            product_name,
+            images_url,
+            images_slider_url,
+            captions,
         )
 
         render_id = ""
@@ -126,14 +132,25 @@ class ShortstackWebhook(Resource):
             if create_video_detail:
                 post_id = create_video_detail.post_id
                 post_detail = PostService.find_post(post_id)
-                if(post_detail):
+                if post_detail:
                     batch_id = post_detail.batch_id or "0"
-                    post_detail = PostService.update_post_by_batch_id(
+                    PostService.update_post_by_batch_id(
                         batch_id, video_url=video_url
                     )
 
                     if status == "failed":
                         BatchService.update_batch(batch_id, status="2")
+                        NotificationServices.create_notification(
+                            user_id=post_detail.user_id,
+                            batch_id=post_detail.batch_id,
+                            title="❌AI로 생성된 비디오 만들기에 실패했습니다.",
+                        )
+                    else:
+                        NotificationServices.create_notification(
+                            user_id=post_detail.user_id,
+                            batch_id=post_detail.batch_id,
+                            title="🔔AI로 생성된 비디오가 성공적으로 만들어졌습니다.",
+                        )
 
             # Trả về phản hồi JSON
             return {
