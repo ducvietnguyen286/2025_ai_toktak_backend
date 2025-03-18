@@ -26,12 +26,16 @@ from app.services.social_post import SocialPostService
 from app.services.video_service import VideoService
 from app.services.shotstack_services import ShotStackService
 from app.services.shorten_services import ShortenServices
+from app.services.notification import NotificationServices
 
 from flask import request
 
 from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
 import const
+from flask_jwt_extended import (
+    verify_jwt_in_request,
+)
 
 ns = Namespace(name="maker", description="Maker API")
 
@@ -49,6 +53,8 @@ class APICreateBatch(Resource):
     )
     def post(self, args):
         try:
+
+            verify_jwt_in_request(optional=True)
             user_id_login = 0
             current_user = AuthService.get_current_identity() or None
             if current_user:
@@ -139,6 +145,12 @@ class APICreateBatch(Resource):
             batch_res = batch._to_json()
             batch_res["posts"] = posts
 
+            NotificationServices.create_notification(
+                user_id=user_id_login,
+                batch_id=batch.id,
+                title=f"제품 정보를 성공적으로 가져왔습니다. {url}",
+            )
+
             return Response(
                 data=batch_res,
                 message="제품 정보를 성공적으로 가져왔습니다.",
@@ -217,9 +229,10 @@ class APITestCreateVideo(Resource):
 
 @ns.route("/make-post/<int:id>")
 class APIMakePost(Resource):
-
     def post(self, id):
         try:
+
+            verify_jwt_in_request(optional=True)
             current_user_id = 0
             current_user = AuthService.get_current_identity() or None
             if current_user:
@@ -629,6 +642,10 @@ class APIUpdateStatusBatch(Resource):
 
             PostService.update_post_by_batch_id(
                 batch.id, status=const.DRAFT_STATUS, user_id=current_user.id
+            )
+            
+            NotificationServices.update_notification_by_batch_id(
+                batch.id,  user_id=current_user.id
             )
 
             return Response(
