@@ -32,6 +32,9 @@ from flask import request
 from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
 import const
+from flask_jwt_extended import (
+    verify_jwt_in_request,
+)
 
 ns = Namespace(name="maker", description="Maker API")
 
@@ -49,6 +52,8 @@ class APICreateBatch(Resource):
     )
     def post(self, args):
         try:
+            
+            verify_jwt_in_request(optional=True)
             user_id_login = 0
             current_user = AuthService.get_current_identity() or None
             if current_user:
@@ -217,9 +222,10 @@ class APITestCreateVideo(Resource):
 
 @ns.route("/make-post/<int:id>")
 class APIMakePost(Resource):
-
     def post(self, id):
         try:
+            
+            verify_jwt_in_request(optional=True)
             current_user_id = 0
             current_user = AuthService.get_current_identity() or None
             if current_user:

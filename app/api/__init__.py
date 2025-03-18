@@ -10,7 +10,8 @@ from app.api.link import ns as link_ns
 from app.api.video_maker import ns as video_maker_ns
 from app.api.setting import ns as setting_ns
 from app.api.month_text import ns as month_text_ns
-from .shorten import ns as shorten_ns  # Thêm module shorten
+from app.api.shorten import ns as shorten_ns
+from app.api.notification import ns as notification_ns
 
 bp = Blueprint("api", __name__, url_prefix="/api/v1")
 
@@ -25,3 +26,4 @@ api.add_namespace(ns=video_maker_ns)
 api.add_namespace(ns=setting_ns)
 api.add_namespace(ns=month_text_ns)
 api.add_namespace(ns=shorten_ns)
+api.add_namespace(ns=notification_ns)
