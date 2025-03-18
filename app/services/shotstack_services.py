@@ -76,6 +76,9 @@ class ShotStackService:
         )
 
         video_urls = get_random_videos(2)
+        
+        audio_urls = get_random_audio(1)
+         
         first_viral_detail = video_urls[0] or []
         first_duration = float(first_viral_detail["duration"] or 0)
 
@@ -143,7 +146,7 @@ class ShotStackService:
                             {
                                 "asset": {
                                     "type": "image",
-                                    "src": "https://admin.lang.canvasee.com/img/watermarker5.png",
+                                    "src": "https://admin.lang.canvasee.com/img/watermarker6.png",
                                 },
                                 "start": 0,
                                 "length": 3,
@@ -158,7 +161,7 @@ class ShotStackService:
                             {
                                 "asset": {
                                     "type": "image",
-                                    "src": "https://admin.lang.canvasee.com/img/watermarker5.png",
+                                    "src": "https://admin.lang.canvasee.com/img/watermarker6.png",
                                 },
                                 "start": 3,
                                 "length": "end",
@@ -176,7 +179,7 @@ class ShotStackService:
                             {
                                 "asset": {
                                     "type": "audio",
-                                    "src": "https://apitoktak.voda-play.com/voice/audio/ambisax.mp3",
+                                    "src": audio_urls[0]['video_url'],
                                     "effect": "fadeOut",
                                     "volume": MUSIC_BACKGROUP_VOLUMN,
                                 },
@@ -419,22 +422,22 @@ def create_combined_clips_v2(
 
 def get_random_videos(limit=2):
     try:
-        videos = VideoViral.query.filter_by(status=1).all()
-        video_data = [
-            {
-                "video_name": video_detail.video_name,
-                "video_url": video_detail.video_url,
-                "duration": video_detail.duration,
-            }
-            for video_detail in videos
-        ]
 
-        key_redis = "viral_video_redis"
+        key_redis = "viral_video_redis_video"
         progress_json = redis_client.get(key_redis)
 
         if progress_json:
             video_viral_s = json.loads(progress_json) if progress_json else {}
         else:
+            videos = VideoViral.query.filter_by(status=1, type="video").all()
+            video_data = [
+                {
+                    "video_name": video_detail.video_name,
+                    "video_url": video_detail.video_url,
+                    "duration": video_detail.duration,
+                }
+                for video_detail in videos
+            ]
             video_viral_s = video_data
             redis_client.set(key_redis, json.dumps(video_viral_s))
 
@@ -443,6 +446,35 @@ def get_random_videos(limit=2):
 
     except Exception as e:
         log_make_video_message(f"get_random_videos: {str(e)}")
+        return []
+
+
+def get_random_audio(limit=1):
+    try:
+
+        key_redis = "viral_video_redis_audio"
+        progress_json = redis_client.get(key_redis)
+
+        if progress_json:
+            video_viral_s = json.loads(progress_json) if progress_json else {}
+        else:
+            videos = VideoViral.query.filter_by(status=1, type="mp3").all()
+            video_data = [
+                {
+                    "video_name": video_detail.video_name,
+                    "video_url": video_detail.video_url,
+                    "duration": video_detail.duration,
+                }
+                for video_detail in videos
+            ]
+            video_viral_s = video_data
+            redis_client.set(key_redis, json.dumps(video_viral_s))
+
+        random_items = random.sample(video_viral_s, limit)
+        return random_items
+
+    except Exception as e:
+        log_make_video_message(f"get_random_audio: {str(e)}")
         return []
 
 
