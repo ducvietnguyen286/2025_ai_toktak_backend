@@ -320,7 +320,7 @@ class VideoService:
                             {
                                 "asset": {
                                     "type": "image",
-                                    "src": "https://admin.lang.canvasee.com/img/watermarker.png",
+                                    "src": "https://admin.lang.canvasee.com/img/watermarker6.png",
                                 },
                                 "start": 0,
                                 "length": "end",
