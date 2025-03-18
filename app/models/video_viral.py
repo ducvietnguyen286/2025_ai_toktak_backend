@@ -8,6 +8,7 @@ class VideoViral(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     video_name = db.Column(db.String(255), nullable=False)
+    type = db.Column(db.String(500), nullable=False)
     video_url = db.Column(db.String(500), nullable=False)
     status = db.Column(db.Integer)
     duration = db.Column(db.Float )
@@ -22,6 +23,7 @@ class VideoViral(db.Model, BaseModel):
             "video_name": self.video_name,
             "video_url": self.video_url,
             "status": self.status,
+            "type": self.type,
             "duration": self.duration,
             "description": self.description,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
