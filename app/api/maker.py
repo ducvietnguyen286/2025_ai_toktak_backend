@@ -44,6 +44,7 @@ class APICreateBatch(Resource):
         properties={
             "url": {"type": "string"},
             "voice": {"type": ["string", "null"]},
+            "is_advance": {"type": "boolean"},
         },
         required=["url"],
     )
@@ -55,6 +56,7 @@ class APICreateBatch(Resource):
                 user_id_login = current_user.id
             url = args.get("url", "")
             voice = args.get("voice", 1)
+            is_advance = args.get("is_advance", False)
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             max_count_image = os.environ.get("MAX_COUNT_IMAGE") or "8"
             max_count_image = int(max_count_image)
@@ -87,12 +89,20 @@ class APICreateBatch(Resource):
 
                 shorten_link = f"{domain_share_url}{existing_entry.short_code}"
 
+            data["shorten_link"] = shorten_link
+
             product_name = data.get("name", "")
             product_name_cleared = call_chatgpt_clear_product_name(product_name)
             if product_name_cleared:
                 product_name_cleared = json.loads(product_name_cleared)
                 res_product_name = product_name_cleared.get("response", "")
                 data["name"] = res_product_name.get("product_name", "")
+
+            if is_advance:
+                return Response(
+                    data=data,
+                    message="상품 정보를 성공적으로 가져왔습니다.",
+                ).to_dict()
 
             images = data.get("images", [])
 

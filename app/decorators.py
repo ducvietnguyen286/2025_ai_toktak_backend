@@ -36,6 +36,13 @@ def parameters(**schema):
                 and request.mimetype == "application/json"
             ):
                 req_args.update(request.get_json())
+
+            if (
+                request.method in ("POST", "PUT", "PATCH", "DELETE")
+                and request.mimetype == "multipart/form-data"
+            ):
+                req_args.update(request.form.to_dict())
+
             req_args = {
                 k: v for k, v in req_args.items() if k in schema["properties"].keys()
             }
