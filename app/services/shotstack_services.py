@@ -75,7 +75,7 @@ class ShotStackService:
             korean_voice, origin_caption, dir_path, config
         )
 
-        video_urls = get_random_videos(2)
+        video_urls =  ShotStackService.get_random_videos(2)
         
         audio_urls = get_random_audio(1)
          
@@ -299,6 +299,35 @@ class ShotStackService:
         if filtered:
             return random.choice(filtered)
         return ""
+    @staticmethod
+    def get_random_videos(limit=2):
+        try:
+
+            key_redis = "viral_video_redis_video"
+            progress_json = redis_client.get(key_redis)
+
+            if progress_json:
+                video_viral_s = json.loads(progress_json) if progress_json else {}
+            else:
+                videos = VideoViral.query.filter_by(status=1, type="video").all()
+                video_data = [
+                    {
+                        "video_name": video_detail.video_name,
+                        "video_url": video_detail.video_url,
+                        "duration": video_detail.duration,
+                    }
+                    for video_detail in videos
+                ]
+                video_viral_s = video_data
+                redis_client.set(key_redis, json.dumps(video_viral_s))
+
+            random_items = random.sample(video_viral_s, limit)
+            return random_items
+
+        except Exception as e:
+            log_make_video_message(f"get_random_videos: {str(e)}")
+            return []
+
 
 
 def create_combined_clips_v2(
@@ -420,33 +449,6 @@ def create_combined_clips_v2(
     return {"intro_length": intro_length, "clips": {"clips": combined_clips}}
 
 
-def get_random_videos(limit=2):
-    try:
-
-        key_redis = "viral_video_redis_video"
-        progress_json = redis_client.get(key_redis)
-
-        if progress_json:
-            video_viral_s = json.loads(progress_json) if progress_json else {}
-        else:
-            videos = VideoViral.query.filter_by(status=1, type="video").all()
-            video_data = [
-                {
-                    "video_name": video_detail.video_name,
-                    "video_url": video_detail.video_url,
-                    "duration": video_detail.duration,
-                }
-                for video_detail in videos
-            ]
-            video_viral_s = video_data
-            redis_client.set(key_redis, json.dumps(video_viral_s))
-
-        random_items = random.sample(video_viral_s, limit)
-        return random_items
-
-    except Exception as e:
-        log_make_video_message(f"get_random_videos: {str(e)}")
-        return []
 
 
 def get_random_audio(limit=1):
