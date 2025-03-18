@@ -20,6 +20,14 @@ class NotificationServices:
         return Notification.query.get(id).delete()
 
     @staticmethod
+    def update_notification_by_batch_id(batch_id, *args, **kwargs):
+        updated_rows = Notification.query.filter_by(batch_id=batch_id).update(
+            kwargs
+        )  # Cập nhật trực tiếp
+        db.session.commit()  # Lưu vào database
+        return updated_rows
+
+    @staticmethod
     def get_notifications(data_search):
         # Query cơ bản với các điều kiện
         query = Notification.query.filter(
