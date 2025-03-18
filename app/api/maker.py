@@ -643,9 +643,9 @@ class APIUpdateStatusBatch(Resource):
             PostService.update_post_by_batch_id(
                 batch.id, status=const.DRAFT_STATUS, user_id=current_user.id
             )
-            
+
             NotificationServices.update_notification_by_batch_id(
-                batch.id,  user_id=current_user.id
+                batch.id, user_id=current_user.id
             )
 
             return Response(
@@ -742,3 +742,23 @@ class APIDeletePostBatch(Resource):
                 message="Delete Post Fail",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/template_video")
+class APITemplateVideo(Resource):
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        user_template = PostService.get_template_video_by_user_id(current_user.id)
+        if not user_template:
+            user_template = PostService.create_user_template(user_id=current_user.id)
+
+        user_template_data = user_template.to_dict()
+
+        video_hooks = ShotStackService.get_random_videos(3)
+        user_template_data["video_hooks"] = video_hooks
+
+        return Response(
+            data=user_template_data,
+            code=200,
+        ).to_dict()
