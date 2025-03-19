@@ -75,10 +75,9 @@ class ShotStackService:
             korean_voice, origin_caption, dir_path, config
         )
 
-        video_urls =  ShotStackService.get_random_videos(2)
-        
+        video_urls = ShotStackService.get_random_videos(2)
+
         audio_urls = get_random_audio(1)
-         
         first_viral_detail = video_urls[0] or []
         first_duration = float(first_viral_detail["duration"] or 0)
 
@@ -179,7 +178,7 @@ class ShotStackService:
                             {
                                 "asset": {
                                     "type": "audio",
-                                    "src": audio_urls[0]['video_url'],
+                                    "src": audio_urls[0]["video_url"],
                                     "effect": "fadeOut",
                                     "volume": MUSIC_BACKGROUP_VOLUMN,
                                 },
@@ -299,6 +298,7 @@ class ShotStackService:
         if filtered:
             return random.choice(filtered)
         return ""
+
     @staticmethod
     def get_random_videos(limit=2):
         try:
@@ -327,7 +327,6 @@ class ShotStackService:
         except Exception as e:
             log_make_video_message(f"get_random_videos: {str(e)}")
             return []
-
 
 
 def create_combined_clips_v2(
@@ -447,8 +446,6 @@ def create_combined_clips_v2(
     # Kết hợp hai danh sách clip lại
     combined_clips = clips
     return {"intro_length": intro_length, "clips": {"clips": combined_clips}}
-
-
 
 
 def get_random_audio(limit=1):
@@ -960,6 +957,47 @@ def format_time(delta):
     return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
 
 
+def split_text_to_sentences(text):
+    """
+    Tách văn bản thành danh sách các câu, giữ dấu câu nhưng không tách số thập phân.
+    Đồng thời, chia nhỏ câu nếu dài hơn 20 ký tự và xóa dấu chấm cuối câu nếu có.
+    :param text: Văn bản đầu vào.
+    :return: Danh sách các câu đã được xử lý.
+    """
+
+    # Biểu thức chính quy tách câu:
+    # - `(?<!\d)[.,](?!\d)`: Chỉ tách `.` hoặc `,` nếu KHÔNG nằm giữa hai chữ số (để giữ số thập phân).
+    # - `([!?])\s+`: Luôn tách `!` hoặc `?` nếu có khoảng trắng theo sau.
+    sentences = [s for s in re.split(r"(?<!\d)[.,](?!\d)|([!?])\s+", text) if s]
+
+    processed_sentences = []
+    temp_sentence = ""
+
+    for segment in sentences:
+        if segment in ".!?,":  # Nếu là dấu câu, thêm vào câu trước đó
+            temp_sentence += segment
+            processed_sentences.append(temp_sentence.strip())
+            temp_sentence = ""
+        else:
+            if temp_sentence:
+                processed_sentences.append(temp_sentence.strip())
+            temp_sentence = segment.strip()
+
+    if temp_sentence:
+        processed_sentences.append(temp_sentence.strip())
+
+    # Xóa dấu chấm cuối câu nếu có
+    processed_sentences = [s.rstrip(".") if s.endswith(".") else s for s in processed_sentences]
+
+    # Chia nhỏ câu nếu dài hơn 20 ký tự
+    short_sentences = []
+    for sentence in processed_sentences:
+        small_chunks = textwrap.wrap(sentence, width=20)  # Chia nhỏ nhưng vẫn giữ dấu câu
+        short_sentences.extend(small_chunks)
+
+    return short_sentences
+
+
 def generate_srt(text, audio_file, output_srt, start_offset=0.0):
     """
     Tạo file phụ đề SRT từ văn bản, đảm bảo đồng bộ với voice, giữ nguyên dấu câu & bỏ index.
@@ -973,48 +1011,30 @@ def generate_srt(text, audio_file, output_srt, start_offset=0.0):
         # Lấy thời gian file âm thanh
         audio_duration = get_audio_duration(audio_file)
 
-        # Tách văn bản theo dấu câu (vẫn giữ nguyên dấu câu)
-        sentences = re.split(r"([.!?])", text)
-
-        # Gộp lại để giữ nguyên dấu câu
-        processed_sentences = []
-        temp_sentence = ""
-
-        for segment in sentences:
-            temp_sentence += segment  # Ghép lại phần nội dung + dấu câu
-            if segment in ".!?":  # Nếu gặp dấu câu, thì hoàn thành câu đó
-                processed_sentences.append(temp_sentence.strip())
-                temp_sentence = ""  # Reset để bắt đầu câu mới
-
-        # Nếu còn câu nào chưa được thêm (trường hợp không có dấu câu cuối)
-        if temp_sentence:
-            processed_sentences.append(temp_sentence.strip())
-
-        # Chia nhỏ câu nếu dài hơn 20 ký tự
-        wrapped_sentences = []
-        for sentence in processed_sentences:
-            small_chunks = textwrap.wrap(
-                sentence, width=20
-            )  # Chia nhỏ nhưng vẫn giữ dấu câu
-            wrapped_sentences.extend(small_chunks)
+        # Sử dụng hàm tách câu và chia nhỏ
+        short_sentences = split_text_to_sentences(text)
 
         # Tính tổng số ký tự để phân bổ thời gian hợp lý
-        total_chars = sum(len(chunk) for chunk in wrapped_sentences)
+        total_chars = sum(len(sentence) for sentence in short_sentences)
 
         start_time = datetime.timedelta(seconds=start_offset)  # Bắt đầu từ start_offset
         srt_content = ""  # Chuỗi chứa nội dung SRT (không có index)
 
-        for chunk in wrapped_sentences:
+        for subtitle in short_sentences:
+            # Kiểm tra nếu subtitle kết thúc bằng dấu chấm, loại bỏ dấu chấm cuối
+            if subtitle.endswith("."):
+                subtitle = subtitle[:-1]
+
             # Tính thời gian hiển thị dựa trên số ký tự
-            chunk_duration = (len(chunk) / total_chars) * audio_duration
-            end_time = start_time + datetime.timedelta(seconds=chunk_duration)
+            subtitle_duration = (len(subtitle) / total_chars) * audio_duration
+            end_time = start_time + datetime.timedelta(seconds=subtitle_duration)
 
             # Định dạng thời gian chính xác
             start_str = format_time(start_time)
             end_str = format_time(end_time)
 
             # Thêm vào nội dung file SRT
-            srt_content += f"{start_str} --> {end_str}\n{chunk}\n\n"
+            srt_content += f"{start_str} --> {end_str}\n{subtitle}\n\n"
 
             # Cập nhật thời gian bắt đầu cho caption tiếp theo
             start_time = end_time

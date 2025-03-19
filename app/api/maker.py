@@ -165,8 +165,8 @@ class APICreateBatch(Resource):
             ).to_dict()
 
 
-@ns.route("/update-batch")
-class APIUpdateBatch(Resource):
+@ns.route("/update_template_video_user")
+class APIUpdateTemplateVideoUser(Resource):
     @jwt_required()
     @parameters(
         type="object",
