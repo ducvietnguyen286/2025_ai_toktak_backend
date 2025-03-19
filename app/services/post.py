@@ -200,3 +200,9 @@ class PostService:
         user_template = UserVideoTemplates(*args, **kwargs)
         user_template.save()
         return user_template
+
+    @staticmethod
+    def update_template(id, *args, **kwargs):
+        user_template = UserVideoTemplates.query.get(id)
+        user_template.update(**kwargs)
+        return user_template
