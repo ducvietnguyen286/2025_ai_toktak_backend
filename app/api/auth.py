@@ -100,9 +100,8 @@ class APIRegister(Resource):
         password = args.get("password", "")
         level = 0
         level_info = get_level_images(level)
-        
 
-        user = AuthService.register(email, password, username , json.dumps(level_info))
+        user = AuthService.register(email, password, username, json.dumps(level_info))
         tokens = AuthService.generate_token(user)
         tokens.update(
             {
@@ -210,11 +209,31 @@ class APIMeUpdate(Resource):
         required=[],
     )
     def post(self, args):
-        name = args.get("name", "")
-        phone = args.get("phone", "")
-        contact = args.get("contact", "")
-        company_name = args.get("company_name", "")
+        name = args.get("name")
+        phone = args.get("phone")
+        contact = args.get("contact")
+        company_name = args.get("company_name")
         user_login = AuthService.get_current_identity()
+
+        update_data = {}
+
+        if name is not None:
+            update_data["name"] = name
+        if phone is not None:
+            update_data["phone"] = phone
+        if contact is not None:
+            update_data["contact"] = contact
+        if company_name is not None:
+            update_data["company_name"] = company_name
+
+        if update_data:  # Chỉ update nếu có dữ liệu
+            user_login = AuthService.update(user_login.id, **update_data)
+
+        return Response(
+            data=user_login._to_json(),
+            message="Update thông tin thành công",
+        ).to_dict()
+
         user_login = AuthService.update(
             user_login.id,
             name=name,
