@@ -68,6 +68,11 @@ class APICreateBatch(Resource):
             data = Scraper().scraper({"url": url})
 
             if not data:
+                NotificationServices.create_notification(
+                    user_id=user_id_login,
+                    title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                )
+
                 return Response(
                     message="상품의 URL을 분석할 수 없어요.",
                     code=201,
@@ -224,12 +229,11 @@ class APIUpdateTemplateVideoUser(Resource):
                 "is_caption_top": is_caption_top,
                 "is_caption_last": is_caption_last,
                 "image_caption_type": image_caption_type,
-            } 
+            }
 
             user_template = PostService.update_template(user_template.id, **data_update)
             user_template_data = user_template.to_dict()
-            
-            
+
             posts = PostService.get_posts_by_batch_id(batch_id)
             user_template_data["posts"] = posts
             return Response(
@@ -753,6 +757,12 @@ class APIUpdateStatusBatch(Resource):
 
             NotificationServices.update_notification_by_batch_id(
                 batch.id, user_id=current_user.id
+            )
+
+            NotificationServices.create_notification(
+                user_id=current_user.id,
+                batch_id=id,
+                title="💾 작업이 임시 저장되었습니다.",
             )
 
             return Response(
