@@ -239,6 +239,7 @@ class APIMeUpdate(Resource):
                 user_id=user_login.id,
                 title=message,
             )
+            update_data["updated_at"] = datetime.now()
 
             user_login = AuthService.update(user_login.id, **update_data)
 
