@@ -753,70 +753,86 @@ class APIGetStatusUploadBySyncId(Resource):
 
 @ns.route("/get-status-upload-with-batch-id/<int:id>")
 class APIGetStatusUploadWithBatch(Resource):
-
     def get(self, id):
-        batch = BatchService.find_batch(id)
-        if not batch:
+        try:
+            batch = BatchService.find_batch(id)
+            if not batch:
+                return Response(
+                    message="Batch không tồn tại",
+                    status=404,
+                ).to_dict()
+
+            posts = PostService.get_posts_by_batch_id(batch.id)
+            for post_detail in posts:
+                try:
+                    post_id = post_detail["id"]
+                    social_post_detail = (
+                        SocialPostService.by_post_id_get_latest_social_posts(post_id)
+                    )
+                    post_detail["social_post_detail"] = social_post_detail
+
+                    status_check_sns = 0
+                    for social_post_each in social_post_detail:
+                        status = social_post_each["status"]
+                        if status == "PUBLISHED":
+                            status_check_sns = 1
+
+                    update_data = {
+                        "social_sns_description": json.dumps(social_post_detail)
+                    }
+                    if status_check_sns == 1:
+                        update_data["status_sns"] = 1
+
+                    for sns_post_detail in social_post_detail:
+                        try:
+                            sns_post_id = sns_post_detail["post_id"]
+                            sns_status = sns_post_detail["status"]
+                            notification_type = sns_post_detail["title"]
+
+                            notification = NotificationServices.find_notification_sns(
+                                sns_post_id, notification_type
+                            )
+                            if not notification:
+                                notification = NotificationServices.create_notification(
+                                    user_id=post_detail["user_id"],
+                                    batch_id=post_detail["batch_id"],
+                                    post_id=sns_post_id,
+                                    title=f"🔄{notification_type}에 업로드 중입니다.",
+                                )
+                            if sns_status == "PUBLISHED":
+                                NotificationServices.update_notification(
+                                    notification.id,
+                                    title=f"✅{notification_type} 업로드에 성공했습니다.",
+                                )
+                            elif sns_status == "ERRORED":
+                                NotificationServices.update_notification(
+                                    notification.id,
+                                    title=f"❌{notification_type} 업로드에 실패했습니다.",
+                                )
+                        except Exception as e:
+                            logger.error(
+                                f"Lỗi xử lý SNS post detail: {e}", exc_info=True
+                            )
+
+                    PostService.update_post(post_id, **update_data)
+                except Exception as e:
+                    logger.error(f"Lỗi xử lý post {post_id}: {e}", exc_info=True)
+
+            batch_res = batch._to_json()
+            batch_res["posts"] = posts
+
             return Response(
-                message="Batch không tồn tại",
-                status=404,
+                data=batch_res,
+                message="Lấy batch thành công",
             ).to_dict()
-
-        posts = PostService.get_posts_by_batch_id(batch.id)
-
-        for post_detail in posts:
-            post_id = post_detail["id"]
-
-            social_post_detail = SocialPostService.by_post_id_get_latest_social_posts(
-                post_id
+        except Exception as e:
+            logger.error(
+                f"Lỗi trong API get-status-upload-with-batch-id: {e}", exc_info=True
             )
-            post_detail["social_post_detail"] = social_post_detail
-
-            status_check_sns = 0
-            for social_post_each in social_post_detail:
-                status = social_post_each["status"]
-                if status == "PUBLISHED":
-                    status_check_sns = 1
-
-            update_data = {"social_sns_description": json.dumps(social_post_detail)}
-            if status_check_sns == 1:
-                update_data["status_sns"] = 1
-
-            for sns_post_detail in social_post_detail:
-                sns_post_id = sns_post_detail["post_id"]
-                sns_status = sns_post_detail["status"]
-                notification_type = sns_post_detail["title"]
-
-                notification = NotificationServices.find_notification_sns(
-                    sns_post_id, notification_type
-                )
-                if not notification:
-                    notification = NotificationServices.create_notification(
-                        user_id=post_detail["user_id"],
-                        batch_id=post_detail["batch_id"],
-                        post_id=sns_post_id,
-                        title=f"🔄{notification_type}에 업로드 중입니다.",
-                    )
-                if sns_status == "PUBLISHED":
-                    NotificationServices.update_notification(
-                        notification.id,
-                        title=f"✅{notification_type} 업로드에 성공했습니다.",
-                    )
-                elif sns_status == "ERRORED":
-                    NotificationServices.update_notification(
-                        notification.id,
-                        title=f"❌{notification_type} 업로드에 실패했습니다.",
-                    )
-
-            PostService.update_post(post_id, **update_data)
-
-        batch_res = batch._to_json()
-        batch_res["posts"] = posts
-
-        return Response(
-            data=batch_res,
-            message="Lấy batch thành công",
-        ).to_dict()
+            return Response(
+                message="Đã xảy ra lỗi trong quá trình xử lý",
+                status=500,
+            ).to_dict()
 
 
 @ns.route("/save_draft_batch/<int:id>")
