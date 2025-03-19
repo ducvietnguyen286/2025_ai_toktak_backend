@@ -18,7 +18,6 @@ class Notification(db.Model, BaseModel):
     description = db.Column(db.Text, default="")
     hashtag = db.Column(db.Text, nullable=True)
     video_url = db.Column(db.String(255), nullable=False, default="")
-    type = db.Column(db.String(10), default="video", index=True)
     status = db.Column(db.Integer, default=1)
     status_sns = db.Column(db.Integer, default=0)
     render_id = db.Column(db.String(500), nullable=False, default="")
