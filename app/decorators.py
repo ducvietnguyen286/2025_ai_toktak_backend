@@ -36,6 +36,13 @@ def parameters(**schema):
                 and request.mimetype == "application/json"
             ):
                 req_args.update(request.get_json())
+
+            if (
+                request.method in ("POST", "PUT", "PATCH", "DELETE")
+                and request.mimetype == "multipart/form-data"
+            ):
+                req_args.update(request.form.to_dict())
+
             req_args = {
                 k: v for k, v in req_args.items() if k in schema["properties"].keys()
             }
@@ -65,6 +72,10 @@ def parameters(**schema):
                 else:
                     message = exp.message  # pragma: no cover
                 raise BadRequest(message=message)
+
+            if request.endpoint == "api.maker_api_make_post":
+                kwargs["req_args"] = req_args
+                return func(*args, **kwargs)
 
             new_args = args + (req_args,)
             return func(*new_args, **kwargs)
