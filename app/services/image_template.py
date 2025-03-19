@@ -26,7 +26,7 @@ class ImageTemplateService:
 
     @staticmethod
     def get_image_templates():
-        image_templates = ImageTemplate.objects(status="ACTIVE").all()
+        image_templates = ImageTemplate.objects(status="ACTIVE").order_by("sort").all()
         return [image_template.to_json() for image_template in image_templates]
 
     @staticmethod
