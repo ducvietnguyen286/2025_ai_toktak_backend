@@ -165,6 +165,85 @@ class APICreateBatch(Resource):
             ).to_dict()
 
 
+@ns.route("/update-batch")
+class APIUpdateBatch(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "batch_id": {"type": "integer"},
+            "is_paid_advertisements": {"type": "integer"},
+            "product_name": {"type": "string"},
+            "is_product_name": {"type": "integer"},
+            "purchase_guide": {"type": "string"},
+            "is_purchase_guide": {"type": "integer"},
+            "voice_gender": {"type": ["integer", "null"]},
+            "voice_id": {"type": ["integer", "null"]},
+            "is_video_hooking": {"type": ["integer", "null"]},
+            "is_caption_top": {"type": ["integer", "null"]},
+            "is_caption_last": {"type": ["integer", "null"]},
+            "image_caption_type": {"type": ["integer", "null"]},
+        },
+        required=["batch_id"],
+    )
+    def post(self, args):
+        try:
+            logger.info(f"update template : {args}")
+            is_paid_advertisements = args.get("is_paid_advertisements", 0)
+            product_name = args.get("product_name", "")
+            is_product_name = args.get("is_product_name", 0)
+            purchase_guide = args.get("purchase_guide", "")
+            is_purchase_guide = args.get("is_purchase_guide", 0)
+            voice_gender = args.get("voice_gender", 0)
+            voice_id = args.get("voice_id", 0)
+            is_video_hooking = args.get("is_video_hooking", 0)
+            is_caption_top = args.get("is_caption_top", 0)
+            is_caption_last = args.get("is_caption_last", 0)
+            image_caption_type = args.get("image_caption_type", 0)
+
+            user_id_login = 0
+            current_user = AuthService.get_current_identity() or None
+            user_id_login = current_user.id
+            user_template = PostService.get_template_video_by_user_id(user_id_login)
+            if not user_template:
+                user_template = PostService.create_user_template(
+                    user_id=current_user.id
+                )
+
+            # user_template = PostService.up
+
+            data_update = {
+                "is_paid_advertisements": is_paid_advertisements,
+                "product_name": product_name,
+                "is_product_name": is_product_name,
+                "purchase_guide": purchase_guide,
+                "is_purchase_guide": is_purchase_guide,
+                "voice_gender": voice_gender,
+                "voice_id": voice_id,
+                "is_video_hooking": is_video_hooking,
+                "is_caption_top": is_caption_top,
+                "is_caption_last": is_caption_last,
+                "image_caption_type": image_caption_type,
+            }
+
+            logger.info(f"update template : {data_update}")
+
+            user_template = PostService.update_template(user_template.id, **data_update)
+            user_template_data = user_template.to_dict()
+            return Response(
+                data=user_template_data,
+                message="제품 정보를 성공적으로 가져왔습니다.",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="상품 정보를 불러올 수 없어요.(Error code : )",
+                status=400,
+                code=201,
+            ).to_dict()
+
+
 @ns.route("/test-create-video/<int:id>")
 class APITestCreateVideo(Resource):
 
@@ -751,12 +830,32 @@ class APITemplateVideo(Resource):
         current_user = AuthService.get_current_identity()
         user_template = PostService.get_template_video_by_user_id(current_user.id)
         if not user_template:
-            user_template = PostService.create_user_template(user_id=current_user.id)
+            image_template = [
+                {
+                    "id": 1,
+                    "name": "노트필기형",
+                    "image_url": "https://apitoktak.voda-play.com/voice/img/1.png",
+                },
+                {
+                    "id": 2,
+                    "name": "블러이미지형",
+                    "image_url": "https://apitoktak.voda-play.com/voice/img/2.png",
+                },
+                {
+                    "id": 3,
+                    "name": "상품이미지형",
+                    "image_url": "https://apitoktak.voda-play.com/voice/img/3.png",
+                },
+            ]
+
+            video_hooks = ShotStackService.get_random_videos(3)
+            user_template = PostService.create_user_template(
+                user_id=current_user.id,
+                video_hooks=json.dumps(video_hooks),
+                image_template=json.dumps(image_template),
+            )
 
         user_template_data = user_template.to_dict()
-
-        video_hooks = ShotStackService.get_random_videos(3)
-        user_template_data["video_hooks"] = video_hooks
 
         return Response(
             data=user_template_data,

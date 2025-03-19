@@ -1,6 +1,7 @@
 from datetime import datetime
 from app.models.base import BaseModel
 from app.extensions import db
+import json
 
 
 class UserVideoTemplates(db.Model, BaseModel):
@@ -22,6 +23,9 @@ class UserVideoTemplates(db.Model, BaseModel):
     is_caption_last = db.Column(db.Integer, default=0, nullable=False)
     image_caption_type = db.Column(db.Integer, default=0, nullable=False)
 
+    image_template = db.Column(db.Text, nullable=False, default="")
+    video_hooks = db.Column(db.Text, nullable=False, default="")
+
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
@@ -40,6 +44,8 @@ class UserVideoTemplates(db.Model, BaseModel):
             "is_caption_top": self.is_caption_top,
             "is_caption_last": self.is_caption_last,
             "image_caption_type": self.image_caption_type,
+            "image_template": json.loads(self.image_template),
+            "video_hooks": json.loads(self.video_hooks),
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
