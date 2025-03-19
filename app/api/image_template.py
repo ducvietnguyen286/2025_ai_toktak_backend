@@ -1,6 +1,5 @@
 # coding: utf8
 from datetime import datetime
-import json
 import os
 import time
 import traceback
@@ -10,6 +9,7 @@ from flask_restx import Namespace, Resource
 from app.decorators import parameters
 from app.lib.response import Response
 
+from app.makers.images import ImageMaker
 from app.services.auth import AuthService
 from app.services.image_template import ImageTemplateService
 from flask import request
@@ -20,12 +20,11 @@ ns = Namespace(name="image-template", description="User API")
 @ns.route("/list")
 class APIListImageTemplate(Resource):
 
-    @jwt_required()
     def get(self):
         image_templates = ImageTemplateService.get_image_templates()
         return Response(
             data=image_templates,
-            message="Đăng nhập thành công",
+            message="Lấy danh sách thành công",
         ).to_dict()
 
 
@@ -43,7 +42,7 @@ class APIFindImageTemplate(Resource):
 
         return Response(
             data=image_template,
-            message="Đăng nhập thành công",
+            message="Lấy template thành công",
         ).to_dict()
 
 
@@ -78,10 +77,16 @@ class APICreateImageTemplate(Resource):
     def post(self, args):
         try:
             current_user = AuthService.get_current_identity()
-            date_create = datetime.now().strftime("%Y-%m-%d")
+            date_create = datetime.now().strftime("%Y_%m_%d")
             UPLOAD_FOLDER = os.path.join(os.getcwd(), f"uploads/{date_create}/fonts")
             if not os.path.exists(UPLOAD_FOLDER):
                 os.makedirs(UPLOAD_FOLDER)
+
+            if "template_image" not in request.files:
+                return Response(
+                    message="Không tìm thấy template_image",
+                    status=400,
+                ).to_dict()
 
             if "font" not in request.files:
                 return Response(
@@ -98,6 +103,10 @@ class APICreateImageTemplate(Resource):
             font_path = f"{UPLOAD_FOLDER}/{font_save_name}"
             with open(font_path, "wb") as font_file:
                 font_file.write(font.read())
+
+            template_image = ImageMaker().save_image_from_request(
+                request.files["template_image"]
+            )
 
             template_name = args.get("template_name", "")
             template_code = args.get("template_code", "")
@@ -120,6 +129,7 @@ class APICreateImageTemplate(Resource):
             image_template = ImageTemplateService.create_image_template(
                 template_name=template_name,
                 template_code=template_code,
+                template_image=template_image,
                 font=font_name,
                 font_path=font_path,
                 font_size=int(font_size),

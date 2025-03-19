@@ -73,6 +73,10 @@ def parameters(**schema):
                     message = exp.message  # pragma: no cover
                 raise BadRequest(message=message)
 
+            if request.endpoint == "api.maker_api_make_post":
+                kwargs["req_args"] = req_args
+                return func(*args, **kwargs)
+
             new_args = args + (req_args,)
             return func(*new_args, **kwargs)
 

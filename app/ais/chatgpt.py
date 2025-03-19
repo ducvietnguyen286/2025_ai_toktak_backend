@@ -565,6 +565,61 @@ def call_chatgpt_clear_product_name(name):
     return call_chatgpt(content, response_schema, 0, prompt)
 
 
+def call_chatgpt_get_main_text_and_color_for_image(
+    input_text, requested_fields, post_id=0
+):
+    prompt = """당신은 색상 디자인 전문가입니다. 다음 요구 사항을 충족하는 색상 팔레트를 만들어 주세요.
+
+1. **주요 텍스트 색상 (`main_text_color`)**: 밝고 눈길을 끄는 색상이며, 열대적인 느낌이 나는 색상을 선택하세요.  
+2. **보조 텍스트 색상**: 항상 흰색으로 설정합니다.  
+3. **배경 색상 (`background`)**: 주요 텍스트 색상 및 보조 텍스트(흰색)와 좋은 대비를 이루는 밝은 색상을 선택하세요.  
+4. **배경 색상이 너무 단조롭거나 흰색과 비슷하지 않도록 주의하세요. "연한 분홍", "연한 노랑" 등의 색상이 적절합니다.**  
+
+또한, 아래의 문장을 제공합니다. 이 문장에서 핵심 내용을 찾아 `main_text` 값으로 사용하세요.  
+
+"{input_text}"  
+
+제가 원하는 데이터 필드는 `{requested_fields}` 입니다.  
+
+**다음 JSON 형식으로 결과를 반환하세요 (요청한 필드만 포함)**:
+```json
+{
+    "main_text": "문장의 핵심 내용",
+    "main_text_color": "", // 예: "#FF5733"
+    "background": "" // 예: "#FFF9C4"
+}
+
+"""
+    prompt = replace_prompt_with_data(
+        prompt, {"input_text": input_text, "requested_fields": requested_fields}
+    )
+
+    response_schema = {
+        "name": "response_schema",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "main_text": {
+                    "type": "string",
+                    "description": "Main Text",
+                },
+                "main_text_color": {
+                    "type": "string",
+                    "description": "Main Text Color",
+                },
+                "background_color": {
+                    "type": "string",
+                    "description": "Background Color",
+                },
+            },
+            "required": ["main_text", "main_text_color", "background_color"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    }
+    return call_chatgpt(prompt, response_schema, post_id)
+
+
 def replace_prompt_with_data(prompt, data):
     for key, value in data.items():
         prompt = prompt.replace("{" + key + "}", str(value))

@@ -9,13 +9,14 @@ class ImageTemplate(BaseDocument):
     }
     template_name = StringField(default="")
     template_code = StringField(default="", max_length=50)
+    template_image = StringField(default="")
     font = StringField(default="")
     font_name = StringField(default="")
     font_path = StringField(default="")
     font_size = IntField(default="")
     main_text_color = StringField(default="random_color")
-    text_color = StringField(default="random_color")
-    stroke_color = StringField(default="0,0,0")
+    text_color = StringField(default="#FFFFFF")
+    stroke_color = StringField(default="#000000")
     stroke_width = IntField(default="5")
     text_shadow = StringField(default="")
     text_align = StringField(default="left")
@@ -29,4 +30,28 @@ class ImageTemplate(BaseDocument):
     margin = StringField(default="30,30,30,30")
     type = StringField(default="TEMPLATE_IMAGE_1", max_length=50)
     created_by = IntField(default=0)
+    sort = IntField(default=0)
     status = StringField(required=True, max_length=50, default="ACTIVE")
+
+    to_json_filter = (
+        "font",
+        "font_path",
+        "font_name",
+        "font_size",
+        "main_text_color",
+        "text_color",
+        "stroke_color",
+        "stroke_width",
+        "text_shadow",
+        "text_align",
+        "text_position",
+        "text_position_x",
+        "text_position_y",
+        "background",
+        "background_color",
+        "background_image",
+        "padding",
+        "margin",
+        "created_by",
+        "status",
+    )

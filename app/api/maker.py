@@ -8,6 +8,7 @@ from app.ais.chatgpt import (
     call_chatgpt_create_caption,
     call_chatgpt_create_blog,
     call_chatgpt_create_social,
+    call_chatgpt_get_main_text_and_color_for_image,
 )
 from app.decorators import jwt_optional, parameters
 from app.lib.caller import get_shorted_link_coupang
@@ -21,6 +22,7 @@ from app.scraper import Scraper
 import traceback
 
 from app.services.batch import BatchService
+from app.services.image_template import ImageTemplateService
 from app.services.post import PostService
 from app.services.social_post import SocialPostService
 from app.services.video_service import VideoService
@@ -155,11 +157,11 @@ class APICreateBatch(Resource):
             batch_res = batch._to_json()
             batch_res["posts"] = posts
 
-            NotificationServices.create_notification(
-                user_id=user_id_login,
-                batch_id=batch.id,
-                title=f"제품 정보를 성공적으로 가져왔습니다. {url}",
-            )
+            # NotificationServices.create_notification(
+            #     user_id=user_id_login,
+            #     batch_id=batch.id,
+            #     title=f"제품 정보를 성공적으로 가져왔습니다. {url}",
+            # )
 
             return Response(
                 data=batch_res,
@@ -239,9 +241,23 @@ class APITestCreateVideo(Resource):
 
 @ns.route("/make-post/<int:id>")
 class APIMakePost(Resource):
-    def post(self, id):
-        try:
 
+    @parameters(
+        type="object",
+        properties={
+            "is_advance": {"type": "boolean"},
+            "video_template_id": {"type": "string"},
+            "video_create_comment": {"type": "boolean"},
+            "video_show_product_name": {"type": "boolean"},
+            "video_show_product_info": {"type": "boolean"},
+            "image_template_id": {"type": "string"},
+        },
+        required=[],
+    )
+    def post(self, id, **kwargs):
+        try:
+            args = kwargs.get("req_args", False)
+            is_advance = args.get("is_advance", False)
             verify_jwt_in_request(optional=True)
             current_user_id = 0
             current_user = AuthService.get_current_identity() or None
@@ -375,21 +391,50 @@ class APIMakePost(Resource):
                 logger.info(
                     "-------------------- PROCESSING CREATE IMAGES -------------------"
                 )
+                image_template_id = args.get("image_template_id", "")
+                if is_advance and image_template_id == "":
+                    return Response(
+                        message="Vui lòng chọn template",
+                        status=200,
+                        code=201,
+                    ).to_dict()
                 response = call_chatgpt_create_social(process_images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
                     captions = parse_response.get("caption", "")
-
-                for index, image_url in enumerate(process_images):
-                    image_caption = captions[index] if index < len(captions) else ""
-                    img_res = ImageMaker.save_image_and_write_text(
-                        image_url, image_caption, font_size=80
-                    )
-                    image_url = img_res.get("image_url", "")
-                    file_size += img_res.get("file_size", 0)
-                    mime_type = img_res.get("mime_type", "")
-                    maker_images.append(image_url)
+                    if is_advance:
+                        image_template = ImageTemplateService.find_image_template(
+                            image_template_id
+                        )
+                        if not image_template:
+                            return Response(
+                                message="Template không tồn tại",
+                                status=200,
+                                code=201,
+                            ).to_dict()
+                        img_res = ImageTemplateService.create_image_by_template(
+                            template=image_template,
+                            captions=captions,
+                            process_images=process_images,
+                            post=post,
+                        )
+                        image_urls = img_res.get("image_urls", [])
+                        file_size += img_res.get("file_size", 0)
+                        mime_type = img_res.get("mime_type", "")
+                        maker_images = image_urls
+                    else:
+                        for index, image_url in enumerate(process_images):
+                            image_caption = (
+                                captions[index] if index < len(captions) else ""
+                            )
+                            img_res = ImageMaker.save_image_and_write_text(
+                                image_url, image_caption, font_size=80
+                            )
+                            image_url = img_res.get("image_url", "")
+                            file_size += img_res.get("file_size", 0)
+                            mime_type = img_res.get("mime_type", "")
+                            maker_images.append(image_url)
 
                 logger.info(
                     "-------------------- PROCESSED CREATE IMAGES -------------------"
@@ -425,6 +470,7 @@ class APIMakePost(Resource):
                 logger.info(
                     "-------------------- PROCESSED CREATE LOGS -------------------"
                 )
+
             title = ""
             subtitle = ""
             content = ""
