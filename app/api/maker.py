@@ -792,8 +792,8 @@ class APIGetStatusUploadWithBatch(Resource):
                 )
                 if not notification:
                     notification = NotificationServices.create_notification(
-                        user_id=post_detail['user_id'],
-                        batch_id=post_detail['batch_id'],
+                        user_id=post_detail["user_id"],
+                        batch_id=post_detail["batch_id"],
                         post_id=sns_post_id,
                         title=f"🔄{notification_type}에 업로드 중입니다.",
                     )
