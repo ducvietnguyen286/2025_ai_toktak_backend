@@ -125,6 +125,7 @@ class APICreateImageTemplate(Resource):
             background_image = args.get("background_image")
             padding = args.get("padding")
             margin = args.get("margin")
+            sort = args.get("sort")
             type = args.get("type", "")
             image_template = ImageTemplateService.create_image_template(
                 template_name=template_name,
@@ -148,6 +149,7 @@ class APICreateImageTemplate(Resource):
                 padding=padding,
                 margin=margin,
                 type=type,
+                sort=sort,
                 created_by=current_user.id,
             )
             return Response(
