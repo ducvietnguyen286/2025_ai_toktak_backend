@@ -227,7 +227,7 @@ class APIMeUpdate(Resource):
             message = f"📞 연락처가 변경되었습니다. ({user_login.phone} → {phone})"
         if contact is not None:
             update_data["contact"] = contact
-            message = f"이름이 변경되었습니다. ({user_login.contact} → {contact})"
+            message = f"📞 이름이 변경되었습니다. ({user_login.contact} → {contact})"
         if company_name is not None:
             update_data["company_name"] = company_name
             message = (
