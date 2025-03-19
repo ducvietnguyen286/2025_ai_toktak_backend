@@ -111,11 +111,11 @@ class APICreateBatch(Resource):
                 res_product_name = product_name_cleared.get("response", "")
                 data["name"] = res_product_name.get("product_name", "")
 
-            if is_advance:
-                return Response(
-                    data=data,
-                    message="상품 정보를 성공적으로 가져왔습니다.",
-                ).to_dict()
+            # if is_advance:
+            #     return Response(
+            #         data=data,
+            #         message="상품 정보를 성공적으로 가져왔습니다.",
+            #     ).to_dict()
 
             images = data.get("images", [])
 
