@@ -797,6 +797,7 @@ class APIGetStatusUploadWithBatch(Resource):
                                     user_id=post_detail["user_id"],
                                     batch_id=post_detail["batch_id"],
                                     post_id=sns_post_id,
+                                    notification_type=notification_type,
                                     title=f"🔄{notification_type}에 업로드 중입니다.",
                                 )
                             if sns_status == "PUBLISHED":
