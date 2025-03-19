@@ -23,6 +23,7 @@ from app.services.post import PostService
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.tiktok_callback import TiktokCallbackService
+from app.services.notification import NotificationServices
 from app.services.user import UserService
 from app.services.link import LinkService
 from app.services.user_link import UserLinkService
@@ -142,10 +143,20 @@ class APINewLink(Resource):
                 is_active = UserLinkService.update_user_link(link, user_link, args)
 
             if not is_active:
+                NotificationServices.create_notification(
+                    user_id=current_user.id,
+                    title=f"{link.type}이름 연결에 실패했습니다. 계정 정보를 확인해주세요.",
+                )
+
                 return Response(
-                    message=f"We can't active {link.type}",
+                    message=f"{link.type}이름 연결에 실패했습니다. 계정 정보를 확인해주세요.",
                     code=201,
                 ).to_dict()
+                
+            NotificationServices.create_notification(
+                user_id=current_user.id,
+                title=f"{link.type}이름 연결이 완료되었습니다.",
+            )
 
             return Response(
                 data=user_link._to_json(),

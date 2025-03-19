@@ -628,9 +628,20 @@ class APIMakePost(Resource):
             if type == "video":
                 message = "비디오 생성이 성공적으로 완료되었습니다."
             elif type == "image":
-                message = "이미지 생성이 성공적으로 완료되었습니다."
+                message = "🖼 이미지 생성이 완료되었습니다."
+                NotificationServices.create_notification(
+                    user_id=current_user_id,
+                    batch_id=batch.id,
+                    title=message,
+                )
+
             elif type == "blog":
-                message = "블로그 생성이 성공적으로 완료되었습니다."
+                message = "✍️ 블로그 콘텐츠가 생성되었습니다."
+                NotificationServices.create_notification(
+                    user_id=current_user_id,
+                    batch_id=batch.id,
+                    title=message,
+                )
 
             return Response(
                 data=post._to_json(),
@@ -639,6 +650,25 @@ class APIMakePost(Resource):
         except Exception as e:
             logger.error(f"Exception: create {type} that bai  :  {str(e)}")
             traceback.print_exc()
+
+            if type == "video":
+                message = "비디오 생성이 성공적으로 완료되었습니다."
+            elif type == "image":
+                message = "⚠️ 이미지 생성에 실패했습니다. 다시 시도해주세요."
+                NotificationServices.create_notification(
+                    user_id=current_user_id,
+                    batch_id=batch.id,
+                    title=message,
+                )
+
+            elif type == "blog":
+                message = "⚠️ 블로그 생성에 실패했습니다. 다시 시도해주세요."
+                NotificationServices.create_notification(
+                    user_id=current_user_id,
+                    batch_id=batch.id,
+                    title=message,
+                )
+
             return Response(
                 message=f"create {type} that bai...",
                 status=200,
