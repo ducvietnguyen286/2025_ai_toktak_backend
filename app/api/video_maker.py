@@ -143,13 +143,13 @@ class ShortstackWebhook(Resource):
                         NotificationServices.create_notification(
                             user_id=post_detail.user_id,
                             batch_id=post_detail.batch_id,
-                            title="❌AI로 생성된 비디오 만들기에 실패했습니다.",
+                            title="⚠️ 비디오 생성에 실패했습니다. 다시 시도해주세요.",
                         )
                     else:
                         NotificationServices.create_notification(
                             user_id=post_detail.user_id,
                             batch_id=post_detail.batch_id,
-                            title="🔔AI로 생성된 비디오가 성공적으로 만들어졌습니다.",
+                            title="🎥 비디오 생성이 완료되었습니다. 이제 공유할 수 있습니다.",
                         )
 
             # Trả về phản hồi JSON
