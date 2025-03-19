@@ -157,11 +157,11 @@ class APICreateBatch(Resource):
             batch_res = batch._to_json()
             batch_res["posts"] = posts
 
-            # NotificationServices.create_notification(
-            #     user_id=user_id_login,
-            #     batch_id=batch.id,
-            #     title=f"제품 정보를 성공적으로 가져왔습니다. {url}",
-            # )
+            NotificationServices.create_notification(
+                user_id=user_id_login,
+                batch_id=batch.id,
+                title=f"제품 정보를 성공적으로 가져왔습니다. {url}",
+            )
 
             return Response(
                 data=batch_res,
@@ -236,12 +236,11 @@ class APIUpdateTemplateVideoUser(Resource):
                 "is_caption_top": is_caption_top,
                 "is_caption_last": is_caption_last,
                 "image_caption_type": image_caption_type,
-            } 
+            }
 
             user_template = PostService.update_template(user_template.id, **data_update)
             user_template_data = user_template.to_dict()
-            
-            
+
             posts = PostService.get_posts_by_batch_id(batch_id)
             user_template_data["posts"] = posts
             return Response(
