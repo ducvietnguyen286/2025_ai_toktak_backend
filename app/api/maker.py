@@ -188,7 +188,7 @@ class APIUpdateTemplateVideoUser(Resource):
     )
     def post(self, args):
         try:
-            logger.info(f"update template : {args}")
+            batch_id = args.get("batch_id", 0)
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
             product_name = args.get("product_name", "")
             is_product_name = args.get("is_product_name", 0)
@@ -224,12 +224,14 @@ class APIUpdateTemplateVideoUser(Resource):
                 "is_caption_top": is_caption_top,
                 "is_caption_last": is_caption_last,
                 "image_caption_type": image_caption_type,
-            }
-
-            logger.info(f"update template : {data_update}")
+            } 
 
             user_template = PostService.update_template(user_template.id, **data_update)
             user_template_data = user_template.to_dict()
+            
+            
+            posts = PostService.get_posts_by_batch_id(batch_id)
+            user_template_data["posts"] = posts
             return Response(
                 data=user_template_data,
                 message="제품 정보를 성공적으로 가져왔습니다.",
@@ -702,12 +704,18 @@ class APIGetStatusUploadWithBatch(Resource):
                     notification = NotificationServices.create_notification(
                         user_id=post_detail.user_id,
                         batch_id=post_detail.batch_id,
-                        title="🔔AI로 생성된 비디오가 성공적으로 만들어졌습니다.",
+                        post_id=sns_post_id,
+                        title=f"🔄{notification_type}에 업로드 중입니다.",
                     )
                 if sns_status == "PUBLISHED":
                     NotificationServices.update_notification(
                         notification.id,
-                        title= "",
+                        title=f"✅{notification_type} 업로드에 성공했습니다.",
+                    )
+                elif sns_status == "ERRORED":
+                    NotificationServices.update_notification(
+                        notification.id,
+                        title=f"❌{notification_type} 업로드에 실패했습니다.",
                     )
 
             PostService.update_post(post_id, **update_data)
