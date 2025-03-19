@@ -954,29 +954,12 @@ class APITemplateVideo(Resource):
         current_user = AuthService.get_current_identity()
         user_template = PostService.get_template_video_by_user_id(current_user.id)
         if not user_template:
-            image_template = [
-                {
-                    "id": 1,
-                    "name": "노트필기형",
-                    "image_url": "https://apitoktak.voda-play.com/voice/img/1.png",
-                },
-                {
-                    "id": 2,
-                    "name": "블러이미지형",
-                    "image_url": "https://apitoktak.voda-play.com/voice/img/2.png",
-                },
-                {
-                    "id": 3,
-                    "name": "상품이미지형",
-                    "image_url": "https://apitoktak.voda-play.com/voice/img/3.png",
-                },
-            ]
-
+            image_templates = ImageTemplateService.get_image_templates()
             video_hooks = ShotStackService.get_random_videos(3)
             user_template = PostService.create_user_template(
                 user_id=current_user.id,
                 video_hooks=json.dumps(video_hooks),
-                image_template=json.dumps(image_template),
+                image_template=json.dumps(image_templates),
             )
 
         user_template_data = user_template.to_dict()
