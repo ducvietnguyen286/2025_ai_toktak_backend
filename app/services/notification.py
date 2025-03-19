@@ -25,7 +25,7 @@ class NotificationServices:
     @staticmethod
     def find_notification_sns(post_id , notification_type):
         notification = Notification.query.filter(
-            Notification.user_id == post_id,
+            Notification.post_id == post_id,
             Notification.notification_type == notification_type,
         ).first()
         return notification
