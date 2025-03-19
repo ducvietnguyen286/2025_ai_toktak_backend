@@ -14,6 +14,15 @@ class NotificationServices:
     @staticmethod
     def find(id):
         return Notification.query.get(id)
+    
+    @staticmethod
+    def find_notification_sns(post_id , notif_type):
+        notification = Notification.query.filter(
+            Notification.user_id == post_id,
+            Notification.notif_type == notif_type,
+        ).first()
+        return notification
+        
 
     @staticmethod
     def delete(id):

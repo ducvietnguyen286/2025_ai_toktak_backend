@@ -690,6 +690,26 @@ class APIGetStatusUploadWithBatch(Resource):
             if status_check_sns == 1:
                 update_data["status_sns"] = 1
 
+            for sns_post_detail in social_post_detail:
+                sns_post_id = sns_post_detail["post_id"]
+                sns_status = sns_post_detail["status"]
+                notification_type = sns_post_detail["title"]
+
+                notification = NotificationServices.find_notification_sns(
+                    sns_post_id, notification_type
+                )
+                if not notification:
+                    notification = NotificationServices.create_notification(
+                        user_id=post_detail.user_id,
+                        batch_id=post_detail.batch_id,
+                        title="🔔AI로 생성된 비디오가 성공적으로 만들어졌습니다.",
+                    )
+                if sns_status == "PUBLISHED":
+                    NotificationServices.update_notification(
+                        notification.id,
+                        title= "",
+                    )
+
             PostService.update_post(post_id, **update_data)
 
         batch_res = batch._to_json()
