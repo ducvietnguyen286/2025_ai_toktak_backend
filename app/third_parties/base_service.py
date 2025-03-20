@@ -32,7 +32,7 @@ class BaseService:
     def get_media_content(self, media_url, get_content=True, is_photo=False):
         session = requests.Session()
         retries = Retry(
-            total=3, backoff_factor=10, status_forcelist=[500, 502, 503, 504]
+            total=5, backoff_factor=5, status_forcelist=[500, 502, 503, 504]
         )
         session.mount("http://", HTTPAdapter(max_retries=retries))
         session.mount("https://", HTTPAdapter(max_retries=retries))
@@ -41,53 +41,53 @@ class BaseService:
             f"------------POST {self.key_log} GET MEDIA : {media_url}----------------"
         )
         try:
-            media_content = session.get(media_url, timeout=(30, 45))
-            self.log_social_message(
-                f"------------POST {self.key_log} GET MEDIA SUCCESSFULLY----------------"
-            )
-            if get_content:
-                return media_content.content
-
-            media_size = int(media_content.headers.get("content-length"))
-            media_type = media_content.headers.get("content-type")
-
-            return {
-                "content": media_content.content,
-                "media_size": media_size,
-                "media_type": media_type,
-            }
-        except Exception as e:
-            self.log_social_message(
-                f"----------------------- {self.key_log} TIMEOUT GET MEDIA ---------------------------"
-            )
             headers = {
                 "Accept": "video/*" if not is_photo else "image/*",
                 "User-Agent": generate_desktop_user_agent(),
             }
+            with session.get(
+                media_url, headers=headers, timeout=(10, 180), stream=True
+            ) as response:
+                response.raise_for_status()
+
+                media_size = int(media_content.headers.get("content-length"))
+                media_type = media_content.headers.get("content-type")
+
+                content = b"".join(
+                    chunk for chunk in response.iter_content(chunk_size=1024)
+                )
+                if get_content:
+                    return content
+                self.log_social_message(
+                    f"------------POST {self.key_log} GET MEDIA SUCCESSFULLY----------------"
+                )
+                return {
+                    "content": content,
+                    "media_size": media_size,
+                    "media_type": media_type,
+                }
+
+        except Exception as e:
+            self.log_social_message(
+                f"----------------------- {self.key_log} TIMEOUT GET MEDIA ---------------------------"
+            )
             self.save_uploading(5)
             try:
+                media_content = session.get(media_url, timeout=(10, 60))
+                self.log_social_message(
+                    f"------------POST {self.key_log} GET MEDIA SUCCESSFULLY----------------"
+                )
+                if get_content:
+                    return media_content.content
 
-                with session.get(
-                    media_url, headers=headers, timeout=(30, 180), stream=True
-                ) as response:
-                    response.raise_for_status()
+                media_size = int(media_content.headers.get("content-length"))
+                media_type = media_content.headers.get("content-type")
 
-                    media_size = int(media_content.headers.get("content-length"))
-                    media_type = media_content.headers.get("content-type")
-
-                    content = b"".join(
-                        chunk for chunk in response.iter_content(chunk_size=1024)
-                    )
-                    if get_content:
-                        return content
-                    self.log_social_message(
-                        f"------------POST {self.key_log} GET MEDIA SUCCESSFULLY----------------"
-                    )
-                    return {
-                        "content": content,
-                        "media_size": media_size,
-                        "media_type": media_type,
-                    }
+                return {
+                    "content": media_content.content,
+                    "media_size": media_size,
+                    "media_type": media_type,
+                }
             except Exception as e:
                 self.save_errors(
                     "ERRORED",
