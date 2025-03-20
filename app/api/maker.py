@@ -155,6 +155,7 @@ class APICreateBatch(Resource):
                 process_status="PENDING",
                 voice_google=voice,
                 is_paid_advertisements=is_paid_advertisements,
+                is_advance=is_advance,
             )
 
             posts = []
@@ -258,6 +259,24 @@ class APIUpdateTemplateVideoUser(Resource):
 
             posts = PostService.get_posts_by_batch_id(batch_id)
             user_template_data["posts"] = posts
+            
+            batch_detail = BatchService.find_batch(batch_id)
+            
+            if not batch_detail:
+                return Response(
+                    message="Batch không tồn tại",
+                    code=201,
+                ).to_dict()
+                
+            voice_id
+            
+            data_update_batch = {
+                is_paid_advertisements : is_paid_advertisements ,
+                voice_google : voice_id
+            }
+            BatchService.update_batch(batch_id, **data_update_batch)
+            
+            
             return Response(
                 data=user_template_data,
                 message="제품 정보를 성공적으로 가져왔습니다.",
