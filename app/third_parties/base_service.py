@@ -1,6 +1,12 @@
 import json
 import os
+
+import requests
+from urllib3 import Retry
+from requests.adapters import HTTPAdapter
+
 from app.extensions import redis_client
+from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import (
     log_thread_message,
     log_youtube_message,
@@ -22,6 +28,72 @@ class BaseService:
         self.social_post = None
         self.service = None
         self.key_log = ""
+
+    def get_media_content(self, media_url, get_content=True, is_photo=False):
+        session = requests.Session()
+        retries = Retry(
+            total=3, backoff_factor=10, status_forcelist=[500, 502, 503, 504]
+        )
+        session.mount("http://", HTTPAdapter(max_retries=retries))
+        session.mount("https://", HTTPAdapter(max_retries=retries))
+
+        self.log_social_message(
+            f"------------POST {self.key_log} GET MEDIA : {media_url}----------------"
+        )
+        try:
+            media_content = session.get(media_url, timeout=(30, 45))
+            self.log_social_message(
+                f"------------POST {self.key_log} GET MEDIA SUCCESSFULLY----------------"
+            )
+            if get_content:
+                return media_content.content
+
+            media_size = int(media_content.headers.get("content-length"))
+            media_type = media_content.headers.get("content-type")
+
+            return {
+                "content": media_content,
+                "media_size": media_size,
+                "media_type": media_type,
+            }
+        except Exception as e:
+            self.log_social_message(
+                f"----------------------- {self.key_log} TIMEOUT GET MEDIA ---------------------------"
+            )
+            headers = {
+                "Accept": "video/*" if not is_photo else "image/*",
+                "User-Agent": generate_desktop_user_agent(),
+            }
+            self.save_uploading(5)
+            try:
+
+                with session.get(
+                    media_url, headers=headers, timeout=(30, 180), stream=True
+                ) as response:
+                    response.raise_for_status()
+
+                    media_size = int(media_content.headers.get("content-length"))
+                    media_type = media_content.headers.get("content-type")
+
+                    content = b"".join(
+                        chunk for chunk in response.iter_content(chunk_size=1024)
+                    )
+                    if get_content:
+                        return content
+                    self.log_social_message(
+                        f"------------POST {self.key_log} GET MEDIA SUCCESSFULLY----------------"
+                    )
+                    return {
+                        "content": media_content,
+                        "media_size": media_size,
+                        "media_type": media_type,
+                    }
+            except Exception as e:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} SEND POST MEDIA - GET MEDIA URL: {str(e)}",
+                )
+                return False
 
     def save_request_log(self, type, request, response):
         RequestSocialLogService.create_request_social_log(

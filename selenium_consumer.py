@@ -2,13 +2,11 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
 import json
 import os
-import shutil
 import signal
 import sys
-import tempfile
 import time
-import uuid
 from dotenv import load_dotenv
+import requests
 
 load_dotenv(override=False)
 
@@ -124,9 +122,9 @@ def create_driver_instance():
     no_gui = os.environ.get("SELENIUM_NO_GUI", "false") == "true"
     proxy = os.environ.get("SELENIUM_PROXY", None)
 
-    if no_gui or config_name == "production":
-        chrome_options.add_argument("--headless=new")
-        chrome_options.add_argument("--disable-gpu")
+    # if no_gui or config_name == "production":
+    # chrome_options.add_argument("--headless=new")
+    # chrome_options.add_argument("--disable-gpu")
 
     if proxy:
         chrome_options.add_argument("--proxy-server={}".format(proxy))
@@ -139,9 +137,9 @@ def create_driver_instance():
     for header, value in headers.items():
         chrome_options.add_argument(f"--{header.lower()}={value}")
 
-    driver = webdriver.Remote(
-        command_executor="http://localhost:4567/wd/hub", options=chrome_options
-    )
+    SELENIUM_URL = os.environ.get("SELENIUM_URL", "http://localhost:4567/wd/hub")
+
+    driver = webdriver.Remote(command_executor=SELENIUM_URL, options=chrome_options)
     return driver
 
 
@@ -156,16 +154,6 @@ def worker_instance():
         # Mở trang cơ sở để làm tab gốc (base tab)
         browser.get("https://ko.aliexpress.com/")
         base_tab = browser.current_window_handle
-
-        COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
-        try:
-            cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
-            if os.path.exists(cookie_file):
-                cookies = json.load(open(cookie_file, "r", encoding="utf-8"))
-                for cookie in cookies:
-                    browser.add_cookie(cookie)
-        except Exception as e:
-            logger.info("Không load được cookie hoặc file không tồn tại: " + str(e))
 
         print("Worker started (PID:", os.getpid(), ")")
 
@@ -201,9 +189,9 @@ def worker_instance():
 
 def process_task_on_tab(browser, task):
     try:
-        COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
         logger.info("[Open Tab]")
         try:
+            load_cookies(browser)
             url = task["url"]
             # wait_id = task["wait_id"]
             # wait_class = task["wait_class"]
@@ -248,9 +236,9 @@ def process_task_on_tab(browser, task):
 
                     print("Switch To Captcha Frame")
 
-                    file_html = open("demo.html", "w", encoding="utf-8")
-                    file_html.write(browser.page_source)
-                    file_html.close()
+                    # file_html = open("demo.html", "w", encoding="utf-8")
+                    # file_html.write(browser.page_source)
+                    # file_html.close()
 
                     checkbox = WebDriverWait(browser, 10).until(
                         EC.element_to_be_clickable((By.ID, "recaptcha-anchor"))
@@ -274,6 +262,8 @@ def process_task_on_tab(browser, task):
             file_html.write(browser.page_source)
             file_html.close()
 
+            # save_cookies(browser)
+
             WebDriverWait(browser, 10).until(
                 EC.presence_of_element_located(
                     (By.XPATH, "//script[@type='application/ld+json']")
@@ -296,23 +286,7 @@ def process_task_on_tab(browser, task):
             # file_html.write(browser.page_source)
             # file_html.close()
 
-            browser_cookie = browser.get_cookies()
-            formatted_cookies = []
-            for cookie in browser_cookie:
-                formatted_cookie = {
-                    "name": cookie.get("name"),
-                    "value": cookie.get("value"),
-                    "domain": cookie.get("domain"),
-                    "path": cookie.get("path", "/"),
-                    "expires": cookie.get("expiry", -1),
-                    "httpOnly": cookie.get("httpOnly", False),
-                    "secure": cookie.get("secure", False),
-                }
-                formatted_cookies.append(formatted_cookie)
-            with open(
-                os.path.join(COOKIE_FOLDER, "cookies.json"), "w", encoding="utf-8"
-            ) as file:
-                json.dump(formatted_cookies, file, ensure_ascii=False, indent=4)
+            save_cookies(browser)
 
             html = BeautifulSoup(browser.page_source, "html.parser")
 
@@ -329,6 +303,53 @@ def process_task_on_tab(browser, task):
         logger.error(f"Error: {str(e)}")
         print("Error: ", e)
         return False
+
+
+def load_cookies(browser):
+    COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
+    try:
+        cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
+        if os.path.exists(cookie_file):
+            cookies = json.load(open(cookie_file, "r", encoding="utf-8"))
+            for cookie in cookies:
+                browser.add_cookie(cookie)
+    except Exception as e:
+        logger.info("Không load được cookie hoặc file không tồn tại: " + str(e))
+
+
+def save_cookies(browser):
+    cookies = browser.execute_script("return document.cookie")
+
+    cookie_dict = {}
+    for cookie in cookies.split("; "):
+        key, value = cookie.split("=", 1)
+        cookie_dict[key] = value
+    print("Parsed Cookies:", cookie_dict)
+
+    COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
+    formatted_cookies = []
+    current_cookies = []
+    cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
+    if os.path.exists(cookie_file):
+        with open(cookie_file, "r", encoding="utf-8") as file:
+            current_cookies = json.load(file)
+
+    for cookie in current_cookies:
+        new_value = cookie_dict.get(cookie.get("name"))
+        if new_value:
+            cookie["value"] = new_value
+            formatted_cookies.append(cookie)
+
+    if not os.path.exists(COOKIE_FOLDER):
+        os.makedirs(COOKIE_FOLDER)
+
+    if len(formatted_cookies) == 0:
+        return
+
+    with open(
+        os.path.join(COOKIE_FOLDER, "cookies.json"), "w", encoding="utf-8"
+    ) as file:
+        json.dump(formatted_cookies, file, ensure_ascii=False, indent=4)
 
 
 def start_selenium_consumer():
