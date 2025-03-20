@@ -202,7 +202,7 @@ class ShotStackService:
         }
 
         if IS_GOOGLE_DRIVER == 1:
-            payload["destinations"] = [
+            payload["output"]["destinations"] = [
                 {
                     "provider": "google-drive",
                     "options": {
