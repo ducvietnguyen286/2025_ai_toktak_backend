@@ -156,6 +156,7 @@ class APICreateBatch(Resource):
                 voice_google=voice,
                 is_paid_advertisements=is_paid_advertisements,
                 is_advance=is_advance,
+                template_info=json.dumps({}),
             )
 
             posts = []
@@ -240,7 +241,7 @@ class APIUpdateTemplateVideoUser(Resource):
 
             # user_template = PostService.up
 
-            data_update = {
+            data_update_template = {
                 "is_paid_advertisements": is_paid_advertisements,
                 "product_name": product_name,
                 "is_product_name": is_product_name,
@@ -254,28 +255,29 @@ class APIUpdateTemplateVideoUser(Resource):
                 "image_template_id": image_template_id,
             }
 
-            user_template = PostService.update_template(user_template.id, **data_update)
+            user_template = PostService.update_template(
+                user_template.id, **data_update_template
+            )
             user_template_data = user_template.to_dict()
 
             posts = PostService.get_posts_by_batch_id(batch_id)
             user_template_data["posts"] = posts
-            
+
             batch_detail = BatchService.find_batch(batch_id)
-            
+
             if not batch_detail:
                 return Response(
                     message="Batch không tồn tại",
                     code=201,
                 ).to_dict()
-                
-            
+
             data_update_batch = {
-                "is_paid_advertisements" : is_paid_advertisements ,
-                "voice_google" : voice_id
+                "is_paid_advertisements": is_paid_advertisements,
+                "voice_google": voice_id,
+                "template_info": json.dumps(data_update_template),
             }
             BatchService.update_batch(batch_id, **data_update_batch)
-            
-            
+
             return Response(
                 data=user_template_data,
                 message="제품 정보를 성공적으로 가져왔습니다.",
@@ -358,19 +360,12 @@ class APIMakePost(Resource):
     @parameters(
         type="object",
         properties={
-            "is_advance": {"type": "boolean"},
-            "video_template_id": {"type": "string"},
-            "video_create_comment": {"type": "boolean"},
-            "video_show_product_name": {"type": "boolean"},
-            "video_show_product_info": {"type": "boolean"},
-            "image_template_id": {"type": "string"},
         },
         required=[],
     )
     def post(self, id, **kwargs):
         try:
             args = kwargs.get("req_args", False)
-            is_advance = args.get("is_advance", False)
             verify_jwt_in_request(optional=True)
             current_user_id = 0
             current_user = AuthService.get_current_identity() or None
@@ -396,6 +391,12 @@ class APIMakePost(Resource):
                     message="Post đã được tạo",
                     status=201,
                 ).to_dict()
+                
+                
+            
+            is_advance = batch.is_advance
+            template_info = json.loads(batch.template_info)
+            
 
             data = json.loads(batch.content)
             images = data.get("images", [])
@@ -457,17 +458,6 @@ class APIMakePost(Resource):
 
                         product_name = data["name"]
 
-                        # tạo từ gtts
-                        # result = VideoService.create_video_from_images(
-                        #     post.id,
-                        #     origin_caption,
-                        #     image_renders,
-                        #     image_renders_sliders,
-                        #     caption_sliders,
-                        # )
-
-                        # Tạo từ google
-
                         voice_google = batch.voice_google or 1
                         result = ShotStackService.create_video_from_images_v2(
                             post.id,
@@ -504,7 +494,10 @@ class APIMakePost(Resource):
                 logger.info(
                     "-------------------- PROCESSING CREATE IMAGES -------------------"
                 )
-                image_template_id = args.get("image_template_id", "")
+                logger.info("template_info: {0}".format(template_info))
+                image_template_id = template_info.get("image_template_id", "")
+                logger.info("image_template_id: {0}".format(image_template_id))
+            
                 if is_advance and image_template_id == "":
                     return Response(
                         message="Vui lòng chọn template",
