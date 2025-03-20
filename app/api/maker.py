@@ -14,7 +14,7 @@ from app.decorators import jwt_optional, parameters
 from app.lib.caller import get_shorted_link_coupang
 from app.lib.logger import logger
 from app.lib.response import Response
-from app.lib.string import split_text_by_sentences, should_replace_shortlink
+from app.lib.string import split_text_by_sentences, should_replace_shortlink , update_ads_content
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
@@ -594,6 +594,7 @@ class APIMakePost(Resource):
                     description = parse_response.get("description", "")
                     if "<" in description or ">" in description:
                         description = description.replace("<", "").replace(">", "")
+                    
                 if parse_response and "title" in parse_response:
                     title = parse_response.get("title", "")
                 if parse_response and "summarize" in parse_response:
@@ -616,6 +617,10 @@ class APIMakePost(Resource):
                 ).to_dict()
 
             url = batch.url
+            
+            if type == "blog":
+                content = update_ads_content(url ,content)
+                
             if should_replace_shortlink(url):
                 shorten_link = batch.shorten_link
                 description = description.replace(url, shorten_link)

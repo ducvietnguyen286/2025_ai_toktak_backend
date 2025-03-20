@@ -157,14 +157,14 @@ class ShortstackWebhook(Resource):
                 create_video_detail = VideoService.update_video_create(
                     render, google_driver_url=video_url, video_url=video_url
                 )
-                if create_video_detail:
-                    post_id = create_video_detail.post_id
-                    post_detail = PostService.find_post(post_id)
-                    if post_detail:
-                        batch_id = post_detail.batch_id or "0"
-                        PostService.update_post_by_batch_id(
-                            batch_id, video_url=video_url
-                        )
+                # if create_video_detail:
+                # post_id = create_video_detail.post_id
+                # post_detail = PostService.find_post(post_id)
+                # if post_detail:
+                #     batch_id = post_detail.batch_id or "0"
+                #     PostService.update_post_by_batch_id(
+                #         batch_id, video_url=video_url
+                #     )
 
             # Trả về phản hồi JSON
             return {
