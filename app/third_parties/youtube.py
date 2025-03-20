@@ -3,7 +3,6 @@ import json
 import os
 
 import requests
-from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import log_youtube_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
@@ -223,27 +222,9 @@ class YoutubeService(BaseService):
 
             video_url = post.video_url
 
-            try:
-                video_content = requests.get(video_url, timeout=20).content
-            except Exception as e:
-                log_youtube_message(
-                    f"----------------------- {self.key_log} TIMEOUT GET VIDEO ---------------------------"
-                )
-                headers = {
-                    "Accept": "video/*",
-                    "User-Agent": generate_desktop_user_agent(),
-                }
-                self.save_uploading(5)
-                try:
-                    video_content = requests.get(
-                        video_url, headers=headers, timeout=20
-                    ).content
-                except Exception as e:
-                    self.save_errors(
-                        "ERRORED",
-                        f"POST {self.key_log} SEND POST VIDEO - GET VIDEO URL: {str(e)}",
-                    )
-                    return False
+            video_content = self.get_media_content(video_url)
+            if not video_content:
+                return False
 
             video_io = BytesIO(video_content)
             video_io.seek(0)

@@ -4,7 +4,6 @@ import time
 import traceback
 
 import requests
-from app.lib.header import generate_desktop_user_agent
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
@@ -274,30 +273,11 @@ class TiktokService(BaseService):
                 f"------------POST {self.key_log} UPLOAD VIDEO TO TIKTOK----------------"
             )
 
-            try:
-                log_tiktok_message(
-                    f"------------POST {self.key_log} GET VIDEO FROM SHOTSTACK----------------"
-                )
-                response = requests.get(media, timeout=20)
-            except Exception as e:
-                log_tiktok_message(
-                    f"------------------POST {self.key_log} TIMEOUT TO GET VIDEO--------------------"
-                )
-                self.save_uploading(5)
-                headers = {
-                    "Accept": "video/*",
-                    "User-Agent": generate_desktop_user_agent(),
-                }
-                try:
-                    response = requests.get(media, headers=headers, timeout=20)
-                except Exception as e:
-                    self.save_errors(
-                        "ERRORED",
-                        f"POST {self.key_log} UPLOAD VIDEO - REQUEST URL VIDEO {media}: {str(e)}",
-                    )
-                    return False
+            video_content = self.get_media_content(media, False)
+            if not video_content:
+                return False
 
-            upload_info = self.upload_video_init(response)
+            upload_info = self.upload_video_init(video_content)
             if not upload_info:
                 return False
             info_data = upload_info.get("data")
@@ -486,9 +466,11 @@ class TiktokService(BaseService):
 
     def upload_video_init(self, media, retry=0):
         log_tiktok_message("Upload video to Tiktok INIT")
+
         access_token = self.meta.get("access_token")
-        media_size = int(media.headers.get("content-length"))
-        media_type = media.headers.get("content-type")
+        media_size = media.get("media_size", 0)
+        media_type = media.get("media_type", "")
+        media_content = media.get("content", "")
 
         URL_VIDEO_UPLOAD = "https://open.tiktokapis.com/v2/post/publish/video/init/"
 
@@ -599,7 +581,7 @@ class TiktokService(BaseService):
                 end_bytes = min(start_bytes + chunk_size, media_size) - 1
                 current_chunk_size = start_bytes - end_bytes + 1
 
-            chunk_data = media.content[start_bytes:end_bytes]
+            chunk_data = media_content[start_bytes:end_bytes]
 
             is_appened = self.upload_video_append(
                 upload_url,
@@ -631,7 +613,6 @@ class TiktokService(BaseService):
         end_bytes,
         total_bytes,
         media_type,
-        retry=0,
     ):
         try:
             log_tiktok_message(f"POST {self.key_log} Upload video to Tiktok APPEND")

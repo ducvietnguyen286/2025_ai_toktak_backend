@@ -5,7 +5,6 @@ import time
 import traceback
 import requests
 
-from app.lib.header import generate_desktop_user_agent
 from app.services.video_service import VideoService
 
 from app.lib.logger import log_twitter_message
@@ -409,29 +408,15 @@ class TwitterService(BaseService):
 
     def upload_media(self, media, is_video=False):
         log_twitter_message(f"{self.key_log} Upload media {media}")
-        headers = {"User-Agent": generate_desktop_user_agent()}
-        if is_video:
-            headers["Accept"] = "video/*"
-        else:
-            headers["Accept"] = "image/*"
-        try:
-            response = requests.get(media, headers=headers, timeout=20)
-        except Exception as e:
-            log_twitter_message(
-                f"------------------{self.key_log} Get Media Timeout-------------------------"
-            )
-            self.save_uploading(5)
-            try:
-                response = requests.get(media, headers=headers, timeout=20)
-            except Exception as e:
-                self.save_errors(
-                    "ERRORED",
-                    f"POST {self.key_log} UPLOAD VIDEO - REQUEST URL VIDEO {media}: {str(e)}",
-                )
-                return False
+        response = self.get_media_content(
+            media_url=media, get_content=False, is_photo=not is_video
+        )
+        if not response:
+            return False
 
-        total_bytes = int(response.headers.get("content-length", 0))
-        media_type = response.headers.get("content-type")
+        total_bytes = media.get("media_size", 0)
+        media_type = media.get("media_type", "")
+        media_content = media.get("content", "")
 
         media_id = self.upload_media_init(media_type, total_bytes, is_video)
 
@@ -439,7 +424,7 @@ class TwitterService(BaseService):
             return False
 
         uploaded = self.upload_append(
-            media_id=media_id, content=response.content, total_bytes=total_bytes
+            media_id=media_id, content=media_content, total_bytes=total_bytes
         )
         if not uploaded:
             return False
