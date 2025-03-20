@@ -46,15 +46,15 @@ class BaseService:
                 "User-Agent": generate_desktop_user_agent(),
             }
             with session.get(
-                media_url, headers=headers, timeout=(10, 180), stream=True
+                media_url, headers=headers, timeout=(10, 240), stream=True
             ) as response:
                 response.raise_for_status()
 
-                media_size = int(media_content.headers.get("content-length"))
-                media_type = media_content.headers.get("content-type")
+                media_size = int(response.headers.get("content-length"))
+                media_type = response.headers.get("content-type")
 
                 content = b"".join(
-                    chunk for chunk in response.iter_content(chunk_size=1024)
+                    chunk for chunk in response.iter_content(chunk_size=2048)
                 )
                 if get_content:
                     return content
@@ -71,7 +71,12 @@ class BaseService:
             self.log_social_message(
                 f"----------------------- {self.key_log} TIMEOUT GET MEDIA ---------------------------"
             )
-            self.save_uploading(5)
+            # self.save_uploading(5)
+            self.save_errors(
+                "ERRORED",
+                f"POST {self.key_log} SEND POST MEDIA - GET MEDIA URL: {str(e)}",
+            )
+            return False
             try:
                 media_content = session.get(media_url, timeout=(10, 60))
                 self.log_social_message(
