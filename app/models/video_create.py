@@ -12,6 +12,7 @@ class VideoCreate(db.Model, BaseModel):
     post_id = db.Column(db.Integer, nullable=False)  # ID Port
     product_name = db.Column(db.String(500), nullable=False)  # Tên sản phẩm
     video_url = db.Column(db.String(500), nullable=False)   
+    google_driver_url = db.Column(db.String(500), nullable=False)   
     hash_tags = db.Column(db.String(500), nullable=False)  # Tên sản phẩm
     images_url = db.Column(db.Text, nullable=False)  # Danh sách URL ảnh
     render_id = db.Column(db.String(100), default="", nullable=False)  # render id

@@ -122,6 +122,8 @@ class ShortstackWebhook(Resource):
             render_id = payload.get("id")
             status = payload.get("status")
             video_url = payload.get("url")
+            action = payload.get("action")
+            render = payload.get("render", "")
 
             # Ghi log thông tin nhận được
             logger.info("Received Shotstack webhook: %s", payload)
@@ -134,9 +136,7 @@ class ShortstackWebhook(Resource):
                 post_detail = PostService.find_post(post_id)
                 if post_detail:
                     batch_id = post_detail.batch_id or "0"
-                    PostService.update_post_by_batch_id(
-                        batch_id, video_url=video_url
-                    )
+                    PostService.update_post_by_batch_id(batch_id, video_url=video_url)
 
                     if status == "failed":
                         BatchService.update_batch(batch_id, status="2")
@@ -152,10 +152,17 @@ class ShortstackWebhook(Resource):
                             title="🎥 비디오 생성이 완료되었습니다. 이제 공유할 수 있습니다.",
                         )
 
+            if action == "copy":
+
+                create_video_detail = VideoService.update_video_create(
+                    render, google_driver_url=video_url, video_url=video_url
+                )
+
             # Trả về phản hồi JSON
             return {
                 "message": "Webhook received successfully",
                 "render_id": render_id,
+                "render": render,
                 "status": status,
                 "video_url": video_url,
                 "batch_id": batch_id,
