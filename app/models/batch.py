@@ -12,6 +12,7 @@ class Batch(db.Model, BaseModel):
     thumbnail = db.Column(db.String(500), nullable=True, default="")
     thumbnails = db.Column(db.Text)
     content = db.Column(db.Text, nullable=True)
+
     type = db.Column(db.Integer, default=1)
     count_post = db.Column(db.Integer, default=0)
     done_post = db.Column(db.Integer, default=0)
@@ -20,7 +21,7 @@ class Batch(db.Model, BaseModel):
     is_advance = db.Column(db.Integer, default=0)
     voice_google = db.Column(db.Integer, default=1)
     process_status = db.Column(db.String(50), default="PENDING")
-
+    template_info = db.Column(db.Text, nullable=True)
     to_json_filter = ("content", "thumbnails")
 
     def to_dict(self):
@@ -38,6 +39,7 @@ class Batch(db.Model, BaseModel):
             "voice_google": self.voice_google,
             "is_paid_advertisements": self.is_paid_advertisements,
             "is_advance": self.is_advance,
+            "template_info": self.template_info,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
