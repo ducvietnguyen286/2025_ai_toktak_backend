@@ -268,11 +268,10 @@ class APIUpdateTemplateVideoUser(Resource):
                     code=201,
                 ).to_dict()
                 
-            voice_id
             
             data_update_batch = {
-                is_paid_advertisements : is_paid_advertisements ,
-                voice_google : voice_id
+                "is_paid_advertisements" : is_paid_advertisements ,
+                "voice_google" : voice_id
             }
             BatchService.update_batch(batch_id, **data_update_batch)
             
