@@ -20,6 +20,7 @@ from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
 from app.scraper import Scraper
 import traceback
+import random
 
 from app.services.batch import BatchService
 from app.services.image_template import ImageTemplateService
@@ -50,13 +51,14 @@ class APICreateBatch(Resource):
         properties={
             "url": {"type": "string"},
             "voice": {"type": ["string", "null"]},
+            "narration": {"type": ["string", "null"]},
             "is_advance": {"type": "boolean"},
+            "is_paid_advertisements": {"type": "integer"},
         },
         required=["url"],
     )
     def post(self, args):
         try:
-
             verify_jwt_in_request(optional=True)
             user_id_login = 0
             current_user = AuthService.get_current_identity() or None
@@ -64,6 +66,13 @@ class APICreateBatch(Resource):
                 user_id_login = current_user.id
             url = args.get("url", "")
             voice = args.get("voice", 1)
+            narration = args.get("narration", "female")
+            if narration == "female":
+                voice = random.randint(1, 2)
+            else:
+                voice = random.randint(3, 4)
+
+            is_paid_advertisements = args.get("is_paid_advertisements", 0)
             is_advance = args.get("is_advance", False)
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             max_count_image = os.environ.get("MAX_COUNT_IMAGE") or "8"
@@ -145,6 +154,7 @@ class APICreateBatch(Resource):
                 status=0,
                 process_status="PENDING",
                 voice_google=voice,
+                is_paid_advertisements=is_paid_advertisements,
             )
 
             posts = []
@@ -995,11 +1005,6 @@ class APITemplateVideo(Resource):
                 },
             ]
             viral_messages = [
-                {
-                    "video_name": "",
-                    "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message.gif",
-                    "duration": 2.9,
-                },
                 {
                     "video_name": "",
                     "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message1.gif",
