@@ -16,6 +16,8 @@ class Batch(db.Model, BaseModel):
     count_post = db.Column(db.Integer, default=0)
     done_post = db.Column(db.Integer, default=0)
     status = db.Column(db.Integer, default=1)
+    is_paid_advertisements = db.Column(db.Integer, default=0)
+    is_advance = db.Column(db.Integer, default=0)
     voice_google = db.Column(db.Integer, default=1)
     process_status = db.Column(db.String(50), default="PENDING")
 
@@ -34,6 +36,8 @@ class Batch(db.Model, BaseModel):
             "status": self.status,
             "process_status": self.process_status,
             "voice_google": self.voice_google,
+            "is_paid_advertisements": self.is_paid_advertisements,
+            "is_advance": self.is_advance,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
