@@ -206,7 +206,7 @@ class ShotStackService:
                 {
                     "provider": "google-drive",
                     "options": {
-                        "filename": "video",
+                        "filename": f"short_video_{date_create}_{post_id}",
                         "folderId": "1bUcQ5eo-MhP7GxL23JhzUZ9LbJvqUp_p",
                     },
                 },
