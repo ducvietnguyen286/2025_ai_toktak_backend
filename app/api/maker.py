@@ -210,7 +210,7 @@ class APIUpdateTemplateVideoUser(Resource):
             "is_video_hooking": {"type": ["integer", "null"]},
             "is_caption_top": {"type": ["integer", "null"]},
             "is_caption_last": {"type": ["integer", "null"]},
-            "image_caption_type": {"type": ["integer", "null"]},
+            "image_template_id": {"type": ["string", "null"]},
         },
         required=["batch_id"],
     )
@@ -227,7 +227,7 @@ class APIUpdateTemplateVideoUser(Resource):
             is_video_hooking = args.get("is_video_hooking", 0)
             is_caption_top = args.get("is_caption_top", 0)
             is_caption_last = args.get("is_caption_last", 0)
-            image_caption_type = args.get("image_caption_type", 0)
+            image_template_id = args.get("image_template_id", 0)
 
             user_id_login = 0
             current_user = AuthService.get_current_identity() or None
@@ -251,7 +251,7 @@ class APIUpdateTemplateVideoUser(Resource):
                 "is_video_hooking": is_video_hooking,
                 "is_caption_top": is_caption_top,
                 "is_caption_last": is_caption_last,
-                "image_caption_type": image_caption_type,
+                "image_template_id": image_template_id,
             }
 
             user_template = PostService.update_template(user_template.id, **data_update)
