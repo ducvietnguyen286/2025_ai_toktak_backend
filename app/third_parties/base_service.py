@@ -31,11 +31,11 @@ class BaseService:
 
     def get_media_content(self, media_url, get_content=True, is_photo=False):
         session = requests.Session()
-        retries = Retry(
-            total=5, backoff_factor=5, status_forcelist=[500, 502, 503, 504]
-        )
-        session.mount("http://", HTTPAdapter(max_retries=retries))
-        session.mount("https://", HTTPAdapter(max_retries=retries))
+        # retries = Retry(
+        #     total=5, backoff_factor=5, status_forcelist=[500, 502, 503, 504]
+        # )
+        # session.mount("http://", HTTPAdapter(max_retries=retries))
+        # session.mount("https://", HTTPAdapter(max_retries=retries))
 
         self.log_social_message(
             f"------------POST {self.key_log} GET MEDIA : {media_url}----------------"
