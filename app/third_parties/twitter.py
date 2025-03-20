@@ -248,7 +248,7 @@ class TwitterService(BaseService):
         try:
             log_twitter_message(f"POST {self.key_log} Send IMAGES {post.id}")
             access_token = self.meta.get("access_token")
-            text = post.description
+            text = post.description + " " + post.hashtag
             if len(text) > 280:
                 text = text[:280]
             data = {
@@ -336,8 +336,12 @@ class TwitterService(BaseService):
             log_twitter_message(f"media_id: {media_id}")
             if not media_id:
                 return False
+
+            text = post.description + " " + post.hashtag
+            if len(text) > 280:
+                text = text[:280]
             data = {
-                "text": post.title,
+                "text": text,
                 "media": {"media_ids": [media_id]},
             }
             log_twitter_message(data)
