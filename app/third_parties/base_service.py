@@ -46,8 +46,12 @@ class BaseService:
                 "User-Agent": generate_desktop_user_agent(),
             }
             with session.get(
-                media_url, headers=headers, timeout=(10, 240), stream=True
+                media_url, headers=headers, timeout=(10, 120), stream=True
             ) as response:
+                self.log_social_message(
+                    f"------------POST {self.key_log} START STREAMING----------------"
+                )
+                self.save_uploading(5)
                 response.raise_for_status()
 
                 media_size = int(response.headers.get("content-length"))
