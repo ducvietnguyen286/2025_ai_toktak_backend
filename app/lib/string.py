@@ -114,3 +114,11 @@ def should_replace_shortlink(url):
     excluded_domains = ["https://link.coupang.com", "https://s.click.aliexpress.com"]
 
     return not any(url.startswith(domain) for domain in excluded_domains)
+
+
+def update_ads_content(url, content):
+    if "https://link.coupang.com/" in url:
+        content = f"이 포스팅은 쿠팡 파트너스 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.\n\n{content}"
+    elif "ko.aliexpress.co" in url:
+        content = f"이 포스팅은 알리 어필리에이트 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.\n\n{content}"
+    return content
