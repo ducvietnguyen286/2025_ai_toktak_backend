@@ -52,7 +52,7 @@ class BaseService:
             media_type = media_content.headers.get("content-type")
 
             return {
-                "content": media_content,
+                "content": media_content.content,
                 "media_size": media_size,
                 "media_type": media_type,
             }
@@ -84,7 +84,7 @@ class BaseService:
                         f"------------POST {self.key_log} GET MEDIA SUCCESSFULLY----------------"
                     )
                     return {
-                        "content": media_content,
+                        "content": content,
                         "media_size": media_size,
                         "media_type": media_type,
                     }
