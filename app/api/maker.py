@@ -20,6 +20,7 @@ from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
 from app.scraper import Scraper
 import traceback
+import random
 
 from app.services.batch import BatchService
 from app.services.image_template import ImageTemplateService
@@ -50,13 +51,14 @@ class APICreateBatch(Resource):
         properties={
             "url": {"type": "string"},
             "voice": {"type": ["string", "null"]},
+            "narration": {"type": ["string", "null"]},
             "is_advance": {"type": "boolean"},
+            "is_paid_advertisements": {"type": "integer"},
         },
         required=["url"],
     )
     def post(self, args):
         try:
-
             verify_jwt_in_request(optional=True)
             user_id_login = 0
             current_user = AuthService.get_current_identity() or None
@@ -64,6 +66,13 @@ class APICreateBatch(Resource):
                 user_id_login = current_user.id
             url = args.get("url", "")
             voice = args.get("voice", 1)
+            narration = args.get("narration", "female")
+            if narration == "female":
+                voice = random.randint(1, 2)
+            else:
+                voice = random.randint(3, 4)
+
+            is_paid_advertisements = args.get("is_paid_advertisements", 0)
             is_advance = args.get("is_advance", False)
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             max_count_image = os.environ.get("MAX_COUNT_IMAGE") or "8"
@@ -72,6 +81,11 @@ class APICreateBatch(Resource):
             data = Scraper().scraper({"url": url})
 
             if not data:
+                NotificationServices.create_notification(
+                    user_id=user_id_login,
+                    title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                )
+
                 return Response(
                     message="상품의 URL을 분석할 수 없어요.",
                     code=201,
@@ -140,6 +154,7 @@ class APICreateBatch(Resource):
                 status=0,
                 process_status="PENDING",
                 voice_google=voice,
+                is_paid_advertisements=is_paid_advertisements,
             )
 
             posts = []
@@ -623,9 +638,20 @@ class APIMakePost(Resource):
             if type == "video":
                 message = "비디오 생성이 성공적으로 완료되었습니다."
             elif type == "image":
-                message = "이미지 생성이 성공적으로 완료되었습니다."
+                message = "🖼 이미지 생성이 완료되었습니다."
+                NotificationServices.create_notification(
+                    user_id=current_user_id,
+                    batch_id=batch.id,
+                    title=message,
+                )
+
             elif type == "blog":
-                message = "블로그 생성이 성공적으로 완료되었습니다."
+                message = "✍️ 블로그 콘텐츠가 생성되었습니다."
+                NotificationServices.create_notification(
+                    user_id=current_user_id,
+                    batch_id=batch.id,
+                    title=message,
+                )
 
             return Response(
                 data=post._to_json(),
@@ -634,6 +660,25 @@ class APIMakePost(Resource):
         except Exception as e:
             logger.error(f"Exception: create {type} that bai  :  {str(e)}")
             traceback.print_exc()
+
+            if type == "video":
+                message = "비디오 생성이 성공적으로 완료되었습니다."
+            elif type == "image":
+                message = "⚠️ 이미지 생성에 실패했습니다. 다시 시도해주세요."
+                NotificationServices.create_notification(
+                    user_id=current_user_id,
+                    batch_id=batch.id,
+                    title=message,
+                )
+
+            elif type == "blog":
+                message = "⚠️ 블로그 생성에 실패했습니다. 다시 시도해주세요."
+                NotificationServices.create_notification(
+                    user_id=current_user_id,
+                    batch_id=batch.id,
+                    title=message,
+                )
+
             return Response(
                 message=f"create {type} that bai...",
                 status=200,
@@ -718,70 +763,92 @@ class APIGetStatusUploadBySyncId(Resource):
 
 @ns.route("/get-status-upload-with-batch-id/<int:id>")
 class APIGetStatusUploadWithBatch(Resource):
-
     def get(self, id):
-        batch = BatchService.find_batch(id)
-        if not batch:
+        try:
+            batch = BatchService.find_batch(id)
+            if not batch:
+                return Response(
+                    message="Batch không tồn tại",
+                    status=404,
+                ).to_dict()
+
+            posts = PostService.get_posts_by_batch_id(batch.id)
+            for post_detail in posts:
+                try:
+                    post_id = post_detail["id"]
+                    social_post_detail = (
+                        SocialPostService.by_post_id_get_latest_social_posts(post_id)
+                    )
+                    post_detail["social_post_detail"] = social_post_detail
+
+                    status_check_sns = 0
+                    for social_post_each in social_post_detail:
+                        status = social_post_each["status"]
+                        if status == "PUBLISHED":
+                            status_check_sns = 1
+
+                    update_data = {
+                        "social_sns_description": json.dumps(social_post_detail)
+                    }
+                    if status_check_sns == 1:
+                        update_data["status_sns"] = 1
+
+                    for sns_post_detail in social_post_detail:
+                        try:
+                            sns_post_id = sns_post_detail["post_id"]
+                            sns_status = sns_post_detail["status"]
+                            notification_type = sns_post_detail["title"]
+
+                            logger.info(f"sns_post_detail: {sns_post_detail}")
+                            logger.info(f"sns_post_id: {sns_post_id}")
+                            logger.info(f"sns_status: {sns_status}")
+                            logger.info(f"notification_type: {notification_type}")
+                            notification = NotificationServices.find_notification_sns(
+                                sns_post_id, notification_type
+                            )
+                            logger.info(f"notification: {notification}")
+                            if not notification:
+                                notification = NotificationServices.create_notification(
+                                    user_id=post_detail["user_id"],
+                                    batch_id=post_detail["batch_id"],
+                                    post_id=sns_post_id,
+                                    notification_type=notification_type,
+                                    title=f"🔄{notification_type}에 업로드 중입니다.",
+                                )
+                            if sns_status == "PUBLISHED":
+                                NotificationServices.update_notification(
+                                    notification.id,
+                                    title=f"✅{notification_type} 업로드에 성공했습니다.",
+                                )
+                            elif sns_status == "ERRORED":
+                                NotificationServices.update_notification(
+                                    notification.id,
+                                    title=f"❌{notification_type} 업로드에 실패했습니다.",
+                                )
+                        except Exception as e:
+                            logger.error(
+                                f"Lỗi xử lý SNS post detail: {e}", exc_info=True
+                            )
+
+                    PostService.update_post(post_id, **update_data)
+                except Exception as e:
+                    logger.error(f"Lỗi xử lý post {post_id}: {e}", exc_info=True)
+
+            batch_res = batch._to_json()
+            batch_res["posts"] = posts
+
             return Response(
-                message="Batch không tồn tại",
-                status=404,
+                data=batch_res,
+                message="Lấy batch thành công",
             ).to_dict()
-
-        posts = PostService.get_posts_by_batch_id(batch.id)
-
-        for post_detail in posts:
-            post_id = post_detail["id"]
-
-            social_post_detail = SocialPostService.by_post_id_get_latest_social_posts(
-                post_id
+        except Exception as e:
+            logger.error(
+                f"Lỗi trong API get-status-upload-with-batch-id: {e}", exc_info=True
             )
-            post_detail["social_post_detail"] = social_post_detail
-
-            status_check_sns = 0
-            for social_post_each in social_post_detail:
-                status = social_post_each["status"]
-                if status == "PUBLISHED":
-                    status_check_sns = 1
-
-            update_data = {"social_sns_description": json.dumps(social_post_detail)}
-            if status_check_sns == 1:
-                update_data["status_sns"] = 1
-
-            for sns_post_detail in social_post_detail:
-                sns_post_id = sns_post_detail["post_id"]
-                sns_status = sns_post_detail["status"]
-                notification_type = sns_post_detail["title"]
-
-                notification = NotificationServices.find_notification_sns(
-                    sns_post_id, notification_type
-                )
-                if not notification:
-                    notification = NotificationServices.create_notification(
-                        user_id=post_detail.user_id,
-                        batch_id=post_detail.batch_id,
-                        post_id=sns_post_id,
-                        title=f"🔄{notification_type}에 업로드 중입니다.",
-                    )
-                if sns_status == "PUBLISHED":
-                    NotificationServices.update_notification(
-                        notification.id,
-                        title=f"✅{notification_type} 업로드에 성공했습니다.",
-                    )
-                elif sns_status == "ERRORED":
-                    NotificationServices.update_notification(
-                        notification.id,
-                        title=f"❌{notification_type} 업로드에 실패했습니다.",
-                    )
-
-            PostService.update_post(post_id, **update_data)
-
-        batch_res = batch._to_json()
-        batch_res["posts"] = posts
-
-        return Response(
-            data=batch_res,
-            message="Lấy batch thành công",
-        ).to_dict()
+            return Response(
+                message="Đã xảy ra lỗi trong quá trình xử lý",
+                status=500,
+            ).to_dict()
 
 
 @ns.route("/save_draft_batch/<int:id>")
@@ -808,6 +875,12 @@ class APIUpdateStatusBatch(Resource):
 
             NotificationServices.update_notification_by_batch_id(
                 batch.id, user_id=current_user.id
+            )
+
+            NotificationServices.create_notification(
+                user_id=current_user.id,
+                batch_id=id,
+                title="💾 작업이 임시 저장되었습니다.",
             )
 
             return Response(
@@ -913,29 +986,61 @@ class APITemplateVideo(Resource):
         current_user = AuthService.get_current_identity()
         user_template = PostService.get_template_video_by_user_id(current_user.id)
         if not user_template:
-            image_template = [
+            image_templates = ImageTemplateService.get_image_templates()
+            video_hooks = [
                 {
-                    "id": 1,
-                    "name": "노트필기형",
-                    "image_url": "https://apitoktak.voda-play.com/voice/img/1.png",
+                    "video_name": "NViral Video_41.mp4",
+                    "video_url": "https://apitoktak.voda-play.com/voice/advance/1_advance.mp4",
+                    "duration": 2.9,
                 },
                 {
-                    "id": 2,
-                    "name": "블러이미지형",
-                    "image_url": "https://apitoktak.voda-play.com/voice/img/2.png",
+                    "video_name": "Video_67.mp4",
+                    "video_url": "https://apitoktak.voda-play.com/voice/advance/2_advance.mp4",
+                    "duration": 2.42,
                 },
                 {
-                    "id": 3,
-                    "name": "상품이미지형",
-                    "image_url": "https://apitoktak.voda-play.com/voice/img/3.png",
+                    "video_name": "Video_16.mp4",
+                    "video_url": "https://apitoktak.voda-play.com/voice/advance/3_advance.mp4",
+                    "duration": 4.04,
                 },
             ]
+            viral_messages = [
+                {
+                    "video_name": "",
+                    "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message1.gif",
+                    "duration": 2.42,
+                },
+                {
+                    "video_name": "",
+                    "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message2.gif",
+                    "duration": 4.04,
+                },
+                {
+                    "video_name": "",
+                    "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message3.gif",
+                    "duration": 2.42,
+                },
+                {
+                    "video_name": "",
+                    "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message4.gif",
+                    "duration": 4.04,
+                },
+                {
+                    "video_name": "",
+                    "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message5.gif",
+                    "duration": 4.04,
+                },
+            ]
+            subscribe_video = (
+                "https://apitoktak.voda-play.com/voice/advance/subscribe_video.mp4"
+            )
 
-            video_hooks = ShotStackService.get_random_videos(3)
             user_template = PostService.create_user_template(
                 user_id=current_user.id,
                 video_hooks=json.dumps(video_hooks),
-                image_template=json.dumps(image_template),
+                image_template=json.dumps(image_templates),
+                viral_messages=json.dumps(viral_messages),
+                subscribe_video=subscribe_video,
             )
 
         user_template_data = user_template.to_dict()

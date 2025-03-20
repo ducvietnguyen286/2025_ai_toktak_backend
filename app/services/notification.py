@@ -15,10 +15,17 @@ class NotificationServices:
     def find(id):
         return Notification.query.get(id)
     
+    
+    @staticmethod
+    def update_notification(id, *args, **kwargs):
+        notification = Notification.query.get(id)
+        notification.update(**kwargs)
+        return notification
+    
     @staticmethod
     def find_notification_sns(post_id , notification_type):
         notification = Notification.query.filter(
-            Notification.user_id == post_id,
+            Notification.post_id == post_id,
             Notification.notification_type == notification_type,
         ).first()
         return notification

@@ -10,6 +10,7 @@ from app.lib.logger import logger
 import json
 
 from app.services.auth import AuthService
+from app.services.notification import NotificationServices
 from app.lib.string import get_level_images
 
 ns = Namespace(name="auth", description="Auth API")
@@ -100,9 +101,8 @@ class APIRegister(Resource):
         password = args.get("password", "")
         level = 0
         level_info = get_level_images(level)
-        
 
-        user = AuthService.register(email, password, username , json.dumps(level_info))
+        user = AuthService.register(email, password, username, json.dumps(level_info))
         tokens = AuthService.generate_token(user)
         tokens.update(
             {
@@ -210,18 +210,38 @@ class APIMeUpdate(Resource):
         required=[],
     )
     def post(self, args):
-        name = args.get("name", "")
-        phone = args.get("phone", "")
-        contact = args.get("contact", "")
-        company_name = args.get("company_name", "")
+        name = args.get("name")
+        phone = args.get("phone")
+        contact = args.get("contact")
+        company_name = args.get("company_name")
         user_login = AuthService.get_current_identity()
-        user_login = AuthService.update(
-            user_login.id,
-            name=name,
-            phone=phone,
-            contact=contact,
-            company_name=company_name,
-        )
+
+        update_data = {}
+
+        message = ""
+        if name is not None:
+            update_data["name"] = name
+            message = f"✏️ 이름이 변경되었습니다. ({user_login.name} → {name})"
+        if phone is not None:
+            update_data["phone"] = phone
+            message = f"📞 연락처가 변경되었습니다. ({user_login.phone} → {phone})"
+        if contact is not None:
+            update_data["contact"] = contact
+            message = f"📞 이름이 변경되었습니다. ({user_login.contact} → {contact})"
+        if company_name is not None:
+            update_data["company_name"] = company_name
+            message = (
+                f"🏢 회사명이 변경되었습니다. ({user_login.company_name} → {company_name})"
+            )
+
+        if update_data:  # Chỉ update nếu có dữ liệu
+            NotificationServices.create_notification(
+                user_id=user_login.id,
+                title=message,
+            )
+            update_data["updated_at"] = datetime.now()
+
+            user_login = AuthService.update(user_login.id, **update_data)
 
         return Response(
             data=user_login._to_json(),
