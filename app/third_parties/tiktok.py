@@ -273,7 +273,7 @@ class TiktokService(BaseService):
                 f"------------POST {self.key_log} UPLOAD VIDEO TO TIKTOK----------------"
             )
 
-            video_content = self.get_media_content(media, False)
+            video_content = self.get_media_content(media_url=media, get_content=False)
             if not video_content:
                 return False
 
@@ -631,7 +631,10 @@ class TiktokService(BaseService):
                 )
                 return False
 
-            response_put = response.json()
+            try:
+                response_put = response.json()
+            except ValueError:
+                print(response.text)
 
             self.save_request_log("upload_video_chunk", headers, response_put)
 

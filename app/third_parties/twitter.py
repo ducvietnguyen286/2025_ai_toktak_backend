@@ -414,9 +414,9 @@ class TwitterService(BaseService):
         if not response:
             return False
 
-        total_bytes = media.get("media_size", 0)
-        media_type = media.get("media_type", "")
-        media_content = media.get("content", "")
+        total_bytes = response.get("media_size", 0)
+        media_type = response.get("media_type", "")
+        media_content = response.get("content", "")
 
         media_id = self.upload_media_init(media_type, total_bytes, is_video)
 
