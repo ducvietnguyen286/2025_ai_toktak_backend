@@ -303,10 +303,6 @@ class TiktokService(BaseService):
                 self.save_publish("PUBLISHED", permalink)
                 return True
             else:
-                error_message = status.get("message")
-                self.save_errors(
-                    "ERRORED", f"POST {self.key_log} UPLOAD VIDEO: {error_message}"
-                )
                 return False
         except Exception as e:
             self.save_errors("ERRORED", f"POST {self.key_log} UPLOAD VIDEO: {str(e)}")

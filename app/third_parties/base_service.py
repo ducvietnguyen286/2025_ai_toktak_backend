@@ -36,10 +36,11 @@ class BaseService:
                     return content
 
                 mime_type, encoding = mimetypes.guess_type(media_path)
+                file_size = os.path.getsize(media_path)
 
                 return {
                     "content": content,
-                    "media_size": len(content),
+                    "media_size": file_size,
                     "media_type": mime_type,
                 }
         except Exception as e:
