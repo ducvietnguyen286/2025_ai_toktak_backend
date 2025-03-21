@@ -560,7 +560,7 @@ def call_chatgpt_clear_product_name(name):
         },
         "strict": True,
     }
-    return call_chatgpt(content, response_schema, 0, prompt)
+    return call_chatgpt(content, response_schema, 0, prompt, 1.0)
 
 
 def call_chatgpt_get_main_text_and_color_for_image(
@@ -624,7 +624,9 @@ def replace_prompt_with_data(prompt, data):
     return prompt
 
 
-def call_chatgpt(content, response_schema, post_id=0, base_prompt=None, retry=0):
+def call_chatgpt(
+    content, response_schema, post_id=0, base_prompt=None, temperature=0.9, retry=0
+):
     client = OpenAI(api_key=chatgpt_api_key)
     model = "gpt-4o-mini"
 
@@ -642,7 +644,7 @@ def call_chatgpt(content, response_schema, post_id=0, base_prompt=None, retry=0)
                 "json_schema": response_schema,
             },
             "max_tokens": 3000,
-            "temperature": 0.9,
+            "temperature": temperature,
         }
     )
 
