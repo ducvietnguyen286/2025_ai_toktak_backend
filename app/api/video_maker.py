@@ -9,6 +9,9 @@ from app.services.batch import BatchService
 import random
 from app.lib.logger import logger
 from app.services.notification import NotificationServices
+import datetime
+import os
+import requests
 
 ns = Namespace(name="video_maker", description="Video Maker API")
 
@@ -167,6 +170,13 @@ class ShortstackWebhook(Resource):
                 #     )
 
             # Trả về phản hồi JSON
+            elif action == "render":
+                file_download = download_video(video_url, post_id)
+                if file_download:
+                    PostService.update_post_by_batch_id(
+                        batch_id, video_url=file_download
+                    )
+
             return {
                 "message": "Webhook received successfully",
                 "render_id": render_id,
@@ -211,3 +221,35 @@ class TestCreateVideo(Resource):
             "message": message,
             "render_id": render_id,
         }
+
+
+def download_video(video_url, post_id):
+    try:
+        # Tạo đường dẫn thư mục theo ngày và post_id
+        today = datetime.datetime.now().strftime("%Y_%m_%d")
+        save_dir = os.path.join("static", "voice", "gtts_voice", today, str(post_id))
+
+        # Tạo thư mục nếu chưa có
+        os.makedirs(save_dir, exist_ok=True)
+
+        # Tên file video
+        video_filename = os.path.join(save_dir, "downloaded_video.mp4")
+
+        # Gửi request tải file
+        response = requests.get(video_url, stream=True)
+        response.raise_for_status()  # Kiểm tra lỗi HTTP
+
+        # Ghi dữ liệu vào file
+        with open(video_filename, "wb") as video_file:
+            for chunk in response.iter_content(chunk_size=8192):
+                video_file.write(chunk)
+
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+        logger.info("Đã download file video: {0}".format(video_filename))
+        file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
+        file_url = f"{current_domain}/{file_path}"
+        return file_url
+
+    except Exception as e:
+        logger.exception("Error processing webhook download: %s", e)
+        return None
