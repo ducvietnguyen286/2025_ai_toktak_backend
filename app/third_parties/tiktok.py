@@ -149,7 +149,7 @@ class TiktokService(BaseService):
                 f"------------ READY TO SEND POST: {post._to_json()} ----------------"
             )
             if post.type == "video":
-                self.upload_video(post.video_url)
+                self.upload_video(post.video_path)
             if post.type == "image":
                 self.upload_image(post.images)
             return True
