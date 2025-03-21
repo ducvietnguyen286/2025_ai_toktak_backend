@@ -149,7 +149,7 @@ class TiktokService(BaseService):
                 f"------------ READY TO SEND POST: {post._to_json()} ----------------"
             )
             if post.type == "video":
-                self.upload_video(post.video_path)
+                self.upload_video(post)
             if post.type == "image":
                 self.upload_image(post.images)
             return True
@@ -267,14 +267,24 @@ class TiktokService(BaseService):
             )
             return False
 
-    def upload_video(self, media):
+    def upload_video(self, post):
         try:
             log_tiktok_message(
                 f"------------POST {self.key_log} UPLOAD VIDEO TO TIKTOK----------------"
             )
 
+            video_path = post.video_path
+            time_waited = 0
+            while not video_path and time_waited < 30:
+                log_tiktok_message(
+                    f"----------------------- {self.key_log} WAIT VIDEO PATH: {time_waited}s ---------------------------"
+                )
+                time.sleep(1)
+                time_waited += 1
+                video_path = post.video_path
+
             video_content = self.get_media_content_by_path(
-                media_path=media, get_content=False
+                media_path=video_path, get_content=False
             )
             if not video_content:
                 return False
