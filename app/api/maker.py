@@ -14,7 +14,7 @@ from app.decorators import jwt_optional, parameters
 from app.lib.caller import get_shorted_link_coupang
 from app.lib.logger import logger
 from app.lib.response import Response
-from app.lib.string import split_text_by_sentences, should_replace_shortlink
+from app.lib.string import split_text_by_sentences, should_replace_shortlink , update_ads_content
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
@@ -155,6 +155,8 @@ class APICreateBatch(Resource):
                 process_status="PENDING",
                 voice_google=voice,
                 is_paid_advertisements=is_paid_advertisements,
+                is_advance=is_advance,
+                template_info=json.dumps({}),
             )
 
             posts = []
@@ -209,7 +211,7 @@ class APIUpdateTemplateVideoUser(Resource):
             "is_video_hooking": {"type": ["integer", "null"]},
             "is_caption_top": {"type": ["integer", "null"]},
             "is_caption_last": {"type": ["integer", "null"]},
-            "image_caption_type": {"type": ["integer", "null"]},
+            "image_template_id": {"type": ["string", "null"]},
         },
         required=["batch_id"],
     )
@@ -226,7 +228,7 @@ class APIUpdateTemplateVideoUser(Resource):
             is_video_hooking = args.get("is_video_hooking", 0)
             is_caption_top = args.get("is_caption_top", 0)
             is_caption_last = args.get("is_caption_last", 0)
-            image_caption_type = args.get("image_caption_type", 0)
+            image_template_id = args.get("image_template_id", 0)
 
             user_id_login = 0
             current_user = AuthService.get_current_identity() or None
@@ -239,7 +241,7 @@ class APIUpdateTemplateVideoUser(Resource):
 
             # user_template = PostService.up
 
-            data_update = {
+            data_update_template = {
                 "is_paid_advertisements": is_paid_advertisements,
                 "product_name": product_name,
                 "is_product_name": is_product_name,
@@ -250,14 +252,32 @@ class APIUpdateTemplateVideoUser(Resource):
                 "is_video_hooking": is_video_hooking,
                 "is_caption_top": is_caption_top,
                 "is_caption_last": is_caption_last,
-                "image_caption_type": image_caption_type,
+                "image_template_id": image_template_id,
             }
 
-            user_template = PostService.update_template(user_template.id, **data_update)
+            user_template = PostService.update_template(
+                user_template.id, **data_update_template
+            )
             user_template_data = user_template.to_dict()
 
             posts = PostService.get_posts_by_batch_id(batch_id)
             user_template_data["posts"] = posts
+
+            batch_detail = BatchService.find_batch(batch_id)
+
+            if not batch_detail:
+                return Response(
+                    message="Batch không tồn tại",
+                    code=201,
+                ).to_dict()
+
+            data_update_batch = {
+                "is_paid_advertisements": is_paid_advertisements,
+                "voice_google": voice_id,
+                "template_info": json.dumps(data_update_template),
+            }
+            BatchService.update_batch(batch_id, **data_update_batch)
+
             return Response(
                 data=user_template_data,
                 message="제품 정보를 성공적으로 가져왔습니다.",
@@ -340,19 +360,12 @@ class APIMakePost(Resource):
     @parameters(
         type="object",
         properties={
-            "is_advance": {"type": "boolean"},
-            "video_template_id": {"type": "string"},
-            "video_create_comment": {"type": "boolean"},
-            "video_show_product_name": {"type": "boolean"},
-            "video_show_product_info": {"type": "boolean"},
-            "image_template_id": {"type": "string"},
         },
         required=[],
     )
     def post(self, id, **kwargs):
         try:
             args = kwargs.get("req_args", False)
-            is_advance = args.get("is_advance", False)
             verify_jwt_in_request(optional=True)
             current_user_id = 0
             current_user = AuthService.get_current_identity() or None
@@ -378,6 +391,12 @@ class APIMakePost(Resource):
                     message="Post đã được tạo",
                     status=201,
                 ).to_dict()
+                
+                
+            
+            is_advance = batch.is_advance
+            template_info = json.loads(batch.template_info)
+            
 
             data = json.loads(batch.content)
             images = data.get("images", [])
@@ -439,17 +458,6 @@ class APIMakePost(Resource):
 
                         product_name = data["name"]
 
-                        # tạo từ gtts
-                        # result = VideoService.create_video_from_images(
-                        #     post.id,
-                        #     origin_caption,
-                        #     image_renders,
-                        #     image_renders_sliders,
-                        #     caption_sliders,
-                        # )
-
-                        # Tạo từ google
-
                         voice_google = batch.voice_google or 1
                         result = ShotStackService.create_video_from_images_v2(
                             post.id,
@@ -486,7 +494,10 @@ class APIMakePost(Resource):
                 logger.info(
                     "-------------------- PROCESSING CREATE IMAGES -------------------"
                 )
-                image_template_id = args.get("image_template_id", "")
+                logger.info("template_info: {0}".format(template_info))
+                image_template_id = template_info.get("image_template_id", "")
+                logger.info("image_template_id: {0}".format(image_template_id))
+            
                 if is_advance and image_template_id == "":
                     return Response(
                         message="Vui lòng chọn template",
@@ -583,6 +594,7 @@ class APIMakePost(Resource):
                     description = parse_response.get("description", "")
                     if "<" in description or ">" in description:
                         description = description.replace("<", "").replace(">", "")
+                    
                 if parse_response and "title" in parse_response:
                     title = parse_response.get("title", "")
                 if parse_response and "summarize" in parse_response:
@@ -605,6 +617,10 @@ class APIMakePost(Resource):
                 ).to_dict()
 
             url = batch.url
+            
+            if type == "blog":
+                content = update_ads_content(url ,content)
+                
             if should_replace_shortlink(url):
                 shorten_link = batch.shorten_link
                 description = description.replace(url, shorten_link)

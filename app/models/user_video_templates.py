@@ -21,7 +21,7 @@ class UserVideoTemplates(db.Model, BaseModel):
     is_video_hooking = db.Column(db.Integer, default=0, nullable=False)
     is_caption_top = db.Column(db.Integer, default=0, nullable=False)
     is_caption_last = db.Column(db.Integer, default=0, nullable=False)
-    image_caption_type = db.Column(db.Integer, default=0, nullable=False)
+    image_template_id = db.Column(db.String(500), default="", nullable=False)
 
     image_template = db.Column(db.Text, nullable=False, default="")
     video_hooks = db.Column(db.Text, nullable=False, default="")
@@ -45,7 +45,7 @@ class UserVideoTemplates(db.Model, BaseModel):
             "is_video_hooking": self.is_video_hooking,
             "is_caption_top": self.is_caption_top,
             "is_caption_last": self.is_caption_last,
-            "image_caption_type": self.image_caption_type,
+            "image_template_id": self.image_template_id,
             "image_template": json.loads(self.image_template),
             "video_hooks": json.loads(self.video_hooks),
             "viral_messages": json.loads(self.viral_messages),

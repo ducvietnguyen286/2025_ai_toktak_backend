@@ -34,6 +34,7 @@ class ShotStackService:
         SHOTSTACK_URL = config["SHOTSTACK_URL"]
         is_ai_image = config["SHOTSTACK_AI_IMAGE"]
         MUSIC_BACKGROUP_VOLUMN = float(config["MUSIC_BACKGROUP_VOLUMN"])
+        IS_GOOGLE_DRIVER = int(config["IS_GOOGLE_DRIVER"])
         video_size_json = config["VIDEO_SIZE"] or '{"width": 1200, "height": 800}'
         video_size = json.loads(video_size_json)
 
@@ -199,6 +200,18 @@ class ShotStackService:
             },
             "callback": f"{current_domain}/api/v1/video_maker/shotstack_webhook",
         }
+
+        if IS_GOOGLE_DRIVER == 1:
+            payload["output"]["destinations"] = [
+                {
+                    "provider": "google-drive",
+                    "options": {
+                        "filename": f"short_video_{date_create}_{post_id}",
+                        "folderId": "1bUcQ5eo-MhP7GxL23JhzUZ9LbJvqUp_p",
+                    },
+                },
+                {"provider": "shotstack", "exclude": True},
+            ]
 
         log_make_video_message(
             f"++++++++++++++++++++++++++++++payload_dumps:\n\n {json.dumps(payload)} \n\n"
@@ -987,12 +1000,16 @@ def split_text_to_sentences(text):
         processed_sentences.append(temp_sentence.strip())
 
     # Xóa dấu chấm cuối câu nếu có
-    processed_sentences = [s.rstrip(".") if s.endswith(".") else s for s in processed_sentences]
+    processed_sentences = [
+        s.rstrip(".") if s.endswith(".") else s for s in processed_sentences
+    ]
 
     # Chia nhỏ câu nếu dài hơn 20 ký tự
     short_sentences = []
     for sentence in processed_sentences:
-        small_chunks = textwrap.wrap(sentence, width=20)  # Chia nhỏ nhưng vẫn giữ dấu câu
+        small_chunks = textwrap.wrap(
+            sentence, width=20
+        )  # Chia nhỏ nhưng vẫn giữ dấu câu
         short_sentences.extend(small_chunks)
 
     return short_sentences

@@ -765,6 +765,11 @@ class VideoService:
         combined_clips = clips_shape + clips
         return {"intro_length": intro_length, "clips": {"clips": combined_clips}}
 
+    @staticmethod
+    def find_by_render_id(render_id):
+        create_video = VideoCreate.query.filter_by(render_id=render_id).first()
+        return create_video
+
 
 def create_combined_clips_v2(
     post_id,
@@ -1497,7 +1502,8 @@ def generate_caption_from_audio(
     except Exception as e:
         log_make_video_message(f"Exception: {str(e)}")
         return ""
-
+    
+    
 
 def google_speech_to_text(audio_file, config=None):
     """
