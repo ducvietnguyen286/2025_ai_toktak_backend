@@ -1,3 +1,4 @@
+import hashlib
 import json
 import random
 import time
@@ -26,21 +27,21 @@ class AliExpressScraper:
 
     def run_scraper(self):
         try:
-            # req_id = str(uuid.uuid4())
-            # task = {
-            #     "req_id": req_id,
-            #     "url": self.url,
-            # }
-            # redis_client.rpush("toktak:crawl_ali_queue", json.dumps(task))
-            # timeout = 30  # Giây
-            # start_time = time.time()
-            # while time.time() - start_time < timeout:
-            #     result = redis_client.get(f"toktak:result-ali:{req_id}")
-            #     print("result", result)
-            #     if result:
-            #         redis_client.delete(f"toktak:result-ali:{req_id}")
-            #         return json.loads(result)
-            #     time.sleep(0.5)
+            req_id = str(uuid.uuid4())
+            task = {
+                "req_id": req_id,
+                "url": self.url,
+            }
+            redis_client.rpush("toktak:crawl_ali_queue", json.dumps(task))
+            timeout = 30  # Giây
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                result = redis_client.get(f"toktak:result-ali:{req_id}")
+                print("result", result)
+                if result:
+                    redis_client.delete(f"toktak:result-ali:{req_id}")
+                    return json.loads(result)
+                time.sleep(1)
 
             # parsed_url = urlparse(self.url)
 
@@ -59,6 +60,20 @@ class AliExpressScraper:
             logger.error("Exception: {0}".format(str(e)))
             return {}
 
+    def generate_fake_sign(self, token, timestamp, app_key, data):
+        """
+        Hàm fake sign nhận vào:
+          - token: mã token (từ options hoặc fake)
+          - timestamp: thời gian hiện tại (milliseconds)
+          - app_key: appKey được sử dụng
+          - data: chuỗi dữ liệu JSON
+        Trả về MD5 hash của chuỗi ghép theo định dạng:
+          "{token}&{timestamp}&{app_key}&{data}"
+        """
+        raw_string = f"{token}&{timestamp}&{app_key}&{data}"
+        sign = hashlib.md5(raw_string.encode("utf-8")).hexdigest().lower()
+        return sign
+
     def get_page_html(self, url):
         try:
             cookie_jar = CookieJar()
@@ -70,9 +85,9 @@ class AliExpressScraper:
                 url, headers=headers, timeout=5, allow_redirects=True
             )
             info = response.content
-            file_html = open("demo.html", "w", encoding="utf-8")
-            file_html.write(str(info))
-            file_html.close()
+            # file_html = open("demo.html", "w", encoding="utf-8")
+            # file_html.write(str(info))
+            # file_html.close()
             html = BeautifulSoup(info, "html.parser")
             return html
         except Exception as e:
