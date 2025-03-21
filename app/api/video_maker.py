@@ -243,7 +243,7 @@ def download_video(video_url, post_id):
         os.makedirs(save_dir, exist_ok=True)
 
         # Đường dẫn file video
-        video_filename = os.path.join(save_dir, "downloaded_video.mp4")
+        video_filename = os.path.join(save_dir, f"{post_id}_downloaded_video.mp4")
 
         # Gửi request tải file
         headers = {"User-Agent": "Mozilla/5.0"}  # Giả lập trình duyệt
