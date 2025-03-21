@@ -458,7 +458,10 @@ class TiktokService(BaseService):
                 "ERRORED",
                 f"POST {self.key_log} CHECK STATUS - GET ERROR: {error_message}",
             )
-            return False
+            return {
+                "status": False,
+                "message": error_message,
+            }
         status = res_json.get("data").get("status")
         if status == "PUBLISH_COMPLETE":
             publicaly_available_post_id = res_json.get("data").get(
