@@ -181,7 +181,7 @@ class ShortstackWebhook(Resource):
                     file_download = file_download_attr["file_download"]
                     PostService.update_post_by_batch_id(
                         batch_id,
-                        video_url=file_download,
+                        # video_url=file_download,
                         video_path=file_path,
                     )
 
