@@ -194,7 +194,6 @@ class APICreateBatch(Resource):
             logger.error("Exception: {0}".format(str(e)))
             return Response(
                 message="상품 정보를 불러올 수 없어요.(Error code : )",
-                status=400,
                 code=201,
             ).to_dict()
 
