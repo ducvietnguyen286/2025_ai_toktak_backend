@@ -616,7 +616,7 @@ class APIMakePost(Resource):
                 content = update_ads_content(url, content)
             
             if is_paid_advertisements == 1:
-                hashtag = f"#광고, {hashtag}"
+                hashtag = f"#광고 {hashtag}"
 
 
             if should_replace_shortlink(url):
