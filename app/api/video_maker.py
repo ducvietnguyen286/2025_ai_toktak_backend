@@ -171,16 +171,18 @@ class ShortstackWebhook(Resource):
                 #     PostService.update_post_by_batch_id(
                 #         batch_id, video_url=video_url
                 #     )
-                
 
             # Trả về phản hồi JSON
             elif action == "render":
-                file_download = download_video(video_url, post_id)
-                if file_download:
+                file_download_attr = download_video(video_url, post_id)
+
+                if file_download_attr:
+                    file_path = file_download_attr["file_path"]
+                    file_download = file_download_attr["file_download"]
                     PostService.update_post_by_batch_id(
                         batch_id,
                         video_url=file_download,
-                        video_path=file_download,
+                        video_path=file_path,
                     )
 
             return {
@@ -253,8 +255,11 @@ def download_video(video_url, post_id):
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
         logger.info("Đã download file video: {0}".format(video_filename))
         file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
-        file_url = f"{current_domain}/{file_path}"
-        return file_url
+        file_download = f"{current_domain}/{file_path}"
+        return {
+            "file_path": video_filename,
+            "file_download": file_download,
+        }
 
     except Exception as e:
         logger.exception("Error processing webhook download: %s", e)
