@@ -300,7 +300,7 @@ class ThreadService(BaseService):
                     return False
                 media_ids.append(media_id)
 
-            carousel_id = self.upload_carousel(media_ids)
+            carousel_id = self.upload_carousel(media_ids, text)
             if not carousel_id:
                 return False
 
@@ -384,10 +384,10 @@ class ThreadService(BaseService):
             )
             UPLOAD_URL = f"https://graph.threads.net/v1.0/{self.thread_user_id}/threads"
             upload_data = {
-                "text": text,
                 "access_token": self.access_token,
             }
             if is_video:
+                upload_data["text"] = text
                 upload_data["media_type"] = "VIDEO"
                 upload_data["video_url"] = media
             else:
@@ -434,7 +434,7 @@ class ThreadService(BaseService):
             self.save_errors("ERRORED", f"UPLOAD MEDIA {self.key_log}: {str(e)}")
             return False
 
-    def upload_carousel(self, media_ids):
+    def upload_carousel(self, media_ids, text):
         try:
             log_thread_message(
                 f"------------ UPLOAD CAROUSEL: {self.key_log} ----------------"
@@ -444,6 +444,7 @@ class ThreadService(BaseService):
             upload_data = {
                 "access_token": self.access_token,
                 "children": ",".join(media_ids),
+                "text": text,
                 "media_type": "CAROUSEL",
             }
 
