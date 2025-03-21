@@ -58,6 +58,8 @@ class ImageTemplateService:
         )
 
         image_urls = []
+        other_images = []
+        other_captions = []
         file_size = 0
 
         if response_color:
@@ -71,6 +73,8 @@ class ImageTemplateService:
                 )
                 image_urls.append(res_visual["image_url"])
                 file_size += res_visual["file_size"]
+                other_images = process_images[1:-1]
+                other_captions = captions[1:-1]
 
             elif template_type == "TEMPLATE_IMAGE_2":
                 res_visual = ImageTemplateService.create_image_by_template_image_2(
@@ -81,6 +85,8 @@ class ImageTemplateService:
                 )
                 image_urls.append(res_visual["image_url"])
                 file_size += res_visual["file_size"]
+                other_images = process_images[1:]
+                other_captions = captions[1:]
 
             elif template_type == "TEMPLATE_IMAGE_3":
                 res_visual = ImageTemplateService.create_image_by_template_image_3(
@@ -91,9 +97,8 @@ class ImageTemplateService:
                 )
                 image_urls.append(res_visual["image_url"])
                 file_size += res_visual["file_size"]
-
-        other_images = process_images[1:]
-        other_captions = captions[1:]
+                other_images = process_images[1:]
+                other_captions = captions[1:]
 
         for index, image_url in enumerate(other_images):
             image_caption = other_captions[index] if index < len(other_captions) else ""

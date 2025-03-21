@@ -471,7 +471,8 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
             "캡션 2",
             "캡션 3",
             "캡션 4",
-            "캡션 5"
+            "캡션 5",
+            ...
         ],
         "description": "게시글 설명",
         "hashtag": "해시태그"`

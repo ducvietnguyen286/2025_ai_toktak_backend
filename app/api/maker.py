@@ -79,8 +79,6 @@ class APICreateBatch(Resource):
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
             is_advance = args.get("is_advance", False)
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
-            max_count_image = os.environ.get("MAX_COUNT_IMAGE") or "8"
-            max_count_image = int(max_count_image)
 
             data = Scraper().scraper({"url": url})
             # return data
@@ -129,15 +127,9 @@ class APICreateBatch(Resource):
             #         message="상품 정보를 성공적으로 가져왔습니다.",
             #     ).to_dict()
 
-            images = data.get("images", [])
-
             thumbnail_url = data.get("image", "")
             thumbnails = data.get("thumbnails", [])
 
-            if images and len(images) > max_count_image:
-                images = images[:max_count_image]
-
-            data["images"] = images
             if "text" not in data:
                 data["text"] = ""
             if "iframes" not in data:
@@ -517,7 +509,7 @@ class APIMakePost(Resource):
                             status=200,
                             code=201,
                         ).to_dict()
-                    
+
                     img_res = ImageTemplateService.create_image_by_template(
                         template=image_template,
                         captions=captions,
@@ -528,7 +520,6 @@ class APIMakePost(Resource):
                     file_size += img_res.get("file_size", 0)
                     mime_type = img_res.get("mime_type", "")
                     maker_images = image_urls
-                    
 
                     # if is_advance:
 
@@ -1091,6 +1082,8 @@ def get_template_info(is_advance):
         return json.dumps({"image_template_id": template_image_default})
 
     except Exception as ex:
-        error_message = f"Error fetching image templates: {ex}\n{traceback.format_exc()}"
+        error_message = (
+            f"Error fetching image templates: {ex}\n{traceback.format_exc()}"
+        )
         logger.error(error_message)
         return json.dumps({})
