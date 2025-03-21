@@ -72,9 +72,9 @@ class APICreateBatch(Resource):
             voice = args.get("voice", 1)
             narration = args.get("narration", "female")
             if narration == "female":
-                voice = random.randint(1, 2)
-            else:
                 voice = random.randint(3, 4)
+            else:
+                voice = random.randint(1, 2)
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
             is_advance = args.get("is_advance", False)
