@@ -7,9 +7,10 @@ from app.services.shotstack_services import ShotStackService
 from app.services.post import PostService
 from app.services.batch import BatchService
 import random
-from app.lib.logger import logger
+from app.lib.logger import logger ,log_webhook_message
 from app.services.notification import NotificationServices
-import datetime
+
+from datetime import date
 import os
 import requests
 
@@ -231,36 +232,50 @@ class TestCreateVideo(Resource):
         }
 
 
+
 def download_video(video_url, post_id):
     try:
-        # Tạo đường dẫn thư mục theo ngày và post_id
-        today = datetime.datetime.now().strftime("%Y_%m_%d")
+        # Lấy ngày hiện tại (YYYY_MM_DD)
+        today = date.today().strftime("%Y_%m_%d")
         save_dir = os.path.join("static", "voice", "gtts_voice", today, str(post_id))
 
-        # Tạo thư mục nếu chưa có
+        # Tạo thư mục nếu chưa tồn tại
         os.makedirs(save_dir, exist_ok=True)
 
-        # Tên file video
+        # Đường dẫn file video
         video_filename = os.path.join(save_dir, "downloaded_video.mp4")
 
         # Gửi request tải file
-        response = requests.get(video_url, stream=True)
+        headers = {"User-Agent": "Mozilla/5.0"}  # Giả lập trình duyệt
+        response = requests.get(video_url, stream=True, headers=headers)
         response.raise_for_status()  # Kiểm tra lỗi HTTP
 
-        # Ghi dữ liệu vào file
-        with open(video_filename, "wb") as video_file:
-            for chunk in response.iter_content(chunk_size=8192):
-                video_file.write(chunk)
+        # Kiểm tra Content-Type để đảm bảo là video
+        content_type = response.headers.get("Content-Type", "")
+        if "video" not in content_type:
+            log_webhook_message.error(f"❌ URL không phải video: {video_url} (Content-Type: {content_type})")
+            return None
 
-        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
-        logger.info("Đã download file video: {0}".format(video_filename))
+        # Ghi dữ liệu vào file
+        with open(video_filename, "wb+") as video_file:
+            for chunk in response.iter_content(chunk_size=16384):  # 16 KB mỗi lần
+                if chunk:
+                    video_file.write(chunk)
+
+        # Tạo đường dẫn có thể truy cập từ trình duyệt
+        current_domain = os.environ.get("CURRENT_DOMAIN", "http://localhost:5000")
+        log_webhook_message.info(f"✅ Đã tải file video: {video_filename}")
         file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
         file_download = f"{current_domain}/{file_path}"
+
         return {
             "file_path": video_filename,
             "file_download": file_download,
         }
 
+    except requests.exceptions.RequestException as e:
+        log_webhook_message.exception(f"❌ Lỗi khi tải video: {e}")
     except Exception as e:
-        logger.exception("Error processing webhook download: %s", e)
-        return None
+        log_webhook_message.exception(f"❌ Lỗi hệ thống: {e}")
+
+    return None
