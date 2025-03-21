@@ -1,4 +1,5 @@
 import json
+import random
 import time
 import traceback
 import uuid
@@ -6,10 +7,11 @@ from bs4 import BeautifulSoup
 import requests
 from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
-from urllib.parse import urlparse, urlencode
+from http.cookiejar import CookieJar
 
 from app.scraper.pages.aliexpress.parser import Parser
 from app.extensions import redis_client
+from app.scraper.pages.coupang.headers import random_mobile_header
 
 
 class AliExpressScraper:
@@ -59,11 +61,18 @@ class AliExpressScraper:
 
     def get_page_html(self, url):
         try:
+            cookie_jar = CookieJar()
             session = requests.Session()
-            headers = self.generate_random_headers_request()
+            session.cookies = cookie_jar
+            headers = self.get_headers()
 
-            response = session.get(url, headers=headers, timeout=5)
+            response = session.get(
+                url, headers=headers, timeout=5, allow_redirects=True
+            )
             info = response.content
+            file_html = open("demo.html", "w", encoding="utf-8")
+            file_html.write(str(info))
+            file_html.close()
             html = BeautifulSoup(info, "html.parser")
             return html
         except Exception as e:
@@ -79,3 +88,30 @@ class AliExpressScraper:
             "Accept-Encoding": "gzip, compress, br",
         }
         return headers
+
+    def get_headers(self):
+        """
+        Generate request headers with a random user agent to prevent blocking.
+        Includes necessary cookies and headers for AliExpress requests.
+        """
+        user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        ]
+        return {
+            "User-Agent": random.choice(user_agents),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Cache-Control": "max-age=0",
+            "Cookie": "aep_usuc_f=site=glo&c_tp=USD&region=US&b_locale=en_US",
+        }
