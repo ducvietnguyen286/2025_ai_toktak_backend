@@ -113,6 +113,7 @@ class APICreateBatch(Resource):
                     )
 
                 shorten_link = f"{domain_share_url}{existing_entry.short_code}"
+                data["base_url"] = shorten_link
 
             data["shorten_link"] = shorten_link
 
