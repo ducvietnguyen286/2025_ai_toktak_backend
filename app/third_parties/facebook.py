@@ -300,6 +300,7 @@ class FacebookService(BaseService):
             self.save_errors(
                 "ERRORED", f"SEND POST {self.key_log} VIDEO: {error_message}"
             )
+            return False
 
         self.upload_video(
             video_id=video_id,
