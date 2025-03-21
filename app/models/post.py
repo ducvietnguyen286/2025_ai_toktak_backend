@@ -25,6 +25,7 @@ class Post(db.Model, BaseModel):
     status_sns = db.Column(db.Integer, default=0)
     process_number = db.Column(db.Integer, default=0)
     render_id = db.Column(db.String(500), nullable=False, default="")
+    video_path = db.Column(db.String(255), nullable=False, default="")
 
     social_sns_description = db.Column(db.Text, nullable=True)
 
