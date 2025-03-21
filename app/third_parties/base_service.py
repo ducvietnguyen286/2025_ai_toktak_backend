@@ -2,8 +2,7 @@ import json
 import os
 
 import requests
-from urllib3 import Retry
-from requests.adapters import HTTPAdapter
+import mimetypes
 
 from app.extensions import redis_client
 from app.lib.header import generate_desktop_user_agent
@@ -35,10 +34,13 @@ class BaseService:
                 content = file.read()
                 if get_content:
                     return content
+
+                mime_type, encoding = mimetypes.guess_type(media_path)
+
                 return {
                     "content": content,
                     "media_size": len(content),
-                    "media_type": "image/*" if is_photo else "video/*",
+                    "media_type": mime_type,
                 }
         except Exception as e:
             self.save_errors(
