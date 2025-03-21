@@ -253,7 +253,7 @@ def download_video(video_url, post_id):
         # Kiểm tra Content-Type để đảm bảo là video
         content_type = response.headers.get("Content-Type", "")
         if "video" not in content_type:
-            log_webhook_message.error(f"❌ URL không phải video: {video_url} (Content-Type: {content_type})")
+            log_webhook_message(f"❌ URL không phải video: {video_url} (Content-Type: {content_type})")
             return None
 
         # Ghi dữ liệu vào file
@@ -264,7 +264,7 @@ def download_video(video_url, post_id):
 
         # Tạo đường dẫn có thể truy cập từ trình duyệt
         current_domain = os.environ.get("CURRENT_DOMAIN", "http://localhost:5000")
-        log_webhook_message.info(f"✅ Đã tải file video: {video_filename}")
+        log_webhook_message(f"✅ Đã tải file video: {video_filename}")
         file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
         file_download = f"{current_domain}/{file_path}"
 
@@ -274,8 +274,8 @@ def download_video(video_url, post_id):
         }
 
     except requests.exceptions.RequestException as e:
-        log_webhook_message.exception(f"❌ Lỗi khi tải video: {e}")
+        log_webhook_message(f"❌ Lỗi khi tải video: {e}")
     except Exception as e:
-        log_webhook_message.exception(f"❌ Lỗi hệ thống: {e}")
+        log_webhook_message(f"❌ Lỗi hệ thống: {e}")
 
     return None
