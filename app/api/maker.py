@@ -395,6 +395,22 @@ class APIMakePost(Resource):
             images = data.get("images", [])
             thumbnails = batch.thumbnails
 
+            need_count = 5
+
+            process_images = json.loads(thumbnails)
+            if process_images and len(process_images) < need_count:
+                current_length = len(process_images)
+                need_length = need_count - current_length
+                if len(images) > need_length:
+                    process_images = process_images + images[:need_length]
+                else:
+                    process_images = process_images + images
+            elif process_images and len(process_images) >= need_count:
+                process_images = process_images[:need_count]
+            else:
+                process_images = images
+                process_images = process_images[:need_count]
+
             type = post.type
 
             response = None
@@ -409,22 +425,6 @@ class APIMakePost(Resource):
             docx_url = ""
 
             if type == "video":
-                need_count = 5
-
-                process_images = json.loads(thumbnails)
-                if process_images and len(process_images) < need_count:
-                    current_length = len(process_images)
-                    need_length = need_count - current_length
-                    if len(images) > need_length:
-                        process_images = process_images + images[:need_length]
-                    else:
-                        process_images = process_images + images
-                elif process_images and len(process_images) >= need_count:
-                    process_images = process_images[:need_count]
-                else:
-                    process_images = images
-                    process_images = process_images[:need_count]
-
                 response = call_chatgpt_create_caption(process_images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
@@ -487,22 +487,6 @@ class APIMakePost(Resource):
                 logger.info(
                     "-------------------- PROCESSING CREATE IMAGES -------------------"
                 )
-                need_count = 8
-
-                process_images = json.loads(thumbnails)
-                if process_images and len(process_images) < need_count:
-                    current_length = len(process_images)
-                    need_length = need_count - current_length
-                    if len(images) > need_length:
-                        process_images = process_images + images[:need_length]
-                    else:
-                        process_images = process_images + images
-                elif process_images and len(process_images) >= need_count:
-                    process_images = process_images[:need_count]
-                else:
-                    process_images = images
-                    process_images = process_images[:need_count]
-
                 image_template_id = template_info.get("image_template_id", "")
                 if image_template_id == "":
                     return Response(
@@ -559,7 +543,6 @@ class APIMakePost(Resource):
                 logger.info(
                     "-------------------- PROCESSING CREATE LOGS -------------------"
                 )
-                need_count = 5
 
                 blog_images = images
                 if blog_images and len(blog_images) < need_count:
