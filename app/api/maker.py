@@ -34,6 +34,7 @@ from app.services.shotstack_services import ShotStackService
 from app.services.shorten_services import ShortenServices
 from app.services.notification import NotificationServices
 
+from app.extensions import redis_client
 from flask import request
 
 from flask_jwt_extended import jwt_required
@@ -136,6 +137,8 @@ class APICreateBatch(Resource):
 
             post_types = ["video", "image", "blog"]
 
+            template_info = get_template_info(is_advance)
+
             batch = BatchService.create_batch(
                 user_id=user_id_login,
                 url=url,
@@ -150,7 +153,7 @@ class APICreateBatch(Resource):
                 voice_google=voice,
                 is_paid_advertisements=is_paid_advertisements,
                 is_advance=is_advance,
-                template_info=json.dumps({}),
+                template_info=template_info,
             )
 
             posts = []
@@ -485,8 +488,7 @@ class APIMakePost(Resource):
                     "-------------------- PROCESSING CREATE IMAGES -------------------"
                 )
                 image_template_id = template_info.get("image_template_id", "")
-
-                if is_advance and image_template_id == "":
+                if image_template_id == "":
                     return Response(
                         message="Vui lòng chọn template",
                         status=200,
@@ -498,38 +500,41 @@ class APIMakePost(Resource):
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
                     captions = parse_response.get("caption", "")
-                    if is_advance:
-                        image_template = ImageTemplateService.find_image_template(
-                            image_template_id
-                        )
-                        if not image_template:
-                            return Response(
-                                message="Template không tồn tại",
-                                status=200,
-                                code=201,
-                            ).to_dict()
-                        img_res = ImageTemplateService.create_image_by_template(
-                            template=image_template,
-                            captions=captions,
-                            process_images=process_images,
-                            post=post,
-                        )
-                        image_urls = img_res.get("image_urls", [])
-                        file_size += img_res.get("file_size", 0)
-                        mime_type = img_res.get("mime_type", "")
-                        maker_images = image_urls
-                    else:
-                        for index, image_url in enumerate(process_images):
-                            image_caption = (
-                                captions[index] if index < len(captions) else ""
-                            )
-                            img_res = ImageMaker.save_image_and_write_text(
-                                image_url, image_caption, font_size=80
-                            )
-                            image_url = img_res.get("image_url", "")
-                            file_size += img_res.get("file_size", 0)
-                            mime_type = img_res.get("mime_type", "")
-                            maker_images.append(image_url)
+                    image_template = ImageTemplateService.find_image_template(
+                        image_template_id
+                    )
+                    if not image_template:
+                        return Response(
+                            message="Template không tồn tại",
+                            status=200,
+                            code=201,
+                        ).to_dict()
+
+                    img_res = ImageTemplateService.create_image_by_template(
+                        template=image_template,
+                        captions=captions,
+                        process_images=process_images,
+                        post=post,
+                    )
+                    image_urls = img_res.get("image_urls", [])
+                    file_size += img_res.get("file_size", 0)
+                    mime_type = img_res.get("mime_type", "")
+                    maker_images = image_urls
+
+                    # if is_advance:
+
+                    # else:
+                    #     for index, image_url in enumerate(process_images):
+                    #         image_caption = (
+                    #             captions[index] if index < len(captions) else ""
+                    #         )
+                    #         img_res = ImageMaker.save_image_and_write_text(
+                    #             image_url, image_caption, font_size=80
+                    #         )
+                    #         image_url = img_res.get("image_url", "")
+                    #         file_size += img_res.get("file_size", 0)
+                    #         mime_type = img_res.get("mime_type", "")
+                    #         maker_images.append(image_url)
 
                 logger.info(
                     "-------------------- PROCESSED CREATE IMAGES -------------------"
@@ -1054,3 +1059,31 @@ class APITemplateVideo(Resource):
             data=user_template_data,
             code=200,
         ).to_dict()
+
+
+def get_template_info(is_advance):
+    if is_advance:
+        return json.dumps({})
+
+    redis_key = "template_image_default"
+
+    template_image_default = redis_client.get(redis_key)
+    if template_image_default:
+        return json.dumps({"image_template_id": template_image_default.decode()})
+
+    try:
+        image_templates = ImageTemplateService.get_image_templates()
+        if not image_templates:
+            return json.dumps({})
+
+        template_image_default = str(image_templates[0]["id"])
+        redis_client.set(redis_key, template_image_default)
+
+        return json.dumps({"image_template_id": template_image_default})
+
+    except Exception as ex:
+        error_message = (
+            f"Error fetching image templates: {ex}\n{traceback.format_exc()}"
+        )
+        logger.error(error_message)
+        return json.dumps({})

@@ -575,6 +575,7 @@ class ImageMaker:
 
     @staticmethod
     def save_image_url_get_path(image_url):
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
         print(f"Downloading image from {image_url}")
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
