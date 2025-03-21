@@ -158,7 +158,10 @@ class ShortstackWebhook(Resource):
             if action == "copy":
 
                 create_video_detail = VideoService.update_video_create(
-                    render, google_driver_url=video_url, video_url=video_url
+                    render,
+                    google_driver_url=video_url,
+                    video_url=video_url,
+                    video_path=video_url,
                 )
                 # if create_video_detail:
                 # post_id = create_video_detail.post_id
@@ -168,13 +171,16 @@ class ShortstackWebhook(Resource):
                 #     PostService.update_post_by_batch_id(
                 #         batch_id, video_url=video_url
                 #     )
+                
 
             # Trả về phản hồi JSON
             elif action == "render":
                 file_download = download_video(video_url, post_id)
                 if file_download:
                     PostService.update_post_by_batch_id(
-                        batch_id, video_url=file_download
+                        batch_id,
+                        video_url=file_download,
+                        video_path=file_download,
                     )
 
             return {
