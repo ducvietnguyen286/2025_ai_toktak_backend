@@ -82,7 +82,7 @@ class APICreateBatch(Resource):
             max_count_image = int(max_count_image)
 
             data = Scraper().scraper({"url": url})
-            return data
+            # return data
             if not data:
                 NotificationServices.create_notification(
                     user_id=user_id_login,

@@ -305,6 +305,12 @@ def process_task_on_tab(browser, task):
                     print("Switch To Middle Frame")
 
                     inner_frame = browser.find_element(By.XPATH, "//iframe[1]")
+
+                    challenger_iframe = browser.find_element(
+                        By.XPATH,
+                        "//iframe[contains(@title, 'recaptcha challenge')]",
+                    )
+
                     browser.switch_to.frame(inner_frame)
 
                     print("Switch To Captcha Frame")
@@ -320,16 +326,12 @@ def process_task_on_tab(browser, task):
 
                     time.sleep(1)
 
-                    challenger_iframe = browser.find_element(
-                        By.XPATH,
-                        "//iframe[contains(@title, 'recaptcha challenge')]",
-                    )
                     if challenger_iframe:
-                        browser.switch_to.frame(challenger_iframe)
+                        # Switch back to the parent frame (middle iframe) to access the sibling iframe
+                        browser.switch_to.parent_frame()
 
-                        file_html = open("demo.html", "w", encoding="utf-8")
-                        file_html.write(browser.page_source)
-                        file_html.close()
+                        # Now switch to the challenger iframe
+                        browser.switch_to.frame(challenger_iframe)
 
                         print("Switch To Challenger Frame")
                         audio_btn = WebDriverWait(browser, 10).until(
@@ -340,6 +342,10 @@ def process_task_on_tab(browser, task):
                         audio_btn.click()
 
                         time.sleep(1)
+
+                        file_html = open("demo.html", "w", encoding="utf-8")
+                        file_html.write(browser.page_source)
+                        file_html.close()
 
                         audio_source = browser.find_element(By.ID, "audio-source")
                         audio_url = audio_source.get_attribute("src")
