@@ -325,7 +325,18 @@ class TwitterService(BaseService):
         log_twitter_message(f"POST {self.key_log} Send post Video to Twitter {post.id}")
         if post.status != 1 or post.video_url == "" or post.video_url is None:
             return
-        return self.send_post_video_to_x(post.video_path, post, link)
+
+        video_path = post.video_path
+        time_waited = 0
+        while not video_path and time_waited < 30:
+            log_twitter_message(
+                f"----------------------- {self.key_log} WAIT VIDEO PATH: {time_waited}s ---------------------------"
+            )
+            time.sleep(1)
+            time_waited += 1
+            video_path = post.video_path
+
+        return self.send_post_video_to_x(video_path, post, link)
 
     def send_post_video_to_x(self, media, post, link, media_id=None, retry=0):
         try:
