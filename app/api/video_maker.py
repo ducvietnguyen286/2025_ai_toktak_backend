@@ -203,34 +203,7 @@ class ShortstackWebhook(Resource):
             return {"message": "Internal Server Error"}, 500
 
 
-@ns.route("/test_create_video")
-class TestCreateVideo(Resource):
-    def post(self):
-        # Lấy dữ liệu từ request
-        data = request.get_json()
-        images_url = data["images_url"]  # Đây là một list các URL của hình ảnh
-        prompts = data["prompts"]  # Đây là một list các URL của hình ảnh
-
-        batch_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
-        result = VideoService.test_create_video_from_images(
-            batch_id, images_url, prompts
-        )
-
-        render_id = ""
-        status = True
-        message = "Video  created successfully"
-        if result["status_code"] == 200:
-            render_id = result["response"]["id"]
-        else:
-            status = False
-            message = result["message"]
-
-        return {
-            "status": status,
-            "message": message,
-            "render_id": render_id,
-        }
-
+ 
 
 
 def download_video(video_url, post_id):

@@ -327,14 +327,6 @@ class TwitterService(BaseService):
             return
 
         video_path = post.video_path
-        time_waited = 0
-        while not video_path and time_waited < 30:
-            log_twitter_message(
-                f"----------------------- {self.key_log} WAIT VIDEO PATH: {time_waited}s ---------------------------"
-            )
-            time.sleep(1)
-            time_waited += 1
-            video_path = post.video_path
 
         return self.send_post_video_to_x(video_path, post, link)
 

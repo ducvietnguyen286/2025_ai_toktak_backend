@@ -222,14 +222,6 @@ class YoutubeService(BaseService):
             tags = tags.split(" ") if tags else []
 
             video_path = post.video_path
-            time_waited = 0
-            while not video_path and time_waited < 30:
-                log_youtube_message(
-                    f"----------------------- {self.key_log} WAIT VIDEO PATH: {time_waited}s ---------------------------"
-                )
-                time.sleep(1)
-                time_waited += 1
-                video_path = post.video_path
 
             video_content = self.get_media_content_by_path(media_path=video_path)
             if not video_content:
