@@ -73,8 +73,8 @@ class ImageTemplateService:
                 )
                 image_urls.append(res_visual["image_url"])
                 file_size += res_visual["file_size"]
-                other_images = process_images[1:-1]
-                other_captions = captions[1:-1]
+                other_images = process_images[0:-1]
+                other_captions = captions[0:-1]
 
             elif template_type == "TEMPLATE_IMAGE_2":
                 res_visual = ImageTemplateService.create_image_by_template_image_2(
