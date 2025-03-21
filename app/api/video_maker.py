@@ -244,9 +244,9 @@ def download_video(video_url, post_id):
             for chunk in response.iter_content(chunk_size=8192):
                 video_file.write(chunk)
 
-
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
-        file_path = video_filename.replace("static/", "").replace("\\", "/")
+        logger.info("Đã download file video: {0}".format(video_filename))
+        file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
         file_url = f"{current_domain}/{file_path}"
         return file_url
 
