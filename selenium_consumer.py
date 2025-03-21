@@ -1,3 +1,4 @@
+import base64
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
 import json
@@ -5,8 +6,11 @@ import os
 import signal
 import sys
 import time
+import traceback
 from dotenv import load_dotenv
 import requests
+
+from app.services.shotstack_services import ShotStackService
 
 load_dotenv(override=False)
 
@@ -131,7 +135,7 @@ def create_driver_instance():
 
     user_agent = generate_desktop_user_agent()
     headers = {
-        "User-Agent": user_agent,
+        # "User-Agent": user_agent,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     }
     for header, value in headers.items():
@@ -185,6 +189,75 @@ def worker_instance():
         print("Worker stopped (PID:", os.getpid(), ")")
         browser.quit()
         return True
+
+
+def speech_to_text(audio_url):
+    try:
+        config = ShotStackService.get_settings()
+        api_key = config.get("GOOGLE_API_TEXT_TO_SPEECH", "")
+        api_url = f"https://speech.googleapis.com/v1/speech:recognize?key={api_key}"
+
+        if not api_key:
+            print("Lỗi: API Key chưa được thiết lập.")
+            return ""
+
+        # Tải file từ audio_url
+        response = requests.get(audio_url)
+        if response.status_code != 200:
+            print(f"Lỗi khi tải file từ URL: {audio_url}")
+            return ""
+
+        # Lưu file tạm (giả sử file gốc là MP3)
+        temp_mp3 = "temp_audio.mp3"
+        with open(temp_mp3, "wb") as f:
+            f.write(response.content)
+
+        # Chuyển file MP3 sang FLAC (Google Speech-to-Text tối ưu cho FLAC)
+        flac_file = temp_mp3.replace(".mp3", ".flac")
+        os.system(f"ffmpeg -i {temp_mp3} -ac 1 -ar 16000 {flac_file} -y")
+
+        # Đọc file FLAC dạng base64
+        with open(flac_file, "rb") as f:
+            audio_content = base64.b64encode(f.read()).decode("utf-8")
+
+        payload = {
+            "config": {
+                "encoding": "FLAC",
+                "sampleRateHertz": 16000,
+                "languageCode": "en-US",
+            },
+            "audio": {"content": audio_content},
+        }
+
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(api_url, json=payload, headers=headers)
+
+        try:
+            os.remove(temp_mp3)
+            os.remove(flac_file)
+        except Exception as e:
+            print(f"Lỗi khi xóa file FLAC: {str(e)}")
+
+        if response.status_code != 200:
+            print(f"Lỗi từ Google Speech API: {response.text}")
+            return ""
+
+        response_json = response.json()
+
+        # Lấy transcript từ API
+        transcript = " ".join(
+            [
+                alt["transcript"]
+                for res in response_json.get("results", [])
+                for alt in res.get("alternatives", [])
+            ]
+        )
+
+        return transcript.strip()
+
+    except Exception as e:
+        print(f"Exception: {str(e)}")
+        return None
 
 
 def process_task_on_tab(browser, task):
@@ -241,15 +314,50 @@ def process_task_on_tab(browser, task):
                     # file_html.close()
 
                     checkbox = WebDriverWait(browser, 10).until(
-                        EC.element_to_be_clickable((By.ID, "recaptcha-anchor"))
+                        EC.presence_of_element_located((By.ID, "recaptcha-anchor"))
                     )
                     checkbox.click()
 
+                    time.sleep(1)
+
+                    challenger_iframe = browser.find_element(
+                        By.XPATH,
+                        "//iframe[contains(@title, 'recaptcha challenge')]",
+                    )
+                    if challenger_iframe:
+                        browser.switch_to.frame(challenger_iframe)
+
+                        file_html = open("demo.html", "w", encoding="utf-8")
+                        file_html.write(browser.page_source)
+                        file_html.close()
+
+                        print("Switch To Challenger Frame")
+                        audio_btn = WebDriverWait(browser, 10).until(
+                            EC.presence_of_element_located(
+                                (By.ID, "recaptcha-audio-button")
+                            )
+                        )
+                        audio_btn.click()
+
+                        time.sleep(1)
+
+                        audio_source = browser.find_element(By.ID, "audio-source")
+                        audio_url = audio_source.get_attribute("src")
+                        text = speech_to_text(audio_url)
+                        print("Text from audio:", text)
+
                     browser.switch_to.default_content()
             except Exception as e:
+                traceback.print_exc()
                 print("Error: ", str(e))
 
-            time.sleep(1)
+            # save_cookies(browser)
+
+            WebDriverWait(browser, 10).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//script[@type='application/ld+json']")
+                )
+            )
 
             browser.execute_script("window.scrollBy(0, 700);")
             logger.info("[Scroll Down 1]")
@@ -262,13 +370,6 @@ def process_task_on_tab(browser, task):
             file_html.write(browser.page_source)
             file_html.close()
 
-            # save_cookies(browser)
-
-            WebDriverWait(browser, 10).until(
-                EC.presence_of_element_located(
-                    (By.XPATH, "//script[@type='application/ld+json']")
-                )
-            )
             # logger.info("[Wait for script tag with type application/ld+json]")
 
             # if wait_id != "":
@@ -295,7 +396,8 @@ def process_task_on_tab(browser, task):
 
             redis_client.set(f"toktak:result-ali:{req_id}", json.dumps(data))
         except Exception as e:
-            logger.error(f"Error in process_task_on_tab: {str(e)}")
+            traceback.print_exc()
+            # logger.error(f"Error in process_task_on_tab: {str(e)}")
             print("Error in process_task_on_tab:", e)
         finally:
             return True
@@ -318,38 +420,38 @@ def load_cookies(browser):
 
 
 def save_cookies(browser):
-    cookies = browser.execute_script("return document.cookie")
+    cookies = browser.get_cookies()
 
-    cookie_dict = {}
-    for cookie in cookies.split("; "):
-        key, value = cookie.split("=", 1)
-        cookie_dict[key] = value
-    print("Parsed Cookies:", cookie_dict)
+    # cookie_dict = {}
+    # for cookie in cookies.split("; "):
+    #     key, value = cookie.split("=", 1)
+    #     cookie_dict[key] = value
+    # print("Parsed Cookies:", cookie_dict)
 
     COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
-    formatted_cookies = []
-    current_cookies = []
-    cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
-    if os.path.exists(cookie_file):
-        with open(cookie_file, "r", encoding="utf-8") as file:
-            current_cookies = json.load(file)
+    # formatted_cookies = []
+    # current_cookies = []
+    # cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
+    # if os.path.exists(cookie_file):
+    #     with open(cookie_file, "r", encoding="utf-8") as file:
+    #         current_cookies = json.load(file)
 
-    for cookie in current_cookies:
-        new_value = cookie_dict.get(cookie.get("name"))
-        if new_value:
-            cookie["value"] = new_value
-            formatted_cookies.append(cookie)
+    # for cookie in current_cookies:
+    #     new_value = cookie_dict.get(cookie.get("name"))
+    #     if new_value:
+    #         cookie["value"] = new_value
+    #         formatted_cookies.append(cookie)
 
     if not os.path.exists(COOKIE_FOLDER):
         os.makedirs(COOKIE_FOLDER)
 
-    if len(formatted_cookies) == 0:
+    if len(cookies) == 0:
         return
 
     with open(
         os.path.join(COOKIE_FOLDER, "cookies.json"), "w", encoding="utf-8"
     ) as file:
-        json.dump(formatted_cookies, file, ensure_ascii=False, indent=4)
+        json.dump(cookies, file, ensure_ascii=False, indent=4)
 
 
 def start_selenium_consumer():

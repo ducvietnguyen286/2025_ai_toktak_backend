@@ -8,13 +8,16 @@ from app.ais.chatgpt import (
     call_chatgpt_create_caption,
     call_chatgpt_create_blog,
     call_chatgpt_create_social,
-    call_chatgpt_get_main_text_and_color_for_image,
 )
 from app.decorators import jwt_optional, parameters
 from app.lib.caller import get_shorted_link_coupang
 from app.lib.logger import logger
 from app.lib.response import Response
-from app.lib.string import split_text_by_sentences, should_replace_shortlink , update_ads_content
+from app.lib.string import (
+    split_text_by_sentences,
+    should_replace_shortlink,
+    update_ads_content,
+)
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
@@ -79,7 +82,7 @@ class APICreateBatch(Resource):
             max_count_image = int(max_count_image)
 
             data = Scraper().scraper({"url": url})
-
+            return data
             if not data:
                 NotificationServices.create_notification(
                     user_id=user_id_login,
@@ -359,8 +362,7 @@ class APIMakePost(Resource):
 
     @parameters(
         type="object",
-        properties={
-        },
+        properties={},
         required=[],
     )
     def post(self, id, **kwargs):
@@ -391,12 +393,9 @@ class APIMakePost(Resource):
                     message="Post đã được tạo",
                     status=201,
                 ).to_dict()
-                
-                
-            
+
             is_advance = batch.is_advance
             template_info = json.loads(batch.template_info)
-            
 
             data = json.loads(batch.content)
             images = data.get("images", [])
@@ -497,7 +496,7 @@ class APIMakePost(Resource):
                 logger.info("template_info: {0}".format(template_info))
                 image_template_id = template_info.get("image_template_id", "")
                 logger.info("image_template_id: {0}".format(image_template_id))
-            
+
                 if is_advance and image_template_id == "":
                     return Response(
                         message="Vui lòng chọn template",
@@ -594,7 +593,7 @@ class APIMakePost(Resource):
                     description = parse_response.get("description", "")
                     if "<" in description or ">" in description:
                         description = description.replace("<", "").replace(">", "")
-                    
+
                 if parse_response and "title" in parse_response:
                     title = parse_response.get("title", "")
                 if parse_response and "summarize" in parse_response:
@@ -617,10 +616,10 @@ class APIMakePost(Resource):
                 ).to_dict()
 
             url = batch.url
-            
+
             if type == "blog":
-                content = update_ads_content(url ,content)
-                
+                content = update_ads_content(url, content)
+
             if should_replace_shortlink(url):
                 shorten_link = batch.shorten_link
                 description = description.replace(url, shorten_link)
