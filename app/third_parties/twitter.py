@@ -325,7 +325,7 @@ class TwitterService(BaseService):
         log_twitter_message(f"POST {self.key_log} Send post Video to Twitter {post.id}")
         if post.status != 1 or post.video_url == "" or post.video_url is None:
             return
-        return self.send_post_video_to_x(post.video_url, post, link)
+        return self.send_post_video_to_x(post.video_path, post, link)
 
     def send_post_video_to_x(self, media, post, link, media_id=None, retry=0):
         try:
@@ -412,8 +412,8 @@ class TwitterService(BaseService):
 
     def upload_media(self, media, is_video=False):
         log_twitter_message(f"{self.key_log} Upload media {media}")
-        response = self.get_media_content(
-            media_url=media, get_content=False, is_photo=not is_video
+        response = self.get_media_content_by_path(
+            media_path=media, get_content=False, is_photo=not is_video
         )
         if not response:
             return False

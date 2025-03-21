@@ -29,6 +29,23 @@ class BaseService:
         self.service = None
         self.key_log = ""
 
+    def get_media_content_by_path(self, media_path, get_content=True, is_photo=False):
+        try:
+            with open(media_path, "rb") as file:
+                content = file.read()
+                if get_content:
+                    return content
+                return {
+                    "content": content,
+                    "media_size": len(content),
+                    "media_type": "image/*" if is_photo else "video/*",
+                }
+        except Exception as e:
+            self.save_errors(
+                "ERRORED",
+                f"POST {self.key_log} SEND POST MEDIA - GET MEDIA PATH: {str(e)}",
+            )
+
     def get_media_content(self, media_url, get_content=True, is_photo=False):
         session = requests.Session()
         # retries = Retry(

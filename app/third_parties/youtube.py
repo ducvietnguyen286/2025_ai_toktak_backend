@@ -220,9 +220,9 @@ class YoutubeService(BaseService):
             tags = post.hashtag
             tags = tags.split(" ") if tags else []
 
-            video_url = post.video_url
+            video_path = post.video_path
 
-            video_content = self.get_media_content(video_url)
+            video_content = self.get_media_content_by_path(media_path=video_path)
             if not video_content:
                 return False
 

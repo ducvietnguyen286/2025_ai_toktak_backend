@@ -273,7 +273,9 @@ class TiktokService(BaseService):
                 f"------------POST {self.key_log} UPLOAD VIDEO TO TIKTOK----------------"
             )
 
-            video_content = self.get_media_content(media_url=media, get_content=False)
+            video_content = self.get_media_content_by_path(
+                media_path=media, get_content=False
+            )
             if not video_content:
                 return False
 
