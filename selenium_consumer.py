@@ -333,10 +333,6 @@ def process_task_on_tab(browser, task):
                         # Now switch to the challenger iframe
                         browser.switch_to.frame(challenger_iframe)
 
-                        file_html = open("demo.html", "w", encoding="utf-8")
-                        file_html.write(browser.page_source)
-                        file_html.close()
-
                         print("Switch To Challenger Frame")
                         audio_btn = WebDriverWait(browser, 10).until(
                             EC.presence_of_element_located(
@@ -346,6 +342,10 @@ def process_task_on_tab(browser, task):
                         audio_btn.click()
 
                         time.sleep(1)
+
+                        file_html = open("demo.html", "w", encoding="utf-8")
+                        file_html.write(browser.page_source)
+                        file_html.close()
 
                         audio_source = browser.find_element(By.ID, "audio-source")
                         audio_url = audio_source.get_attribute("src")
