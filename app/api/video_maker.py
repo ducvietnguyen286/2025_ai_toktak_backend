@@ -7,7 +7,7 @@ from app.services.shotstack_services import ShotStackService
 from app.services.post import PostService
 from app.services.batch import BatchService
 import random
-from app.lib.logger import logger ,log_webhook_message
+from app.lib.logger import logger , log_webhook_message
 from app.services.notification import NotificationServices
 
 from datetime import date
@@ -19,6 +19,7 @@ ns = Namespace(name="video_maker", description="Video Maker API")
 
 @ns.route("/video_status/<string:render_id>")
 class VideoStatus(Resource):
+
     def get(self, render_id):
         # Giả lập trả về JSON cho render_id
 
@@ -28,6 +29,7 @@ class VideoStatus(Resource):
 
 @ns.route("/create_video")
 class CreateVideo(Resource):
+
     def post(self):
         # Lấy dữ liệu từ request
         data = request.get_json()
@@ -94,6 +96,7 @@ class CreateVideo(Resource):
 
 @ns.route("/video_list")
 class VideoList(Resource):
+
     def get(self):
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
@@ -115,6 +118,7 @@ class VideoList(Resource):
 
 @ns.route("/shotstack_webhook")
 class ShortstackWebhook(Resource):
+
     def post(self):
         try:
             # Lấy payload JSON từ request
@@ -140,7 +144,7 @@ class ShortstackWebhook(Resource):
                 post_detail = PostService.find_post(post_id)
                 if post_detail:
                     batch_id = post_detail.batch_id or "0"
-                    PostService.update_post_by_batch_id(batch_id, video_url=video_url)
+                    # PostService.update_post_by_batch_id(batch_id, video_url=video_url)
 
                     if status == "failed":
                         BatchService.update_batch(batch_id, status="2")
@@ -182,7 +186,7 @@ class ShortstackWebhook(Resource):
                     file_download = file_download_attr["file_download"]
                     PostService.update_post_by_batch_id(
                         batch_id,
-                        # video_url=file_download,
+                        video_url=video_url,
                         video_path=file_path,
                     )
 
@@ -201,9 +205,6 @@ class ShortstackWebhook(Resource):
             # Ghi log lỗi kèm stack trace
             logger.exception("Error processing webhook: %s", e)
             return {"message": "Internal Server Error"}, 500
-
-
- 
 
 
 def download_video(video_url, post_id):
