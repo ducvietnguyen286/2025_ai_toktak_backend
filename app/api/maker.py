@@ -78,8 +78,6 @@ class APICreateBatch(Resource):
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
             is_advance = args.get("is_advance", False)
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
-            max_count_image = os.environ.get("MAX_COUNT_IMAGE") or "8"
-            max_count_image = int(max_count_image)
 
             data = Scraper().scraper({"url": url})
             # return data
@@ -128,15 +126,9 @@ class APICreateBatch(Resource):
             #         message="상품 정보를 성공적으로 가져왔습니다.",
             #     ).to_dict()
 
-            images = data.get("images", [])
-
             thumbnail_url = data.get("image", "")
             thumbnails = data.get("thumbnails", [])
 
-            if images and len(images) > max_count_image:
-                images = images[:max_count_image]
-
-            data["images"] = images
             if "text" not in data:
                 data["text"] = ""
             if "iframes" not in data:
@@ -492,9 +484,7 @@ class APIMakePost(Resource):
                 logger.info(
                     "-------------------- PROCESSING CREATE IMAGES -------------------"
                 )
-                logger.info("template_info: {0}".format(template_info))
                 image_template_id = template_info.get("image_template_id", "")
-                logger.info("image_template_id: {0}".format(image_template_id))
 
                 if is_advance and image_template_id == "":
                     return Response(
@@ -502,6 +492,7 @@ class APIMakePost(Resource):
                         status=200,
                         code=201,
                     ).to_dict()
+
                 response = call_chatgpt_create_social(process_images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
