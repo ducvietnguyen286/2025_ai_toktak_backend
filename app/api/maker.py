@@ -397,6 +397,7 @@ class APIMakePost(Resource):
                 ).to_dict()
 
             is_advance = batch.is_advance
+            is_paid_advertisements = batch.is_paid_advertisements
             template_info = json.loads(batch.template_info)
 
             data = json.loads(batch.content)
@@ -623,6 +624,10 @@ class APIMakePost(Resource):
 
             if type == "blog":
                 content = update_ads_content(url, content)
+            
+            if is_paid_advertisements == 1:
+                hashtag = f"#광고, {hashtag}"
+
 
             if should_replace_shortlink(url):
                 shorten_link = batch.shorten_link
