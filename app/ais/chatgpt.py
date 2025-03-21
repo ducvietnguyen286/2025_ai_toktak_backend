@@ -176,6 +176,7 @@ macOS Sequoia 15.1을 통해 AI 기반 도구와 향상된 시리, 아이폰 미
 ## hashtag:
 #패션스타그램 #운동복추천 #ootd #일상룩 #스포티룩 #여자옷 #스타일링 #쇼핑
 #인생템 #살림꿀템 #내돈내산 #집꾸미기 #편리미엄 #필수템 #살림템 #자동청소
+해시태그의 시작은 반드시 # 기호여야 합니다.
 
 [Notes]
 - 예시 출력을 참고할 것.
@@ -457,6 +458,7 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
 ## Hashtags:
 #패션스타그램 #운동복추천 #ootd #일상룩 #스포티룩 #여자옷 #스타일링 #쇼핑
 #인생템 #살림꿀템 #내돈내산 #집꾸미기 #편리미엄 #필수템 #살림템 #자동청소
+해시태그의 시작은 반드시 # 기호여야 합니다.
 
 [Notes]
 전체 게시글과 이미지 캡션은 별개로 작성되어야 합니다.
@@ -483,6 +485,8 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
     data["image_count"] = len(images)
 
     prompt = replace_prompt_with_data(prompt, data)
+
+    print(prompt)
 
     content = [{"type": "text", "text": prompt}]
     for image in images:
