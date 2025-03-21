@@ -518,9 +518,6 @@ class APIMakePost(Resource):
                             code=201,
                         ).to_dict()
                     
-                    logger.info(image_template)
-                    logger.info(f"image_template------------: {image_template.type}" )
-                    logger.info(f"image_template------------: {image_template.id}" )
                     img_res = ImageTemplateService.create_image_by_template(
                         template=image_template,
                         captions=captions,
@@ -532,7 +529,6 @@ class APIMakePost(Resource):
                     mime_type = img_res.get("mime_type", "")
                     maker_images = image_urls
                     
-                    logger.info(f"img_res------------: {img_res}" )
 
                     # if is_advance:
 
