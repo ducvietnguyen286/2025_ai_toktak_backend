@@ -1,4 +1,5 @@
 import json
+import time
 from openai import OpenAI
 from app.services.request_log import RequestLogService
 import os
@@ -46,7 +47,6 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
   - 커뮤니티 특유의 자연스러운 표현 사용
 
 - **title**: 
-  - {name} 무조건 포함 
   - title은 유튜브 제목으로 들어갈 내용
   - 유튜브에서 클릭을 유도할 수 있는 흥미로운 표현 포함
 
@@ -509,61 +509,29 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
 
 
 def call_chatgpt_clear_product_name(name):
-    prompt = """제공된 목록에서 불필요한 세부 정보를 제거하고 형식을 표준화하여 제품 이름을 정리 및 개선하세요.
+    client = OpenAI(api_key=chatgpt_api_key)
+    assistant_id = "asst_EK0uKR3AbhB2Js9cESzqRIxa"
+    empty_thread = client.beta.threads.create()
+    client.beta.threads.messages.create(
+        empty_thread.id,
+        role="user",
+        content=[{"type": "text", "text": name}],
+    )
+    run = client.beta.threads.runs.create(
+        thread_id=empty_thread.id, assistant_id=assistant_id
+    )
+    while True:
+        run = client.beta.threads.runs.retrieve(
+            run_id=run.id, thread_id=empty_thread.id
+        )
+        if run.status == "completed":
+            break
 
-주요 단계
-제공된 제품 이름을 식별하고 분석하며, 각 제품을 정의하는 필수 요소에 집중합니다.
-제품 이름의 고유성을 직접적으로 나타내지 않는 수량, 크기, 상세 사양 등 불필요한 세부 정보를 제거합니다.
-브랜드 이름과 주요 특징 등 제품을 다른 제품과 구분할 수 있는 중요한 정보를 유지합니다.
-명확성과 단순성을 위해 각 제품 이름을 간결하게 재구성합니다.
-출력 형식
-각 이름을 개별 항목으로 나열한 깔끔하고 정제된 제품 이름 목록을 제공합니다.
-출력 데이터는 반드시 한국어로 작성되어야 합니다.
-예시
-입력: 펩티드 AtoZ 탄력 주름개선 에센스50ml 6개
-출력: 펩티드 AtoZ 탄력 주름개선 에센스
-
-입력: 에스로체 전면 오픈 기내용 캐리어 20인치 24인치 28인치 캐리어
-출력: 에스로체 전면 오픈 기내용 캐리어
-
-입력: 바세린 바디 프로텍팅 젤리 알로에, 100ml, 1개
-출력: 바세린 바디 프로텍팅 젤리 알로에
-
-입력: TORSO 토르소 T76 발리오스 멀티 다이아몬드 워치 남자 메탈 시계 (가죽 스트랩 증정)
-출력: 토르소 발리오스 멀티 다이아몬드 워치
-
-입력: 갸스비 셋&킵 헤어스프레이 슈퍼하드 263ml 2개, 263ml, 2개
-출력: 갸스비 셋&킵 헤어스프레이 슈퍼하드
-
-참고사항
-출력 결과가 유사한 제품과 구분될 수 있도록 필수 속성과 브랜드 이름을 포함하여야 합니다.
-차별화를 위해 필요한 정보가 있는 특별한 경우에는 해당 정보를 포함합니다."""
-
-    content = [{"type": "text", "text": name}]
-
-    response_schema = {
-        "name": "response_schema",
-        "schema": {
-            "type": "object",
-            "properties": {
-                "response": {
-                    "type": "object",
-                    "properties": {
-                        "product_name": {
-                            "type": "string",
-                            "description": "New Product name",
-                        },
-                    },
-                    "required": ["product_name"],
-                    "additionalProperties": False,
-                }
-            },
-            "required": ["response"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    }
-    return call_chatgpt(content, response_schema, 0, prompt, 1.0)
+    thread_messages = client.beta.threads.messages.list(empty_thread.id)
+    for message in thread_messages:
+        if message.role == "assistant":
+            return message.content[0].text.value
+    return name
 
 
 def call_chatgpt_get_main_text_and_color_for_image(

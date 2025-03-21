@@ -152,7 +152,7 @@ class APINewLink(Resource):
                     message=f"{link.type}이름 연결에 실패했습니다. 계정 정보를 확인해주세요.",
                     code=201,
                 ).to_dict()
-                
+
             NotificationServices.create_notification(
                 user_id=current_user.id,
                 title=f"{link.type}이름 연결이 완료되었습니다.",
@@ -600,6 +600,7 @@ class APITiktokLogin(Resource):
                 "redirect_uri": TIKTOK_REDIRECT_URL,
                 "state": state_token,
                 "response_type": "code",
+                "disable_auto_auth": 1,
             }
             url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
 
