@@ -517,6 +517,7 @@ class APIMakePost(Resource):
                             status=200,
                             code=201,
                         ).to_dict()
+                    
                     img_res = ImageTemplateService.create_image_by_template(
                         template=image_template,
                         captions=captions,
@@ -527,6 +528,7 @@ class APIMakePost(Resource):
                     file_size += img_res.get("file_size", 0)
                     mime_type = img_res.get("mime_type", "")
                     maker_images = image_urls
+                    
 
                     # if is_advance:
 
@@ -1074,14 +1076,11 @@ def get_template_info(is_advance):
 
     redis_key = "template_image_default"
 
-    # Lấy từ Redis (tránh truy vấn Redis 2 lần)
     template_image_default = redis_client.get(redis_key)
-    logger.info(f"template_image_default: {template_image_default}")
     if template_image_default:
         return json.dumps({"image_template_id": template_image_default.decode()})
 
     try:
-        # Lấy danh sách template từ DB nếu Redis không có
         image_templates = ImageTemplateService.get_image_templates()
         if not image_templates:
             return json.dumps({})
