@@ -681,6 +681,19 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
         os.makedirs(disk_path, exist_ok=True)
         output_file = os.path.join(disk_path, "output.mp3")
 
+        # Danh sách value của giọng Chirp3-HD (cần bỏ speakingRate)
+        chirp3_hd_voices = {
+            "ko-KR-Chirp3-HD-Charon",
+            "ko-KR-Chirp3-HD-Fenrir",
+            "ko-KR-Chirp3-HD-Orus",
+            "ko-KR-Chirp3-HD-Puck",
+            "ko-KR-Chirp3-HD-Aoede",
+            "ko-KR-Chirp3-HD-Kore",
+            "ko-KR-Chirp3-HD-Leda",
+            "ko-KR-Chirp3-HD-Zephyr",
+            "ko-KR-Chirp3-HD-Orus",
+        }
+        
         # Payload gửi lên Google API
         payload = {
             "input": {"text": text},
@@ -689,8 +702,13 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
                 "name": korean_voice["name"],
                 "ssmlGender": korean_voice["ssmlGender"],
             },
-            "audioConfig": {"audioEncoding": "MP3", "speakingRate": GOOGLE_API_SPEED},
+            "audioConfig": {"audioEncoding": "MP3"},
         }
+
+        # Nếu giọng không thuộc Chirp3-HD, thêm speakingRate
+        if korean_voice["name"] not in chirp3_hd_voices:
+            payload["audioConfig"]["speakingRate"] = GOOGLE_API_SPEED
+
 
         headers = {"Content-Type": "application/json"}
         response = requests.post(
@@ -698,6 +716,7 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
         )
 
         if response.status_code != 200:
+            log_make_video_message(f"Lỗi từ Google API payload: {payload}")
             log_make_video_message(f"Lỗi từ Google API: {response.text}")
             return "", 0.0
 

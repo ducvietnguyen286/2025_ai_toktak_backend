@@ -187,16 +187,16 @@ class ShortstackWebhook(Resource):
 
             # Trả về phản hồi JSON
             elif action == "render":
-                file_download_attr = download_video(video_url, post_id)
-
-                if file_download_attr:
-                    file_path = file_download_attr["file_path"]
-                    file_download = file_download_attr["file_download"]
-                    PostService.update_post_by_batch_id(
-                        batch_id,
-                        video_url=video_url,
-                        video_path=file_path,
-                    )
+                if video_url != "":
+                    file_download_attr = download_video(video_url, post_id)
+                    if file_download_attr:
+                        file_path = file_download_attr["file_path"]
+                        file_download = file_download_attr["file_download"]
+                        PostService.update_post_by_batch_id(
+                            batch_id,
+                            video_url=video_url,
+                            video_path=file_path,
+                        )
 
             return {
                 "message": "Webhook received successfully",
