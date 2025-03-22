@@ -192,6 +192,7 @@ class APICreateBatch(Resource):
 
 @ns.route("/update_template_video_user")
 class APIUpdateTemplateVideoUser(Resource):
+
     @jwt_required()
     @parameters(
         type="object",
@@ -444,21 +445,25 @@ class APIMakePost(Resource):
                     # Tạo video từ ảnh
                     if len(maker_images) > 0:
                         image_renders = maker_images[:1]  # Lấy tối đa 3 Ảnh đầu tiên
-                        image_renders_sliders = maker_images[
-                            :5
+                        image_renders_sliders = maker_images[:5
                         ]  # Lấy tối đa 5 Ảnh đầu tiên
                         caption_sliders = captions[:5]  # Lấy tối đa 5 Ảnh đầu tiên
 
                         product_name = data["name"]
 
                         voice_google = batch.voice_google or 1
+                        data_make_video = {
+                            "post_id": post.id,
+                            "batch_id": batch.id,
+                            "is_advance": batch.is_advance,
+                            "template_info": batch.template_info,
+                            "voice_google": voice_google,
+                            "origin_caption": origin_caption,
+                            "images_url": image_renders,
+                            "images_slider_url": image_renders_sliders,
+                        }
                         result = ShotStackService.create_video_from_images_v2(
-                            post.id,
-                            voice_google,
-                            origin_caption,
-                            image_renders,
-                            image_renders_sliders,
-                            caption_sliders,
+                            data_make_video 
                         )
 
                         logger.info("result: {0}".format(result))
@@ -618,7 +623,6 @@ class APIMakePost(Resource):
             if is_paid_advertisements == 1:
                 hashtag = f"#광고 {hashtag}"
 
-
             if should_replace_shortlink(url):
                 shorten_link = batch.shorten_link
                 description = description.replace(url, shorten_link)
@@ -777,6 +781,7 @@ class APIGetStatusUploadBySyncId(Resource):
 
 @ns.route("/get-status-upload-with-batch-id/<int:id>")
 class APIGetStatusUploadWithBatch(Resource):
+
     def get(self, id):
         try:
             batch = BatchService.find_batch(id)
@@ -867,6 +872,7 @@ class APIGetStatusUploadWithBatch(Resource):
 
 @ns.route("/save_draft_batch/<int:id>")
 class APIUpdateStatusBatch(Resource):
+
     @jwt_required()
     def post(self, id):
         try:
@@ -947,6 +953,7 @@ class APIHistories(Resource):
 
 @ns.route("/delete_post")
 class APIDeletePostBatch(Resource):
+
     @jwt_required()
     @parameters(
         type="object",
@@ -995,6 +1002,7 @@ class APIDeletePostBatch(Resource):
 
 @ns.route("/template_video")
 class APITemplateVideo(Resource):
+
     @jwt_required()
     def get(self):
         current_user = AuthService.get_current_identity()

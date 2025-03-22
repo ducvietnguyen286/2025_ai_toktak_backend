@@ -58,15 +58,23 @@ class CreateVideo(Resource):
                 return {"message": "Each URL must be a string"}, 400
         batch_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
         voice_google = random.randint(1, 4)  # Chọn số nguyên từ 1 đến 4
+        
+        post_id = data["post_id"]
+        post = PostService.find_post(post_id)
+        batch = BatchService.find_batch(post.batch_id)
 
-        result = ShotStackService.create_video_from_images_v2(
-            batch_id,
-            voice_google,
-            product_name,
-            images_url,
-            images_slider_url,
-            captions,
-        )
+        data_make_video = {
+            "post_id": post.id,
+            "batch_id": batch.id,
+            "is_advance": batch.is_advance,
+            "template_info": batch.template_info,
+            "voice_google": voice_google,
+            "origin_caption": product_name,
+            "images_url": images_url,
+            "images_slider_url": images_slider_url,
+        }
+
+        result = ShotStackService.create_video_from_images_v2(data_make_video)
 
         render_id = ""
         status = True

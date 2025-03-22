@@ -14,6 +14,7 @@ from pydub import AudioSegment
 import subprocess
 from app.services.request_log import RequestLogService
 import base64
+from app.services.post import PostService
 
 import srt
 
@@ -26,8 +27,16 @@ class ShotStackService:
 
     @staticmethod
     def create_video_from_images_v2(
-        post_id, voice_google, origin_caption, images_url, images_slider_url, captions
+        data_make_video 
     ):
+        post_id = data_make_video["post_id"]
+        batch_id = data_make_video["batch_id"]
+        is_advance = data_make_video["is_advance"]
+        template_info = data_make_video["template_info"]
+        voice_google = data_make_video["voice_google"]
+        origin_caption = data_make_video["origin_caption"]
+        images_url = data_make_video["images_url"]
+        images_slider_url = data_make_video["images_slider_url"]
 
         config = ShotStackService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
@@ -62,7 +71,7 @@ class ShotStackService:
             # Lặp lại prompts để đủ số lượng ảnh
             prompts = (
                 prompts * (len(images_url) // len(prompts))
-                + prompts[: len(images_url) % len(prompts)]
+                +prompts[: len(images_url) % len(prompts)]
             )
 
         date_create = datetime.datetime.now().strftime("%Y_%m_%d")
@@ -167,7 +176,7 @@ class ShotStackService:
                                 "length": "end",
                                 "fit": "none",
                                 "position": "bottomRight",
-                                "offset": {"x": -0.05, "y": 0.22},
+                                "offset": {"x":-0.05, "y": 0.22},
                             }
                         ]
                     },
@@ -576,7 +585,7 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
         "start": start + add_time,
         "length": length,
         "position": "top",
-        "offset": {"x": 0, "y": -0.01},
+        "offset": {"x": 0, "y":-0.01},
     }
     return clip_detail
 
