@@ -133,10 +133,15 @@ class ShotStackService:
         }
 
         layout_advance = {}
+        layout_advance_image_last = {}
+        layout_advance_caption_top = {}
         if is_advance == 1:
             template_info = json.loads(template_info)
             product_name = template_info["product_name"]
             purchase_guide = template_info["purchase_guide"]
+            is_video_hooking = template_info["is_video_hooking"]
+            is_caption_top = template_info["is_caption_top"]
+            is_caption_last = template_info["is_caption_last"]
 
             if len(purchase_guide) > 5:
                 purchase_guide = purchase_guide[:5] + "\n" + purchase_guide[5:]
@@ -159,7 +164,7 @@ class ShotStackService:
                         "start": 0,
                         "length": "end",
                         "position": "topLeft",
-                        "offset": {"x": -0.25, "y": 0},
+                        "offset": {"x": -0.18, "y": 0},
                     },
                     {
                         "asset": {
@@ -183,6 +188,23 @@ class ShotStackService:
                     },
                 ]
             }
+
+            if is_caption_top == 1:
+                layout_advance_caption_top = {}
+
+            if is_caption_last == 1:
+                layout_advance_image_last = {
+                    "clips": [
+                        {
+                            "asset": {
+                                "type": "video",
+                                "src": "https://apitoktak.voda-play.com/voice/advance/subscribe_video.mp4",
+                            },
+                            "start": clips_data["current_start"],
+                            "length": 5,
+                        }
+                    ]
+                }
 
         tracks = [
             {
@@ -237,6 +259,9 @@ class ShotStackService:
         # Nếu layout_advance có dữ liệu thì thêm vào
         if layout_advance:
             tracks.insert(2, layout_advance)
+
+        if layout_advance_image_last:
+            tracks.append(layout_advance_image_last)
 
         payload = {
             "timeline": {
@@ -523,10 +548,16 @@ def create_combined_clips_v2(
         last_caption_videos_default, current_start, last_duration
     )
     clips.append(clip_detail)
+    
+    current_start = current_start + last_duration
 
     # Kết hợp hai danh sách clip lại
     combined_clips = clips
-    return {"intro_length": intro_length, "clips": {"clips": combined_clips}}
+    return {
+        "intro_length": intro_length,
+        "clips": {"clips": combined_clips},
+        "current_start": current_start,
+    }
 
 
 def get_random_audio(limit=1):
@@ -644,7 +675,7 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
         "start": start + add_time,
         "length": length,
         "position": "top",
-        "offset": {"x": 0, "y": -0.07},
+        "offset": {"x": 0, "y": -0.08},
     }
     return clip_detail
 
@@ -693,7 +724,7 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
             "ko-KR-Chirp3-HD-Zephyr",
             "ko-KR-Chirp3-HD-Orus",
         }
-        
+
         # Payload gửi lên Google API
         payload = {
             "input": {"text": text},
@@ -708,7 +739,6 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
         # Nếu giọng không thuộc Chirp3-HD, thêm speakingRate
         if korean_voice["name"] not in chirp3_hd_voices:
             payload["audioConfig"]["speakingRate"] = GOOGLE_API_SPEED
-
 
         headers = {"Content-Type": "application/json"}
         response = requests.post(
