@@ -26,9 +26,7 @@ import re  # Thêm thư viện để xử lý dấu câu
 class ShotStackService:
 
     @staticmethod
-    def create_video_from_images_v2(
-        data_make_video 
-    ):
+    def create_video_from_images_v2(data_make_video):
         post_id = data_make_video["post_id"]
         batch_id = data_make_video["batch_id"]
         is_advance = data_make_video["is_advance"]
@@ -71,7 +69,7 @@ class ShotStackService:
             # Lặp lại prompts để đủ số lượng ảnh
             prompts = (
                 prompts * (len(images_url) // len(prompts))
-                +prompts[: len(images_url) % len(prompts)]
+                + prompts[: len(images_url) % len(prompts)]
             )
 
         date_create = datetime.datetime.now().strftime("%Y_%m_%d")
@@ -134,6 +132,58 @@ class ShotStackService:
             "length": "end",
         }
 
+        layout_advance = []
+        if is_advance == 1:
+            template_info = json.loads(template_info)
+            product_name = template_info["product_name"]
+            purchase_guide = template_info["purchase_guide"]
+            
+            if len(purchase_guide) > 5:
+                purchase_guide = purchase_guide[:5] + '\n' + purchase_guide[5:]
+                
+            layout_advance = {
+                "clips": [
+                    {
+                        "asset": {
+                            "type": "text",
+                            "text": product_name,
+                            "font": {
+                                "family": "JalnanGothic",
+                                "size": 48,
+                                "color": "#FFFFFF",
+                            },
+                            "stroke": {"color": "#000000", "width": 1.5},
+                            "height": 110,
+                            "width": 600,
+                        },
+                        "start": 0,
+                        "length": 5,
+                        "position": "topLeft",
+                        "offset": {"x": -0.25, "y": 0},
+                    },
+                    {
+                        "asset": {
+                            "type": "text",
+                            "text": purchase_guide,
+                            "font": {
+                                "family": "JalnanGothic",
+                                "color": "#ffffff",
+                                "opacity": 0.8,
+                                "size": 46,
+                                "lineHeight": 0.85,
+                            },
+                            "stroke": {"color": "#000000", "width": 1.5},
+                            "height": 200,
+                            "width": 600,
+                        },
+                        "start": 0.01,
+                        "length": "end",
+                        "position": "topRight",
+                        "offset": {"x": 0.25, "y": 0.02},
+                    },
+                ]
+            }
+
         payload = {
             "timeline": {
                 "fonts": [
@@ -176,10 +226,11 @@ class ShotStackService:
                                 "length": "end",
                                 "fit": "none",
                                 "position": "bottomRight",
-                                "offset": {"x":-0.05, "y": 0.22},
+                                "offset": {"x": -0.05, "y": 0.22},
                             }
                         ]
                     },
+                    layout_advance,
                     {"clips": [clips_caption]},
                     {"clips": [clips_audio_sub]},
                     clips_data["clips"],
@@ -585,7 +636,7 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
         "start": start + add_time,
         "length": length,
         "position": "top",
-        "offset": {"x": 0, "y":-0.01},
+        "offset": {"x": 0, "y": -0.07},
     }
     return clip_detail
 
