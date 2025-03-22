@@ -21,6 +21,7 @@ import srt
 # import ffmpeg
 import textwrap
 import re  # Thêm thư viện để xử lý dấu câu
+from const import EFFECTS_CONST
 
 
 class ShotStackService:
@@ -69,7 +70,7 @@ class ShotStackService:
             # Lặp lại prompts để đủ số lượng ảnh
             prompts = (
                 prompts * (len(images_url) // len(prompts))
-                + prompts[: len(images_url) % len(prompts)]
+                +prompts[: len(images_url) % len(prompts)]
             )
 
         date_create = datetime.datetime.now().strftime("%Y_%m_%d")
@@ -92,12 +93,23 @@ class ShotStackService:
         new_image_sliders = distribute_images_over_audio(
             images_slider_url, audio_duration, first_duration
         )
-        clips_data = create_combined_clips_v2(
-            new_image_sliders,
-            video_urls,
-            config,
-            caption_videos_default,
-        )
+
+        if is_advance == 1:
+            clips_data = create_combined_clips_with_advance(
+                data_make_video ,
+                new_image_sliders,
+                video_urls,
+                config,
+                caption_videos_default,
+            )
+        else:
+            # Man  hinh thong thuong
+            clips_data = create_combined_clips_v2(
+                new_image_sliders,
+                video_urls,
+                config,
+                caption_videos_default,
+            )
 
         file_caption = generate_srt(
             origin_caption, mp3_file, f"{dir_path}/test.srt", first_duration
@@ -164,7 +176,7 @@ class ShotStackService:
                         "start": 0,
                         "length": "end",
                         "position": "topLeft",
-                        "offset": {"x": -0.18, "y": 0},
+                        "offset": {"x":-0.18, "y": 0},
                     },
                     {
                         "asset": {
@@ -233,7 +245,7 @@ class ShotStackService:
                         "length": "end",
                         "fit": "none",
                         "position": "bottomRight",
-                        "offset": {"x": -0.05, "y": 0.22},
+                        "offset": {"x":-0.05, "y": 0.22},
                     }
                 ]
             },
@@ -560,6 +572,140 @@ def create_combined_clips_v2(
     }
 
 
+def create_combined_clips_with_advance(
+    data_make_video,
+    images_slider_url,
+    video_urls,
+    config=None,
+    caption_videos_default=None,
+):
+    
+    is_advance = data_make_video["is_advance"]
+    template_info = data_make_video["template_info"]
+
+    template_info = json.loads(template_info)
+    product_name = template_info["product_name"]
+    purchase_guide = template_info["purchase_guide"]
+    is_video_hooking = template_info["is_video_hooking"]
+    is_caption_top = template_info["is_caption_top"] 
+    is_caption_last = template_info["is_caption_last"]
+     
+    first_viral_detail = video_urls[0] or []
+    last_viral_detail = video_urls[1] or []
+    # Chọn 2 URL khác nhau một cách ngẫu nhiên
+    first_viral_url = first_viral_detail["video_url"]
+    first_duration = float(first_viral_detail["duration"] or 0)
+
+    clips = []
+    current_start = 0
+    intro_length = 0
+
+    if is_advance == 1:
+        if is_video_hooking == 1:
+            intro_length = first_duration
+            clips.append(
+                {
+                    "asset": {"type": "video", "src": first_viral_url},
+                    "start": current_start,
+                    "length": intro_length,
+                }
+            )
+        if is_caption_top == 1:
+            first_caption_videos_default = ShotStackService.filter_content_by_type(caption_videos_default, 1)
+
+            clip_detail = create_header_text(first_caption_videos_default, current_start, 2)
+            clips.append(clip_detail)
+
+    current_start += intro_length
+
+    SHOTSTACK_IMAGE_EFFECTS = config["SHOTSTACK_IMAGE_EFFECTS"] or ""
+    if SHOTSTACK_IMAGE_EFFECTS == "random":
+        effects = EFFECTS_CONST
+    else:
+        effects = [
+            SHOTSTACK_IMAGE_EFFECTS,
+        ]
+
+    last_caption_videos_default = ShotStackService.filter_content_by_type(
+        caption_videos_default, 4
+    )
+
+    end_time = current_start
+    for j_index, image_slider_detail in enumerate(images_slider_url):
+        url = image_slider_detail["url"]
+        start_time = image_slider_detail["start_time"]
+        end_time = image_slider_detail["end_time"]
+        length = image_slider_detail["length"]
+        random_effect = random.choice(effects)
+        start_slider_time = start_time
+
+        clip_detail = {
+            "asset": {"type": "image", "src": url},
+            "start": start_slider_time,
+            "length": length,
+        }
+
+        if random_effect != "":
+            clip_detail["effect"] = random_effect
+        clips.append(clip_detail)
+
+        # khi chon 영상 위에 바이럴 문구가 표시됩니다. moi hien thi text tren dau
+        if is_caption_top == 1:
+            if j_index == 0:
+                first_caption_image_default = ShotStackService.filter_content_by_type(
+                    caption_videos_default, 2
+                )
+                clip_detail = create_header_text(
+                    first_caption_image_default, start_slider_time, 2
+                )
+                clips.append(clip_detail)
+            elif j_index == 2:
+                # When 3rd image start, display for 2 sec
+                first_caption_image_default = ShotStackService.filter_content_by_type(
+                    caption_videos_default, 3
+                )
+                clip_detail = create_header_text(
+                    first_caption_image_default, start_slider_time, 2
+                )
+                clips.append(clip_detail)
+
+            elif j_index == 4:
+                # When 5th image start, display for 2 sec & When start last hooking video, display for 2 sec in the middle of screen until end of video
+                clip_detail = create_header_text(
+                    last_caption_videos_default, start_slider_time, 2
+                )
+                clips.append(clip_detail)
+        # lấy thời gian cuối
+        current_start = end_time
+
+    if is_video_hooking == 1:
+        last_viral_url = last_viral_detail["video_url"]
+        last_duration = float(last_viral_detail["duration"] or 0)
+        clips.append(
+            {
+                "asset": {"type": "video", "src": last_viral_url},
+                "start": current_start,
+                "length": last_duration,
+            }
+        )
+    
+    if is_caption_top == 1:
+        clip_detail = create_header_text(
+            last_caption_videos_default, current_start, last_duration
+        )
+        clips.append(clip_detail)
+        
+        current_start = current_start + last_duration
+
+    # Kết hợp hai danh sách clip lại
+    combined_clips = clips
+    return {
+        "intro_length": intro_length,
+        "clips": {"clips": combined_clips},
+        "current_start": current_start,
+    }
+
+
 def get_random_audio(limit=1):
     try:
 
@@ -675,7 +821,7 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
         "start": start + add_time,
         "length": length,
         "position": "top",
-        "offset": {"x": 0, "y": -0.08},
+        "offset": {"x": 0, "y":-0.08},
     }
     return clip_detail
 
