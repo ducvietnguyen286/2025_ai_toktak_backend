@@ -90,11 +90,20 @@ class ShotStackService:
         first_viral_detail = video_urls[0] or []
         first_duration = float(first_viral_detail["duration"] or 0)
 
-        new_image_sliders = distribute_images_over_audio(
-            images_slider_url, audio_duration, first_duration
-        )
 
         if is_advance == 1:
+            
+            template_info = data_make_video["template_info"]
+
+            template_info_json = json.loads(template_info)
+            is_video_hooking = template_info_json["is_video_hooking"]
+            
+            if is_video_hooking == 0:
+                first_duration = 0
+                
+            new_image_sliders = distribute_images_over_audio(
+                images_slider_url, audio_duration, first_duration
+            )
             clips_data = create_combined_clips_with_advance(
                 data_make_video ,
                 new_image_sliders,
@@ -103,6 +112,9 @@ class ShotStackService:
                 caption_videos_default,
             )
         else:
+            new_image_sliders = distribute_images_over_audio(
+                images_slider_url, audio_duration, first_duration
+            )
             # Man  hinh thong thuong
             clips_data = create_combined_clips_v2(
                 new_image_sliders,
@@ -589,7 +601,7 @@ def create_combined_clips_with_advance(
     is_video_hooking = template_info["is_video_hooking"]
     is_caption_top = template_info["is_caption_top"] 
     is_caption_last = template_info["is_caption_last"]
-     
+    
     first_viral_detail = video_urls[0] or []
     last_viral_detail = video_urls[1] or []
     # Chọn 2 URL khác nhau một cách ngẫu nhiên
@@ -631,6 +643,7 @@ def create_combined_clips_with_advance(
     )
 
     end_time = current_start
+    start_time = 0
     for j_index, image_slider_detail in enumerate(images_slider_url):
         url = image_slider_detail["url"]
         start_time = image_slider_detail["start_time"]
