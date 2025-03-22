@@ -132,15 +132,15 @@ class ShotStackService:
             "length": "end",
         }
 
-        layout_advance = []
+        layout_advance = {}
         if is_advance == 1:
             template_info = json.loads(template_info)
             product_name = template_info["product_name"]
             purchase_guide = template_info["purchase_guide"]
-            
+
             if len(purchase_guide) > 5:
-                purchase_guide = purchase_guide[:5] + '\n' + purchase_guide[5:]
-                
+                purchase_guide = purchase_guide[:5] + "\n" + purchase_guide[5:]
+
             layout_advance = {
                 "clips": [
                     {
@@ -184,6 +184,60 @@ class ShotStackService:
                 ]
             }
 
+        tracks = [
+            {
+                "clips": [
+                    {
+                        "asset": {
+                            "type": "image",
+                            "src": "https://admin.lang.canvasee.com/img/watermarker6.png",
+                        },
+                        "start": 0,
+                        "length": 3,
+                        "fit": "none",
+                        "position": "left",
+                        "offset": {"x": 0.05, "y": 0},
+                    }
+                ]
+            },
+            {
+                "clips": [
+                    {
+                        "asset": {
+                            "type": "image",
+                            "src": "https://admin.lang.canvasee.com/img/watermarker6.png",
+                        },
+                        "start": 3,
+                        "length": "end",
+                        "fit": "none",
+                        "position": "bottomRight",
+                        "offset": {"x": -0.05, "y": 0.22},
+                    }
+                ]
+            },
+            {"clips": [clips_caption]},
+            {"clips": [clips_audio_sub]},
+            clips_data["clips"],
+            {
+                "clips": [
+                    {
+                        "asset": {
+                            "type": "audio",
+                            "src": audio_urls[0]["video_url"],
+                            "effect": "fadeOut",
+                            "volume": MUSIC_BACKGROUP_VOLUMN,
+                        },
+                        "start": 0,
+                        "length": "end",
+                    }
+                ]
+            },
+        ]
+
+        # Nếu layout_advance có dữ liệu thì thêm vào
+        if layout_advance:
+            tracks.insert(2, layout_advance)
+
         payload = {
             "timeline": {
                 "fonts": [
@@ -199,56 +253,7 @@ class ShotStackService:
                     },
                 ],
                 "background": "#FFFFFF",
-                "tracks": [
-                    {
-                        "clips": [
-                            {
-                                "asset": {
-                                    "type": "image",
-                                    "src": "https://admin.lang.canvasee.com/img/watermarker6.png",
-                                },
-                                "start": 0,
-                                "length": 3,
-                                "fit": "none",
-                                "position": "left",
-                                "offset": {"x": 0.05, "y": 0},
-                            }
-                        ]
-                    },
-                    {
-                        "clips": [
-                            {
-                                "asset": {
-                                    "type": "image",
-                                    "src": "https://admin.lang.canvasee.com/img/watermarker6.png",
-                                },
-                                "start": 3,
-                                "length": "end",
-                                "fit": "none",
-                                "position": "bottomRight",
-                                "offset": {"x": -0.05, "y": 0.22},
-                            }
-                        ]
-                    },
-                    layout_advance,
-                    {"clips": [clips_caption]},
-                    {"clips": [clips_audio_sub]},
-                    clips_data["clips"],
-                    {
-                        "clips": [
-                            {
-                                "asset": {
-                                    "type": "audio",
-                                    "src": audio_urls[0]["video_url"],
-                                    "effect": "fadeOut",
-                                    "volume": MUSIC_BACKGROUP_VOLUMN,
-                                },
-                                "start": 0,
-                                "length": "end",
-                            }
-                        ]
-                    },
-                ],
+                "tracks": tracks,
             },
             "output": {
                 "format": "mp4",
@@ -260,6 +265,9 @@ class ShotStackService:
             },
             "callback": f"{current_domain}/api/v1/video_maker/shotstack_webhook",
         }
+
+        if layout_advance:
+            tracks.insert(2, layout_advance)
 
         if IS_GOOGLE_DRIVER == 1:
             payload["output"]["destinations"] = [
