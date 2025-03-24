@@ -2,9 +2,11 @@ import os
 import atexit
 import time
 import logging
-from logging import DEBUG
 
 from dotenv import load_dotenv
+
+load_dotenv(override=False)
+
 from flask import Flask
 from werkzeug.exceptions import default_exceptions
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -14,10 +16,8 @@ from app.schedules.exchange_facebook_token import exchange_facebook_token
 from app.schedules.exchange_instagram_token import exchange_instagram_token
 from app.schedules.exchange_thread_token import exchange_thread_token
 from app.errors.handler import api_error_handler
-from app.extensions import redis_client, db
+from app.extensions import redis_client, db, db_mongo
 from app.config import configs as config  # noqa
-
-load_dotenv(override=False)
 
 
 def schedule_task():
@@ -34,6 +34,7 @@ def create_app():
 
     db.init_app(app)
     redis_client.init_app(app)
+    db_mongo.init_app(app)
 
     configure_logging(app)
     configure_error_handlers(app)
@@ -42,11 +43,8 @@ def create_app():
 
 
 def configure_logging(app):
-    handler = logging.StreamHandler()
-    handler.setLevel(DEBUG)
-    app.logger.addHandler(handler)
-    app.logger.setLevel(DEBUG)
-    app.logger.info("Starting scheduler...")
+    app.logger.setLevel(logging.DEBUG)
+    app.logger.info("Start INSTAGRAM Consumer...")
 
 
 def configure_error_handlers(app):
