@@ -70,7 +70,7 @@ class ShotStackService:
             # Lặp lại prompts để đủ số lượng ảnh
             prompts = (
                 prompts * (len(images_url) // len(prompts))
-                +prompts[: len(images_url) % len(prompts)]
+                + prompts[: len(images_url) % len(prompts)]
             )
 
         date_create = datetime.datetime.now().strftime("%Y_%m_%d")
@@ -90,22 +90,21 @@ class ShotStackService:
         first_viral_detail = video_urls[0] or []
         first_duration = float(first_viral_detail["duration"] or 0)
 
-
         if is_advance == 1:
-            
+
             template_info = data_make_video["template_info"]
 
             template_info_json = json.loads(template_info)
             is_video_hooking = template_info_json["is_video_hooking"]
-            
+
             if is_video_hooking == 0:
                 first_duration = 0
-                
+
             new_image_sliders = distribute_images_over_audio(
                 images_slider_url, audio_duration, first_duration
             )
             clips_data = create_combined_clips_with_advance(
-                data_make_video ,
+                data_make_video,
                 new_image_sliders,
                 video_urls,
                 config,
@@ -188,7 +187,7 @@ class ShotStackService:
                         "start": 0,
                         "length": "end",
                         "position": "topLeft",
-                        "offset": {"x":-0.18, "y": 0},
+                        "offset": {"x": -0.18, "y": 0},
                     },
                     {
                         "asset": {
@@ -257,7 +256,7 @@ class ShotStackService:
                         "length": "end",
                         "fit": "none",
                         "position": "bottomRight",
-                        "offset": {"x":-0.05, "y": 0.22},
+                        "offset": {"x": -0.05, "y": 0.22},
                     }
                 ]
             },
@@ -572,7 +571,7 @@ def create_combined_clips_v2(
         last_caption_videos_default, current_start, last_duration
     )
     clips.append(clip_detail)
-    
+
     current_start = current_start + last_duration
 
     # Kết hợp hai danh sách clip lại
@@ -591,7 +590,7 @@ def create_combined_clips_with_advance(
     config=None,
     caption_videos_default=None,
 ):
-    
+
     is_advance = data_make_video["is_advance"]
     template_info = data_make_video["template_info"]
 
@@ -599,9 +598,9 @@ def create_combined_clips_with_advance(
     product_name = template_info["product_name"]
     purchase_guide = template_info["purchase_guide"]
     is_video_hooking = template_info["is_video_hooking"]
-    is_caption_top = template_info["is_caption_top"] 
+    is_caption_top = template_info["is_caption_top"]
     is_caption_last = template_info["is_caption_last"]
-    
+
     first_viral_detail = video_urls[0] or []
     last_viral_detail = video_urls[1] or []
     # Chọn 2 URL khác nhau một cách ngẫu nhiên
@@ -623,9 +622,13 @@ def create_combined_clips_with_advance(
                 }
             )
         if is_caption_top == 1:
-            first_caption_videos_default = ShotStackService.filter_content_by_type(caption_videos_default, 1)
+            first_caption_videos_default = ShotStackService.filter_content_by_type(
+                caption_videos_default, 1
+            )
 
-            clip_detail = create_header_text(first_caption_videos_default, current_start, 2)
+            clip_detail = create_header_text(
+                first_caption_videos_default, current_start, 2
+            )
             clips.append(clip_detail)
 
     current_start += intro_length
@@ -701,13 +704,13 @@ def create_combined_clips_with_advance(
                 "length": last_duration,
             }
         )
-    
+
     if is_caption_top == 1:
         clip_detail = create_header_text(
             last_caption_videos_default, current_start, last_duration
         )
         clips.append(clip_detail)
-        
+
         current_start = current_start + last_duration
 
     # Kết hợp hai danh sách clip lại
@@ -810,6 +813,8 @@ def parse_srt_to_html_assets(url_path_srt: str, start_time):
 
 
 def create_header_text(caption_text, start=0, length=0, add_time=0.01):
+    font_size = 40 if len(caption_text) > 20 else 45
+
     clip_detail = {
         "asset": {
             "type": "text",
@@ -818,7 +823,7 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
                 "family": "JalnanGothic",
                 "color": "#ffffff",
                 "opacity": 0.8,
-                "size": 46,
+                "size": font_size,
                 "lineHeight": 0.85,
             },
             # "background": {
@@ -834,7 +839,7 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
         "start": start + add_time,
         "length": length,
         "position": "top",
-        "offset": {"x": 0, "y":-0.08},
+        "offset": {"x": 0, "y": -0.08},
     }
     return clip_detail
 
