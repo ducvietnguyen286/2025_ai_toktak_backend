@@ -44,7 +44,7 @@ def create_app():
 
 def configure_logging(app):
     app.logger.setLevel(logging.DEBUG)
-    app.logger.info("Start INSTAGRAM Consumer...")
+    app.logger.info("Start Schedule Tasks...")
 
 
 def configure_error_handlers(app):
