@@ -256,7 +256,7 @@ def download_video(video_url, post_id):
         }
 
     except requests.exceptions.RequestException as e:
-        log_webhook_message(f"❌ Lỗi khi tải video: {e}")
+        log_webhook_message(f"❌ Lỗi khi tải video:  url {video_url}  post_id {post_id}  Error : {e}")
     except Exception as e:
         log_webhook_message(f"❌ Lỗi hệ thống: {e}")
 

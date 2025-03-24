@@ -383,6 +383,10 @@ class APIPostToLinks(Resource):
 
             batch_id = post.batch_id
 
+            batch_detail = BatchService.find_batch(batch_id)
+            if batch_detail:
+                BatchService.update_batch(batch_id, process_status="UPLOAD_SNS")
+
             links = LinkService.get_not_json_links()
             link_pluck_by_id = {link.id: link for link in links}
 
