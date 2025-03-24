@@ -18,12 +18,12 @@ CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
 
 class DocxMaker:
-    def make(self, title, description, images=[]):
+    def make(self, title, description, images=[], batch_id=0):
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
         file_name = f"{timestamp}_{unique_id}.docx"
 
-        docx_path = f"{UPLOAD_FOLDER}/{file_name}"
+        docx_path = f"{UPLOAD_FOLDER}/{batch_id}/{file_name}"
 
         doc = Document()
         url_pattern = re.compile(r"https?://\S+")
@@ -69,7 +69,7 @@ class DocxMaker:
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 
-        docx_url = f"{CURRENT_DOMAIN}/files/{date_create}/{file_name}"
+        docx_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
         return {
             "file_size": file_size,
             "mime_type": mime_type,

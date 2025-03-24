@@ -74,7 +74,7 @@ class ShotStackService:
             )
 
         date_create = datetime.datetime.now().strftime("%Y_%m_%d")
-        dir_path = f"static/voice/gtts_voice/{date_create}/{post_id}"
+        dir_path = f"static/voice/gtts_voice/{date_create}/{batch_id}"
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
         # Chọn giọng nói ngẫu nhiên
@@ -322,7 +322,7 @@ class ShotStackService:
                 {
                     "provider": "google-drive",
                     "options": {
-                        "filename": f"short_video_{date_create}_{post_id}",
+                        "filename": f"short_video_{date_create}_{batch_id}",
                         "folderId": "1bUcQ5eo-MhP7GxL23JhzUZ9LbJvqUp_p",
                     },
                 },

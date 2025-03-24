@@ -501,7 +501,6 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
 
     prompt = replace_prompt_with_data(prompt, data)
 
-    print(prompt)
 
     content = [{"type": "text", "text": prompt}]
     for image in images:
