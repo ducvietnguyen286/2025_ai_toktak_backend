@@ -388,7 +388,7 @@ class APIMakePost(Resource):
                     status=201,
                 ).to_dict()
 
-            is_advance = batch.is_advance
+            batch_id = batch.id
             is_paid_advertisements = batch.is_paid_advertisements
             template_info = json.loads(batch.template_info)
 
@@ -439,13 +439,14 @@ class APIMakePost(Resource):
                     captions = split_text_by_sentences(caption, len(process_images))
 
                     for image_url in process_images:
-                        maker_image = ImageMaker.save_image_for_short_video(image_url)
+                        maker_image = ImageMaker.save_image_for_short_video(image_url , batch_id)
                         maker_images.append(maker_image)
 
                     # Tạo video từ ảnh
                     if len(maker_images) > 0:
                         image_renders = maker_images[:1]  # Lấy tối đa 3 Ảnh đầu tiên
-                        image_renders_sliders = maker_images[:5
+                        image_renders_sliders = maker_images[
+                            :5
                         ]  # Lấy tối đa 5 Ảnh đầu tiên
                         caption_sliders = captions[:5]  # Lấy tối đa 5 Ảnh đầu tiên
 
@@ -463,7 +464,7 @@ class APIMakePost(Resource):
                             "images_slider_url": image_renders_sliders,
                         }
                         result = ShotStackService.create_video_from_images_v2(
-                            data_make_video 
+                            data_make_video
                         )
 
                         logger.info("result: {0}".format(result))
@@ -566,7 +567,7 @@ class APIMakePost(Resource):
                     parse_response = parse_caption.get("response", {})
                     docx_title = parse_response.get("title", "")
                     docx_content = parse_response.get("docx_content", "")
-                    res_docx = DocxMaker().make(docx_title, docx_content, blog_images)
+                    res_docx = DocxMaker().make(docx_title, docx_content, blog_images , batch_id = batch_id)
 
                     docx_url = res_docx.get("docx_url", "")
                     file_size = res_docx.get("file_size", 0)
@@ -619,7 +620,7 @@ class APIMakePost(Resource):
 
             if type == "blog":
                 content = update_ads_content(url, content)
-            
+
             if is_paid_advertisements == 1:
                 hashtag = f"#광고 {hashtag}"
 
@@ -1006,16 +1007,13 @@ class APITemplateVideo(Resource):
     @jwt_required()
     def get(self):
         batch_id = request.args.get("batch_id")
-        
+
         batch_info = BatchService.find_batch(batch_id)
         if not batch_info:
             return Response(
                 message="Batch không tồn tại",
                 code=201,
             ).to_dict()
-        
-        
-        
 
         current_user = AuthService.get_current_identity()
         user_template = PostService.get_template_video_by_user_id(current_user.id)
@@ -1078,10 +1076,11 @@ class APITemplateVideo(Resource):
             )
 
         user_template_data = user_template.to_dict()
-        
+
         content_batch = json.loads(batch_info.content)
-        
-        user_template_data['product_name']= content_batch.get("name")
+
+        user_template_data["product_name_full"] = content_batch.get("name", "")
+        user_template_data["product_name"] = content_batch.get("name", "")[:10]
 
         return Response(
             data=user_template_data,

@@ -88,13 +88,14 @@ class ImageMaker:
         image_url,
         text,
         font_size=50,
+        batch_id = 0,
         margin=(90, 50, 90, 160),
         text_color=(0, 0, 0),  # Trắng
         stroke_color=(255, 255, 255),  # Màu viền (đen)
         stroke_width=10,  # Độ dày viền
         target_size=(1080, 1350),
     ):
-        image_path = ImageMaker.save_image_url_get_path(image_url)
+        image_path = ImageMaker.save_image_url_get_path(image_url , batch_id)
         image_name = image_path.split("/")[-1]
 
         while not os.path.exists(image_path):
@@ -182,7 +183,7 @@ class ImageMaker:
             image_path = image_path.rsplit(".", 1)[0] + ".jpg"
         image.save(image_path)
 
-        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
 
         file_size = os.path.getsize(image_path)
         mime_type = "image/jpeg"
@@ -200,9 +201,10 @@ class ImageMaker:
         first_caption,
         main_text,
         main_color,
+        batch_id = 0,
         target_size=(1080, 1350),
     ):
-        image_path = ImageMaker.make_resize_image(first_image, target_size)
+        image_path = ImageMaker.make_resize_image(first_image, target_size , batch_id)
         image_name = image_path.split("/")[-1]
         try:
             background = cv2.imread(image_path)
@@ -214,7 +216,7 @@ class ImageMaker:
             return {
                 "file_size": file_size,
                 "mime_type": mime_type,
-                "image_url": f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}",
+                "image_url": f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}",
             }
         background_pil = Image.fromarray(background)
         image = ImageMaker.draw_text_to_image_bottom(
@@ -229,9 +231,10 @@ class ImageMaker:
             stroke_color=template.stroke_color,
             stroke_width=template.stroke_width,
             bottom_margin=300,
+            batch_id=batch_id,
         )
         image.save(image_path)
-        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
 
         file_size = os.path.getsize(image_path)
         mime_type = "image/jpeg"
@@ -249,6 +252,7 @@ class ImageMaker:
         first_caption,
         main_text,
         main_color,
+        batch_id = 0,
         target_size=(1080, 1350),
     ):
         image_path = ImageMaker.make_resize_image(first_image, target_size)
@@ -264,7 +268,7 @@ class ImageMaker:
             return {
                 "file_size": file_size,
                 "mime_type": mime_type,
-                "image_url": f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}",
+                "image_url": f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}",
             }
         background_pil = Image.fromarray(cv2.cvtColor(background, cv2.COLOR_BGR2RGB))
 
@@ -282,7 +286,7 @@ class ImageMaker:
         )
 
         image.save(image_path)
-        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
 
         file_size = os.path.getsize(image_path)
         mime_type = "image/jpeg"
@@ -294,8 +298,8 @@ class ImageMaker:
         }
 
     @staticmethod
-    def make_resize_image(image, target_size):
-        image_path = ImageMaker.save_image_url_get_path(image)
+    def make_resize_image(image, target_size , batch_id = 0):
+        image_path = ImageMaker.save_image_url_get_path(image , batch_id)
         image_name = image_path.split("/")[-1]
 
         while not os.path.exists(image_path):
@@ -310,7 +314,7 @@ class ImageMaker:
             return {
                 "file_size": file_size,
                 "mime_type": mime_type,
-                "image_url": f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}",
+                "image_url": f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}",
             }
 
         image = image.convert("RGB")
@@ -354,14 +358,17 @@ class ImageMaker:
         main_text,
         main_color,
         background_color,
+        batch_id = 0,
         target_size=(1080, 1350),
     ):
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
 
         image_name = f"{timestamp}_{unique_id}.jpg"
+        
+        os.makedirs(f"{UPLOAD_FOLDER}/{batch_id}", exist_ok=True)
 
-        image_path = f"{UPLOAD_FOLDER}/{image_name}"
+        image_path = f"{UPLOAD_FOLDER}/{batch_id}/{image_name}"
         image_width, image_height = target_size
 
         image = Image.new("RGB", (image_width, image_height), background_color)
@@ -380,7 +387,7 @@ class ImageMaker:
         )
 
         image.save(image_path)
-        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
 
         file_size = os.path.getsize(image_path)
         mime_type = "image/jpeg"
@@ -404,6 +411,7 @@ class ImageMaker:
         stroke_color,
         stroke_width,
         bottom_margin,
+        batch_id = 0,
     ):
         print(f"Draw text to image: {margin}")
         if type(margin) == str:
@@ -574,8 +582,9 @@ class ImageMaker:
         return image_url
 
     @staticmethod
-    def save_image_url_get_path(image_url):
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    def save_image_url_get_path(image_url , batch_id = 0):
+        new_folder = f"{UPLOAD_FOLDER}/{batch_id}"
+        os.makedirs(new_folder, exist_ok=True)
         print(f"Downloading image from {image_url}")
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
@@ -596,7 +605,7 @@ class ImageMaker:
 
         image_name = f"{timestamp}_{unique_id}.{image_ext}"
 
-        image_path = f"{UPLOAD_FOLDER}/{image_name}"
+        image_path = f"{new_folder}/{image_name}"
         with open(image_path, "wb") as image_file:
             try:
                 user_agent = generate_desktop_user_agent()
@@ -617,9 +626,10 @@ class ImageMaker:
     @staticmethod
     def save_image_for_short_video(
         image_url,
+        batch_id = 0,
         target_size=(1080, 1920),
     ):
-        image_path = ImageMaker.save_image_url_get_path(image_url)
+        image_path = ImageMaker.save_image_url_get_path(image_url , batch_id)
         image_name = image_path.split("/")[-1]
 
         video_width, video_height = target_size
@@ -628,7 +638,7 @@ class ImageMaker:
         try:
             image = Image.open(image_path)
         except IOError:
-            return f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
+            return f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
         if not (
             image_name.lower().endswith(".jpg") or image_name.lower().endswith(".jpeg")
         ):
@@ -656,7 +666,7 @@ class ImageMaker:
 
         image.save(image_path)
 
-        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
 
         return image_url
 
