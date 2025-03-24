@@ -5,6 +5,7 @@ import time
 import traceback
 import requests
 
+from app.services.post import PostService
 from app.services.video_service import VideoService
 
 from app.lib.logger import log_twitter_message
@@ -327,6 +328,12 @@ class TwitterService(BaseService):
             return
 
         video_path = post.video_path
+        time_waited = 0
+        while not video_path and time_waited < 30:
+            time.sleep(2)
+            time_waited += 2
+            post = PostService.find_post(post.id)
+            video_path = post.video_path
 
         return self.send_post_video_to_x(video_path, post, link)
 
@@ -415,9 +422,14 @@ class TwitterService(BaseService):
 
     def upload_media(self, media, is_video=False):
         log_twitter_message(f"{self.key_log} Upload media {media}")
-        response = self.get_media_content_by_path(
-            media_path=media, get_content=False, is_photo=not is_video
-        )
+        if is_video:
+            response = self.get_media_content_by_path(
+                media_path=media, get_content=False
+            )
+        else:
+            response = self.get_media_content(
+                media_url=media, get_content=False, is_photo=not is_video
+            )
         if not response:
             return False
 

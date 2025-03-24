@@ -4,6 +4,7 @@ import os
 
 import requests
 from app.lib.logger import log_youtube_message
+from app.services.post import PostService
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
 from app.services.user import UserService
@@ -222,6 +223,12 @@ class YoutubeService(BaseService):
             tags = tags.split(" ") if tags else []
 
             video_path = post.video_path
+            time_waited = 0
+            while not video_path and time_waited < 30:
+                time.sleep(2)
+                time_waited += 2
+                post = PostService.find_post(post.id)
+                video_path = post.video_path
 
             video_content = self.get_media_content_by_path(media_path=video_path)
             if not video_content:
