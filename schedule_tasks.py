@@ -22,6 +22,7 @@ from app.config import configs as config
 from app.models.batch import Batch
 from app.models.post import Post
 from app.models.notification import Notification
+from pytz import timezone  # Thêm vào đầu file nếu chưa có
 
 # Load biến môi trường
 load_dotenv(override=False)
@@ -154,8 +155,9 @@ def create_notification_task():
 def start_scheduler(app):
     """Khởi động Scheduler với các công việc theo lịch trình"""
     scheduler = BackgroundScheduler()
-
-    three_am_kst_trigger = CronTrigger(hour=3, minute=0)  # Chạy 3h sáng giờ Hàn Quốc
+    kst = timezone("Asia/Seoul")
+    
+    three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
 
     scheduler.add_job(
