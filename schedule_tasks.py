@@ -32,7 +32,8 @@ load_dotenv(dotenv_path=env_path, override=True)
 
 print("ENV SQLALCHEMY_HOST:", os.environ.get("SQLALCHEMY_HOST"))
 print("ENV SQLALCHEMY_PORT:", os.environ.get("SQLALCHEMY_PORT"))
-print("ENV SQLALCHEMY_DB:", os.environ.get("SQLALCHEMY_DB"))
+print("ENV SQLALCHEMY_DATABASE:", os.environ.get("SQLALCHEMY_DATABASE"))
+print("ENV SQLALCHEMY_PASSWORD:", os.environ.get("SQLALCHEMY_PASSWORD"))
 
 UPLOAD_BASE_PATH = "upload"
 VOICE_BASE_PATH = "static/voice"
