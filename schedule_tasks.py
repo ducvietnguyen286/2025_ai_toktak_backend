@@ -31,10 +31,8 @@ env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path, override=True)
  
 
-UPLOAD_BASE_PATH = "upload"
-VOICE_BASE_PATH = "static/voice"
-UPLOAD_BASE_PATH = "upload"
-VOICE_BASE_PATH = "static/voice"
+UPLOAD_BASE_PATH = "uploads"
+VOICE_BASE_PATH = "static/voice/gtts_voice" 
 LOG_DIR = "logs"
 
 
