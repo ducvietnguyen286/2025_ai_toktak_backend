@@ -22,11 +22,20 @@ from app.config import configs as config
 from app.models.batch import Batch
 from app.models.post import Post
 from app.models.notification import Notification
-from pytz import timezone  # Thêm vào đầu file nếu chưa có
+from pytz import timezone 
+
+from pathlib import Path
 
 # Load biến môi trường
-load_dotenv(override=False)
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path, override=True)
 
+print("ENV SQLALCHEMY_HOST:", os.environ.get("SQLALCHEMY_HOST"))
+print("ENV SQLALCHEMY_PORT:", os.environ.get("SQLALCHEMY_PORT"))
+print("ENV SQLALCHEMY_DB:", os.environ.get("SQLALCHEMY_DB"))
+
+UPLOAD_BASE_PATH = "upload"
+VOICE_BASE_PATH = "static/voice"
 UPLOAD_BASE_PATH = "upload"
 VOICE_BASE_PATH = "static/voice"
 LOG_DIR = "logs"
