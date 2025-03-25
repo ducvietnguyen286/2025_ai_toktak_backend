@@ -29,11 +29,7 @@ from pathlib import Path
 # Load biến môi trường
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path, override=True)
-
-print("ENV SQLALCHEMY_HOST:", os.environ.get("SQLALCHEMY_HOST"))
-print("ENV SQLALCHEMY_PORT:", os.environ.get("SQLALCHEMY_PORT"))
-print("ENV SQLALCHEMY_DATABASE:", os.environ.get("SQLALCHEMY_DATABASE"))
-print("ENV SQLALCHEMY_PASSWORD:", os.environ.get("SQLALCHEMY_PASSWORD"))
+ 
 
 UPLOAD_BASE_PATH = "upload"
 VOICE_BASE_PATH = "static/voice"
