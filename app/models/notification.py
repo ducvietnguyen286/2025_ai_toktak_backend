@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models.base import BaseModel
+from datetime import datetime
 
 
 class Notification(db.Model, BaseModel):
@@ -23,6 +24,10 @@ class Notification(db.Model, BaseModel):
     render_id = db.Column(db.String(500), nullable=False, default="")
 
     social_sns_description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )  #
 
     to_json_parse = "images"
     to_json_filter = "captions"
@@ -47,6 +52,6 @@ class Notification(db.Model, BaseModel):
             "status_sns": self.status_sns,
             "render_id": self.render_id,
             "social_sns_description": self.social_sns_description,
-            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
         }

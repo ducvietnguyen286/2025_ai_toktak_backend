@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models.base import BaseModel
+from datetime import datetime
 
 
 class Batch(db.Model, BaseModel):
@@ -23,6 +24,8 @@ class Batch(db.Model, BaseModel):
     process_status = db.Column(db.String(50), default="PENDING")
     template_info = db.Column(db.Text, nullable=True)
     to_json_filter = ("content", "thumbnails")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def to_dict(self):
         return {

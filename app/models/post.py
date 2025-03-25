@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models.base import BaseModel
+from datetime import datetime
 
 
 class Post(db.Model, BaseModel):
@@ -28,6 +29,11 @@ class Post(db.Model, BaseModel):
     video_path = db.Column(db.String(255), nullable=False, default="")
 
     social_sns_description = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )  #
 
     to_json_parse = "images"
     to_json_filter = "captions"

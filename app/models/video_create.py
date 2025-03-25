@@ -3,7 +3,6 @@ from app.models.base import BaseModel
 from app.extensions import db
 
 
-
 class VideoCreate(db.Model, BaseModel):
     __tablename__ = "video_create"
 
@@ -11,8 +10,8 @@ class VideoCreate(db.Model, BaseModel):
     user_id = db.Column(db.Integer, nullable=False)  # ID người dùng
     post_id = db.Column(db.Integer, nullable=False)  # ID Port
     product_name = db.Column(db.String(500), nullable=False)  # Tên sản phẩm
-    video_url = db.Column(db.String(500), nullable=False)   
-    google_driver_url = db.Column(db.String(500), nullable=False)   
+    video_url = db.Column(db.String(500), nullable=False)
+    google_driver_url = db.Column(db.String(500), nullable=False)
     hash_tags = db.Column(db.String(500), nullable=False)  # Tên sản phẩm
     images_url = db.Column(db.Text, nullable=False)  # Danh sách URL ảnh
     render_id = db.Column(db.String(100), default="", nullable=False)  # render id
@@ -20,11 +19,11 @@ class VideoCreate(db.Model, BaseModel):
     description = db.Column(db.Text, nullable=True)  # Mô tả
     captions = db.Column(db.Text, nullable=True)  # Mô tả
     origin_caption = db.Column(db.Text, nullable=True)  # Mô tả
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )  # Ngày cập nhật
-    
+
     def to_dict(self):
         return {
             "id": self.id,

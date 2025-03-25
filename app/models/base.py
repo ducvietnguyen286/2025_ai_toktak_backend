@@ -36,7 +36,8 @@ class BaseModel:
     def _to_json(self):
         """Define a base way to jsonify models
         Columns inside `to_json_filter` are excluded"""
-        timezone = os.environ.get("TZ", "UTC")
+        # timezone = os.environ.get("TZ", "UTC")
+        timezone ="UTC"
         tz = pytz.timezone(timezone)
 
         response = {}
@@ -47,7 +48,9 @@ class BaseModel:
                 if value and isinstance(value, str):
                     response[column] = json.loads(value)
             elif isinstance(value, datetime):
-                response[column] = value.astimezone(tz).strftime("%Y-%m-%d %H:%M:%S")
+                if value.tzinfo is None:
+                    value = pytz.utc.localize(value)  # Fix lỗi lệch giờ
+                response[column] = value.astimezone(tz).strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
                 response[column] = value
 
