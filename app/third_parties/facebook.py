@@ -470,7 +470,7 @@ class FacebookService(BaseService):
             "video_id": video_id,
             "access_token": access_token,
             "video_state": "PUBLISHED",
-            "description": post.description + " " + post.hashtag,
+            "description": post.description + "\n\n" + post.hashtag,
         }
 
         final_url = (
@@ -530,7 +530,7 @@ class FacebookService(BaseService):
         log_facebook_message(f"POST {self.key_log}: Attached media: {attached_media}")
 
         post_data = {
-            "message": post.description + " " + post.hashtag,
+            "message": post.description + "\n\n" + post.hashtag,
             "attached_media": json.dumps(attached_media),
             "access_token": page_access_token,
         }

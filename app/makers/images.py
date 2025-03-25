@@ -1,11 +1,16 @@
+import io
 import os
 import time
 import datetime
+import traceback
 from urllib.parse import urlparse
 import uuid
 from PIL import Image, ImageDraw, ImageFont
 import requests
 import cv2
+from ultralytics import YOLO, FastSAM
+from google.cloud import vision
+import pytesseract
 
 from app.lib.header import generate_desktop_user_agent
 
@@ -76,6 +81,197 @@ def wrap_text(draw, text, font, max_width):
 class ImageMaker:
 
     @staticmethod
+    def cut_out_long_heihgt_images_by_sam(image_url, batch_id=0):
+        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id=batch_id)
+        output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
+        print(f"Cut out long height images: {image_path}")
+        if not image_path:
+            return [image_url]
+
+        while not os.path.exists(image_path):
+            time.sleep(0.5)
+
+        try:
+            image = Image.open(image_path)
+            image = image.convert("RGB")
+            image.save(image_path)
+        except IOError:
+            print(f"Cannot identify image file {image_path}")
+            image_name = image_path.split("/")[-1]
+            image_url = f"{CURRENT_DOMAIN}/{date_create}/{batch_id}/{image_name}"
+            return [image_url]
+
+        image_width, image_height = image.size
+
+        print(f"Image size: {image_width}x{image_height}")
+
+        if image_height > (image_width * 4):
+
+            model_path = os.path.join(os.getcwd(), "app/ais/models")
+            fast_sam_path = os.path.join(model_path, "FastSAM-x.pt")
+
+            try:
+                model = FastSAM(fast_sam_path)
+                results = model.predict(source=image_path, conf=0.5)
+                image_cv = cv2.imread(image_path)
+                if image_cv is None:
+                    return [image_path]
+
+                cropped_images = []
+
+                excluded_labels = ["barcode", "qr code", "text", "logo"]
+
+                for result in results:
+                    for box in result.boxes:
+                        x1, y1, x2, y2 = map(
+                            int, box.xyxy[0]
+                        )  # Lấy tọa độ bounding box
+
+                        label = result.names[int(box.cls[0])]
+                        conf = box.conf[0].item()
+
+                        if label.lower() in excluded_labels:
+                            continue
+
+                        # Kiểm tra kích thước của bounding box
+                        w = x2 - x1
+                        h = y2 - y1
+                        if w < 100 or h < 100:
+                            continue
+
+                        cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
+                        ocr_result = pytesseract.image_to_string(cropped)
+                        text = ocr_result.strip()
+                        # Nếu độ dài văn bản vượt quá 10 ký tự, có thể cho rằng đây là vùng chứa chữ/table
+                        if len(text) > 20:
+                            continue
+
+                        timestamp = int(time.time())
+                        unique_id = uuid.uuid4().hex
+                        new_name = f"{timestamp}_{unique_id}.jpg"
+                        cropped_path = os.path.join(output_folder, new_name)
+
+                        cv2.imwrite(cropped_path, cropped)  # Lưu ảnh
+
+                        cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
+                        cropped_images.append((cropped_url, conf))
+
+                if cropped_images:
+                    cropped_data_sorted = sorted(
+                        cropped_images, key=lambda x: x[1], reverse=True
+                    )
+                    top5 = [url for url, c in cropped_data_sorted[:5]]
+                    os.remove(image_path)
+                    return top5
+
+            except Exception as e:
+                print(f"Error: {e}")
+                traceback.print_exc()
+                image_name = image_path.split("/")[-1]
+                image_url = (
+                    f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+                )
+                return [image_url]
+
+        else:
+            ocr_result = pytesseract.image_to_string(image)
+            text = ocr_result.strip()
+            if len(text) > 25:
+                os.remove(image_path)
+                return []
+
+        image_name = image_path.split("/")[-1]
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+        return [image_url]
+
+    @staticmethod
+    def cut_out_long_height_images_by_google(image_url, batch_id=0):
+        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id=batch_id)
+        output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
+        print(f"Cut out long height images: {image_path}")
+
+        while not os.path.exists(image_path):
+            time.sleep(0.5)
+
+        try:
+            image = Image.open(image_path)
+            image = image.convert("RGB")
+            image.save(image_path)
+        except IOError:
+            print(f"Cannot identify image file {image_path}")
+            image_name = image_path.split("/")[-1]
+            image_url = f"{CURRENT_DOMAIN}/{date_create}/{batch_id}/{image_name}"
+            return [image_url]
+
+        image_width, image_height = image.size
+
+        print(f"Image size: {image_width}x{image_height}")
+
+        if image_height > (image_width * 2):
+            try:
+                key_path = os.path.join(os.getcwd(), "google-cloud-vision.json")
+                client = vision.ImageAnnotatorClient.from_service_account_file(key_path)
+                with io.open(image_path, "rb") as image_file:
+                    content = image_file.read()
+
+                image = vision.Image(content=content)
+                response = client.object_localization(image=image)
+
+                excluded_labels = ["Barcode", "QR code", "Text", "Logo"]
+
+                print(
+                    f"Found {len(response.localized_object_annotations)} objects in image"
+                )
+
+                original_image = Image.open(image_path)
+                cropped_images = []
+                for idx, obj in enumerate(response.localized_object_annotations):
+                    name = obj.name
+
+                    print(f"Object {image_path}: {name}")
+
+                    if name in excluded_labels:
+                        continue
+
+                    vertices = [
+                        (
+                            int(vertex.x * original_image.width),
+                            int(vertex.y * original_image.height),
+                        )
+                        for vertex in obj.bounding_poly.normalized_vertices
+                    ]
+
+                    x1, y1 = vertices[0]
+                    x2, y2 = vertices[2]
+                    cropped_image = original_image.crop((x1, y1, x2, y2))
+                    cropped_resized = cropped_image.resize((640, 640), Image.LANCZOS)
+                    timestamp = int(time.time())
+                    unique_id = uuid.uuid4().hex
+                    new_name = f"{timestamp}_{unique_id}.jpg"
+                    output_path = os.path.join(output_folder, new_name)
+                    cropped_resized.save(output_path)
+
+                    cropped_url = (
+                        f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
+                    )
+                    cropped_images.append(cropped_url)
+                if cropped_images:
+                    os.remove(image_path)
+                    return cropped_images
+
+            except Exception as e:
+                print(f"Error: {e}")
+                image_name = image_path.split("/")[-1]
+                image_url = (
+                    f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+                )
+                return [image_url]
+
+        image_name = image_path.split("/")[-1]
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+        return [image_url]
+
+    @staticmethod
     def save_images(images):
         image_paths = []
         for index, image_url in enumerate(images):
@@ -88,14 +284,14 @@ class ImageMaker:
         image_url,
         text,
         font_size=50,
-        batch_id = 0,
+        batch_id=0,
         margin=(90, 50, 90, 160),
         text_color=(0, 0, 0),  # Trắng
         stroke_color=(255, 255, 255),  # Màu viền (đen)
         stroke_width=10,  # Độ dày viền
         target_size=(1080, 1350),
     ):
-        image_path = ImageMaker.save_image_url_get_path(image_url , batch_id)
+        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id)
         image_name = image_path.split("/")[-1]
 
         while not os.path.exists(image_path):
@@ -201,10 +397,10 @@ class ImageMaker:
         first_caption,
         main_text,
         main_color,
-        batch_id = 0,
+        batch_id=0,
         target_size=(1080, 1350),
     ):
-        image_path = ImageMaker.make_resize_image(first_image, target_size , batch_id)
+        image_path = ImageMaker.make_resize_image(first_image, target_size, batch_id)
         image_name = image_path.split("/")[-1]
         try:
             background = cv2.imread(image_path)
@@ -252,7 +448,7 @@ class ImageMaker:
         first_caption,
         main_text,
         main_color,
-        batch_id = 0,
+        batch_id=0,
         target_size=(1080, 1350),
     ):
         image_path = ImageMaker.make_resize_image(first_image, target_size)
@@ -298,8 +494,8 @@ class ImageMaker:
         }
 
     @staticmethod
-    def make_resize_image(image, target_size , batch_id = 0):
-        image_path = ImageMaker.save_image_url_get_path(image , batch_id)
+    def make_resize_image(image, target_size, batch_id=0):
+        image_path = ImageMaker.save_image_url_get_path(image, batch_id)
         image_name = image_path.split("/")[-1]
 
         while not os.path.exists(image_path):
@@ -358,14 +554,14 @@ class ImageMaker:
         main_text,
         main_color,
         background_color,
-        batch_id = 0,
+        batch_id=0,
         target_size=(1080, 1350),
     ):
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
 
         image_name = f"{timestamp}_{unique_id}.jpg"
-        
+
         os.makedirs(f"{UPLOAD_FOLDER}/{batch_id}", exist_ok=True)
 
         image_path = f"{UPLOAD_FOLDER}/{batch_id}/{image_name}"
@@ -411,7 +607,7 @@ class ImageMaker:
         stroke_color,
         stroke_width,
         bottom_margin,
-        batch_id = 0,
+        batch_id=0,
     ):
         print(f"Draw text to image: {margin}")
         if type(margin) == str:
@@ -582,7 +778,7 @@ class ImageMaker:
         return image_url
 
     @staticmethod
-    def save_image_url_get_path(image_url , batch_id = 0):
+    def save_image_url_get_path(image_url, batch_id=0):
         new_folder = f"{UPLOAD_FOLDER}/{batch_id}"
         os.makedirs(new_folder, exist_ok=True)
         print(f"Downloading image from {image_url}")
@@ -626,10 +822,10 @@ class ImageMaker:
     @staticmethod
     def save_image_for_short_video(
         image_url,
-        batch_id = 0,
+        batch_id=0,
         target_size=(1080, 1920),
     ):
-        image_path = ImageMaker.save_image_url_get_path(image_url , batch_id)
+        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id)
         image_name = image_path.split("/")[-1]
 
         video_width, video_height = target_size

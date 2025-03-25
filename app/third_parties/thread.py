@@ -284,7 +284,7 @@ class ThreadService(BaseService):
                     if post.description and post.description != ""
                     else post.title
                 )
-                + " "
+                + "\n\n"
                 + post.hashtag
             )
             images = json.loads(post.images)
@@ -326,7 +326,7 @@ class ThreadService(BaseService):
                     if post.description and post.description != ""
                     else post.title
                 )
-                + " "
+                + "\n\n"
                 + post.hashtag
             )
             video = post.video_url
