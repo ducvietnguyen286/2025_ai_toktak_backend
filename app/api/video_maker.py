@@ -7,7 +7,7 @@ from app.services.shotstack_services import ShotStackService
 from app.services.post import PostService
 from app.services.batch import BatchService
 import random
-from app.lib.logger import logger , log_webhook_message
+from app.lib.logger import logger, log_webhook_message
 from app.services.notification import NotificationServices
 
 from datetime import date
@@ -58,7 +58,7 @@ class CreateVideo(Resource):
                 return {"message": "Each URL must be a string"}, 400
         batch_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
         voice_google = random.randint(1, 4)  # Chọn số nguyên từ 1 đến 4
-        
+
         post_id = data["post_id"]
         post = PostService.find_post(post_id)
         batch = BatchService.find_batch(post.batch_id)
@@ -134,6 +134,7 @@ class ShortstackWebhook(Resource):
             if not payload:
                 return {"message": "No JSON payload provided"}, 400
 
+            batch_id = 0
             # Lấy thông tin từ payload
             render_id = payload.get("id")
             status = payload.get("status")
@@ -146,7 +147,6 @@ class ShortstackWebhook(Resource):
             create_video_detail = VideoService.update_video_create(
                 render_id, status=status, video_url=video_url
             )
-            batch_id = 0
             if create_video_detail:
                 post_id = create_video_detail.post_id
                 post_detail = PostService.find_post(post_id)
@@ -188,7 +188,7 @@ class ShortstackWebhook(Resource):
             # Trả về phản hồi JSON
             elif action == "render":
                 if video_url != "":
-                    file_download_attr = download_video(video_url, post_id)
+                    file_download_attr = download_video(video_url, batch_id)
                     if file_download_attr:
                         file_path = file_download_attr["file_path"]
                         file_download = file_download_attr["file_download"]
@@ -215,49 +215,69 @@ class ShortstackWebhook(Resource):
             return {"message": "Internal Server Error"}, 500
 
 
-def download_video(video_url, post_id):
-    try:
-        # Lấy ngày hiện tại (YYYY_MM_DD)
-        today = date.today().strftime("%Y_%m_%d")
-        save_dir = os.path.join("static", "voice", "gtts_voice", today, str(post_id))
+def download_video(video_url, batch_id):
+    MAX_RETRIES = 3
+    RETRY_DELAY = 2
+    TIMEOUT = 10  # giây
 
-        # Tạo thư mục nếu chưa tồn tại
-        os.makedirs(save_dir, exist_ok=True)
+    # Lấy ngày hiện tại (YYYY_MM_DD)
+    today = date.today().strftime("%Y_%m_%d")
+    save_dir = os.path.join("static", "voice", "gtts_voice", today, str(batch_id))
+    os.makedirs(save_dir, exist_ok=True)
 
-        # Đường dẫn file video
-        video_filename = os.path.join(save_dir, f"{post_id}_downloaded_video.mp4")
+    video_filename = os.path.join(save_dir, f"{batch_id}_downloaded_video.mp4")
+    current_domain = os.environ.get("CURRENT_DOMAIN", "http://localhost:5000")
 
-        # Gửi request tải file
-        headers = {"User-Agent": "Mozilla/5.0"}  # Giả lập trình duyệt
-        response = requests.get(video_url, stream=True, headers=headers)
-        response.raise_for_status()  # Kiểm tra lỗi HTTP
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            headers = {"User-Agent": "Mozilla/5.0"}
+            response = requests.get(
+                video_url, stream=True, headers=headers, timeout=TIMEOUT
+            )
+            response.raise_for_status()
 
-        # Kiểm tra Content-Type để đảm bảo là video
-        content_type = response.headers.get("Content-Type", "")
-        if "video" not in content_type:
-            log_webhook_message(f"❌ URL không phải video: {video_url} (Content-Type: {content_type})")
-            return None
+            content_type = response.headers.get("Content-Type", "")
+            if "video" not in content_type:
+                log_webhook_message(
+                    f"❌ URL không phải video: {video_url} (Content-Type: {content_type})"
+                )
+                return None
 
-        # Ghi dữ liệu vào file
-        with open(video_filename, "wb+") as video_file:
-            for chunk in response.iter_content(chunk_size=16384):  # 16 KB mỗi lần
-                if chunk:
-                    video_file.write(chunk)
+            with open(video_filename, "wb") as video_file:
+                for chunk in response.iter_content(chunk_size=16384):
+                    if chunk:
+                        video_file.write(chunk)
 
-        # Tạo đường dẫn có thể truy cập từ trình duyệt
-        current_domain = os.environ.get("CURRENT_DOMAIN", "http://localhost:5000")
-        log_webhook_message(f"✅ Đã tải file video: {video_filename}")
-        file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
-        file_download = f"{current_domain}/{file_path}"
+            # Kiểm tra nếu file tải về quá nhỏ (có thể lỗi)
+            if os.path.getsize(video_filename) < 1024:  # <1KB
+                log_webhook_message(
+                    f"⚠️ Video tải về quá nhỏ, có thể lỗi: {video_filename}"
+                )
+                return None
 
-        return {
-            "file_path": video_filename,
-            "file_download": file_download,
-        }
+            # Thành công
+            log_webhook_message(f"✅ Đã tải file video: {video_filename}")
+            file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
+            file_download = f"{current_domain}/{file_path}"
 
-    except requests.exceptions.RequestException as e:
-        log_webhook_message(f"❌ Lỗi khi tải video:  url {video_url}  post_id {post_id}  Error : {e}")
-    except Exception as e:
-        log_webhook_message(f"❌ Lỗi hệ thống: {e}")
+            return {
+                "file_path": video_filename,
+                "file_download": file_download,
+            }
 
+        except requests.exceptions.Timeout:
+            log_webhook_message(
+                f"⚠️ Timeout khi tải video (thử {attempt}/{MAX_RETRIES}): {video_url}"
+            )
+        except requests.exceptions.RequestException as e:
+            log_webhook_message(
+                f"⚠️ Lỗi khi tải video (thử {attempt}/{MAX_RETRIES}): {video_url} - Error: {e}"
+            )
+        except Exception as e:
+            log_webhook_message(f"❌ Lỗi hệ thống khi tải video: {e}")
+
+        if attempt < MAX_RETRIES:
+            time.sleep(RETRY_DELAY)
+
+    log_webhook_message(f"❌ Tải video thất bại sau {MAX_RETRIES} lần: {video_url}")
     return None

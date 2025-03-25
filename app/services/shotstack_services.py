@@ -123,7 +123,7 @@ class ShotStackService:
             )
 
         file_caption = generate_srt(
-            origin_caption, mp3_file, f"{dir_path}/test.srt", first_duration
+            origin_caption, mp3_file, f"{dir_path}/caption_file.srt", first_duration
         )
 
         clips_caption = {
@@ -874,7 +874,7 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
             return "", 0.0
 
         os.makedirs(disk_path, exist_ok=True)
-        output_file = os.path.join(disk_path, "output.mp3")
+        output_file = os.path.join(disk_path, "google_voice_output.mp3")
 
         # Danh sách value của giọng Chirp3-HD (cần bỏ speakingRate)
         chirp3_hd_voices = {
