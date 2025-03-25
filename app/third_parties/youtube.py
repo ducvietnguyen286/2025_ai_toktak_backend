@@ -218,7 +218,7 @@ class YoutubeService(BaseService):
             )
 
             post_title = post.title
-            post_description = post.description + " " + post.hashtag + " #shorts"
+            post_description = post.description + "\n\n " + post.hashtag + " #shorts"
             tags = post.hashtag
             tags = tags.split(" ") if tags else []
 
