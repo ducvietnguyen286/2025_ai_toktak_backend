@@ -12,11 +12,11 @@ class Config(object):
 
     SQLALCHEMY_DATABASE_URI = "{engine}://{user}:{password}@{host}:{port}/{db}".format(
         engine=os.environ.get("SQLALCHEMY_ENGINE") or "mysql+pymysql",
-        user=os.environ.get("SQLALCHEMY_USER") or "<your sql username>",
-        password=os.environ.get("SQLALCHEMY_PASSWORD") or "<your sql password>",
-        host=os.environ.get("SQLALCHEMY_HOST") or "<your sql host",
-        port=os.environ.get("SQLALCHEMY_PORT") or "<your sql port>",
-        db=os.environ.get("SQLALCHEMY_DATABASE") or "<your sql database>",
+        user=os.environ.get("SQLALCHEMY_USER") or "root",
+        password=os.environ.get("SQLALCHEMY_PASSWORD") or "",
+        host=os.environ.get("SQLALCHEMY_HOST") or "127.0.0.1",
+        port=int(os.environ.get("SQLALCHEMY_PORT", 3306)),
+        db=os.environ.get("SQLALCHEMY_DATABASE") or "toktak",
     )
 
     MONGODB_DB = os.environ.get("MONGODB_DB") or "toktak"
