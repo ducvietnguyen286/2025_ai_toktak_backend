@@ -142,8 +142,8 @@ class ImageMaker:
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
                         ocr_result = pytesseract.image_to_string(cropped)
                         text = ocr_result.strip()
-                        # Nếu độ dài văn bản vượt quá 10 ký tự, có thể cho rằng đây là vùng chứa chữ/table
-                        if len(text) > 20:
+                        # Nếu độ dài văn bản vượt quá 25 ký tự, có thể cho rằng đây là vùng chứa chữ/table
+                        if len(text) > 25:
                             continue
 
                         timestamp = int(time.time())
