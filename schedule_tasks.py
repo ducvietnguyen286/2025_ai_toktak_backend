@@ -30,6 +30,9 @@ from pathlib import Path
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path, override=True)
 
+print("SQLALCHEMY_HOST:", os.environ.get("SQLALCHEMY_HOST"))
+print("SQLALCHEMY_DATABASE:", os.environ.get("SQLALCHEMY_DATABASE"))
+print("SQLALCHEMY_PASSWORD:", os.environ.get("SQLALCHEMY_PASSWORD"))
 
 UPLOAD_BASE_PATH = "uploads"
 VOICE_BASE_PATH = "static/voice/gtts_voice"
