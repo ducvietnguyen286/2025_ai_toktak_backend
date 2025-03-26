@@ -147,7 +147,7 @@ def cleanup_pending_batches(app):
 
 def create_notification_task():
     try:
-        app.logger.info("CheckCreated a new notification successfully.")
+        app.logger.info("Check : Created a new notification successfully.")
     except Exception as e:
         app.logger.error(f"Error creating notification: {str(e)}")
 
@@ -202,6 +202,7 @@ if __name__ == "__main__":
         scheduler = start_scheduler(app)
 
     try:
+        app.logger.info("while True loop...")
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
