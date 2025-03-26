@@ -18,21 +18,22 @@ from app.schedules.exchange_instagram_token import exchange_instagram_token
 from app.schedules.exchange_thread_token import exchange_thread_token
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db, db_mongo
-from app.config import configs as config
 from app.models.batch import Batch
 from app.models.post import Post
 from app.models.notification import Notification
-from pytz import timezone 
+from pytz import timezone
 
 from pathlib import Path
 
 # Load biến môi trường
-env_path = Path(__file__).parent / '.env'
+env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path, override=True)
- 
+
+from app.config import configs as config
+
 
 UPLOAD_BASE_PATH = "uploads"
-VOICE_BASE_PATH = "static/voice/gtts_voice" 
+VOICE_BASE_PATH = "static/voice/gtts_voice"
 LOG_DIR = "logs"
 
 
@@ -96,62 +97,58 @@ def delete_folder_if_exists(folder_path, app):
         app.logger.error(f"Error deleting folder {folder_path}: {str(e)}")
 
 
-def cleanup_pending_batches():
+def cleanup_pending_batches(app):
     """Xóa Batch có process_status = 'PENDING', các Post liên quan và thư mục"""
-    try:
-        has_more_batches = True  
+    app.logger.info("Begin cleanup_pending_batches.")
+    with app.app_context():
+        try:
+            has_more_batches = True
 
-        while has_more_batches:
-            with db.session.begin():
-                batches = (
-                    Batch.query.filter_by(process_status="PENDING").limit(100).all()
-                )
-                has_more_batches = bool(
-                    batches
-                )  # Nếu không còn batch, sẽ dừng vòng lặp
+            while has_more_batches:
+                with db.session.begin():
+                    batches = (
+                        Batch.query.filter_by(process_status="PENDING").limit(100).all()
+                    )
+                    has_more_batches = bool(batches)
 
-                deleted_batch_ids = []
+                    deleted_batch_ids = []
 
-                for batch in batches:
-                    try:
-                        # Lấy ngày tạo batch theo định dạng yyyy_mm_dd
-                        batch_date = batch.created_at.strftime("%Y_%m_%d")
+                    for batch in batches:
+                        try:
+                            batch_date = batch.created_at.strftime("%Y_%m_%d")
 
-                        # Xóa tất cả post thuộc batch này
-                        Post.query.filter_by(batch_id=batch.id).delete()
-                        db.session.delete(batch)
-                        deleted_batch_ids.append(batch.id)
+                            Post.query.filter_by(batch_id=batch.id).delete()
+                            db.session.delete(batch)
+                            deleted_batch_ids.append(batch.id)
 
-                        # Xóa thư mục upload và voice
-                        upload_folder = os.path.join(
-                            UPLOAD_BASE_PATH, batch_date, str(batch.id)
-                        )
-                        voice_folder = os.path.join(
-                            VOICE_BASE_PATH, batch_date, str(batch.id)
-                        )
-                        delete_folder_if_exists(upload_folder, app)
-                        delete_folder_if_exists(voice_folder, app)
+                            upload_folder = os.path.join(
+                                UPLOAD_BASE_PATH, batch_date, str(batch.id)
+                            )
+                            voice_folder = os.path.join(
+                                VOICE_BASE_PATH, batch_date, str(batch.id)
+                            )
+                            delete_folder_if_exists(upload_folder, app)
+                            delete_folder_if_exists(voice_folder, app)
 
-                    except Exception as batch_error:
-                        app.logger.error(
-                            f"Error processing batch {batch.id}: {str(batch_error)}"
-                        )
+                        except Exception as batch_error:
+                            app.logger.error(
+                                f"Error processing batch {batch.id}: {str(batch_error)}"
+                            )
 
                 db.session.commit()
 
-            # Ghi log lại các batch đã xóa
             if deleted_batch_ids:
                 app.logger.info(
                     f"Deleted Batches: {', '.join(map(str, deleted_batch_ids))}"
                 )
 
-    except Exception as e:
-        app.logger.error(f"Error in cleanup_pending_batches: {str(e)}")
+        except Exception as e:
+            app.logger.error(f"Error in cleanup_pending_batches: {str(e)}")
 
 
 def create_notification_task():
     try:
-        app.logger.info("Created a new notification successfully.")
+        app.logger.info("Check : Created a new notification successfully.")
     except Exception as e:
         app.logger.error(f"Error creating notification: {str(e)}")
 
@@ -160,18 +157,19 @@ def start_scheduler(app):
     """Khởi động Scheduler với các công việc theo lịch trình"""
     scheduler = BackgroundScheduler()
     kst = timezone("Asia/Seoul")
-    
+
+    every_5_minutes_trigger = CronTrigger(minute="*/5", timezone=kst)
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
 
     scheduler.add_job(
-        func=cleanup_pending_batches,
+        func=lambda: cleanup_pending_batches(app),
         trigger=three_am_kst_trigger,
         id="cleanup_pending_batches",
     )
 
     scheduler.add_job(
-        func=create_notification_task,
+        func=lambda: create_notification_task(),
         trigger=every_hour_trigger,
         id="create_notification_task",
     )
@@ -205,6 +203,7 @@ if __name__ == "__main__":
         scheduler = start_scheduler(app)
 
     try:
+        app.logger.info("while True loop...")
         while True:
             time.sleep(1)
     except KeyboardInterrupt:

@@ -10,7 +10,7 @@ import random
 from app.lib.logger import logger, log_webhook_message
 from app.services.notification import NotificationServices
 
-from datetime import date
+from datetime import date ,time
 import os
 import requests
 
@@ -239,7 +239,7 @@ def download_video(video_url, batch_id):
             content_type = response.headers.get("Content-Type", "")
             if "video" not in content_type:
                 log_webhook_message(
-                    f"❌ URL không phải video: {video_url} (Content-Type: {content_type})"
+                    f"❌ URL không phải video:  batch_id : {batch_id} : {video_url} (Content-Type: {content_type})"
                 )
                 return None
 
@@ -251,12 +251,12 @@ def download_video(video_url, batch_id):
             # Kiểm tra nếu file tải về quá nhỏ (có thể lỗi)
             if os.path.getsize(video_filename) < 1024:  # <1KB
                 log_webhook_message(
-                    f"⚠️ Video tải về quá nhỏ, có thể lỗi: {video_filename}"
+                    f"⚠️ Video tải về quá nhỏ, có thể lỗi:  batch_id : {batch_id} : {video_filename}"
                 )
                 return None
 
             # Thành công
-            log_webhook_message(f"✅ Đã tải file video: {video_filename}")
+            log_webhook_message(f"✅ Đã tải file video  batch_id : {batch_id} : {video_filename}")
             file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
             file_download = f"{current_domain}/{file_path}"
 
@@ -267,17 +267,17 @@ def download_video(video_url, batch_id):
 
         except requests.exceptions.Timeout:
             log_webhook_message(
-                f"⚠️ Timeout khi tải video (thử {attempt}/{MAX_RETRIES}): {video_url}"
+                f"⚠️ Timeout khi tải video  batch_id : {batch_id} (thử {attempt}/{MAX_RETRIES}): {video_url}"
             )
         except requests.exceptions.RequestException as e:
             log_webhook_message(
-                f"⚠️ Lỗi khi tải video (thử {attempt}/{MAX_RETRIES}): {video_url} - Error: {e}"
+                f"⚠️ Lỗi khi tải video ( batch_id : {batch_id} thử {attempt}/{MAX_RETRIES}): {video_url} - Error: {e}"
             )
         except Exception as e:
-            log_webhook_message(f"❌ Lỗi hệ thống khi tải video: {e}")
+            log_webhook_message(f"❌ Lỗi hệ thống khi tải video  batch_id : {batch_id} : {e}")
 
         if attempt < MAX_RETRIES:
             time.sleep(RETRY_DELAY)
 
-    log_webhook_message(f"❌ Tải video thất bại sau {MAX_RETRIES} lần: {video_url}")
+    log_webhook_message(f"❌ Tải video thất bại  batch_id : {batch_id} sau {MAX_RETRIES} lần: {video_url}")
     return None
