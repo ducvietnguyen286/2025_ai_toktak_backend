@@ -162,7 +162,7 @@ class APICreateBatch(Resource):
             for image in images:
                 cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(image)
                 cleared_images.extend(cutout_images)
-            data["images"] = cleared_images
+            data["cleared_images"] = cleared_images
 
             batch.content = json.dumps(data)
             batch.save()
