@@ -247,7 +247,7 @@ class YoutubeService(BaseService):
                     "categoryId": 22,  # Ví dụ: "22" cho 'People & Blogs'
                 },
                 "status": {
-                    "privacyStatus": "private"  # "public", "private" hoặc "unlisted"
+                    "privacyStatus": "public"  # "public", "private" hoặc "unlisted"
                 },
             }
 
