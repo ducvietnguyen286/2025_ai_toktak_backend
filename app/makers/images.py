@@ -91,6 +91,9 @@ class ImageMaker:
         while not os.path.exists(image_path):
             time.sleep(0.5)
 
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+
         try:
             image = Image.open(image_path)
             image = image.convert("RGB")
