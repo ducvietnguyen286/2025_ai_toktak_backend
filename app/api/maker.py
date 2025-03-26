@@ -157,14 +157,16 @@ class APICreateBatch(Resource):
                 template_info=template_info,
             )
 
-            images = data.get("images", [])
-            cleared_images = []
-            for image in images:
-                cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(
-                    image, batch_id=batch.id
-                )
-                cleared_images.extend(cutout_images)
-            data["cleared_images"] = cleared_images
+            data["cleared_images"] = []
+            if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
+                images = data.get("images", [])
+                cleared_images = []
+                for image in images:
+                    cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(
+                        image, batch_id=batch.id
+                    )
+                    cleared_images.extend(cutout_images)
+                data["cleared_images"] = cleared_images
 
             batch.content = json.dumps(data)
             batch.save()
