@@ -163,13 +163,13 @@ def start_scheduler(app):
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
 
     scheduler.add_job(
-        func=cleanup_pending_batches(app),
+        func=lambda: cleanup_pending_batches(app),
         trigger=three_am_kst_trigger,
         id="cleanup_pending_batches",
     )
 
     scheduler.add_job(
-        func=create_notification_task,
+        func=lambda: create_notification_task(),
         trigger=every_hour_trigger,
         id="create_notification_task",
     )
