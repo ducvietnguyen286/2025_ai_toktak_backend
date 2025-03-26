@@ -407,7 +407,10 @@ class ImageMaker:
         image_name = image_path.split("/")[-1]
         try:
             background = cv2.imread(image_path)
-            background = cv2.cvtColor(background, cv2.COLOR_BGR2RGB)
+            overlay = background.copy()
+            overlay[:] = (0, 0, 0)  # Màu đen
+            alpha = 0.2  # Độ mờ (opacity)
+            background = cv2.addWeighted(overlay, alpha, background, 1 - alpha, 0)
         except IOError:
             print(f"Cannot identify image file {image_path}")
             file_size = os.path.getsize(image_path)
@@ -417,7 +420,7 @@ class ImageMaker:
                 "mime_type": mime_type,
                 "image_url": f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}",
             }
-        background_pil = Image.fromarray(background)
+        background_pil = Image.fromarray(cv2.cvtColor(background, cv2.COLOR_BGR2RGB))
         image = ImageMaker.draw_text_to_image_bottom(
             base_text=first_caption,
             image=background_pil,
@@ -429,8 +432,7 @@ class ImageMaker:
             text_color=template.text_color,
             stroke_color=template.stroke_color,
             stroke_width=template.stroke_width,
-            bottom_margin=300,
-            batch_id=batch_id,
+            bottom_margin=260,
         )
         image.save(image_path)
         image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
@@ -610,7 +612,6 @@ class ImageMaker:
         stroke_color,
         stroke_width,
         bottom_margin,
-        batch_id=0,
     ):
         print(f"Draw text to image: {margin}")
         if type(margin) == str:
@@ -647,7 +648,7 @@ class ImageMaker:
         # Tính tổng chiều cao văn bản chính xác
         ascent, descent = font.getmetrics()  # Lấy chiều cao dòng thực tế
         line_height = ascent + descent  # Tổng chiều cao của mỗi dòng
-        line_spacing = 60  # Khoảng cách giữa các dòng
+        line_spacing = 80  # Khoảng cách giữa các dòng
         total_text_height = (
             len(all_lines) * line_height + (len(all_lines) - 1) * line_spacing
         )
@@ -666,7 +667,7 @@ class ImageMaker:
                 stroke_color,
                 stroke_width,
             )
-            text_y += line_height + 60  # Khoảng cách giữa các dòng
+            text_y += line_spacing + 80  # Khoảng cách giữa các dòng
 
         return image
 
