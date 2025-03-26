@@ -160,7 +160,9 @@ class APICreateBatch(Resource):
             images = data.get("images", [])
             cleared_images = []
             for image in images:
-                cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(image)
+                cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(
+                    image, batch_id=batch.id
+                )
                 cleared_images.extend(cutout_images)
             data["cleared_images"] = cleared_images
 
