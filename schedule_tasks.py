@@ -98,6 +98,7 @@ def delete_folder_if_exists(folder_path, app):
 
 def cleanup_pending_batches(app):
     """Xóa Batch có process_status = 'PENDING', các Post liên quan và thư mục"""
+    app.logger.info("Begin cleanup_pending_batches.")
     with app.app_context():
         try:
             has_more_batches = True
@@ -146,7 +147,7 @@ def cleanup_pending_batches(app):
 
 def create_notification_task():
     try:
-        app.logger.info("Created a new notification successfully.")
+        app.logger.info("CheckCreated a new notification successfully.")
     except Exception as e:
         app.logger.error(f"Error creating notification: {str(e)}")
 
@@ -161,7 +162,7 @@ def start_scheduler(app):
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
 
     scheduler.add_job(
-        func=lambda: cleanup_pending_batches(app),
+        func= cleanup_pending_batches(app),
         trigger=every_5_minutes_trigger,
         id="cleanup_pending_batches",
     )
