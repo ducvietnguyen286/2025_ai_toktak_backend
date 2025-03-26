@@ -18,7 +18,6 @@ from app.schedules.exchange_instagram_token import exchange_instagram_token
 from app.schedules.exchange_thread_token import exchange_thread_token
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db, db_mongo
-from app.config import configs as config
 from app.models.batch import Batch
 from app.models.post import Post
 from app.models.notification import Notification
@@ -30,9 +29,8 @@ from pathlib import Path
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path, override=True)
 
-print("SQLALCHEMY_HOST:", os.environ.get("SQLALCHEMY_HOST"))
-print("SQLALCHEMY_DATABASE:", os.environ.get("SQLALCHEMY_DATABASE"))
-print("SQLALCHEMY_PASSWORD:", os.environ.get("SQLALCHEMY_PASSWORD"))
+from app.config import configs as config
+
 
 UPLOAD_BASE_PATH = "uploads"
 VOICE_BASE_PATH = "static/voice/gtts_voice"
@@ -159,14 +157,14 @@ def start_scheduler(app):
     """Khởi động Scheduler với các công việc theo lịch trình"""
     scheduler = BackgroundScheduler()
     kst = timezone("Asia/Seoul")
-    
-    every_5_minutes_trigger = CronTrigger(minute='*/5', timezone=kst)
+
+    every_5_minutes_trigger = CronTrigger(minute="*/5", timezone=kst)
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
 
     scheduler.add_job(
-        func= cleanup_pending_batches(app),
-        trigger=every_5_minutes_trigger,
+        func=cleanup_pending_batches(app),
+        trigger=three_am_kst_trigger,
         id="cleanup_pending_batches",
     )
 
