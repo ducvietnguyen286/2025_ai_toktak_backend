@@ -625,6 +625,13 @@ class APIMakePost(Resource):
                     description = json.dumps(docx)
                 if parse_response and "content" in parse_response:
                     content = parse_response.get("content", "")
+                    cleared_images = data.get("cleared_images", [])
+                    if cleared_images:
+                        for cleared_image in enumerate(cleared_images):
+                            pre_content += f'<p><img src="{cleared_image}" /></p>'
+
+                        content = pre_content + content
+
                     for index, image_url in enumerate(blog_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
 
