@@ -628,7 +628,7 @@ class APIMakePost(Resource):
                     cleared_images = data.get("cleared_images", [])
                     if cleared_images:
                         pre_content = ""
-                        for index, cleared_image in cleared_images:
+                        for index, cleared_image in enumerate(cleared_images):
                             current_stt = index + 1
                             pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
 
