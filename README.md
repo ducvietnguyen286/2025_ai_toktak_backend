@@ -14,3 +14,21 @@ http://118.70.171.129:9955/
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=99553)
+
+
+
+
+
+rm -rf /var/www/logs/*
+rm -rf /var/www/toktak/logs/*
+sudo systemctl restart nginx 
+pm2 reload all
+
+sudo systemctl restart consumer_toktak
+sudo systemctl restart consumer_toktak_tiktok
+sudo systemctl restart consumer_toktak_twitter
+sudo systemctl restart consumer_toktak_youtube
+sudo systemctl restart consumer_toktak_thread
+sudo systemctl restart consumer_toktak_instagram
+sudo systemctl restart toktak.service
+
