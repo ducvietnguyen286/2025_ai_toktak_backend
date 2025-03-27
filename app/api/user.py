@@ -815,6 +815,16 @@ class APIRefreshTiktokToken(Resource):
             ).to_dict()
 
 
+@ns.route("/oauth/ali-callback")
+class APIAliCallback(Resource):
+    def get(self, *args, **kwargs):
+        logger.info("------------------ALI CALLBACK------------------")
+        logger.info(args)
+        logger.info(kwargs)
+        logger.info("------------------END ALI CALLBACK------------------")
+        return "Ali Callback"
+
+
 @ns.route("/check-sns-link")
 class APICheckSNSLink(Resource):
     @jwt_required()
