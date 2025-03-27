@@ -156,7 +156,15 @@ class ImageMaker:
 
                         cv2.imwrite(cropped_path, cropped)  # Lưu ảnh
 
+                        # print("-----------------INFO IMAGE--------------------")
+                        # print(f"Object: {label} - Confidence: {conf}")
+                        # print(f"OCR Result: {text}")
+                        # print(f"OCR TEXT LENGTH: {len(text)}")
+                        # print(f"Path: {cropped_path}")
+                        # print("----------------------------------------------")
+
                         cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
+
                         cropped_images.append((cropped_url, conf))
 
                 if cropped_images:
@@ -360,10 +368,12 @@ class ImageMaker:
         bottom_margin = 220
         # Tính toán vị trí để đặt text xuống bottom của ảnh
         text_y = image.height - bottom_margin - text_height
+        # Tính toán vị trí text_x để căn giữa theo chiều ngang
+        text_x = (image.width - text_width) // 2
 
         # Vẽ multiline text tại vị trí (left_margin, top_margin)
         draw.multiline_text(
-            (left_margin, text_y),
+            (text_x, text_y),
             wrapped_text,
             font=font,
             fill=text_color,
