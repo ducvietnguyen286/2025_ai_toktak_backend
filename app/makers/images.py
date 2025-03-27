@@ -340,9 +340,9 @@ class ImageMaker:
         draw = ImageDraw.Draw(image)
 
         try:
-            font = ImageFont.truetype(f"{FONT_FOLDER}/CookieRun.ttf", font_size)
+            font = ImageFont.truetype(f"{FONT_FOLDER}/CookieRun-Bold.ttf", font_size)
         except IOError:
-            print(f"Không tìm thấy font CookieRun.ttf, sử dụng font mặc định.")
+            print(f"Không tìm thấy font CookieRun-Bold.ttf, sử dụng font mặc định.")
             font = ImageFont.load_default()
 
         # Tính vùng giới hạn chữ
@@ -369,6 +369,7 @@ class ImageMaker:
             fill=text_color,
             stroke_width=stroke_width,
             stroke_fill=stroke_color,
+            align="center",
         )
 
         if not (
