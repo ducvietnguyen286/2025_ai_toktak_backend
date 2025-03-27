@@ -39,9 +39,15 @@ python-docx~=1.1.2
 pandas~=2.0.3
 openpyxl~=3.1.5
 opencv-python~=4.11.0.86
+ultralytics~=8.0.239
+torch~=1.13.1
+torchvision~=0.14.1
+torchaudio~=0.13.1
+pytesseract~=0.3.13
 
 threads-api~=1.2.0
 google-auth-oauthlib~=1.2.1
 google-api-python-client~=2.162.0
 requests-oauthlib~=2.0.0
 google-cloud-texttospeech
+google-cloud-vision~=3.10.1

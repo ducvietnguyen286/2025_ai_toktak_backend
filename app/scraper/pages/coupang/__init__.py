@@ -151,6 +151,7 @@ class CoupangScraper:
             if r_data is None:
                 return {}
             page_list = r_data.get("pageList")
+
             if page_list is None:
                 return {}
             widget_list = None
@@ -185,9 +186,10 @@ class CoupangScraper:
                 is_html = False
                 no_space_images = []
                 for vendor_item_content in vendor_item_contents:
-                    if (
-                        "contentType" in vendor_item_content
-                        and vendor_item_content["contentType"] == "HTML"
+                    if "contentType" in vendor_item_content and (
+                        vendor_item_content["contentType"] == "HTML"
+                        or vendor_item_content["contentType"] == "HTML_NO_SPACE"
+                        or vendor_item_content["contentType"] == "TEXT"
                     ):
                         html_item = vendor_item_content.get(
                             "vendorItemContentDescriptions"

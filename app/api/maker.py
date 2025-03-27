@@ -81,6 +81,7 @@ class APICreateBatch(Resource):
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
             data = Scraper().scraper({"url": url})
+
             # return data
             if not data:
                 NotificationServices.create_notification(
@@ -145,7 +146,7 @@ class APICreateBatch(Resource):
                 shorten_link=shorten_link,
                 thumbnail=thumbnail_url,
                 thumbnails=json.dumps(thumbnails),
-                content=json.dumps(data),
+                content="",
                 type=1,
                 count_post=len(post_types),
                 status=0,
@@ -155,6 +156,20 @@ class APICreateBatch(Resource):
                 is_advance=is_advance,
                 template_info=template_info,
             )
+
+            data["cleared_images"] = []
+            if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
+                images = data.get("images", [])
+                cleared_images = []
+                for image in images:
+                    cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(
+                        image, batch_id=batch.id
+                    )
+                    cleared_images.extend(cutout_images)
+                data["cleared_images"] = cleared_images
+
+            batch.content = json.dumps(data)
+            batch.save()
 
             posts = []
             for post_type in post_types:
@@ -439,7 +454,9 @@ class APIMakePost(Resource):
                     captions = split_text_by_sentences(caption, len(process_images))
 
                     for image_url in process_images:
-                        maker_image = ImageMaker.save_image_for_short_video(image_url , batch_id)
+                        maker_image = ImageMaker.save_image_for_short_video(
+                            image_url, batch_id
+                        )
                         maker_images.append(maker_image)
 
                     # Tạo video từ ảnh
@@ -567,7 +584,9 @@ class APIMakePost(Resource):
                     parse_response = parse_caption.get("response", {})
                     docx_title = parse_response.get("title", "")
                     docx_content = parse_response.get("docx_content", "")
-                    res_docx = DocxMaker().make(docx_title, docx_content, blog_images , batch_id = batch_id)
+                    res_docx = DocxMaker().make(
+                        docx_title, docx_content, blog_images, batch_id=batch_id
+                    )
 
                     docx_url = res_docx.get("docx_url", "")
                     file_size = res_docx.get("file_size", 0)
@@ -606,6 +625,15 @@ class APIMakePost(Resource):
                     description = json.dumps(docx)
                 if parse_response and "content" in parse_response:
                     content = parse_response.get("content", "")
+                    cleared_images = data.get("cleared_images", [])
+                    if cleared_images:
+                        pre_content = ""
+                        for index, cleared_image in cleared_images:
+                            current_stt = index + 1
+                            pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
+
+                        content = pre_content + content
+
                     for index, image_url in enumerate(blog_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
 

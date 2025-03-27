@@ -283,7 +283,7 @@ class InstagramService(BaseService):
                     if post.description and post.description != ""
                     else post.title
                 )
-                + " "
+                + "\n\n"
                 + post.hashtag
             )
             images = json.loads(post.images)
@@ -581,7 +581,7 @@ class InstagramService(BaseService):
                     if post.description and post.description != ""
                     else post.title
                 )
-                + " "
+                + "\n\n"
                 + post.hashtag
             )
 

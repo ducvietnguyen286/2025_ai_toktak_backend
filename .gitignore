@@ -40,3 +40,5 @@ Pipfile.lock
 uploads/*
 static/voice/
 env/
+app/ais/models/*
+google-cloud-vision.json

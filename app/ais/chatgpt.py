@@ -146,32 +146,32 @@ macOS Sequoia 15.1을 통해 AI 기반 도구와 향상된 시리, 아이폰 미
 
 ## description:
 - 🔥 강한 호기심 유발형
-- 이거 없으면 올봄 코디 끝났다고 봐야지...🔥 \n구매링크👉: {base_url}\n\n\n{name}
-- 패션 좀 신경 쓰는 애들은 다 샀다는데? 🤔 \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 요즘 이거 없이 스타일링 못한다던데...😏 \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 그냥 편해서 입었는데 분위기 미쳤다고 함;; \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 이거 품절된다는 얘기 들었는데 사실임?😨 \n구매링크👉: {base_url}{base_url}\n\n\n{name}
+- 이거 없으면 올봄 코디 끝났다고 봐야지...🔥 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 패션 좀 신경 쓰는 애들은 다 샀다는데? 🤔 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 요즘 이거 없이 스타일링 못한다던데...😏 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 그냥 편해서 입었는데 분위기 미쳤다고 함;; BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 이거 품절된다는 얘기 들었는데 사실임?😨 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
 
 🔥 유행 & 트렌드 반영형
-- 이거 요즘 힙한 애들은 다 입는다며? 😎 \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 스트릿룩 입는 애들 이거 다 샀더라;; \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 패션 피플 사이에서 요즘 제일 핫한 후드티 \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 연예인들이 요즘 이거 입고 나온다고 함!! \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 트렌드 좀 신경 쓰는 사람들은 다 샀다는데? \n구매링크👉: {base_url}{base_url}\n\n\n{name}
+- 이거 요즘 힙한 애들은 다 입는다며? 😎 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 스트릿룩 입는 애들 이거 다 샀더라;; BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 패션 피플 사이에서 요즘 제일 핫한 후드티 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 연예인들이 요즘 이거 입고 나온다고 함!! BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 트렌드 좀 신경 쓰는 사람들은 다 샀다는데? BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
 
 🔥 공감 유발형 (친구/연인/일상 연계)
-- 이거 입고 갔는데 친구들이 브랜드 어디냐고 물어봄 \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 후드티 하나 샀을 뿐인데 스타일 왜 이렇게 달라짐? \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 데이트룩 고민 끝났다, 그냥 이거 입으면 됨 \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 이거 입고 나갔더니 여친이 귀엽대...🫣 \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 이거 입고 사진 찍으면 인생샷 보장됨📸 \n구매링크👉: {base_url}{base_url}\n\n\n{name}
+- 이거 입고 갔는데 친구들이 브랜드 어디냐고 물어봄 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 후드티 하나 샀을 뿐인데 스타일 왜 이렇게 달라짐? BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 데이트룩 고민 끝났다, 그냥 이거 입으면 됨 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 이거 입고 나갔더니 여친이 귀엽대...🫣 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 이거 입고 사진 찍으면 인생샷 보장됨📸 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
 
 🔥 유머 & 자극형
-- 이거 사면 패션 인싸 되는 거 맞음? \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 솔직히 이거 안 사는 사람들 이해 안 감 \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 이거 품절되면 눈물 난다 진짜... \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 진짜 스타일에 관심 있는 사람들은 이거 다 샀다는데? \n구매링크👉: {base_url}{base_url}\n\n\n{name}
-- 이거 사고 후드티 유목민 탈출했다 \n구매링크👉: {base_url}{base_url}\n\n\n{name}
+- 이거 사면 패션 인싸 되는 거 맞음? BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 솔직히 이거 안 사는 사람들 이해 안 감 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 이거 품절되면 눈물 난다 진짜... BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 진짜 스타일에 관심 있는 사람들은 이거 다 샀다는데? BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
+- 이거 사고 후드티 유목민 탈출했다 BREAK_LINE구매링크👉: {base_url} BREAK_LINE{name}
 
 ## hashtag:
 #패션스타그램 #운동복추천 #ootd #일상룩 #스포티룩 #여자옷 #스타일링 #쇼핑
@@ -182,6 +182,23 @@ macOS Sequoia 15.1을 통해 AI 기반 도구와 향상된 시리, 아이폰 미
 - 예시 출력을 참고할 것.
 - 20대, 30대 커뮤니티 문화를 깊이 이해하고 이를 반영합니다.
 - 트렌디한 요소들을 정확히 파악하고 적용하는 데 중점을 둡니다.
+- 다음과 같이 BREAK_LINE 키를 일반 텍스트의 줄 바꿈 기호 "\\n" 로 변경하세요.
+
+
+```json
+{
+    "response": {
+        "hooking": [
+            "hooking 1",
+            "hooking 2",
+            ...
+        ],
+        "caption": "",
+        "title": "",
+        "description": "Description? \n구매링크👉: https://example.com \nProduct Name",
+        "hashtag": "#hashtag1 #hashtag2 #hashtag3"
+    }
+}
 """
     prompt = replace_prompt_with_data(prompt, data)
 
@@ -362,7 +379,7 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
 
 **description**: 
   - 문장 최대 2줄로 작성
-  - 줄바꿈 후 "> {base_url}" 이 문장 무조건 표시 
+  - 줄바꿈 후 " {base_url}" 이 문장 무조건 표시 
   - 구매링크 다음에 줄바꿈 후 "{name}" 무조건 포함
   - 문장을 정확하게 끝내지 말고, 말 끝을 흐릴 것 
 
@@ -413,72 +430,73 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
 
 ## description:
 🔥 강한 호기심 유발형
-- 필터 안 쓴 거 맞아요. 그냥 이 세럼 덕분임. \n > {base_url} \n\n\n {name}
-- 물광? 아니, 이건 대기권 뚫고 올라가는 빛광. \n > {base_url} \n\n\n {name}
-- 자기 전에 바르고 자면 피부 리셋됨. 100% 실화. \n > {base_url} \n\n\n {name}
-- 이거 바르면 거울 셀카 필터 꺼야 됨. 왜냐면... \n > {base_url} \n\n\n {name}
-- 이게 된다고?” 싶었는데 진짜 되더라;; \n > {base_url} \n\n\n {name}
-- 집들이 선물 고민할 필요 없이 이거 사면 됨. \n > {base_url} \n\n\n {name}
+- 필터 안 쓴 거 맞아요. 그냥 이 세럼 덕분임. BREAK_LINE {base_url} BREAK_LINE {name}
+- 물광? 아니, 이건 대기권 뚫고 올라가는 빛광. BREAK_LINE {base_url} BREAK_LINE {name}
+- 자기 전에 바르고 자면 피부 리셋됨. 100% 실화. BREAK_LINE {base_url} BREAK_LINE {name}
+- 이거 바르면 거울 셀카 필터 꺼야 됨. 왜냐면... BREAK_LINE {base_url} BREAK_LINE {name}
+- 이게 된다고?” 싶었는데 진짜 되더라;; BREAK_LINE {base_url} BREAK_LINE {name}
+- 집들이 선물 고민할 필요 없이 이거 사면 됨. BREAK_LINE {base_url} BREAK_LINE {name}
 
 🔥 유행 & 트렌드 반영형
-- 2025년, 촉촉한 피부가 대세라던데? 난 이미 탑승 완료. \n > {base_url} \n\n\n {name}
-- 이거 없으면 글로우 스킨 트렌드 못 따라감. \n > {base_url} \n\n\n {name}
-- 요즘 꾸안꾸 스킨은 이거 하나로 완성이라던데? \n > {base_url} \n\n\n {name}
-- 이제 다들 청소 안 한다고? 이유가 있음 \n > {base_url} \n\n\n {name}
-- 요즘 하이테크 라이프 살려면 필수템 \n > {base_url} \n\n\n {name}
+- 2025년, 촉촉한 피부가 대세라던데? 난 이미 탑승 완료. BREAK_LINE {base_url} BREAK_LINE {name}
+- 이거 없으면 글로우 스킨 트렌드 못 따라감. BREAK_LINE {base_url} BREAK_LINE {name}
+- 요즘 꾸안꾸 스킨은 이거 하나로 완성이라던데? BREAK_LINE {base_url} BREAK_LINE {name}
+- 이제 다들 청소 안 한다고? 이유가 있음 BREAK_LINE {base_url} BREAK_LINE {name}
+- 요즘 하이테크 라이프 살려면 필수템 BREAK_LINE {base_url} BREAK_LINE {name}
 
 🔥 공감 유발형 (친구/연인/일상 연계)
-- 피부 고민? 내 친구도 이거 쓰고 해결했대. \n > {base_url} \n\n\n {name}
-- 이거 사고 다들 청소 어떻게 하냐고 물어보는데요? \n > {base_url} \n\n\n {name}
-- 친구네 갔다가 청소기 보고 반해서 바로 삼 \n > {base_url} \n\n\n {name}
-- 남친 집 갔는데 먼지 1도 없길래 이유 물어보니까 이거였음 \n > {base_url} \n\n\n {name}
-- 부모님 선물로 드렸는데 좋아하심 \n > {base_url} \n\n\n {name}
+- 피부 고민? 내 친구도 이거 쓰고 해결했대. BREAK_LINE {base_url} BREAK_LINE {name}
+- 이거 사고 다들 청소 어떻게 하냐고 물어보는데요? BREAK_LINE {base_url} BREAK_LINE {name}
+- 친구네 갔다가 청소기 보고 반해서 바로 삼 BREAK_LINE {base_url} BREAK_LINE {name}
+- 남친 집 갔는데 먼지 1도 없길래 이유 물어보니까 이거였음 BREAK_LINE {base_url} BREAK_LINE {name}
+- 부모님 선물로 드렸는데 좋아하심 BREAK_LINE {base_url} BREAK_LINE {name}
 
 🔥 감성 & 미니멀한 감각형
-- 조용하지만 확실한 변화 \n > {base_url} \n\n\n {name}
-- 스킨케어, 심플한 게 답이다. \n > {base_url} \n\n\n {name}
-- 공간에 스며드는 디자인 \n > {base_url} \n\n\n {name}
-- 보이지 않는 기술이 진짜다 \n > {base_url} \n\n\n {name}
-- 기술은 보이지 않을 때 더 가치 있다 \n > {base_url} \n\n\n {name}
+- 조용하지만 확실한 변화 BREAK_LINE {base_url} BREAK_LINE {name}
+- 스킨케어, 심플한 게 답이다. BREAK_LINE {base_url} BREAK_LINE {name}
+- 공간에 스며드는 디자인 BREAK_LINE {base_url} BREAK_LINE {name}
+- 보이지 않는 기술이 진짜다 BREAK_LINE {base_url} BREAK_LINE {name}
+- 기술은 보이지 않을 때 더 가치 있다 BREAK_LINE {base_url} BREAK_LINE {name}
 
 🔥 리뷰 & 추천 느낌형
-- 원래 광고 안 믿는데, 이건 진짜 추천함 \n > {base_url} \n\n\n {name}
-- 사용 후기: 인생템 등극 \n > {base_url} \n\n\n {name}
-- 한 통 다 쓰고 재구매함. 답 나왔지? \n > {base_url} \n\n\n {name}
-- 부모님도 좋아하는 가전템 찾음 \n > {base_url} \n\n\n {name}
-- 써보니까 다들 왜 추천하는지 알겠음 \n > {base_url} \n\n\n {name}
+- 원래 광고 안 믿는데, 이건 진짜 추천함 BREAK_LINE {base_url} BREAK_LINE {name}
+- 사용 후기: 인생템 등극 BREAK_LINE {base_url} BREAK_LINE {name}
+- 한 통 다 쓰고 재구매함. 답 나왔지? BREAK_LINE {base_url} BREAK_LINE {name}
+- 부모님도 좋아하는 가전템 찾음 BREAK_LINE {base_url} BREAK_LINE {name}
+- 써보니까 다들 왜 추천하는지 알겠음 BREAK_LINE {base_url} BREAK_LINE {name}
 
 🔥 유머 & 자극형
-- 필터? 필요 없음. 그냥 내 피부가 이 정도임. \n > {base_url} \n\n\n {name}
-- 인스타 감성 말고 피부 감성부터 챙기자 \n > {base_url} \n\n\n {name}
-- 자고 일어났는데 피부 상태가 미쳤음 \n > {base_url} \n\n\n {name}
-- 나는 앉아 있고 청소기는 일함. 이게 맞지? \n > {base_url} \n\n\n {name}
-- 로봇청소기 켜놓고 나는 드라마 정주행 중 \n > {base_url} \n\n\n {name}
-- “이거 사고 나서 바닥 닦은 적 없어” (진짜임) \n > {base_url} \n\n\n {name}
+- 필터? 필요 없음. 그냥 내 피부가 이 정도임. BREAK_LINE {base_url} BREAK_LINE {name}
+- 인스타 감성 말고 피부 감성부터 챙기자 BREAK_LINE {base_url} BREAK_LINE {name}
+- 자고 일어났는데 피부 상태가 미쳤음 BREAK_LINE {base_url} BREAK_LINE {name}
+- 나는 앉아 있고 청소기는 일함. 이게 맞지? BREAK_LINE {base_url} BREAK_LINE {name}
+- 로봇청소기 켜놓고 나는 드라마 정주행 중 BREAK_LINE {base_url} BREAK_LINE {name}
+- “이거 사고 나서 바닥 닦은 적 없어” (진짜임) BREAK_LINE {base_url} BREAK_LINE {name}
 
 🔥 계절 & 트렌드 활용형
-- 봄맞이 스킨케어? 이거 하나면 충분 \n > {base_url} \n\n\n {name}
-- 계절이 바뀌면 피부 루틴도 달라져야 함 \n > {base_url} \n\n\n {name}
-- 봄 피부 고민? 미리 대비해야 함 \n > {base_url} \n\n\n {name}
-- 황사, 미세먼지 많은 날 필수템 \n > {base_url} \n\n\n {name}
-- 미세먼지 시즌 도착! 공기 관리 필수템 \n > {base_url} \n\n\n {name}
+- 봄맞이 스킨케어? 이거 하나면 충분 BREAK_LINE {base_url} BREAK_LINE {name}
+- 계절이 바뀌면 피부 루틴도 달라져야 함 BREAK_LINE {base_url} BREAK_LINE {name}
+- 봄 피부 고민? 미리 대비해야 함 BREAK_LINE {base_url} BREAK_LINE {name}
+- 황사, 미세먼지 많은 날 필수템 BREAK_LINE {base_url} BREAK_LINE {name}
+- 미세먼지 시즌 도착! 공기 관리 필수템 BREAK_LINE {base_url} BREAK_LINE {name}
 
 🔥 가격 & 한정판 강조형
-- 이 가격에 이 퀄리티? 고민할 시간 없음. \n > {base_url} \n\n\n {name}
-- 이 가격 실화냐? 안 사면 후회할 듯 \n > {base_url} \n\n\n {name}
-- 이 가격이면 쟁여둬야 하는 거 아님? \n > {base_url} \n\n\n {name}
-- 가격 보고 심장 뛰는 중. 지금 바로 구매각 \n > {base_url} \n\n\n {name}
-- 일 들어갔대. 얘들아 달려라 \n > {base_url} \n\n\n {name}
+- 이 가격에 이 퀄리티? 고민할 시간 없음. BREAK_LINE {base_url} BREAK_LINE {name}
+- 이 가격 실화냐? 안 사면 후회할 듯 BREAK_LINE {base_url} BREAK_LINE {name}
+- 이 가격이면 쟁여둬야 하는 거 아님? BREAK_LINE {base_url} BREAK_LINE {name}
+- 가격 보고 심장 뛰는 중. 지금 바로 구매각 BREAK_LINE {base_url} BREAK_LINE {name}
+- 일 들어갔대. 얘들아 달려라 BREAK_LINE {base_url} BREAK_LINE {name}
 
 ## Hashtags:
 #패션스타그램 #운동복추천 #ootd #일상룩 #스포티룩 #여자옷 #스타일링 #쇼핑
 #인생템 #살림꿀템 #내돈내산 #집꾸미기 #편리미엄 #필수템 #살림템 #자동청소
 
 [Notes]
-전체 게시글과 이미지 캡션은 별개로 작성되어야 합니다.
-제품 직접 설명을 피하고, 자연스러운 스토리텔링과 공감을 유도하는 내용으로 작성하세요.
-20~30대 커뮤니티에서 유행하는 언어와 스타일을 적극 활용하세요.
-해시태그의 시작은 반드시 # 기호여야 합니다.
+- 전체 게시글과 이미지 캡션은 별개로 작성되어야 합니다.
+- 제품 직접 설명을 피하고, 자연스러운 스토리텔링과 공감을 유도하는 내용으로 작성하세요.
+- 20~30대 커뮤니티에서 유행하는 언어와 스타일을 적극 활용하세요.
+- 해시태그의 시작은 반드시 # 기호여야 합니다.
+- 다음과 같이 BREAK_LINE 키를 일반 텍스트의 줄 바꿈 기호 "\\n" 로 변경하세요.
 
 ```json
 {
@@ -491,8 +509,8 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
             "캡션 5",
             ...
         ],
-        "description": "게시글 설명",
-        "hashtag": "해시태그"`
+        "description": "Description \n https://example.com \n Product Name",
+        "hashtag": "#hashtag1 #hashtag2 #hashtag3"
     }
 }
 """
@@ -500,7 +518,6 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
     data["image_count"] = len(images)
 
     prompt = replace_prompt_with_data(prompt, data)
-
 
     content = [{"type": "text", "text": prompt}]
     for image in images:
