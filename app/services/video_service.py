@@ -101,20 +101,6 @@ class VideoService:
                 "background": "#FFFFFF",
                 "tracks": [
                     clips_data["clips"],
-                    {
-                        "clips": [
-                            {
-                                "asset": {
-                                    "type": "audio",
-                                    "src": "https://apitoktak.voda-play.com/voice/audio/ambisax.mp3",
-                                    "effect": "fadeOut",
-                                    "volume": MUSIC_BACKGROUP_VOLUMN,
-                                },
-                                "start": clips_data["intro_length"],
-                                "length": "end",
-                            }
-                        ]
-                    },
                 ],
             },
             "output": {
@@ -334,20 +320,7 @@ class VideoService:
                     {"clips": [clips_caption]},
                     {"clips": [clips_audio_sub]},
                     clips_data["clips"],
-                    {
-                        "clips": [
-                            {
-                                "asset": {
-                                    "type": "audio",
-                                    "src": "https://apitoktak.voda-play.com/voice/audio/ambisax.mp3",
-                                    "effect": "fadeOut",
-                                    "volume": MUSIC_BACKGROUP_VOLUMN,
-                                },
-                                "start": 0,
-                                "length": "end",
-                            }
-                        ]
-                    },
+                    
                 ],
             },
             "output": {
