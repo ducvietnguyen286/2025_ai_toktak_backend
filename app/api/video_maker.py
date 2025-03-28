@@ -224,7 +224,7 @@ def download_video(video_url, batch_id):
             content_type = response.headers.get("Content-Type", "")
             if "video" not in content_type:
                 log_webhook_message(
-                    f"❌ URL không phải video: batch_id: {batch_id} : {video_url} (Content-Type: {content_type})"
+                    f"❌ URL không phải (lần thử {attempt}/{MAX_RETRIES} video: batch_id: {batch_id} : {video_url} (Content-Type: {content_type})"
                 )
                 return None
 
@@ -243,7 +243,7 @@ def download_video(video_url, batch_id):
 
             # Thành công
             log_webhook_message(
-                f"✅ Đã tải file video batch_id: {batch_id} : {video_filename}"
+                f"✅ Đã tải file video (lần thử {attempt}/{MAX_RETRIES} batch_id: {batch_id} : {video_filename}"
             )
             file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
             file_download = f"{current_domain}/{file_path}"
@@ -259,7 +259,7 @@ def download_video(video_url, batch_id):
             )
         except requests.exceptions.ConnectionError as e:
             log_webhook_message(
-                f"🚫 Không kết nối được tới máy chủ batch_id: {batch_id} : {video_url} - Error: {e}"
+                f"🚫 Không kết nối được tới máy chủ (lần thử {attempt}/{MAX_RETRIES} batch_id: {batch_id} : {video_url} - Error: {e}"
             )
         except requests.exceptions.RequestException as e:
             log_webhook_message(
