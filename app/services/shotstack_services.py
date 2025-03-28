@@ -190,7 +190,7 @@ class ShotStackService:
                         "length": "end",
                         "fit": "none",
                         "position": "topLeft",
-                        "offset": {"x": 0.02, "y": -0.03},
+                        "offset": {"x": 0.04, "y": -0.03},
                     },
                     {
                         "asset": {
@@ -199,11 +199,10 @@ class ShotStackService:
                             "font": {
                                 "family": "JalnanGothic",
                                 "color": "#ffffff",
-                                "opacity": 0.8,
-                                "size": 35,
-                                "lineHeight": 0.85,
+                                "size": 28,
+                                "lineHeight": 1.2,
                             },
-                            "stroke": {"color": "#000000", "width": 1.5},
+                            "stroke": {"color": "#000000", "width": 0.5},
                             "height": 200,
                             "width": 600,
                         },
@@ -832,9 +831,8 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
             "font": {
                 "family": "Jalnan2",
                 "color": "#ffffff",
-                "opacity": 0.8,
                 "size": font_size,
-                "lineHeight": 0.85,
+                "lineHeight": 1.2,
             },
             # "background": {
             #     "color": "#000000",
@@ -843,13 +841,13 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
             #     "opacity": 0.6,
             # },
             "stroke": {"color": "#000000", "width": 1.5},
-            "height": 110,
-            "width": 600,
+            "height": 120,
+            "width": 500,
         },
         "start": start + add_time,
         "length": length,
         "position": "top",
-        "offset": {"x": 0, "y": -0.08},
+        "offset": {"x": 0, "y": -0.14},
     }
     return clip_detail
 
