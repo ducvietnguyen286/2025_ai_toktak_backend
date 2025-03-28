@@ -96,6 +96,7 @@ class CreateVideo(Resource):
             message = result["message"]
 
         return {
+            "post_id": post_id,
             "batch_id": batch_id,
             "status": status,
             "message": message,

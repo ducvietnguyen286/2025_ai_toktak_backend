@@ -137,9 +137,9 @@ class ShotStackService:
                 "src": file_caption,
                 "font": {
                     "lineHeight": 1,
-                    "family": "GmarketSans",
+                    "family": "JalnanGothic",
                     "color": "#ffffff",
-                    "size": 46,
+                    "size": 38,
                     "stroke": "#000000",
                     "strokeWidth": 1.5,
                 },
@@ -830,7 +830,7 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
             "type": "text",
             "text": caption_text,
             "font": {
-                "family": "JalnanGothic",
+                "family": "Jalnan2",
                 "color": "#ffffff",
                 "opacity": 0.8,
                 "size": font_size,
@@ -855,8 +855,7 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
 
 
 def create_first_header_text(viral_text, start=0, length=0, add_time=0.01):
-    font_size = 45 if len(viral_text) > 20 else 40
-
+    font_size = 60 if len(viral_text) > 20 else 55
     clip_detail = {
         "asset": {
             "type": "text",
@@ -867,13 +866,7 @@ def create_first_header_text(viral_text, start=0, length=0, add_time=0.01):
                 "size": font_size,
                 "lineHeight": 1,
             },
-            # "background": {
-            #     "color": "#000000",
-            #     "borderRadius": 20,
-            #     "padding": 0,
-            #     "opacity": 0.6,
-            # },
-            "stroke": {"color": "#000000", "width": 1.8},
+            "stroke": {"color": "#000000", "width": 3.5},
             "height": 360,
             "width": 700,
         },
