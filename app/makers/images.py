@@ -10,7 +10,8 @@ import requests
 import cv2
 from ultralytics import YOLO, FastSAM
 from google.cloud import vision
-import pytesseract
+import torch
+import easyocr
 
 from app.lib.header import generate_desktop_user_agent
 
@@ -82,9 +83,14 @@ class ImageMaker:
 
     @staticmethod
     def cut_out_long_heihgt_images_by_sam(image_url, batch_id=0):
+        extension = image_url.split(".")[-1].lower()
+        if extension == "gif":
+            return [image_url]
+
         image_path = ImageMaker.save_image_url_get_path(image_url, batch_id=batch_id)
         output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
         print(f"Cut out long height images: {image_path}")
+
         if not image_path:
             return [image_url]
 
@@ -108,14 +114,24 @@ class ImageMaker:
 
         print(f"Image size: {image_width}x{image_height}")
 
+        is_gpu = torch.cuda.is_available()
+        reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
+
         if image_height > (image_width * 4):
 
             model_path = os.path.join(os.getcwd(), "app/ais/models")
             fast_sam_path = os.path.join(model_path, "FastSAM-x.pt")
+            yolo_path = os.path.join(model_path, "yolov8s-seg.pt")
 
             try:
-                model = FastSAM(fast_sam_path)
+                if is_gpu:
+                    model = FastSAM(fast_sam_path).cuda()
+                    # model = YOLO(yolo_path).cuda()
+                else:
+                    model = FastSAM(fast_sam_path)
+                    # model = YOLO(yolo_path)
                 results = model.predict(source=image_path, conf=0.5)
+                # results = model(image_path, conf=0.5)
                 image_cv = cv2.imread(image_path)
                 if image_cv is None:
                     return [image_path]
@@ -143,8 +159,8 @@ class ImageMaker:
                             continue
 
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
-                        ocr_result = pytesseract.image_to_string(cropped)
-                        text = ocr_result.strip()
+                        ocr_result = reader.readtext(cropped)
+                        text = "".join([item[1] for item in ocr_result]).strip()
                         # Nếu độ dài văn bản vượt quá 25 ký tự, có thể cho rằng đây là vùng chứa chữ/table
                         if len(text) > 25:
                             continue
@@ -168,10 +184,18 @@ class ImageMaker:
                         cropped_images.append((cropped_url, conf))
 
                 if cropped_images:
+                    needed_length = 5
                     cropped_data_sorted = sorted(
                         cropped_images, key=lambda x: x[1], reverse=True
                     )
-                    top5 = [url for url, c in cropped_data_sorted[:5]]
+                    top5 = [url for url, c in cropped_data_sorted[:needed_length]]
+                    for cropped_url, _ in cropped_images[needed_length:]:
+                        cropped_image_path = os.path.join(
+                            output_folder, os.path.basename(cropped_url)
+                        )
+                        if os.path.exists(cropped_image_path):
+                            os.remove(cropped_image_path)
+
                     os.remove(image_path)
                     return top5
 
@@ -184,12 +208,14 @@ class ImageMaker:
                 )
                 return [image_url]
 
-        else:
-            ocr_result = pytesseract.image_to_string(image)
-            text = ocr_result.strip()
-            if len(text) > 25:
-                os.remove(image_path)
-                return []
+        # else:
+        #     image_cv = cv2.imread(image_path)
+        #     ocr_result = reader.readtext(image_cv)
+        #     text = "".join([item[1] for item in ocr_result]).strip()
+        #     print(f"OCR Result: {text}")
+        #     if len(text) > 25:
+        #         os.remove(image_path)
+        #         return []
 
         image_name = image_path.split("/")[-1]
         image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"

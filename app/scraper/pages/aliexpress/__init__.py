@@ -1,18 +1,13 @@
 import hashlib
+import hmac
 import json
-import random
-import time
+import os
 import traceback
-import uuid
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import requests
-from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
-from http.cookiejar import CookieJar
-
-from app.scraper.pages.aliexpress.parser import Parser
-from app.extensions import redis_client
-from app.scraper.pages.coupang.headers import random_mobile_header
+from app.services.crawl_data import CrawlDataService
 
 
 class AliExpressScraper:
@@ -25,108 +20,205 @@ class AliExpressScraper:
     def run_call_api(self):
         return None
 
+    def sign_api_request(self, api, parameters, secret):
+        sort_dict = sorted(parameters)
+        if "/" in api:
+            parameters_str = "%s%s" % (
+                api,
+                str().join("%s%s" % (key, parameters[key]) for key in sort_dict),
+            )
+        else:
+            parameters_str = str().join(
+                "%s%s" % (key, parameters[key]) for key in sort_dict
+            )
+
+        h = hmac.new(
+            secret.encode(encoding="utf-8"),
+            parameters_str.encode(encoding="utf-8"),
+            digestmod=hashlib.sha256,
+        )
+
+        return h.hexdigest().upper()
+
+    def sign_business_request(self, params, app_secret, sign_method, api_name):
+        """
+        Sinh chữ ký API request dựa theo:
+        1. Sắp xếp các tham số theo thứ tự ASCII của key.
+        2. Nối chuỗi: api_name + (key + value của các tham số nếu không rỗng).
+        3. Tính HMAC-SHA256 của chuỗi đã nối.
+        4. Chuyển kết quả về dạng chuỗi hex in HOA.
+
+        Nếu sử dụng Business Interface, có thể cần thêm:
+            params['method'] = api_name
+        """
+        # Sắp xếp các key
+        sorted_keys = sorted(params.keys())
+
+        # Khởi tạo chuỗi với API name (với System Interface)
+        query = api_name
+        for key in sorted_keys:
+            value = params.get(key)
+            if self.are_not_empty(key, value):
+                query += key + value
+
+        # Sinh chữ ký
+        if sign_method == "sha256":
+            signature_bytes = self.encrypt_hmac_sha256(query, app_secret)
+        else:
+            raise ValueError("Unsupported sign method")
+
+        # Trả về chữ ký dạng hex in hoa
+        return self.byte2hex(signature_bytes)
+
+    def encrypt_hmac_sha256(self, data, secret):
+        """
+        Tính HMAC-SHA256 của dữ liệu với secret.
+        Trả về mảng byte kết quả.
+        """
+        try:
+            secret_bytes = secret.encode("utf-8")
+            data_bytes = data.encode("utf-8")
+            signature = hmac.new(secret_bytes, data_bytes, hashlib.sha256).digest()
+            return signature
+        except Exception as e:
+            raise Exception(str(e))
+
+    def byte2hex(self, byte_arr):
+        """
+        Chuyển đổi mảng byte sang chuỗi hex in hoa.
+        """
+        return "".join("{:02X}".format(b) for b in byte_arr)
+
+    def are_not_empty(self, key, value):
+        """Kiểm tra key và value không rỗng."""
+        return key is not None and value is not None and key != "" and value != ""
+
+    def generate_sign(self, parameters, api_secret):
+        sorted_params = sorted(parameters.items())
+        sorted_string = "".join(f"{key}{value}" for key, value in sorted_params)
+        sign_string = f"{api_secret}{sorted_string}{api_secret}"
+        md5_hash = hashlib.md5(sign_string.encode("utf-8")).hexdigest().upper()
+        return md5_hash
+
     def run_scraper(self):
         try:
-            # req_id = str(uuid.uuid4())
-            # task = {
-            #     "req_id": req_id,
-            #     "url": self.url,
-            # }
-            # redis_client.rpush("toktak:crawl_ali_queue", json.dumps(task))
-            # timeout = 30  # Giây
-            # start_time = time.time()
-            # while time.time() - start_time < timeout:
-            #     result = redis_client.get(f"toktak:result-ali:{req_id}")
-            #     print("result", result)
-            #     if result:
-            #         redis_client.delete(f"toktak:result-ali:{req_id}")
-            #         return json.loads(result)
-            #     time.sleep(1)
 
-            # parsed_url = urlparse(self.url)
+            parsed_url = urlparse(self.url)
+            real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
 
-            # real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
-            ali_data = self.get_page_html(self.url)
-            if not ali_data:
+            crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            if exist_data:
+                return json.loads(exist_data.response)
+
+            product_id = parsed_url.path.split("/")[-1].split(".")[0]
+
+            RAPIDAPI_KEY = os.getenv(
+                "RAPIDAPI_KEY", "7f050149a7msh633a9677b0540dbp1a82dbjsncbe7b28137ed"
+            )
+
+            headers = {
+                "x-rapidapi-key": RAPIDAPI_KEY,
+                "x-rapidapi-host": "aliexpress-data.p.rapidapi.com",
+            }
+
+            querystring = {
+                "productId": product_id,
+                "country": "ko",
+                "currency": "KRW",
+            }
+
+            url = "https://aliexpress-data.p.rapidapi.com/product/descriptionv5"
+
+            response = requests.get(url, headers=headers, params=querystring)
+            res = response.json()
+            data = res.get("data", {})
+            if not data:
                 return {}
-            ali_base_data = Parser(ali_data).parse(self.url)
 
-            # file_html = open("demo.html", "w", encoding="utf-8")
-            # file_html.write(str(ali_data))
-            # file_html.close()
-            return ali_base_data
+            description = data.get("description", {})
+            description_html = description.get("descriptionHtml", "")
+            images, gifs, iframes, text = self.extract_images_and_text(description_html)
+            in_stock = data.get("hasStock", False)
+            shop_info = data.get("shopInfo", {})
+            store_name = shop_info.get("storeName", "")
+            image_url = data.get("image", "")
+            prices = data.get("prices", {})
+            target_price = prices.get("targetSkuPriceInfo", {})
+            price_show = target_price.get("salePriceString", "")
+            media = data.get("media", {})
+            thumbnails = media.get("images", [])
+            sku_images = media.get("currentSkuImages", [])
+            video = media.get("video", {})
+            video_url = ""
+            video_thumbnail = ""
+            if video:
+                video_info = video.get("videoPlayInfo", {})
+                video_thumbnail = video.get("posterUrl", "")
+                video_url = video_info.get("webUrl", "")
+
+            result = {
+                "name": data.get("title", ""),
+                "description": text,
+                "stock": 1 if in_stock else 0,
+                "domain": real_url,
+                "brand": "",
+                "image": image_url,
+                "sku_images": sku_images,
+                "thumbnails": thumbnails,
+                "price": price_show,
+                "url": real_url,
+                "url_crawl": real_url,
+                "base_url": real_url,
+                "store_name": store_name,
+                "show_free_shipping": 0,
+                "meta_url": "",
+                "images": images,
+                "text": text,
+                "iframes": iframes,
+                "gifs": gifs,
+                "video_url": video_url,
+                "video_thumbnail": video_thumbnail,
+            }
+            CrawlDataService.create_crawl_data(
+                site="ALIEXPRESS",
+                input_url=self.url,
+                crawl_url=real_url,
+                crawl_url_hash=crawl_url_hash,
+                request=json.dumps(
+                    {
+                        "x-rapidapi-host": headers["x-rapidapi-host"],
+                        "querystring": querystring,
+                    }
+                ),
+                response=json.dumps(response),
+            )
+            return result
+
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
             return {}
 
-    def generate_fake_sign(self, token, timestamp, app_key, data):
-        """
-        Hàm fake sign nhận vào:
-          - token: mã token (từ options hoặc fake)
-          - timestamp: thời gian hiện tại (milliseconds)
-          - app_key: appKey được sử dụng
-          - data: chuỗi dữ liệu JSON
-        Trả về MD5 hash của chuỗi ghép theo định dạng:
-          "{token}&{timestamp}&{app_key}&{data}"
-        """
-        raw_string = f"{token}&{timestamp}&{app_key}&{data}"
-        sign = hashlib.md5(raw_string.encode("utf-8")).hexdigest().lower()
-        return sign
+    def extract_images_and_text(self, html):
+        soup = BeautifulSoup(html, "html.parser")
 
-    def get_page_html(self, url):
-        try:
-            cookie_jar = CookieJar()
-            session = requests.Session()
-            session.cookies = cookie_jar
-            headers = self.get_headers()
+        images = []
+        gifs = []
+        iframes = []
+        for img in soup.find_all("img"):
+            src = img.get("src")
+            if src:
+                if src.endswith(".gif"):
+                    gifs.append(src)
+                else:
+                    images.append(src)
 
-            response = session.get(
-                url, headers=headers, timeout=5, allow_redirects=True
-            )
-            info = response.content
-            # file_html = open("demo.html", "w", encoding="utf-8")
-            # file_html.write(str(info))
-            # file_html.close()
-            html = BeautifulSoup(info, "html.parser")
-            return html
-        except Exception as e:
-            logger.error(e)
-            traceback.print_exc()
-            return None
+        for iframe in soup.find_all("iframe"):
+            src = iframe.get("src")
+            if src:
+                iframes.append(src)
 
-    def generate_random_headers_request(self):
-        user_agent = generate_desktop_user_agent()
-        headers = {
-            "User-Agent": user_agent,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Encoding": "gzip, compress, br",
-        }
-        return headers
+        text = soup.get_text(separator=" ", strip=True)
 
-    def get_headers(self):
-        """
-        Generate request headers with a random user agent to prevent blocking.
-        Includes necessary cookies and headers for AliExpress requests.
-        """
-        user_agents = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        ]
-        return {
-            "User-Agent": random.choice(user_agents),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-            "Cache-Control": "max-age=0",
-            "Cookie": "aep_usuc_f=site=glo&c_tp=USD&region=US&b_locale=en_US",
-        }
+        return images, gifs, iframes, text
