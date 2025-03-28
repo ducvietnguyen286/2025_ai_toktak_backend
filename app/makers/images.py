@@ -11,7 +11,7 @@ import cv2
 from ultralytics import YOLO, FastSAM
 from google.cloud import vision
 import torch
-import easyocr
+# import easyocr
 
 from app.lib.header import generate_desktop_user_agent
 
@@ -83,6 +83,7 @@ class ImageMaker:
 
     @staticmethod
     def cut_out_long_heihgt_images_by_sam(image_url, batch_id=0):
+        return
         extension = image_url.split(".")[-1].lower()
         if extension == "gif":
             return [image_url]
