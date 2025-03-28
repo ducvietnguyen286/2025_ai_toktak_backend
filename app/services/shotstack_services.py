@@ -308,7 +308,7 @@ class ShotStackService:
                     {
                         "src": "http://apitoktak.voda-play.com/voice/font/JalnanGothic.otf"
                     },
-                    {"src": "http://apitoktak.voda-play.com/voice/font/Jalnan2.otf"}
+                    {"src": "http://apitoktak.voda-play.com/voice/font/Jalnan2.otf"},
                 ],
                 "background": "#FFFFFF",
                 "tracks": tracks,
@@ -863,7 +863,7 @@ def create_first_header_text(viral_text, start=0, length=0, add_time=0.01):
             "text": viral_text,
             "font": {
                 "family": "Jalnan2",
-                "color": "#ffffff", 
+                "color": "#ffffff",
                 "size": font_size,
                 "lineHeight": 1,
             },
@@ -1379,16 +1379,20 @@ def merge_emoji_image_with_text(
 def add_centered_text_to_png(
     text: str,
     output_path: str,
-    font_size=25,
+    font_size=24,
     text_color=(255, 255, 255, 255),
     offset_x=10,  # Dịch sang phải (tăng = dịch nhiều hơn)
     text_font_path="app/makers/fonts/GmarketSansTTFBold.ttf",
     fallback_font_path="app/makers/fonts/Arial.ttf",
 ):
     base_image_path = "app/makers/fonts/emoji_tag_base.png"
-    # Mở ảnh gốc (RGBA để giữ trong suốt)
-    image = Image.open(base_image_path).convert("RGBA")
-    draw = ImageDraw.Draw(image)
+
+    # Mở ảnh gốc (RGBA để giữ alpha)
+    base_image = Image.open(base_image_path).convert("RGBA")
+
+    # Tạo một layer trong suốt để vẽ chữ
+    text_layer = Image.new("RGBA", base_image.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(text_layer)
 
     # Load font
     try:
@@ -1401,17 +1405,19 @@ def add_centered_text_to_png(
     text_width = text_bbox[2] - text_bbox[0]
     text_height = text_bbox[3] - text_bbox[1]
 
-    # Tính vị trí giữa + offset sang phải
-    img_width, img_height = image.size
+    # Tính vị trí căn giữa + offset
+    img_width, img_height = base_image.size
     x = (img_width - text_width) // 2 + offset_x
     y = (img_height - text_height) // 2
 
-    # Vẽ text
+    # Vẽ text lên lớp trong suốt
     draw.text((x, y), text, font=font, fill=text_color)
 
-    # Lưu ảnh mới
-    image.save(output_path)
+    # Kết hợp lớp text với ảnh gốc (giữ alpha)
+    final_image = Image.alpha_composite(base_image, text_layer)
 
+    # Lưu ảnh với alpha
+    final_image.save(output_path, format="PNG")
     # Tạo đường dẫn file trên server
     current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
     output_file_image_tag = output_path.replace("static/", "").replace("\\", "/")
