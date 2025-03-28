@@ -727,7 +727,7 @@ class APIMakePost(Resource):
                 )
 
             return Response(
-                message=f"create {type} that bai...",
+                message=message,
                 status=200,
                 code=201,
             ).to_dict()

@@ -301,6 +301,14 @@ class ShotStackService:
                     {
                         "src": "http://apitoktak.voda-play.com/voice/font/GmarketSansTTFMedium.ttf"
                     },
+                    {"src": "http://apitoktak.voda-play.com/voice/font/Jalnan2TTF.ttf"},
+                    {
+                        "src": "http://apitoktak.voda-play.com/voice/font/JalnanGothicTTF.ttf"
+                    },
+                    {
+                        "src": "http://apitoktak.voda-play.com/voice/font/JalnanGothic.otf"
+                    },
+                    {"src": "http://apitoktak.voda-play.com/voice/font/Jalnan2.otf"}
                 ],
                 "background": "#FFFFFF",
                 "tracks": tracks,
@@ -847,18 +855,17 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
 
 
 def create_first_header_text(viral_text, start=0, length=0, add_time=0.01):
-    font_size = 65 if len(viral_text) > 20 else 60
+    font_size = 45 if len(viral_text) > 20 else 40
 
     clip_detail = {
         "asset": {
             "type": "text",
             "text": viral_text,
             "font": {
-                "family": "JalnanGothic",
-                "color": "#ffffff",
-                "opacity": 0.8,
+                "family": "Jalnan2",
+                "color": "#ffffff", 
                 "size": font_size,
-                "lineHeight": 0.85,
+                "lineHeight": 1,
             },
             # "background": {
             #     "color": "#000000",
