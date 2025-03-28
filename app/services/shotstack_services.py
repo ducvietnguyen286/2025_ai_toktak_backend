@@ -197,9 +197,9 @@ class ShotStackService:
                             "type": "text",
                             "text": purchase_guide,
                             "font": {
-                                "family": "JalnanGothic",
+                                "family": "GmarketSansTTFMedium",
                                 "color": "#ffffff",
-                                "size": 28,
+                                "size": 30,
                                 "lineHeight": 1.2,
                             },
                             "stroke": {"color": "#000000", "width": 0.5},
