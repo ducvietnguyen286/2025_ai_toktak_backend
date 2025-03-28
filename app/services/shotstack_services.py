@@ -137,13 +137,14 @@ class ShotStackService:
                 "src": file_caption,
                 "font": {
                     "lineHeight": 1,
-                    "family": "JalnanGothic",
+                    "family": "Jalnan2",
                     "color": "#ffffff",
                     "size": 38,
                     "stroke": "#000000",
-                    "strokeWidth": 1.5,
+                    "strokeWidth": 1.8,
                 },
             },
+            "offset": {"x": 0.04, "y": -0.03},
             "start": 0,
             "length": "end",
         }
