@@ -795,6 +795,14 @@ class APIGetStatusUploadBySyncId(Resource):
             sync_status = SocialPostService.get_status_social_sycns__by_id(
                 social_sync.id
             )
+
+            posts = sync_status["posts"]
+            for post in posts:
+                post_id = post["id"]
+                social_post_detail = post["social_posts"]
+                update_data = {"social_sns_description": json.dumps(social_post_detail)}
+                PostService.update_post(post_id, **update_data)
+
             return Response(
                 data=sync_status,
                 message="Lấy sync thành công",
