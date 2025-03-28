@@ -145,50 +145,30 @@ class ShortstackWebhook(Resource):
 
             # Ghi log thông tin nhận được
             logger.info("Received Shotstack webhook: %s", payload)
-            create_video_detail = VideoService.update_video_create(
-                render_id, status=status, video_url=video_url
-            )
-            if create_video_detail:
-                post_id = create_video_detail.post_id
-                post_detail = PostService.find_post(post_id)
-                if post_detail:
-                    batch_id = post_detail.batch_id or "0"
-                    # PostService.update_post_by_batch_id(batch_id, video_url=video_url)
+            if action == "render" and  video_url != "":
+                    create_video_detail = VideoService.update_video_create(
+                        render_id, status=status, video_url=video_url
+                    )
+                    if create_video_detail:
+                        post_id = create_video_detail.post_id
+                        post_detail = PostService.find_post(post_id)
+                        if post_detail:
+                            batch_id = post_detail.batch_id or "0"
+                            # PostService.update_post_by_batch_id(batch_id, video_url=video_url)
 
-                    if status == "failed":
-                        BatchService.update_batch(batch_id, status="2")
-                        NotificationServices.create_notification(
-                            user_id=post_detail.user_id,
-                            batch_id=post_detail.batch_id,
-                            title="⚠️ 비디오 생성에 실패했습니다. 다시 시도해주세요.",
-                        )
-                    else:
-                        NotificationServices.create_notification(
-                            user_id=post_detail.user_id,
-                            batch_id=post_detail.batch_id,
-                            title="🎥 비디오 생성이 완료되었습니다. 이제 공유할 수 있습니다.",
-                        )
-
-            if action == "copy":
-
-                create_video_detail = VideoService.update_video_create(
-                    render,
-                    google_driver_url=video_url,
-                    video_url=video_url,
-                    video_path=video_url,
-                )
-                # if create_video_detail:
-                # post_id = create_video_detail.post_id
-                # post_detail = PostService.find_post(post_id)
-                # if post_detail:
-                #     batch_id = post_detail.batch_id or "0"
-                #     PostService.update_post_by_batch_id(
-                #         batch_id, video_url=video_url
-                #     )
-
-            # Trả về phản hồi JSON
-            elif action == "render":
-                if video_url != "":
+                            if status == "failed":
+                                BatchService.update_batch(batch_id, status="2")
+                                NotificationServices.create_notification(
+                                    user_id=post_detail.user_id,
+                                    batch_id=post_detail.batch_id,
+                                    title="⚠️ 비디오 생성에 실패했습니다. 다시 시도해주세요.",
+                                )
+                            else:
+                                NotificationServices.create_notification(
+                                    user_id=post_detail.user_id,
+                                    batch_id=post_detail.batch_id,
+                                    title="🎥 비디오 생성이 완료되었습니다. 이제 공유할 수 있습니다.",
+                                )
                     file_download_attr = download_video(video_url, batch_id)
                     if file_download_attr:
                         file_path = file_download_attr["file_path"]
