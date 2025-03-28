@@ -17,8 +17,7 @@ if __name__ == '__main__':
 
 
 
-
-
+ 
 rm -rf /var/www/logs/*
 rm -rf /var/www/toktak/logs/*
 sudo systemctl restart nginx 
@@ -32,3 +31,9 @@ sudo systemctl restart consumer_toktak_thread
 sudo systemctl restart consumer_toktak_instagram
 sudo systemctl restart toktak.service
 
+
+
+journalctl -u toktak.service -f
+
+
+journalctl -u toktak.service
