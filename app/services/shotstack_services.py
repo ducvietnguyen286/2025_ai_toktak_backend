@@ -144,7 +144,7 @@ class ShotStackService:
                     "strokeWidth": 1.8,
                 },
             },
-            "offset": {"x": 0.04, "y": -0.03},
+            "offset": {"x": 0.04, "y": 0.05},
             "start": 0,
             "length": "end",
         }
@@ -191,7 +191,7 @@ class ShotStackService:
                         "length": "end",
                         "fit": "none",
                         "position": "topLeft",
-                        "offset": {"x": 0.04, "y": -0.03},
+                        "offset": {"x": 0.04, "y": -0.026},
                     },
                     {
                         "asset": {
@@ -210,7 +210,7 @@ class ShotStackService:
                         "start": 0.01,
                         "length": "end",
                         "position": "topRight",
-                        "offset": {"x": 0.25, "y": 0.02},
+                        "offset": {"x": 0.25, "y": 0.0255},
                     },
                 ]
             }

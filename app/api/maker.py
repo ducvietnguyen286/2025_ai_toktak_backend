@@ -485,7 +485,7 @@ class APIMakePost(Resource):
             images = data.get("images", [])
             thumbnails = batch.thumbnails
 
-            need_count = 5
+            need_count = 10
 
             process_images = json.loads(thumbnails)
             if process_images and len(process_images) < need_count:
@@ -535,11 +535,10 @@ class APIMakePost(Resource):
 
                     # Tạo video từ ảnh
                     if len(maker_images) > 0:
-                        image_renders = maker_images[:1]  # Lấy tối đa 3 Ảnh đầu tiên
+                        image_renders = maker_images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
                         image_renders_sliders = maker_images[
-                            :5
-                        ]  # Lấy tối đa 5 Ảnh đầu tiên
-                        caption_sliders = captions[:5]  # Lấy tối đa 5 Ảnh đầu tiên
+                            :10
+                        ]  # Lấy tối đa 10 Ảnh đầu tiên
 
                         product_name = data["name"]
 
@@ -570,7 +569,6 @@ class APIMakePost(Resource):
                                 images_url=json.dumps(image_renders),
                                 description="",
                                 origin_caption=origin_caption,
-                                captions=json.dumps(caption_sliders),
                                 post_id=post.id,
                             )
                         else:
