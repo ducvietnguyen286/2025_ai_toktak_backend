@@ -160,8 +160,13 @@ class APICreateBatch(Resource):
             data["cleared_images"] = []
             if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
                 images = data.get("images", [])
+
+                non_text_images = ImageMaker.get_only_beauty_images(
+                    images, batch_id=batch.id
+                )
+
                 cleared_images = []
-                for image in images:
+                for image in non_text_images:
                     cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(
                         image, batch_id=batch.id
                     )

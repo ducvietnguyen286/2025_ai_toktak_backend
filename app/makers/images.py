@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import io
 import os
 import time
@@ -12,6 +13,8 @@ from ultralytics import YOLO, FastSAM
 from google.cloud import vision
 import torch
 import easyocr
+from multiprocessing import Pool
+import numpy as np
 
 from app.lib.header import generate_desktop_user_agent
 
@@ -79,20 +82,104 @@ def wrap_text(draw, text, font, max_width):
     return lines
 
 
+def process_beauty_image(image_path):
+    extension = image_path.split(".")[-1].lower()
+    if extension == "gif":
+        return image_path
+    try:
+        image = Image.open(image_path)
+    except IOError:
+        print(f"Cannot identify image file {image_path}")
+        return ""
+    is_gpu = torch.cuda.is_available()
+    ocr = easyocr.Reader(["ko", "en"], gpu=is_gpu)
+    ocr_result = ocr.readtext(image)
+    text = "".join([item[1] for item in ocr_result]).strip()
+    if len(text) > 50:
+        image.close()
+        os.remove(image_path)
+        return ""
+    return image_path
+
+
 class ImageMaker:
 
     @staticmethod
-    def cut_out_long_heihgt_images_by_sam(image_url, batch_id=0):
-        extension = image_url.split(".")[-1].lower()
-        if extension == "gif":
-            return [image_url]
-
-        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id=batch_id)
+    def get_only_beauty_images(images, batch_id=0):
         output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
-        print(f"Cut out long height images: {image_path}")
 
-        if not image_path:
-            return [image_url]
+        os.makedirs(output_folder, exist_ok=True)
+
+        process_images = []
+        base_images = []
+
+        downloaded_images = []
+        with ThreadPoolExecutor(max_workers=15) as executor:
+            future_to_image = {
+                executor.submit(
+                    ImageMaker.save_image_url_get_path, image_url, batch_id
+                ): image_url
+                for image_url in images
+            }
+            downloaded_images = [future.result() for future in future_to_image]
+
+        for image_path in downloaded_images:
+            if not image_path:
+                continue
+            try:
+                image = Image.open(image_path)
+            except IOError:
+                print(f"Cannot identify image file {image_path}")
+                base_images.append(image_path)
+                continue
+
+            image_width, image_height = image.size
+
+            if image_height <= (image_width * 4):
+                extension = image_path.split(".")[-1].lower()
+                if extension == "gif":
+                    process_images.append(image_path)
+                    continue
+
+                image_cv = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+
+                if not image_path.lower().endswith(".jpg"):
+                    new_image_path = image_path.rsplit(".", 1)[0] + ".jpg"
+                    cv2.imwrite(
+                        new_image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90]
+                    )
+                    image.close()
+                    os.remove(image_path)
+                    image_path = new_image_path
+                else:
+                    cv2.imwrite(image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90])
+
+                process_images.append(image_path)
+            else:
+                base_images.append(image_path)
+
+            image.close()
+
+        with Pool(processes=5) as pool:
+            results = pool.map(process_beauty_image, process_images)
+
+        processed_images = [result for result in results if result]
+
+        cleared_images = []
+        for image_path in processed_images:
+            if image_path != "":
+                cleared_images.append(image_path)
+
+        cleared_images.extend(base_images)
+
+        return cleared_images
+
+    @staticmethod
+    def cut_out_long_heihgt_images_by_sam(image_path, batch_id=0):
+        extension = image_path.split(".")[-1].lower()
+        if extension == "gif":
+            return [image_path]
+        output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
 
         while not os.path.exists(image_path):
             time.sleep(0.5)
@@ -102,8 +189,6 @@ class ImageMaker:
 
         try:
             image = Image.open(image_path)
-            image = image.convert("RGB")
-            image.save(image_path)
         except IOError:
             print(f"Cannot identify image file {image_path}")
             image_name = image_path.split("/")[-1]
@@ -162,7 +247,7 @@ class ImageMaker:
                         ocr_result = reader.readtext(cropped)
                         text = "".join([item[1] for item in ocr_result]).strip()
                         # Nếu độ dài văn bản vượt quá 25 ký tự, có thể cho rằng đây là vùng chứa chữ/table
-                        if len(text) > 25:
+                        if len(text) > 20:
                             continue
 
                         timestamp = int(time.time())
@@ -170,14 +255,28 @@ class ImageMaker:
                         new_name = f"{timestamp}_{unique_id}.jpg"
                         cropped_path = os.path.join(output_folder, new_name)
 
-                        cv2.imwrite(cropped_path, cropped)  # Lưu ảnh
+                        # Resize the cropped image to the target size (1350x1080)
+                        target_size = (1350, 1080)
+                        h, w, _ = cropped.shape
+                        scale = min(target_size[1] / h, target_size[0] / w)
+                        new_w = int(w * scale)
+                        new_h = int(h * scale)
+                        resized = cv2.resize(
+                            cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
+                        )
 
-                        # print("-----------------INFO IMAGE--------------------")
-                        # print(f"Object: {label} - Confidence: {conf}")
-                        # print(f"OCR Result: {text}")
-                        # print(f"OCR TEXT LENGTH: {len(text)}")
-                        # print(f"Path: {cropped_path}")
-                        # print("----------------------------------------------")
+                        cropped_resized = np.zeros(
+                            (target_size[1], target_size[0], 3), dtype=np.uint8
+                        )
+                        y_offset = (target_size[1] - new_h) // 2
+                        x_offset = (target_size[0] - new_w) // 2
+                        cropped_resized[
+                            y_offset : y_offset + new_h, x_offset : x_offset + new_w
+                        ] = resized
+
+                        cv2.imwrite(
+                            cropped_path, cropped_resized
+                        )  # Save the resized image
 
                         cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
 
@@ -188,16 +287,16 @@ class ImageMaker:
                     cropped_data_sorted = sorted(
                         cropped_images, key=lambda x: x[1], reverse=True
                     )
-                    top5 = [url for url, c in cropped_data_sorted[:needed_length]]
+                    top = [url for url, c in cropped_data_sorted[:needed_length]]
                     for cropped_url, _ in cropped_images[needed_length:]:
                         cropped_image_path = os.path.join(
                             output_folder, os.path.basename(cropped_url)
                         )
                         if os.path.exists(cropped_image_path):
                             os.remove(cropped_image_path)
-
+                    image.close()
                     os.remove(image_path)
-                    return top5
+                    return top
 
             except Exception as e:
                 print(f"Error: {e}")
@@ -207,15 +306,6 @@ class ImageMaker:
                     f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
                 )
                 return [image_url]
-
-        # else:
-        #     image_cv = cv2.imread(image_path)
-        #     ocr_result = reader.readtext(image_cv)
-        #     text = "".join([item[1] for item in ocr_result]).strip()
-        #     print(f"OCR Result: {text}")
-        #     if len(text) > 25:
-        #         os.remove(image_path)
-        #         return []
 
         image_name = image_path.split("/")[-1]
         image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
