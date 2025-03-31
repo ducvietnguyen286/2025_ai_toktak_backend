@@ -186,6 +186,10 @@ class APICreateBatch(Resource):
             batch_res = batch._to_json()
             batch_res["posts"] = posts
 
+            batch_id = batch.id
+            redis_key = f"batch_info_{batch_id}"
+            redis_client.set(redis_key, json.dumps(posts), ex=3600)
+
             NotificationServices.create_notification(
                 user_id=user_id_login,
                 batch_id=batch.id,
@@ -194,6 +198,70 @@ class APICreateBatch(Resource):
 
             return Response(
                 data=batch_res,
+                message="제품 정보를 성공적으로 가져왔습니다.",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="상품 정보를 불러올 수 없어요.(Error code : )",
+                code=201,
+            ).to_dict()
+
+
+@ns.route("/batch-make-image")
+class APIBatchMakeImage(Resource):
+
+    @parameters(
+        type="object",
+        properties={
+            "batch_id": {"type": "integer"},
+        },
+        required=["batch_id"],
+    )
+    def post(self, args):
+        try:
+            batch_id = args.get("batch_id", 0)
+
+            batch_detail = BatchService.find_batch(batch_id)
+            if not batch_detail:
+                return Response(
+                    message="Batch không tồn tại",
+                    code=201,
+                ).to_dict()
+
+            content = json.loads(batch_detail.content)
+            data = []
+            if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
+                images = data.get("images", [])
+                cleared_images = []
+                for image in images:
+                    cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(
+                        image, batch_id=batch_id
+                    )
+                    cleared_images.extend(cutout_images)
+                content["cleared_images"] = cleared_images
+                data_update_batch = {
+                    "content": content,
+                }
+                BatchService.update_batch(batch_id, **data_update_batch)
+
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+            redis_key = f"batch_info_{batch_id}"
+            batch_info = redis_client.get(redis_key)
+            if batch_info:
+                posts = json.loads(batch_info)
+            else:
+                posts = PostService.get_posts_by_batch_id(batch_id)
+                for post in posts:
+                    post["url_run"] = (
+                        f"{current_domain}/api/v1/maker/make-post/{post['id']}"
+                    )
+
+                redis_client.set(redis_key, json.dumps(posts), ex=3600)
+
+            return Response(
+                data=posts,
                 message="제품 정보를 성공적으로 가져왔습니다.",
             ).to_dict()
         except Exception as e:
