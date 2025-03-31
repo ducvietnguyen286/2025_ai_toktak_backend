@@ -223,7 +223,8 @@ class APIBatchMakeImage(Resource):
             content = json.loads(batch_detail.content)
             data = []
             if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
-                images = data.get("images", [])
+                
+                images = content['images'] or []
                 cleared_images = []
                 for image in images:
                     cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(

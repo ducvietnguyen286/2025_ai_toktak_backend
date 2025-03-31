@@ -83,7 +83,7 @@ class ImageMaker:
 
     @staticmethod
     def cut_out_long_heihgt_images_by_sam(image_url, batch_id=0):
-        return
+        return None
         extension = image_url.split(".")[-1].lower()
         if extension == "gif":
             return [image_url]
