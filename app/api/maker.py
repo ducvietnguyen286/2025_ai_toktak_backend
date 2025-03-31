@@ -223,8 +223,8 @@ class APIBatchMakeImage(Resource):
             content = json.loads(batch_detail.content)
             data = []
             if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
-                
-                images = content['images'] or []
+
+                images = content["images"] or []
                 cleared_images = []
                 for image in images:
                     cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(
@@ -234,7 +234,7 @@ class APIBatchMakeImage(Resource):
                         cleared_images.extend(cutout_images)
                 content["cleared_images"] = cleared_images
                 data_update_batch = {
-                    "content": content,
+                    "content": json.dumps(content),
                 }
                 BatchService.update_batch(batch_id, **data_update_batch)
 
