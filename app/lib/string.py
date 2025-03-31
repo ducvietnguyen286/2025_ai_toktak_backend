@@ -36,7 +36,7 @@ def get_level_images(level):
     """
     Trả về danh sách ảnh theo cấp độ với một ảnh ngẫu nhiên được đánh dấu active.
     """
-    base_url = "https://admin.lang.canvasee.com/img/level/"
+    base_url = "/"
     images = []
 
     if level == 0:
