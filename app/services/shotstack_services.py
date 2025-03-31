@@ -21,7 +21,8 @@ import srt
 # import ffmpeg
 import textwrap
 import re  # Thêm thư viện để xử lý dấu câu
-from const import EFFECTS_CONST
+from const import EFFECTS_CONST, KOREAN_VOICES
+from PIL import Image, ImageDraw, ImageFont
 
 
 class ShotStackService:
@@ -48,6 +49,7 @@ class ShotStackService:
 
         key_redis = f"caption_videos_default"
         progress_json = redis_client.get(key_redis)
+        timestamp = datetime.datetime.now().strftime("%H%M%S")
 
         if progress_json:
             caption_videos_default = json.loads(progress_json) if progress_json else {}
@@ -123,7 +125,10 @@ class ShotStackService:
             )
 
         file_caption = generate_srt(
-            origin_caption, mp3_file, f"{dir_path}/caption_file.srt", first_duration
+            origin_caption,
+            mp3_file,
+            f"{dir_path}/caption_file{timestamp}.srt",
+            first_duration,
         )
 
         clips_caption = {
@@ -132,13 +137,14 @@ class ShotStackService:
                 "src": file_caption,
                 "font": {
                     "lineHeight": 1,
-                    "family": "JalnanGothic",
+                    "family": "Jalnan2",
                     "color": "#ffffff",
-                    "size": 46,
+                    "size": 38,
                     "stroke": "#000000",
-                    "strokeWidth": 1.5,
+                    "strokeWidth": 1.8,
                 },
             },
+            "offset": {"x": 0.04, "y": -0.03},
             "start": 0,
             "length": "end",
         }
@@ -166,6 +172,11 @@ class ShotStackService:
             is_caption_top = template_info["is_caption_top"]
             is_caption_last = template_info["is_caption_last"]
 
+            output_file_image_tag = add_centered_text_to_png(
+                text=product_name,
+                output_path=f"{dir_path}/emoji_with_text_{timestamp}.png",
+            )
+
             if len(purchase_guide) > 5:
                 purchase_guide = purchase_guide[:5] + "\n" + purchase_guide[5:]
 
@@ -173,34 +184,26 @@ class ShotStackService:
                 "clips": [
                     {
                         "asset": {
-                            "type": "text",
-                            "text": product_name,
-                            "font": {
-                                "family": "JalnanGothic",
-                                "size": 35,
-                                "color": "#FFFFFF",
-                            },
-                            "stroke": {"color": "#000000", "width": 1.5},
-                            "height": 110,
-                            "width": 600,
+                            "type": "image",
+                            "src": output_file_image_tag,
                         },
                         "start": 0,
                         "length": "end",
+                        "fit": "none",
                         "position": "topLeft",
-                        "offset": {"x": -0.18, "y": 0},
+                        "offset": {"x": 0.04, "y": -0.03},
                     },
                     {
                         "asset": {
                             "type": "text",
                             "text": purchase_guide,
                             "font": {
-                                "family": "JalnanGothic",
+                                "family": "GmarketSansTTFMedium",
                                 "color": "#ffffff",
-                                "opacity": 0.8,
-                                "size": 35,
-                                "lineHeight": 0.85,
+                                "size": 30,
+                                "lineHeight": 1.2,
                             },
-                            "stroke": {"color": "#000000", "width": 1.5},
+                            "stroke": {"color": "#000000", "width": 0.5},
                             "height": 200,
                             "width": 600,
                         },
@@ -290,15 +293,22 @@ class ShotStackService:
             "timeline": {
                 "fonts": [
                     {
-                        "src": "http://admin.lang.canvasee.com/fonts/Jalnan2/Jalnan2TTF.ttf"
-                    },
-                    {"src": "http://admin.lang.canvasee.com/fonts/Jalnan2/Jalnan2.otf"},
-                    {
-                        "src": "http://admin.lang.canvasee.com/fonts/Jalnan2/JalnanGothicTTF.ttf"
+                        "src": "http://apitoktak.voda-play.com/voice/font/GmarketSansTTFBold.ttf"
                     },
                     {
-                        "src": "http://admin.lang.canvasee.com/fonts/Jalnan2/JalnanGothic.otf"
+                        "src": "http://apitoktak.voda-play.com/voice/font/GmarketSansTTFLight.ttf"
                     },
+                    {
+                        "src": "http://apitoktak.voda-play.com/voice/font/GmarketSansTTFMedium.ttf"
+                    },
+                    {"src": "http://apitoktak.voda-play.com/voice/font/Jalnan2TTF.ttf"},
+                    {
+                        "src": "http://apitoktak.voda-play.com/voice/font/JalnanGothicTTF.ttf"
+                    },
+                    {
+                        "src": "http://apitoktak.voda-play.com/voice/font/JalnanGothic.otf"
+                    },
+                    {"src": "http://apitoktak.voda-play.com/voice/font/Jalnan2.otf"},
                 ],
                 "background": "#FFFFFF",
                 "tracks": tracks,
@@ -534,7 +544,7 @@ def create_combined_clips_v2(
             first_caption_image_default = ShotStackService.filter_content_by_type(
                 caption_videos_default, 2
             )
-            clip_detail = create_header_text(
+            clip_detail = create_first_header_text(
                 first_caption_image_default, start_slider_time, 2
             )
             clips.append(clip_detail)
@@ -671,7 +681,7 @@ def create_combined_clips_with_advance(
                 first_caption_image_default = ShotStackService.filter_content_by_type(
                     caption_videos_default, 2
                 )
-                clip_detail = create_header_text(
+                clip_detail = create_first_header_text(
                     first_caption_image_default, start_slider_time, 2
                 )
                 clips.append(clip_detail)
@@ -820,11 +830,10 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
             "type": "text",
             "text": caption_text,
             "font": {
-                "family": "JalnanGothic",
+                "family": "Jalnan2",
                 "color": "#ffffff",
-                "opacity": 0.8,
                 "size": font_size,
-                "lineHeight": 0.85,
+                "lineHeight": 1.2,
             },
             # "background": {
             #     "color": "#000000",
@@ -833,13 +842,38 @@ def create_header_text(caption_text, start=0, length=0, add_time=0.01):
             #     "opacity": 0.6,
             # },
             "stroke": {"color": "#000000", "width": 1.5},
-            "height": 110,
-            "width": 600,
+            "height": 120,
+            "width": 500,
         },
         "start": start + add_time,
         "length": length,
         "position": "top",
-        "offset": {"x": 0, "y": -0.08},
+        "offset": {"x": 0, "y": -0.14},
+    }
+    return clip_detail
+
+
+def create_first_header_text(viral_text, start=0, length=0, add_time=0.01):
+    font_size = 60 if len(viral_text) > 20 else 55
+    clip_detail = {
+        "asset": {
+            "type": "text",
+            "text": viral_text,
+            "font": {
+                "family": "Jalnan2",
+                "color": "#ffffff",
+                "size": font_size,
+                "lineHeight": 1,
+            },
+            "stroke": {"color": "#000000", "width": 3.5},
+            "height": 360,
+            "width": 700,
+        },
+        "start": start + add_time,
+        "length": length,
+        "position": "center",
+        "transition": {"in": "slideUp", "out": "slideDown"},
+        "offset": {"x": 0, "y": 0},
     }
     return clip_detail
 
@@ -934,7 +968,7 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
         return output_file, audio_duration
 
     except Exception as e:
-        log_make_video_message(f"Exception: {str(e)}")
+        log_make_video_message(f"Exception text_to_speech_kr : {str(e)}")
         return "", 0.0
 
 
@@ -1077,126 +1111,9 @@ def google_speech_to_text(audio_file, config=None):
 
 
 def get_korean_voice(index):
-    korean_voices = [
-        {
-            "index": 1,
-            "type": "Standard",
-            "name": "ko-KR-Standard-C",
-            "ssmlGender": "MALE",
-        },
-        {
-            "index": 2,
-            "type": "Standard",
-            "name": "ko-KR-Standard-D",
-            "ssmlGender": "MALE",
-        },
-        {
-            "index": 3,
-            "type": "Standard",
-            "name": "ko-KR-Standard-A",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 4,
-            "type": "Standard",
-            "name": "ko-KR-Standard-B",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 5,
-            "type": "Premium",
-            "name": "ko-KR-Chirp3-HD-Aoede",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 6,
-            "type": "Premium",
-            "name": "ko-KR-Chirp3-HD-Charon",
-            "ssmlGender": "MALE",
-        },
-        {
-            "index": 7,
-            "type": "Premium",
-            "name": "ko-KR-Chirp3-HD-Fenrir",
-            "ssmlGender": "MALE",
-        },
-        {
-            "index": 8,
-            "type": "Premium",
-            "name": "ko-KR-Chirp3-HD-Kore",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 9,
-            "type": "Premium",
-            "name": "ko-KR-Chirp3-HD-Leda",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 10,
-            "type": "Premium",
-            "name": "ko-KR-Chirp3-HD-Orus",
-            "ssmlGender": "MALE",
-        },
-        {
-            "index": 11,
-            "type": "Premium",
-            "name": "ko-KR-Chirp3-HD-Puck",
-            "ssmlGender": "MALE",
-        },
-        {
-            "index": 12,
-            "type": "Premium",
-            "name": "ko-KR-Chirp3-HD-Zephyr",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 13,
-            "type": "Premium",
-            "name": "ko-KR-Neural2-A",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 14,
-            "type": "Premium",
-            "name": "ko-KR-Neural2-B",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 15,
-            "type": "Premium",
-            "name": "ko-KR-Neural2-C",
-            "ssmlGender": "MALE",
-        },
-        {
-            "index": 16,
-            "type": "Premium",
-            "name": "ko-KR-Wavenet-A",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 17,
-            "type": "Premium",
-            "name": "ko-KR-Wavenet-B",
-            "ssmlGender": "FEMALE",
-        },
-        {
-            "index": 18,
-            "type": "Premium",
-            "name": "ko-KR-Wavenet-C",
-            "ssmlGender": "MALE",
-        },
-        {
-            "index": 19,
-            "type": "Premium",
-            "name": "ko-KR-Wavenet-D",
-            "ssmlGender": "MALE",
-        },
-    ]
-
     # Điều chỉnh index để luôn nằm trong phạm vi hợp lệ
-    adjusted_index = (index - 1) % len(korean_voices)
-    return korean_voices[adjusted_index]
+    adjusted_index = (index - 1) % len(KOREAN_VOICES)
+    return KOREAN_VOICES[adjusted_index]
 
 
 def format_time_caption(seconds):
@@ -1341,7 +1258,7 @@ def generate_srt(text, audio_file, output_srt, start_offset=0.0):
         with open(output_srt, "w", encoding="utf-8") as f:
             f.write(srt_content)
 
-        print(f"✅ Đã tạo file SRT (KHÔNG có index): {output_srt}")
+        # print(f"✅ Đã tạo file SRT (KHÔNG có index): {output_srt}")
 
         # Tạo đường dẫn file trên server
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -1389,3 +1306,113 @@ def distribute_images_over_audio(image_list, audio_duration, start_offset=0.0):
 
     log_make_video_message(timestamps)
     return timestamps
+
+
+def merge_emoji_image_with_text(
+    emoji_image_path: str,
+    label_text: str,
+    output_path: str,
+    bg_color=(0, 0, 0, 255),
+    text_color=(255, 255, 255, 255),
+    font_size=30,
+    padding=30,
+    spacing=30,
+    border_radius=30,
+    text_font_path="app/makers/fonts/GmarketSansTTFBold.ttf",
+    fallback_font_path="app/makers/fonts/Arial.ttf",
+):
+    # Load emoji ảnh gốc, KHÔNG resize
+    emoji_img = Image.open(emoji_image_path).convert("RGBA")
+
+    # Load font chữ
+    try:
+        text_font = ImageFont.truetype(text_font_path, font_size)
+    except:
+        text_font = ImageFont.truetype(fallback_font_path, font_size)
+
+    # Đo kích thước text
+    text_bbox = text_font.getbbox(label_text)
+    text_width = text_bbox[2] - text_bbox[0]
+    text_height = text_bbox[3] - text_bbox[1]
+
+    # Tính kích thước toàn ảnh
+    total_width = padding * 2 + emoji_img.width + spacing + text_width
+    total_height = padding + max(emoji_img.height, text_height)
+
+    # Tạo ảnh RGBA trong suốt
+    image = Image.new("RGBA", (total_width, total_height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+
+    # Vẽ nền bo góc
+    draw.rounded_rectangle(
+        [(0, 0), (total_width, total_height)], radius=border_radius, fill=bg_color
+    )
+
+    # Dán emoji
+    emoji_y = (total_height - emoji_img.height) // 2
+    image.paste(emoji_img, (padding, emoji_y), mask=emoji_img)
+
+    # Vẽ text
+    text_x = padding + emoji_img.width + spacing
+    text_y = (total_height - text_height) // 2
+    draw.text((text_x, text_y), label_text, font=text_font, fill=text_color)
+
+    # Lưu file
+    image.save(output_path)
+
+    # Tạo đường dẫn file trên server
+    current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+    output_file_image_tag = output_path.replace("static/", "").replace("\\", "/")
+    file_url = f"{current_domain}/{output_file_image_tag}"
+
+    return file_url
+
+
+def add_centered_text_to_png(
+    text: str,
+    output_path: str,
+    font_size=24,
+    text_color=(255, 255, 255, 255),
+    offset_x=10,  # Dịch sang phải (tăng = dịch nhiều hơn)
+    text_font_path="app/makers/fonts/GmarketSansTTFBold.ttf",
+    fallback_font_path="app/makers/fonts/Arial.ttf",
+):
+    base_image_path = "app/makers/fonts/emoji_tag_base.png"
+
+    # Mở ảnh gốc (RGBA để giữ alpha)
+    base_image = Image.open(base_image_path).convert("RGBA")
+
+    # Tạo một layer trong suốt để vẽ chữ
+    text_layer = Image.new("RGBA", base_image.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(text_layer)
+
+    # Load font
+    try:
+        font = ImageFont.truetype(text_font_path, font_size)
+    except:
+        font = ImageFont.truetype(fallback_font_path, font_size)
+
+    # Tính kích thước text
+    text_bbox = font.getbbox(text)
+    text_width = text_bbox[2] - text_bbox[0]
+    text_height = text_bbox[3] - text_bbox[1]
+
+    # Tính vị trí căn giữa + offset
+    img_width, img_height = base_image.size
+    x = (img_width - text_width) // 2 + offset_x
+    y = (img_height - text_height) // 2
+
+    # Vẽ text lên lớp trong suốt
+    draw.text((x, y), text, font=font, fill=text_color)
+
+    # Kết hợp lớp text với ảnh gốc (giữ alpha)
+    final_image = Image.alpha_composite(base_image, text_layer)
+
+    # Lưu ảnh với alpha
+    final_image.save(output_path, format="PNG")
+    # Tạo đường dẫn file trên server
+    current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+    output_file_image_tag = output_path.replace("static/", "").replace("\\", "/")
+    file_url = f"{current_domain}/{output_file_image_tag}"
+
+    return file_url

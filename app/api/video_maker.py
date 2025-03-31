@@ -10,7 +10,8 @@ import random
 from app.lib.logger import logger, log_webhook_message
 from app.services.notification import NotificationServices
 
-from datetime import date ,time
+from datetime import datetime, date
+import time
 import os
 import requests
 
@@ -95,6 +96,7 @@ class CreateVideo(Resource):
             message = result["message"]
 
         return {
+            "post_id": post_id,
             "batch_id": batch_id,
             "status": status,
             "message": message,
@@ -143,60 +145,40 @@ class ShortstackWebhook(Resource):
             render = payload.get("render", "")
 
             # Ghi log thông tin nhận được
-            logger.info("Received Shotstack webhook: %s", payload)
-            create_video_detail = VideoService.update_video_create(
-                render_id, status=status, video_url=video_url
-            )
-            if create_video_detail:
-                post_id = create_video_detail.post_id
-                post_detail = PostService.find_post(post_id)
-                if post_detail:
-                    batch_id = post_detail.batch_id or "0"
-                    # PostService.update_post_by_batch_id(batch_id, video_url=video_url)
-
-                    if status == "failed":
-                        BatchService.update_batch(batch_id, status="2")
-                        NotificationServices.create_notification(
-                            user_id=post_detail.user_id,
-                            batch_id=post_detail.batch_id,
-                            title="⚠️ 비디오 생성에 실패했습니다. 다시 시도해주세요.",
-                        )
-                    else:
-                        NotificationServices.create_notification(
-                            user_id=post_detail.user_id,
-                            batch_id=post_detail.batch_id,
-                            title="🎥 비디오 생성이 완료되었습니다. 이제 공유할 수 있습니다.",
-                        )
-
-            if action == "copy":
-
+            log_webhook_message(f"Received Shotstack webhook: %{payload}")
+            if action == "render" and video_url != "":
                 create_video_detail = VideoService.update_video_create(
-                    render,
-                    google_driver_url=video_url,
-                    video_url=video_url,
-                    video_path=video_url,
+                    render_id, status=status, video_url=video_url
                 )
-                # if create_video_detail:
-                # post_id = create_video_detail.post_id
-                # post_detail = PostService.find_post(post_id)
-                # if post_detail:
-                #     batch_id = post_detail.batch_id or "0"
-                #     PostService.update_post_by_batch_id(
-                #         batch_id, video_url=video_url
-                #     )
+                if create_video_detail:
+                    post_id = create_video_detail.post_id
+                    post_detail = PostService.find_post(post_id)
+                    if post_detail:
+                        batch_id = post_detail.batch_id
+                        # PostService.update_post_by_batch_id(batch_id, video_url=video_url)
 
-            # Trả về phản hồi JSON
-            elif action == "render":
-                if video_url != "":
-                    file_download_attr = download_video(video_url, batch_id)
-                    if file_download_attr:
-                        file_path = file_download_attr["file_path"]
-                        file_download = file_download_attr["file_download"]
-                        PostService.update_post_by_batch_id(
-                            batch_id,
-                            video_url=video_url,
-                            video_path=file_path,
-                        )
+                        if status == "failed":
+                            BatchService.update_batch(batch_id, status="2")
+                            NotificationServices.create_notification(
+                                user_id=post_detail.user_id,
+                                batch_id=post_detail.batch_id,
+                                title="⚠️ 비디오 생성에 실패했습니다. 다시 시도해주세요.",
+                            )
+                        else:
+                            NotificationServices.create_notification(
+                                user_id=post_detail.user_id,
+                                batch_id=post_detail.batch_id,
+                                title="🎥 비디오 생성이 완료되었습니다. 이제 공유할 수 있습니다.",
+                            )
+                file_download_attr = download_video(video_url, batch_id)
+                if file_download_attr:
+                    file_path = file_download_attr["file_path"]
+                    file_download = file_download_attr["file_download"]
+                    PostService.update_post_by_batch_id(
+                        batch_id,
+                        video_url=video_url,
+                        video_path=file_path,
+                    )
 
             return {
                 "message": "Webhook received successfully",
@@ -211,21 +193,25 @@ class ShortstackWebhook(Resource):
 
         except Exception as e:
             # Ghi log lỗi kèm stack trace
-            logger.exception("Error processing webhook: %s", e)
+            log_webhook_message("Error processing webhook: %s", e)
             return {"message": "Internal Server Error"}, 500
 
 
 def download_video(video_url, batch_id):
     MAX_RETRIES = 3
-    RETRY_DELAY = 2
-    TIMEOUT = 10  # giây
+    RETRY_DELAY = 2  # giây
+    TIMEOUT = 20  # giây
 
     # Lấy ngày hiện tại (YYYY_MM_DD)
     today = date.today().strftime("%Y_%m_%d")
     save_dir = os.path.join("static", "voice", "gtts_voice", today, str(batch_id))
     os.makedirs(save_dir, exist_ok=True)
 
-    video_filename = os.path.join(save_dir, f"{batch_id}_downloaded_video.mp4")
+    # Thêm timestamp vào tên file để tránh trùng lặp
+    timestamp = datetime.now().strftime("%H%M%S")
+    video_filename = os.path.join(save_dir, f"{batch_id}_video_{timestamp}.mp4")
+
+    # Domain hiện tại
     current_domain = os.environ.get("CURRENT_DOMAIN", "http://localhost:5000")
 
     for attempt in range(1, MAX_RETRIES + 1):
@@ -239,7 +225,7 @@ def download_video(video_url, batch_id):
             content_type = response.headers.get("Content-Type", "")
             if "video" not in content_type:
                 log_webhook_message(
-                    f"❌ URL không phải video:  batch_id : {batch_id} : {video_url} (Content-Type: {content_type})"
+                    f"❌ URL không phải (lần thử {attempt}/{MAX_RETRIES} video: batch_id: {batch_id} : {video_url} (Content-Type: {content_type})"
                 )
                 return None
 
@@ -248,15 +234,18 @@ def download_video(video_url, batch_id):
                     if chunk:
                         video_file.write(chunk)
 
-            # Kiểm tra nếu file tải về quá nhỏ (có thể lỗi)
-            if os.path.getsize(video_filename) < 1024:  # <1KB
+            # Kiểm tra kích thước file
+            size = os.path.getsize(video_filename)
+            if size < 1024:  # <1KB
                 log_webhook_message(
-                    f"⚠️ Video tải về quá nhỏ, có thể lỗi:  batch_id : {batch_id} : {video_filename}"
+                    f"⚠️ Video tải về quá nhỏ ({size} bytes), có thể lỗi: batch_id: {batch_id} : {video_filename}"
                 )
                 return None
 
             # Thành công
-            log_webhook_message(f"✅ Đã tải file video  batch_id : {batch_id} : {video_filename}")
+            log_webhook_message(
+                f"✅ Đã tải file video (lần thử {attempt}/{MAX_RETRIES} batch_id: {batch_id} : {video_filename}"
+            )
             file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
             file_download = f"{current_domain}/{file_path}"
 
@@ -267,17 +256,25 @@ def download_video(video_url, batch_id):
 
         except requests.exceptions.Timeout:
             log_webhook_message(
-                f"⚠️ Timeout khi tải video  batch_id : {batch_id} (thử {attempt}/{MAX_RETRIES}): {video_url}"
+                f"⚠️ Timeout khi tải video batch_id: {batch_id} (lần thử {attempt}/{MAX_RETRIES}): {video_url}"
+            )
+        except requests.exceptions.ConnectionError as e:
+            log_webhook_message(
+                f"🚫 Không kết nối được tới máy chủ (lần thử {attempt}/{MAX_RETRIES} batch_id: {batch_id} : {video_url} - Error: {e}"
             )
         except requests.exceptions.RequestException as e:
             log_webhook_message(
-                f"⚠️ Lỗi khi tải video ( batch_id : {batch_id} thử {attempt}/{MAX_RETRIES}): {video_url} - Error: {e}"
+                f"⚠️ Lỗi khi tải video batch_id: {batch_id} (lần thử {attempt}/{MAX_RETRIES}): {video_url} - Error: {e}"
             )
         except Exception as e:
-            log_webhook_message(f"❌ Lỗi hệ thống khi tải video  batch_id : {batch_id} : {e}")
+            log_webhook_message(
+                f"❌ Lỗi hệ thống khi tải video batch_id: {batch_id} : {e}"
+            )
 
         if attempt < MAX_RETRIES:
             time.sleep(RETRY_DELAY)
 
-    log_webhook_message(f"❌ Tải video thất bại  batch_id : {batch_id} sau {MAX_RETRIES} lần: {video_url}")
+    log_webhook_message(
+        f"❌ Tải video thất bại batch_id: {batch_id} sau {MAX_RETRIES} lần: {video_url}"
+    )
     return None
