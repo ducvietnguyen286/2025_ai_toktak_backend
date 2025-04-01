@@ -959,8 +959,7 @@ class ImageMaker:
 
             with Image.open(image_temp_path) as temp_image:
                 temp_image.save(image_path, "JPEG", quality=100, optimize=True)
-
-        os.remove(image_temp_path)
+            os.remove(image_temp_path)
         return image_path
 
     @staticmethod
