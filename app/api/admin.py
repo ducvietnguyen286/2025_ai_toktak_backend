@@ -17,6 +17,7 @@ ns = Namespace(name="admin", description="Admin API")
 
 
 
+
 @ns.route("/login")
 class APIAdminLoginByInput(Resource):
 
