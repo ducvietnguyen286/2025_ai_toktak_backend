@@ -5,6 +5,7 @@ MAX_PER_PAGE = 100
 
 DRAFT_STATUS = 99
 UPLOADED = 1
+ADMIN = 1
 
 EFFECTS_CONST = [
     "zoomIn",
