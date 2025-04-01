@@ -8,6 +8,7 @@ import datetime
 import traceback
 from urllib.parse import urlparse
 import uuid
+import pillow_avif
 from PIL import Image, ImageDraw, ImageFont
 import requests
 import cv2
@@ -17,7 +18,6 @@ import torch
 import easyocr
 from multiprocessing import Pool
 import numpy as np
-import pillow_avif
 
 from app.lib.header import generate_desktop_user_agent
 
@@ -957,9 +957,9 @@ class ImageMaker:
                 response = ImageMaker.request_content_image(image_url)
                 temp_avif.write(response)
 
-            subprocess.run(
-                ["ffmpeg", "-y", "-i", image_temp_path, image_path], check=True
-            )
+            with Image.open(image_temp_path) as temp_image:
+                temp_image.save(image_path, "JPEG", quality=100, optimize=True)
+
         os.remove(image_temp_path)
         return image_path
 
