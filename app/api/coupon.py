@@ -110,7 +110,6 @@ class APICreateCoupon(Resource):
     )
     def post(self, args):
         current_user = AuthService.get_current_identity()
-        print(current_user)
         image = args.get("image", "")
         name = args.get("name", "")
         type = args.get("type", "")
