@@ -849,7 +849,7 @@ class APICheckSNSLink(Resource):
             if current_user.subscription == "FREE":
                 return Response(
                     message="SNS 연동이 필요해요",
-                    code=400,
+                    code=201,
                 ).to_dict()
 
             if batchId:
@@ -865,7 +865,6 @@ class APICheckSNSLink(Resource):
                     ):
                         return Response(
                             message="Bạn đã tạo quá số lượng batch cho phép.",
-                            status=200,
                             code=201,
                         ).to_dict()
                 BatchService.update_batch(batchId, user_id=current_user.id)
