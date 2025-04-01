@@ -43,6 +43,7 @@ opencv-python~=4.11.0.86
 ultralytics~=8.0.239
 pytesseract~=0.3.13
 easyocr~=1.7.2
+pillow-avif-plugin~=1.5.1
 
 threads-api~=1.2.0
 google-auth-oauthlib~=1.2.1
