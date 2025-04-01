@@ -1,8 +1,10 @@
 import json
+import random
 import re
 
 import hashlib
 import base64
+import string
 
 
 def is_json(data):
@@ -108,6 +110,12 @@ def generate_short_code(url):
     hash_value = hashlib.md5(url.encode()).digest()
     short_code = base64.urlsafe_b64encode(hash_value)[:6].decode("utf-8")
     return short_code
+
+
+def generate_shortcode(length=6):
+    characters = string.ascii_letters + string.digits
+    shortcode = "".join(random.choice(characters) for _ in range(length))
+    return shortcode
 
 
 def should_replace_shortlink(url):

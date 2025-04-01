@@ -97,6 +97,7 @@ class APICreateBatch(Resource):
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
             data = Scraper().scraper({"url": url})
+
             # return data
             if not data:
                 NotificationServices.create_notification(
@@ -137,6 +138,7 @@ class APICreateBatch(Resource):
             data["shorten_link"] = shorten_link
 
             product_name = data.get("name", "")
+
             product_name_cleared = call_chatgpt_clear_product_name(product_name)
             if product_name_cleared:
                 data["name"] = product_name_cleared
@@ -537,6 +539,11 @@ class APIMakePost(Resource):
             mime_type = ""
             docx_url = ""
 
+            is_avif = False
+            crawl_url = data.get("domain", "")
+            if "aliexpress" in crawl_url:
+                is_avif = True
+
             if type == "video":
                 response = call_chatgpt_create_caption(process_images, data, post.id)
                 if response:
@@ -552,7 +559,7 @@ class APIMakePost(Resource):
 
                     for image_url in process_images:
                         maker_image = ImageMaker.save_image_for_short_video(
-                            image_url, batch_id
+                            image_url, batch_id, is_avif=is_avif
                         )
                         maker_images.append(maker_image)
 
@@ -605,6 +612,7 @@ class APIMakePost(Resource):
                 logger.info(
                     "-------------------- PROCESSING CREATE IMAGES -------------------"
                 )
+
                 image_template_id = template_info.get("image_template_id", "")
                 if image_template_id == "":
                     return Response(
@@ -633,6 +641,7 @@ class APIMakePost(Resource):
                         captions=captions,
                         process_images=process_images,
                         post=post,
+                        is_avif=is_avif,
                     )
                     image_urls = img_res.get("image_urls", [])
                     file_size += img_res.get("file_size", 0)

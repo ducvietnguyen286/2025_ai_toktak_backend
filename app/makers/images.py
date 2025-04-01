@@ -1,6 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
 import io
 import os
+import subprocess
+import tempfile
 import time
 import datetime
 import traceback
@@ -417,8 +419,10 @@ class ImageMaker:
         stroke_color=(255, 255, 255),  # Màu viền (đen)
         stroke_width=10,  # Độ dày viền
         target_size=(1080, 1350),
+        is_avif=False,
     ):
-        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id)
+
+        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id, is_avif)
         image_name = image_path.split("/")[-1]
 
         while not os.path.exists(image_path):
@@ -529,8 +533,11 @@ class ImageMaker:
         main_color,
         batch_id=0,
         target_size=(1080, 1350),
+        is_avif=False,
     ):
-        image_path = ImageMaker.make_resize_image(first_image, target_size, batch_id)
+        image_path = ImageMaker.make_resize_image(
+            first_image, target_size, batch_id, is_avif
+        )
         image_name = image_path.split("/")[-1]
         try:
             background = cv2.imread(image_path)
@@ -582,8 +589,11 @@ class ImageMaker:
         main_color,
         batch_id=0,
         target_size=(1080, 1350),
+        is_avif=False,
     ):
-        image_path = ImageMaker.make_resize_image(first_image, target_size)
+        image_path = ImageMaker.make_resize_image(
+            first_image, target_size, batch_id, is_avif
+        )
         image_name = image_path.split("/")[-1]
 
         try:
@@ -626,8 +636,8 @@ class ImageMaker:
         }
 
     @staticmethod
-    def make_resize_image(image, target_size, batch_id=0):
-        image_path = ImageMaker.save_image_url_get_path(image, batch_id)
+    def make_resize_image(image, target_size, batch_id=0, is_avif=False):
+        image_path = ImageMaker.save_image_url_get_path(image, batch_id, is_avif)
         image_name = image_path.split("/")[-1]
 
         while not os.path.exists(image_path):
@@ -909,7 +919,7 @@ class ImageMaker:
         return image_url
 
     @staticmethod
-    def save_image_url_get_path(image_url, batch_id=0):
+    def save_image_url_get_path(image_url, batch_id=0, is_avif=False):
         new_folder = f"{UPLOAD_FOLDER}/{batch_id}"
         os.makedirs(new_folder, exist_ok=True)
         print(f"Downloading image from {image_url}")
@@ -944,19 +954,30 @@ class ImageMaker:
                 }
 
                 response = requests.get(image_url, headers=headers).content
+
+                if is_avif:
+                    with tempfile.NamedTemporaryFile(
+                        delete=False, suffix=".avif"
+                    ) as temp_avif:
+                        temp_avif.write(response)
+                        avif_path = temp_avif.name
+
+                    subprocess.run(
+                        ["ffmpeg", "-y", "-i", avif_path, image_path], check=True
+                    )
+                    os.remove(avif_path)
             except Exception as e:
                 print(f"Error: {e}")
                 return None
-            image_file.write(response)
+            if not is_avif:
+                image_file.write(response)
         return image_path
 
     @staticmethod
     def save_image_for_short_video(
-        image_url,
-        batch_id=0,
-        target_size=(1080, 1920),
+        image_url, batch_id=0, target_size=(1080, 1920), is_avif=False
     ):
-        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id)
+        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id, is_avif)
         image_name = image_path.split("/")[-1]
 
         video_width, video_height = target_size
