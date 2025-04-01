@@ -69,7 +69,7 @@ class APICreateBatch(Resource):
             current_user = AuthService.get_current_identity() or None
             if current_user:
                 user_id_login = current_user.id
-                if current_month.batch_of_month != current_month:
+                if current_user.batch_of_month != current_month:
                     current_user.batch_of_month = current_month
                     current_user.batch_total = 0
                     current_user.save()
