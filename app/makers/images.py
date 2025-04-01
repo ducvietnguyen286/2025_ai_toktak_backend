@@ -965,7 +965,7 @@ class ImageMaker:
                     subprocess.run(
                         ["ffmpeg", "-y", "-i", avif_path, image_path], check=True
                     )
-                    os.remove(avif_path)
+
             except Exception as e:
                 print(f"Error: {e}")
                 return None
