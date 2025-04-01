@@ -508,7 +508,9 @@ class APIMakePost(Resource):
             images = data.get("images", [])
             thumbnails = batch.thumbnails
 
-            need_count = 10
+            type = post.type
+
+            need_count = 10 if type == "video" else 5
 
             process_images = json.loads(thumbnails)
             if process_images and len(process_images) < need_count:
@@ -523,8 +525,6 @@ class APIMakePost(Resource):
             else:
                 process_images = images
                 process_images = process_images[:need_count]
-
-            type = post.type
 
             response = None
             render_id = ""
