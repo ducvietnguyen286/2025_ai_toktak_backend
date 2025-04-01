@@ -113,9 +113,7 @@ class AliExpressScraper:
 
             product_id = parsed_url.path.split("/")[-1].split(".")[0]
 
-            RAPIDAPI_KEY = os.getenv(
-                "RAPIDAPI_KEY", "7f050149a7msh633a9677b0540dbp1a82dbjsncbe7b28137ed"
-            )
+            RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
 
             headers = {
                 "x-rapidapi-key": RAPIDAPI_KEY,
