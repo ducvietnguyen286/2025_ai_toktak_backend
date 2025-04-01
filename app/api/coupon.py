@@ -200,18 +200,18 @@ class APIListCoupon(Resource):
         properties={
             "name": {"type": "string"},
             "type": {"type": "string"},
-            "from_max_used": {"type": "integer"},
-            "to_max_used": {"type": "integer"},
-            "from_used": {"type": "integer"},
-            "to_used": {"type": "integer"},
+            "from_max_used": {"type": ["integer", "null"]},
+            "to_max_used": {"type": ["integer", "null"]},
+            "from_used": {"type": ["integer", "null"]},
+            "to_used": {"type": ["integer", "null"]},
             "from_expired": {"type": "string"},
             "to_expired": {"type": "string"},
             "from_created_at": {"type": "string"},
             "to_created_at": {"type": "string"},
-            "created_by": {"type": "array", "items": {"type": "integer"}},
+            "created_by": {"type": "array", "items": {"type": ["integer", "null"]}},
             "is_active": {"type": "boolean"},
-            "page": {"type": "integer"},
-            "limit": {"type": "integer"},
+            "page": {"type": ["string", "null"]},
+            "per_page": {"type": ["string", "null"]},
             "sort": {"type": "string"},
         },
         required=[],
@@ -229,8 +229,8 @@ class APIListCoupon(Resource):
         to_created_at = args.get("to_created_at", None)
         is_active = args.get("is_active", None)
         created_by = args.get("created_by", None)
-        page = args.get("page", 1)
-        limit = args.get("limit", 10)
+        page = int(args.get("page", 1)) if args.get("page") else 1
+        limit = int(args.get("per_page", 10)) if args.get("per_page") else 10
         sort = args.get("sort", "created_at|desc")
 
         if from_expired:
@@ -400,7 +400,7 @@ class APIListCouponCodes(Resource):
     @parameters(
         type="object",
         properties={
-            "coupon_id": {"type": "integer"},
+            "coupon_id": {"type": ["string", "null"]},
             "code": {"type": "string"},
             "is_used": {"type": "boolean"},
             "is_active": {"type": "boolean"},
@@ -408,11 +408,11 @@ class APIListCouponCodes(Resource):
             "to_created_at": {"type": "string"},
             "from_expired": {"type": "string"},
             "to_expired": {"type": "string"},
-            "used_by": {"type": "integer"},
+            "used_by": {"type": ["string", "null"]},
             "from_used_at": {"type": "string"},
             "to_used_at": {"type": "string"},
-            "page": {"type": "integer"},
-            "limit": {"type": "integer"},
+            "page": {"type": ["string", "null"]},
+            "limit": {"type": ["string", "null"]},
             "sort": {"type": "string"},
         },
         required=[],
@@ -429,8 +429,8 @@ class APIListCouponCodes(Resource):
         used_by = args.get("used_by", None)
         from_used_at = args.get("from_used_at", None)
         to_used_at = args.get("to_used_at", None)
-        page = args.get("page", 1)
-        limit = args.get("limit", 10)
+        page = int(args.get("page", 1)) if args.get("page") else 1
+        limit = int(args.get("per_page", 10)) if args.get("per_page") else 10
         sort = args.get("sort", "created_at|desc")
 
         if from_created_at:
@@ -480,16 +480,24 @@ class APIListCouponCodes(Resource):
         }
         coupon_codes, total_codes = CouponService.get_coupon_codes(query_params)
 
+        total_pages = total_codes // limit + (1 if total_codes % limit > 0 else 0)
         pagination = {
             "page": page,
             "limit": limit,
             "total": total_codes,
-            "total_pages": total_codes // limit + (1 if total_codes % limit > 0 else 0),
+            "total_pages": total_pages,
             "has_next": total_codes > page * limit,
             "has_prev": page > 1,
         }
-
-        return Response(
-            data={"list": coupon_codes, "pagination": pagination},
-            message="Lấy danh sách coupon thành công",
-        ).to_dict()
+        
+        
+        return {
+            "status": True,
+            "message": "Lấy danh sách coupon thành công",
+            "total": total_codes,
+            "page": page,
+            "per_page": limit,
+            "total_pages": total_pages,
+            "data": coupon_codes,
+        }, 200
+ 
