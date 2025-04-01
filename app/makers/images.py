@@ -975,11 +975,9 @@ class ImageMaker:
 
     @staticmethod
     def save_image_for_short_video(
-        image_url,
-        batch_id=0,
-        target_size=(1080, 1920),
+        image_url, batch_id=0, target_size=(1080, 1920), is_avif=False
     ):
-        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id)
+        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id, is_avif)
         image_name = image_path.split("/")[-1]
 
         video_width, video_height = target_size

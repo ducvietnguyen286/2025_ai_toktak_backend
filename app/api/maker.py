@@ -539,6 +539,11 @@ class APIMakePost(Resource):
             mime_type = ""
             docx_url = ""
 
+            is_avif = False
+            crawl_url = data.get("domain", "")
+            if "aliexpress" in crawl_url:
+                is_avif = True
+
             if type == "video":
                 response = call_chatgpt_create_caption(process_images, data, post.id)
                 if response:
@@ -554,7 +559,7 @@ class APIMakePost(Resource):
 
                     for image_url in process_images:
                         maker_image = ImageMaker.save_image_for_short_video(
-                            image_url, batch_id
+                            image_url, batch_id, is_avif=is_avif
                         )
                         maker_images.append(maker_image)
 
@@ -607,10 +612,6 @@ class APIMakePost(Resource):
                 logger.info(
                     "-------------------- PROCESSING CREATE IMAGES -------------------"
                 )
-                is_avif = False
-                crawl_url = data.get("domain", "")
-                if "aliexpress" in crawl_url:
-                    is_avif = True
 
                 image_template_id = template_info.get("image_template_id", "")
                 if image_template_id == "":
