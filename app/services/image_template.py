@@ -45,7 +45,9 @@ class ImageTemplateService:
         return ImageTemplate.objects.get(id=id).delete()
 
     @staticmethod
-    def create_image_by_template(template, captions, process_images, post):
+    def create_image_by_template(
+        template, captions, process_images, post, is_avif=False
+    ):
         template_type = template.type
         random_key = []
         for key, value in template.to_json().items():
@@ -76,7 +78,12 @@ class ImageTemplateService:
 
             elif template_type == "TEMPLATE_IMAGE_2":
                 res_visual = ImageTemplateService.create_image_by_template_image_2(
-                    template, process_images, captions, parse_color, post.batch_id
+                    template,
+                    process_images,
+                    captions,
+                    parse_color,
+                    post.batch_id,
+                    is_avif=is_avif,
                 )
                 image_urls.append(res_visual["image_url"])
                 file_size += res_visual["file_size"]
@@ -85,7 +92,12 @@ class ImageTemplateService:
 
             elif template_type == "TEMPLATE_IMAGE_3":
                 res_visual = ImageTemplateService.create_image_by_template_image_3(
-                    template, process_images, captions, parse_color, post.batch_id
+                    template,
+                    process_images,
+                    captions,
+                    parse_color,
+                    post.batch_id,
+                    is_avif=is_avif,
                 )
                 image_urls.append(res_visual["image_url"])
                 file_size += res_visual["file_size"]
@@ -95,7 +107,11 @@ class ImageTemplateService:
         for index, image_url in enumerate(other_images):
             image_caption = other_captions[index] if index < len(other_captions) else ""
             res_img = ImageMaker.save_image_and_write_text_advance(
-                image_url, image_caption, font_size=80, batch_id=post.batch_id
+                image_url,
+                image_caption,
+                font_size=80,
+                batch_id=post.batch_id,
+                is_avif=is_avif,
             )
             image_urls.append(res_img["image_url"])
             file_size += res_img["file_size"]
@@ -127,7 +143,7 @@ class ImageTemplateService:
 
     @staticmethod
     def create_image_by_template_image_2(
-        template, process_images, captions, parse_color, batch_id
+        template, process_images, captions, parse_color, batch_id, is_avif=False
     ):
         first_image = process_images[0]
         first_caption = captions[0] if len(captions) > 0 else ""
@@ -142,13 +158,14 @@ class ImageTemplateService:
             main_text=main_text,
             main_color=main_color,
             batch_id=batch_id,
+            is_avif=is_avif,
         )
 
         return res_visual
 
     @staticmethod
     def create_image_by_template_image_3(
-        template, process_images, captions, parse_color, batch_id
+        template, process_images, captions, parse_color, batch_id, is_avif=False
     ):
         first_image = process_images[0]
         first_caption = captions[0] if len(captions) > 0 else ""
@@ -163,6 +180,7 @@ class ImageTemplateService:
             main_text=main_text,
             main_color=main_color,
             batch_id=batch_id,
+            is_avif=is_avif,
         )
 
         return res_visual

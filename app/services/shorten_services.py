@@ -1,5 +1,5 @@
 from app.models.shorten import ShortenURL
-from app.lib.string import generate_short_code
+from app.lib.string import generate_shortcode
 
 
 class ShortenServices:
@@ -20,8 +20,10 @@ class ShortenServices:
 
     @staticmethod
     def make_short_url(url):
-        short_code = generate_short_code(url)
+        short_code = generate_shortcode()
 
-        while ShortenURL.query.filter_by(short_code=short_code).first():
-            short_code = generate_short_code(url)
+        exist = ShortenURL.query.filter_by(short_code=short_code).first()
+        while exist:
+            short_code = generate_shortcode()
+            exist = ShortenURL.query.filter_by(short_code=short_code).first()
         return short_code
