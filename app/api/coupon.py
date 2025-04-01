@@ -162,6 +162,7 @@ class APIListCoupon(Resource):
             "is_active": {"type": "boolean"},
             "page": {"type": "integer"},
             "limit": {"type": "integer"},
+            "sort": {"type": "string"},
         },
         required=[],
     )
@@ -180,6 +181,7 @@ class APIListCoupon(Resource):
         created_by = args.get("created_by", None)
         page = args.get("page", 1)
         limit = args.get("limit", 10)
+        sort = args.get("sort", "created_at|desc")
 
         if from_expired:
             from_expired = datetime.datetime.strptime(
@@ -223,11 +225,24 @@ class APIListCoupon(Resource):
             "created_by": created_by,
             "page": page,
             "limit": limit,
+            "sort": sort,
         }
-        coupons = CouponService.get_coupons(**query_params)
+        coupons, total_coupons = CouponService.get_coupons(query_params)
+        pagination = {
+            "page": page,
+            "limit": limit,
+            "total": total_coupons,
+            "total_pages": total_coupons // limit
+            + (1 if total_coupons % limit > 0 else 0),
+            "has_next": total_coupons > page * limit,
+            "has_prev": page > 1,
+        }
 
         return Response(
-            data=coupons,
+            data={
+                "list": coupons,
+                "pagination": pagination,
+            },
             message="Lấy danh sách coupon thành công",
         ).to_dict()
 
@@ -348,6 +363,7 @@ class APIListCouponCodes(Resource):
             "to_used_at": {"type": "string"},
             "page": {"type": "integer"},
             "limit": {"type": "integer"},
+            "sort": {"type": "string"},
         },
         required=[],
     )
@@ -365,6 +381,7 @@ class APIListCouponCodes(Resource):
         to_used_at = args.get("to_used_at", None)
         page = args.get("page", 1)
         limit = args.get("limit", 10)
+        sort = args.get("sort", "created_at|desc")
 
         if from_created_at:
             from_created_at = datetime.datetime.strptime(
@@ -409,10 +426,20 @@ class APIListCouponCodes(Resource):
             "to_used_at": to_used_at,
             "page": page,
             "limit": limit,
+            "sort": sort,
         }
-        coupons = CouponService.get_coupon_codes(**query_params)
+        coupon_codes, total_codes = CouponService.get_coupon_codes(query_params)
+
+        pagination = {
+            "page": page,
+            "limit": limit,
+            "total": total_codes,
+            "total_pages": total_codes // limit + (1 if total_codes % limit > 0 else 0),
+            "has_next": total_codes > page * limit,
+            "has_prev": page > 1,
+        }
 
         return Response(
-            data=coupons,
+            data={"list": coupon_codes, "pagination": pagination},
             message="Lấy danh sách coupon thành công",
         ).to_dict()

@@ -18,3 +18,5 @@ class Coupon(db.Model, BaseModel):
     white_lists = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    to_json_parse = ("white_lists",)
