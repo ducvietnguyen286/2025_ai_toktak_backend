@@ -854,7 +854,7 @@ class APICheckSNSLink(Resource):
 
             if batchId:
                 current_month = time.strftime("%Y-%m", time.localtime())
-                if current_month.batch_of_month != current_month:
+                if current_user.batch_of_month != current_month:
                     current_user.batch_of_month = current_month
                     current_user.batch_total = 0
                     current_user.save()
