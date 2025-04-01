@@ -80,7 +80,6 @@ class APICreateBatch(Resource):
                     ):
                         return Response(
                             message="Bạn đã tạo quá số lượng batch cho phép.",
-                            status=200,
                             code=201,
                         ).to_dict()
 
