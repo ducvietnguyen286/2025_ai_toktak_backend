@@ -18,7 +18,7 @@ class User(db.Model, BaseModel):
     contact = db.Column(db.String(255), nullable=True)
     company_name = db.Column(db.String(255), nullable=True)
 
-    subscription = db.Column(db.String(255), nullable=False, default="")
+    subscription = db.Column(db.String(255), nullable=False, default="FREE")
     subscription_expired = db.Column(db.DateTime, nullable=True)
 
     level = db.Column(db.Integer, default=0)

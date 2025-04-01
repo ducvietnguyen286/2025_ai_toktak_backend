@@ -10,5 +10,6 @@ class CouponCode(db.Model, BaseModel):
     code = db.Column(db.String(20), nullable=False, unique=True)
     is_used = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
+    expired_at = db.Column(db.DateTime)
     used_at = db.Column(db.DateTime)
     used_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
