@@ -941,39 +941,45 @@ class ImageMaker:
         if not image_ext:
             image_ext = "jpg"
 
+        temp_image = ""
+        if is_avif:
+            temp_image = f"{timestamp}_{unique_id}.avif"
         image_name = f"{timestamp}_{unique_id}.{image_ext}"
 
         image_path = f"{new_folder}/{image_name}"
-        with open(image_path, "wb") as image_file:
-            try:
-                user_agent = generate_desktop_user_agent()
-                headers = {
-                    "User-Agent": user_agent,
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                    "Accept-Encoding": "gzip, deflate, br, zstd",
-                    "Accept-Language": "en,vi;q=0.9,es;q=0.8,vi-VN;q=0.7,fr-FR;q=0.6,fr;q=0.5,en-US;q=0.4",
-                }
-
-                response = requests.get(image_url, headers=headers).content
-
-                if is_avif:
-                    with tempfile.NamedTemporaryFile(
-                        delete=False, suffix=".avif"
-                    ) as temp_avif:
-                        temp_avif.write(response)
-                        avif_path = temp_avif.name
-
-                    subprocess.run(
-                        ["ffmpeg", "-y", "-i", avif_path, image_path], check=True
-                    )
-
-            except Exception as e:
-                print(f"Error: {e}")
-                traceback.print_exc()
-                return None
-            if not is_avif:
+        image_temp_path = f"{new_folder}/{temp_image}"
+        if not is_avif:
+            with open(image_path, "wb") as image_file:
+                response = ImageMaker.request_content_image(image_url)
                 image_file.write(response)
+        else:
+            with open(image_temp_path, "wb") as temp_avif:
+                response = ImageMaker.request_content_image(image_url)
+                temp_avif.write(response)
+
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", image_temp_path, image_path], check=True
+            )
+        os.remove(image_temp_path)
         return image_path
+
+    @staticmethod
+    def request_content_image(image_url):
+        try:
+            user_agent = generate_desktop_user_agent()
+            headers = {
+                "User-Agent": user_agent,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Language": "en,vi;q=0.9,es;q=0.8,vi-VN;q=0.7,fr-FR;q=0.6,fr;q=0.5,en-US;q=0.4",
+            }
+
+            response = requests.get(image_url, headers=headers).content
+            return response
+        except Exception as e:
+            print(f"Error: {e}")
+            traceback.print_exc()
+            return None
 
     @staticmethod
     def save_image_for_short_video(
