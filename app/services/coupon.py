@@ -37,7 +37,7 @@ class CouponService:
 
     @staticmethod
     def find_coupon_code(code):
-        return CouponCode.query.where(Coupon.code == code).first()
+        return CouponCode.query.where(CouponCode.code == code).first()
 
     @staticmethod
     def update_coupon_codes(coupon_id, **kwargs):

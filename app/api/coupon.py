@@ -10,6 +10,8 @@ from app.services.auth import AuthService
 from app.services.coupon import CouponService
 
 ns = Namespace(name="coupon", description="User API")
+from app.extensions import db
+from sqlalchemy.orm import Session
 
 
 @ns.route("/used")
@@ -67,22 +69,38 @@ class APIUsedCoupon(Resource):
                 status=400,
             ).to_dict()
 
-        coupon.used += 1
-        coupon.save()
+        session = Session(bind=db.engine)
+        try:
+            coupon.used += 1
+            coupon.save()
 
-        coupon_code = CouponService.find_coupon_code(code)
-        coupon_code.is_used = True
-        coupon_code.is_active = False
-        coupon_code.used_by = current_user.id
-        coupon_code.used_at = datetime.datetime.now()
-        coupon_code.save()
+            coupon_code = CouponService.find_coupon_code(code)
+            coupon_code.is_used = True
+            coupon_code.used_by = current_user.id
+            coupon_code.used_at = datetime.datetime.now()
+            coupon_code.save()
 
-        if coupon.type == "SUB_STANDARD":
-            current_user.subscription = "STANDARD"
-            current_user.subscription_expired = (
-                datetime.datetime.now() + datetime.timedelta(days=30)
-            )
-            current_user.save()
+            if coupon.type == "DISCOUNT":
+                pass
+            elif coupon.type == "SUB_STANDARD":
+                current_user.subscription = "STANDARD"
+                current_user.subscription_expired = (
+                    datetime.datetime.now() + datetime.timedelta(days=30)
+                )
+                current_user.save()
+            elif coupon.type == "SUB_PREMIUM":
+                pass
+            elif coupon.type == "SUB_PRO":
+                pass
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            return Response(
+                message="Có lỗi xảy ra khi sử dụng coupon",
+                status=400,
+            ).to_dict()
+        finally:
+            session.close()
 
         return Response(
             data=coupon_code._to_json(),
