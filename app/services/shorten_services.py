@@ -15,8 +15,8 @@ class ShortenServices:
         return ShortenURL.query.get(id)
 
     @staticmethod
-    def get_short_by_original_url(original_url):
-        return ShortenURL.query.filter_by(original_url=original_url).first()
+    def get_short_by_original_url(origin_hash):
+        return ShortenURL.query.filter_by(original_url_hash=origin_hash).first()
 
     @staticmethod
     def make_short_url(url):

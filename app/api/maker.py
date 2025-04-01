@@ -1,4 +1,5 @@
 # coding: utf8
+import hashlib
 import time
 import json
 import os
@@ -96,7 +97,6 @@ class APICreateBatch(Resource):
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
             data = Scraper().scraper({"url": url})
-
             # return data
             if not data:
                 NotificationServices.create_notification(
@@ -117,14 +117,18 @@ class APICreateBatch(Resource):
             #     shorten_link = url
 
             # Kiểm tra nếu URL đã tồn tại trong DB
+
             if should_replace_shortlink(url):
-                existing_entry = ShortenServices.get_short_by_original_url(url)
+                origin_hash = hashlib.sha256(url.encode()).hexdigest()
+                existing_entry = ShortenServices.get_short_by_original_url(origin_hash)
                 domain_share_url = "https://s.toktak.ai/"
                 if not existing_entry:
                     short_code = ShortenServices.make_short_url(url)
 
                     existing_entry = ShortenServices.create_shorten(
-                        original_url=url, short_code=short_code
+                        original_url=url,
+                        original_url_hash=origin_hash,
+                        short_code=short_code,
                     )
 
                 shorten_link = f"{domain_share_url}{existing_entry.short_code}"
@@ -210,8 +214,9 @@ class APICreateBatch(Resource):
             redis_key = f"batch_info_{batch_id}"
             redis_client.set(redis_key, json.dumps(posts), ex=3600)
 
-            current_user.batch_total += 1
-            current_user.save()
+            if current_user:
+                current_user.batch_total += 1
+                current_user.save()
 
             NotificationServices.create_notification(
                 user_id=user_id_login,

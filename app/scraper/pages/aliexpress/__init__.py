@@ -189,7 +189,7 @@ class AliExpressScraper:
                         "querystring": querystring,
                     }
                 ),
-                response=json.dumps(response),
+                response=json.dumps(res),
             )
             return result
 
