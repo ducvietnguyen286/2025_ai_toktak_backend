@@ -158,6 +158,39 @@ class APICreateCoupon(Resource):
         ).to_dict()
 
 
+@ns.route("/<int:id>/add-codes")
+class APIAddCouponCodes(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "count": {"type": "integer"},
+            "expired_at": {"type": "string"},
+        },
+        required=["count"],
+    )
+    def post(self, args, id):
+        count = args.get("count", 0)
+        expired_at = args.get("expired_at", None)
+        if expired_at:
+            expired_at = datetime.datetime.strptime(expired_at, "%Y-%m-%dT%H:%M:%SZ")
+        coupon = CouponService.find_coupon(id)
+        if not coupon:
+            return Response(
+                message="Không tìm thấy coupon",
+                status=400,
+            ).to_dict()
+        if not expired_at:
+            expired_at = coupon.expired
+
+        CouponService.create_codes(coupon.id, count_code=count, expired_at=expired_at)
+
+        return Response(
+            message="Thêm mã coupon thành công",
+        ).to_dict()
+
+
 @ns.route("/list")
 class APIListCoupon(Resource):
 
