@@ -17,6 +17,7 @@ import torch
 import easyocr
 from multiprocessing import Pool
 import numpy as np
+import pillow_avif
 
 from app.lib.header import generate_desktop_user_agent
 
@@ -968,6 +969,7 @@ class ImageMaker:
 
             except Exception as e:
                 print(f"Error: {e}")
+                traceback.print_exc()
                 return None
             if not is_avif:
                 image_file.write(response)
