@@ -132,3 +132,11 @@ KOREAN_VOICES = [
         "ssmlGender": "MALE",
     },
 ]
+
+LIMIT_BATCH = {
+    "FREE": 10,
+    "STANDARD": 90,
+    "PRO": 300,
+    "BUSINESS": 1000,
+    "ENTERPRISE": 10000,
+}

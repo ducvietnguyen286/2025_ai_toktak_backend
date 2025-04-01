@@ -63,11 +63,26 @@ class APICreateBatch(Resource):
     )
     def post(self, args):
         try:
+            current_month = time.strftime("%Y-%m", time.localtime())
             verify_jwt_in_request(optional=True)
             user_id_login = 0
             current_user = AuthService.get_current_identity() or None
             if current_user:
                 user_id_login = current_user.id
+                if current_month.batch_of_month != current_month:
+                    current_user.batch_of_month = current_month
+                    current_user.batch_total = 0
+                    current_user.save()
+                else:
+                    if (
+                        current_user.batch_total
+                        >= const.LIMIT_BATCH[current_user.subscription]
+                    ):
+                        return Response(
+                            message="Bạn đã tạo quá số lượng batch cho phép.",
+                            code=201,
+                        ).to_dict()
+
             url = args.get("url", "")
             voice = args.get("voice", 1)
             narration = args.get("narration", "female")
@@ -194,6 +209,9 @@ class APICreateBatch(Resource):
             batch_id = batch.id
             redis_key = f"batch_info_{batch_id}"
             redis_client.set(redis_key, json.dumps(posts), ex=3600)
+
+            current_user.batch_total += 1
+            current_user.save()
 
             NotificationServices.create_notification(
                 user_id=user_id_login,
