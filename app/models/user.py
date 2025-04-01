@@ -28,9 +28,9 @@ class User(db.Model, BaseModel):
     level = db.Column(db.Integer, default=0)
     level_info = db.Column(db.Text, nullable=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
-    last_activated = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
-    updated_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    last_activated = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     print_filter = ("password",)
     to_json_filter = ("password",)
@@ -54,4 +54,5 @@ class User(db.Model, BaseModel):
             "level": self.level,
             "level_info": self.level_info,
             "company_name": self.company_name,
+            "created_at": self.created_at,
         }
