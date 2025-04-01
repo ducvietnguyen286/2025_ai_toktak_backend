@@ -10,6 +10,8 @@ from app.services.auth import AuthService
 from app.services.coupon import CouponService
 
 ns = Namespace(name="coupon", description="User API")
+from app.extensions import db
+from sqlalchemy.orm import Session
 
 
 @ns.route("/used")
@@ -67,22 +69,38 @@ class APIUsedCoupon(Resource):
                 status=400,
             ).to_dict()
 
-        coupon.used += 1
-        coupon.save()
+        session = Session(bind=db.engine)
+        try:
+            coupon.used += 1
+            coupon.save()
 
-        coupon_code = CouponService.find_coupon_code(code)
-        coupon_code.is_used = True
-        coupon_code.is_active = False
-        coupon_code.used_by = current_user.id
-        coupon_code.used_at = datetime.datetime.now()
-        coupon_code.save()
+            coupon_code = CouponService.find_coupon_code(code)
+            coupon_code.is_used = True
+            coupon_code.used_by = current_user.id
+            coupon_code.used_at = datetime.datetime.now()
+            coupon_code.save()
 
-        if coupon.type == "SUB_STANDARD":
-            current_user.subscription = "STANDARD"
-            current_user.subscription_expired = (
-                datetime.datetime.now() + datetime.timedelta(days=30)
-            )
-            current_user.save()
+            if coupon.type == "DISCOUNT":
+                pass
+            elif coupon.type == "SUB_STANDARD":
+                current_user.subscription = "STANDARD"
+                current_user.subscription_expired = (
+                    datetime.datetime.now() + datetime.timedelta(days=30)
+                )
+                current_user.save()
+            elif coupon.type == "SUB_PREMIUM":
+                pass
+            elif coupon.type == "SUB_PRO":
+                pass
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            return Response(
+                message="Có lỗi xảy ra khi sử dụng coupon",
+                status=400,
+            ).to_dict()
+        finally:
+            session.close()
 
         return Response(
             data=coupon_code._to_json(),
@@ -110,7 +128,6 @@ class APICreateCoupon(Resource):
     )
     def post(self, args):
         current_user = AuthService.get_current_identity()
-        print(current_user)
         image = args.get("image", "")
         name = args.get("name", "")
         type = args.get("type", "")
@@ -141,6 +158,39 @@ class APICreateCoupon(Resource):
         ).to_dict()
 
 
+@ns.route("/<int:id>/add-codes")
+class APIAddCouponCodes(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "count": {"type": "integer"},
+            "expired_at": {"type": "string"},
+        },
+        required=["count"],
+    )
+    def post(self, args, id):
+        count = args.get("count", 0)
+        expired_at = args.get("expired_at", None)
+        if expired_at:
+            expired_at = datetime.datetime.strptime(expired_at, "%Y-%m-%dT%H:%M:%SZ")
+        coupon = CouponService.find_coupon(id)
+        if not coupon:
+            return Response(
+                message="Không tìm thấy coupon",
+                status=400,
+            ).to_dict()
+        if not expired_at:
+            expired_at = coupon.expired
+
+        CouponService.create_codes(coupon.id, count_code=count, expired_at=expired_at)
+
+        return Response(
+            message="Thêm mã coupon thành công",
+        ).to_dict()
+
+
 @ns.route("/list")
 class APIListCoupon(Resource):
 
@@ -162,6 +212,7 @@ class APIListCoupon(Resource):
             "is_active": {"type": "boolean"},
             "page": {"type": "integer"},
             "limit": {"type": "integer"},
+            "sort": {"type": "string"},
         },
         required=[],
     )
@@ -180,6 +231,7 @@ class APIListCoupon(Resource):
         created_by = args.get("created_by", None)
         page = args.get("page", 1)
         limit = args.get("limit", 10)
+        sort = args.get("sort", "created_at|desc")
 
         if from_expired:
             from_expired = datetime.datetime.strptime(
@@ -223,11 +275,24 @@ class APIListCoupon(Resource):
             "created_by": created_by,
             "page": page,
             "limit": limit,
+            "sort": sort,
         }
-        coupons = CouponService.get_coupons(**query_params)
+        coupons, total_coupons = CouponService.get_coupons(query_params)
+        pagination = {
+            "page": page,
+            "limit": limit,
+            "total": total_coupons,
+            "total_pages": total_coupons // limit
+            + (1 if total_coupons % limit > 0 else 0),
+            "has_next": total_coupons > page * limit,
+            "has_prev": page > 1,
+        }
 
         return Response(
-            data=coupons,
+            data={
+                "list": coupons,
+                "pagination": pagination,
+            },
             message="Lấy danh sách coupon thành công",
         ).to_dict()
 
@@ -348,6 +413,7 @@ class APIListCouponCodes(Resource):
             "to_used_at": {"type": "string"},
             "page": {"type": "integer"},
             "limit": {"type": "integer"},
+            "sort": {"type": "string"},
         },
         required=[],
     )
@@ -365,6 +431,7 @@ class APIListCouponCodes(Resource):
         to_used_at = args.get("to_used_at", None)
         page = args.get("page", 1)
         limit = args.get("limit", 10)
+        sort = args.get("sort", "created_at|desc")
 
         if from_created_at:
             from_created_at = datetime.datetime.strptime(
@@ -409,10 +476,20 @@ class APIListCouponCodes(Resource):
             "to_used_at": to_used_at,
             "page": page,
             "limit": limit,
+            "sort": sort,
         }
-        coupons = CouponService.get_coupon_codes(**query_params)
+        coupon_codes, total_codes = CouponService.get_coupon_codes(query_params)
+
+        pagination = {
+            "page": page,
+            "limit": limit,
+            "total": total_codes,
+            "total_pages": total_codes // limit + (1 if total_codes % limit > 0 else 0),
+            "has_next": total_codes > page * limit,
+            "has_prev": page > 1,
+        }
 
         return Response(
-            data=coupons,
+            data={"list": coupon_codes, "pagination": pagination},
             message="Lấy danh sách coupon thành công",
         ).to_dict()

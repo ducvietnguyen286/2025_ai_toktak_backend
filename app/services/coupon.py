@@ -37,7 +37,7 @@ class CouponService:
 
     @staticmethod
     def find_coupon_code(code):
-        return CouponCode.query.where(Coupon.code == code).first()
+        return CouponCode.query.where(CouponCode.code == code).first()
 
     @staticmethod
     def update_coupon_codes(coupon_id, **kwargs):
@@ -67,69 +67,133 @@ class CouponService:
 
     @staticmethod
     def get_coupons(query_params={}):
-        coupons = Coupon.query
+        coupon_query = Coupon.query
         if "name" in query_params and query_params["name"]:
-            coupons = coupons.filter(Coupon.name.ilike(f"%{query_params['name']}%"))
+            coupon_query = coupon_query.filter(
+                Coupon.name.ilike(f"%{query_params['name']}%")
+            )
         if "type" in query_params and query_params["type"]:
-            coupons = coupons.filter(Coupon.type == query_params["type"])
+            coupon_query = coupon_query.filter(Coupon.type == query_params["type"])
         if "from_max_used" in query_params and query_params["from_max_used"]:
-            coupons = coupons.filter(Coupon.max_used >= query_params["from_max_used"])
+            coupon_query = coupon_query.filter(
+                Coupon.max_used >= query_params["from_max_used"]
+            )
         if "to_max_used" in query_params and query_params["to_max_used"]:
-            coupons = coupons.filter(Coupon.max_used <= query_params["to_max_used"])
+            coupon_query = coupon_query.filter(
+                Coupon.max_used <= query_params["to_max_used"]
+            )
         if "from_used" in query_params and query_params["from_used"]:
-            coupons = coupons.filter(Coupon.used >= query_params["from_used"])
+            coupon_query = coupon_query.filter(Coupon.used >= query_params["from_used"])
         if "to_used" in query_params and query_params["to_used"]:
-            coupons = coupons.filter(Coupon.used <= query_params["to_used"])
+            coupon_query = coupon_query.filter(Coupon.used <= query_params["to_used"])
         if "from_expired" in query_params and query_params["from_expired"]:
-            coupons = coupons.filter(Coupon.expired_at >= query_params["from_expired"])
+            coupon_query = coupon_query.filter(
+                Coupon.expired >= query_params["from_expired"]
+            )
         if "to_expired" in query_params and query_params["to_expired"]:
-            coupons = coupons.filter(Coupon.expired_at <= query_params["to_expired"])
+            coupon_query = coupon_query.filter(
+                Coupon.expired <= query_params["to_expired"]
+            )
         if "from_created_at" in query_params and query_params["from_created_at"]:
-            coupons = coupons.filter(
+            coupon_query = coupon_query.filter(
                 Coupon.created_at >= query_params["from_created_at"]
             )
         if "to_created_at" in query_params and query_params["to_created_at"]:
-            coupons = coupons.filter(Coupon.created_at <= query_params["to_created_at"])
+            coupon_query = coupon_query.filter(
+                Coupon.created_at <= query_params["to_created_at"]
+            )
         if "is_active" in query_params and query_params["is_active"] is not None:
-            coupons = coupons.filter(Coupon.is_active == query_params["is_active"])
+            coupon_query = coupon_query.filter(
+                Coupon.is_active == query_params["is_active"]
+            )
         if "created_by" in query_params and query_params["created_by"]:
-            coupons = coupons.filter(Coupon.created_by == query_params["created_by"])
+            coupon_query = coupon_query.filter(
+                Coupon.created_by == query_params["created_by"]
+            )
+        total_coupons = coupon_query.count()
+        if "sort" in query_params and query_params["sort"]:
+            sort = query_params["sort"].split("|")
+            if len(sort) == 2:
+                field, order = sort
+                order = order.lower()
+                if order == "asc":
+                    coupon_query = coupon_query.order_by(getattr(Coupon, field).asc())
+                elif order == "desc":
+                    coupon_query = coupon_query.order_by(getattr(Coupon, field).desc())
         if "page" in query_params and "limit" in query_params:
             page = int(query_params["page"])
             limit = int(query_params["limit"])
-            coupons = coupons.offset((page - 1) * limit).limit(limit)
-        coupons = coupons.all()
-        return [coupon._to_json() for coupon in coupons]
+            coupon_query = coupon_query.offset((page - 1) * limit).limit(limit)
+
+        coupons = coupon_query.all()
+        coupons = [coupon._to_json() for coupon in coupons]
+        return coupons, total_coupons
 
     @staticmethod
     def get_coupon_codes(query_params={}):
-        coupon_codes = CouponCode.query
+        code_query = CouponCode.query
         if "code" in query_params and query_params["code"]:
-            coupon_codes = coupon_codes.filter(
+            code_query = code_query.filter(
                 CouponCode.code.ilike(f"%{query_params['code']}%")
             )
         if "coupon_id" in query_params and query_params["coupon_id"]:
-            coupon_codes = coupon_codes.filter(
+            code_query = code_query.filter(
                 CouponCode.coupon_id == query_params["coupon_id"]
             )
         if "is_used" in query_params and query_params["is_used"] is not None:
-            coupon_codes = coupon_codes.filter(
+            code_query = code_query.filter(
                 CouponCode.is_used == query_params["is_used"]
             )
+        if "used_by" in query_params and query_params["used_by"] is not None:
+            code_query = code_query.filter(
+                CouponCode.used_by == query_params["used_by"]
+            )
         if "is_active" in query_params and query_params["is_active"] is not None:
-            coupon_codes = coupon_codes.filter(
+            code_query = code_query.filter(
                 CouponCode.is_active == query_params["is_active"]
             )
-        if "expired_at" in query_params and query_params["expired_at"]:
-            coupon_codes = coupon_codes.filter(
-                CouponCode.expired_at == query_params["expired_at"]
+        if "from_expired" in query_params and query_params["from_expired"]:
+            code_query = code_query.filter(
+                CouponCode.expired_at >= query_params["from_expired"]
             )
+        if "to_expired" in query_params and query_params["to_expired"]:
+            code_query = code_query.filter(
+                CouponCode.expired_at <= query_params["to_expired"]
+            )
+        if "from_created_at" in query_params and query_params["from_created_at"]:
+            code_query = code_query.filter(
+                CouponCode.created_at >= query_params["from_created_at"]
+            )
+        if "to_created_at" in query_params and query_params["to_created_at"]:
+            code_query = code_query.filter(
+                CouponCode.created_at <= query_params["to_created_at"]
+            )
+        if "from_used_at" in query_params and query_params["from_used_at"]:
+            code_query = code_query.filter(
+                CouponCode.used_at >= query_params["from_used_at"]
+            )
+        if "to_used_at" in query_params and query_params["to_used_at"]:
+            code_query = code_query.filter(
+                CouponCode.used_at <= query_params["to_used_at"]
+            )
+        total_codes = code_query.count()
+        if "sort" in query_params and query_params["sort"]:
+            sort = query_params["sort"].split("|")
+            if len(sort) == 2:
+                field, order = sort
+                order = order.lower()
+                if order == "asc":
+                    code_query = code_query.order_by(getattr(CouponCode, field).asc())
+                elif order == "desc":
+                    code_query = code_query.order_by(getattr(CouponCode, field).desc())
         if "page" in query_params and "limit" in query_params:
             page = int(query_params["page"])
             limit = int(query_params["limit"])
-            coupon_codes = coupon_codes.offset((page - 1) * limit).limit(limit)
-        coupon_codes = coupon_codes.all()
-        return [coupon_code._to_json() for coupon_code in coupon_codes]
+            code_query = code_query.offset((page - 1) * limit).limit(limit)
+
+        coupon_codes = code_query.all()
+        coupon_codes = [coupon_code._to_json() for coupon_code in coupon_codes]
+        return coupon_codes, total_codes
 
     @staticmethod
     def create_codes(coupon_id, count_code=100, expired_at=None):

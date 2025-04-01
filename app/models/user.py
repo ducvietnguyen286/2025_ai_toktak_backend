@@ -21,6 +21,9 @@ class User(db.Model, BaseModel):
     subscription = db.Column(db.String(255), nullable=False, default="FREE")
     subscription_expired = db.Column(db.DateTime, nullable=True)
 
+    batch_total = db.Column(db.Integer, default=0)
+    batch_of_month = db.Column(db.String(50), default="")
+
     level = db.Column(db.Integer, default=0)
     level_info = db.Column(db.Text, nullable=False)
 

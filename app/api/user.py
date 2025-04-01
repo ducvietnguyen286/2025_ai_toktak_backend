@@ -39,6 +39,7 @@ from app.rabbitmq.producer import (
     send_youtube_message,
 )
 from app.third_parties.youtube import YoutubeTokenService
+import const
 
 ns = Namespace(name="user", description="User API")
 
@@ -833,11 +834,11 @@ class APICheckSNSLink(Resource):
         properties={
             "batchId": {"type": "string"},
         },
-        required=["batchId"],
+        required=[""],
     )
     def post(self, args):
         try:
-            batchId = args.get("batchId")
+            batchId = args.get("batchId", None)
             current_user = AuthService.get_current_identity()
             if not current_user:
                 return Response(
@@ -845,24 +846,46 @@ class APICheckSNSLink(Resource):
                     code=201,
                 ).to_dict()
 
-            BatchService.update_batch(batchId, user_id=current_user.id)
-            PostService.update_post_by_batch_id(batchId, user_id=current_user.id)
-
-            user_links = UserService.get_original_user_links(current_user.id)
-            active_links = [link.link_id for link in user_links if link.status == 1]
-
-            if not active_links:
+            if current_user.subscription == "FREE":
                 return Response(
                     message="SNS 연동이 필요해요",
-                    code=201,
+                    code=400,
                 ).to_dict()
 
-            batch_detail = BatchService.find_batch(batchId)
-            if not batch_detail:
-                return Response(
-                    message="Batch not found",
-                    code=201,
-                ).to_dict()
+            if batchId:
+                current_month = time.strftime("%Y-%m", time.localtime())
+                if current_month.batch_of_month != current_month:
+                    current_user.batch_of_month = current_month
+                    current_user.batch_total = 0
+                    current_user.save()
+                else:
+                    if (
+                        current_user.batch_total
+                        >= const.LIMIT_BATCH[current_user.subscription]
+                    ):
+                        return Response(
+                            message="Bạn đã tạo quá số lượng batch cho phép.",
+                            status=200,
+                            code=201,
+                        ).to_dict()
+                BatchService.update_batch(batchId, user_id=current_user.id)
+                PostService.update_post_by_batch_id(batchId, user_id=current_user.id)
+
+                user_links = UserService.get_original_user_links(current_user.id)
+                active_links = [link.link_id for link in user_links if link.status == 1]
+
+                if not active_links:
+                    return Response(
+                        message="SNS 연동이 필요해요",
+                        code=201,
+                    ).to_dict()
+
+                batch_detail = BatchService.find_batch(batchId)
+                if not batch_detail:
+                    return Response(
+                        message="Batch not found",
+                        code=201,
+                    ).to_dict()
 
             return Response(
                 message="Check Active Link Success",
