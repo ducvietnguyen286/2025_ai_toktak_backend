@@ -760,7 +760,7 @@ class ImageMaker:
         try:
             font = ImageFont.truetype(font_path, font_size)
         except IOError:
-            print(f"Không tìm thấy font dotum.ttc, sử dụng font mặc định.")
+            print(f"Không tìm thấy font {font_path}, sử dụng font mặc định.")
             font = ImageFont.load_default()
 
         left_margin, top_margin, right_margin, bottom_margin = margin
@@ -831,7 +831,7 @@ class ImageMaker:
         try:
             font = ImageFont.truetype(font_path, font_size)
         except IOError:
-            print(f"Không tìm thấy font dotum.ttc, sử dụng font mặc định.")
+            print(f"Không tìm thấy font {font_path}, sử dụng font mặc định.")
             font = ImageFont.load_default()
 
         # Tính vùng giới hạn chữ
