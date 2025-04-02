@@ -3,7 +3,7 @@ from app.errors.const import error_codes
 
 class ApiException(Exception):
     status_code = 500
-    message = "Internal Server Error"
+    message = "Internal Server Error 3"
 
     def __init__(self, code=None, message=None):
         self.code = code if code is not None else self.__class__.status_code

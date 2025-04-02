@@ -19,9 +19,9 @@ class VideoCreate(db.Model, BaseModel):
     description = db.Column(db.Text, nullable=True)  # Mô tả
     captions = db.Column(db.Text, nullable=True)  # Mô tả
     origin_caption = db.Column(db.Text, nullable=True)  # Mô tả
-    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
     updated_at = db.Column(
-        db.DateTime, default=datetime.now, onupdate=datetime.now
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )  # Ngày cập nhật
 
     def to_dict(self):

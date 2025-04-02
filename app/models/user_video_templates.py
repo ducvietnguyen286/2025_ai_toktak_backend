@@ -28,8 +28,8 @@ class UserVideoTemplates(db.Model, BaseModel):
     viral_messages = db.Column(db.Text, nullable=False, default="")
     subscribe_video = db.Column(db.Text, nullable=False, default="")
 
-    created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def to_dict(self):
         return {
