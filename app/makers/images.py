@@ -958,7 +958,8 @@ class ImageMaker:
                 temp_avif.write(response)
 
             with Image.open(image_temp_path) as temp_image:
-                temp_image.save(image_path, "JPEG", quality=100, optimize=True)
+                temp_image.save(image_path, "JPEG", quality=90, optimize=True)
+
             time.sleep(0.1)
             os.remove(image_temp_path)
         return image_path

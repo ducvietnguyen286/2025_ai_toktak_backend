@@ -133,7 +133,7 @@ KOREAN_VOICES = [
 ]
 
 LIMIT_BATCH = {
-    "FREE": 10,
+    "FREE": 20,
     "STANDARD": 90,
     "PRO": 300,
     "BUSINESS": 1000,
