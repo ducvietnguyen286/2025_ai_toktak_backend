@@ -27,6 +27,7 @@ from app.services.notification import NotificationServices
 from app.services.user import UserService
 from app.services.link import LinkService
 from app.services.user_link import UserLinkService
+from app.third_parties.aliexpress import TokenAliExpress
 from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.tiktok import TiktokTokenService
 from app.third_parties.twitter import TwitterTokenService
@@ -816,14 +817,114 @@ class APIRefreshTiktokToken(Resource):
             ).to_dict()
 
 
+@ns.route("/oauth/ali-login")
+class APITiktokLogin(Resource):
+
+    @parameters(
+        type="object",
+        properties={
+            "user_id": {"type": "string"},
+        },
+        required=["user_id"],
+    )
+    def get(self, args):
+        try:
+            user_id = args.get("user_id")
+            link_id = args.get("link_id")
+            state_token = self.generate_state_token(user_id, link_id)
+
+            ALI_APP_KEY = os.environ.get("ALI_APP_KEY") or ""
+            ALI_REDIRECT_URL = os.environ.get("ALI_REDIRECT_URL") or ""
+
+            params = {
+                "client_id": ALI_APP_KEY,
+                "redirect_uri": ALI_REDIRECT_URL,
+                "state": state_token,
+                "response_type": "code",
+            }
+            url = f"https://api-sg.aliexpress.com/oauth/authorize?{urlencode(params)}"
+
+            logger.info(f"Redirect to Ali: {url}")
+
+            return redirect(url)
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            print(f"Error send post to link: {str(e)}")
+            return False
+
+    def generate_state_token(self, user_id, link_id):
+        nonce = secrets.token_urlsafe(16)
+        ALI_APP_SECRET = os.environ.get("ALI_APP_SECRET") or ""
+        payload = {
+            "nonce": nonce,
+            "user_id": user_id,
+            "exp": (datetime.datetime.now() + datetime.timedelta(days=7)).timestamp(),
+        }
+        token = jwt.encode(payload, ALI_APP_SECRET, algorithm="HS256")
+        return token
+
+
 @ns.route("/oauth/ali-callback")
 class APIAliCallback(Resource):
-    def get(self, *args, **kwargs):
-        logger.info("------------------ALI CALLBACK------------------")
-        logger.info(args)
-        logger.info(kwargs)
-        logger.info("------------------END ALI CALLBACK------------------")
-        return "Ali Callback"
+
+    @parameters(
+        type="object",
+        properties={
+            "code": {"type": "string"},
+            "state": {"type": "string"},
+        },
+        required=["code", "state"],
+    )
+    def get(self, args):
+        code = args.get("code")
+        state = args.get("state")
+
+        PAGE_PROFILE = "https://voda-play.com/profile"
+
+        if not state:
+            return Response(
+                message="Invalid or expired state token 1",
+                status=400,
+            ).to_dict()
+
+        payload = self.verify_state_token(state)
+
+        if not payload:
+            return Response(
+                message="Invalid or expired state token 2",
+                status=400,
+            ).to_dict()
+
+        user_id = payload.get("user_id")
+        user = UserService.find_user(user_id)
+        if not user:
+            return Response(
+                message="Không tìm thấy người dùng",
+                status=400,
+            ).to_dict()
+
+        access_response = TokenAliExpress().get_access_token(code)
+        if not access_response:
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
+
+        user.ali_express_info = json.dumps(access_response)
+        user.ali_express_active = 1
+        user.save()
+
+        return redirect(PAGE_PROFILE + "?success=1")
+
+    def verify_state_token(self, token):
+        try:
+            ALI_APP_SECRET = os.environ.get("ALI_APP_SECRET") or ""
+            payload = jwt.decode(token, ALI_APP_SECRET, algorithms=["HS256"])
+            return payload
+        except Exception as e:
+            print(f"Error verify state token: {str(e)}")
+            return None
 
 
 @ns.route("/check-sns-link")

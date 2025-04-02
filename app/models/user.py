@@ -27,12 +27,15 @@ class User(db.Model, BaseModel):
     level = db.Column(db.Integer, default=0)
     level_info = db.Column(db.Text, nullable=False)
 
+    ali_express_active = db.Column(db.Boolean, default=False)
+    ali_express_info = db.Column(db.Text)
+
     created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     last_activated = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
     print_filter = ("password",)
-    to_json_filter = ("password",)
+    to_json_filter = ("password", "ali_express_info")
 
     def set_password(self, password):
         self.password = bcrypt.generate_password_hash(password).decode("utf-8")
