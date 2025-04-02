@@ -43,7 +43,7 @@ class TokenAliExpress:
             "app_key": ALI_APP_KEY,
             "timestamp": CURRENT_TIME,
             "sign_method": SIGN_METHOD,
-            "CODE": authorization_code,
+            "code": authorization_code,
             "simplify": "true",
         }
         sign = sign_api_request(ACTION, params, ALI_APP_SECRET)
