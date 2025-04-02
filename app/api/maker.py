@@ -1265,3 +1265,51 @@ def get_template_info(is_advance, is_paid_advertisements):
         )
         logger.error(error_message)
         return json.dumps({})
+
+
+@ns.route("/admin_histories")
+class APIAdminHistories(Resource):
+
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        user_type = current_user.user_type
+        if user_type != const.ADMIN:
+            return Response(
+                message="접근 권한이 없습니다.",
+                code=201,
+            ).to_dict()
+
+        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+        status = request.args.get("status", const.UPLOADED, type=int)
+        type_order = request.args.get("type_order", "", type=str)
+        type_post = request.args.get("type_post", "", type=str)
+        time_range = request.args.get("time_range", "", type=str)
+        data_search = {
+            "page": page,
+            "per_page": per_page,
+            "status": status,
+            "type_order": type_order,
+            "type_post": type_post,
+            "time_range": time_range,
+        }
+        posts = PostService.admin_get_posts_upload(data_search)
+        logger.info(posts.items)
+        return {
+            "current_user": current_user.id,
+            "status": True,
+            "message": "Success",
+            "total": posts.total,
+            "page": posts.page,
+            "per_page": posts.per_page,
+            "total_pages": posts.pages,
+            "data": [
+                {
+                    **post[0]._to_json(),   
+                    "user_email": post[1] if post[1] is not None else None,   
+                    # "avatar": post[2].avatar,   
+                }
+                for post in posts.items
+            ],
+        }, 200
