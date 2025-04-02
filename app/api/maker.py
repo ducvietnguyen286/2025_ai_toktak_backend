@@ -1307,7 +1307,7 @@ class APIAdminHistories(Resource):
             "data": [
                 {
                     **post[0]._to_json(),   
-                    "user_email": post[1].email if post[1] else None,   
+                    "user_email": post[1] if post[1] is not None else None,   
                     # "avatar": post[2].avatar,   
                 }
                 for post in posts.items
