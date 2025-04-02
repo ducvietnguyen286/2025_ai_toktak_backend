@@ -115,23 +115,23 @@ class APICreateCoupon(Resource):
     @parameters(
         type="object",
         properties={
-            "image": {"type": "string"},
-            "name": {"type": "string"},
-            "type": {"type": "string"},
-            "max_used": {"type": "integer"},
-            "is_has_whitelist": {"type": "boolean"},
-            "white_lists": {"type": "array", "items": {"type": "string"}},
-            "description": {"type": "string"},
-            "expired": {"type": "string"},
+            "image": {"type": ["string", "null"]},
+            "name": {"type": ["string", "null"]},
+            "type": {"type": ["string", "null"]},
+            "max_used": {"type": ["string", "null"]},
+            # "is_has_whitelist": {"type": "boolean"},
+            # "white_lists": {"type": "array", "items": {"type": ["string", "null"]}},
+            "description": {"type": ["string", "null"]},
+            "expired": {"type": ["string", "null"]},
         },
-        required=["name", "type", "max_used"],
+        required=["name", "max_used"],
     )
     def post(self, args):
         current_user = AuthService.get_current_identity()
         image = args.get("image", "")
         name = args.get("name", "")
-        type = args.get("type", "")
-        max_used = args.get("max_used", 0)
+        type = "SUB_STANDARD"
+        max_used = int(args.get("max_used", 1)) if args.get("max_used") else 1
         is_has_whitelist = args.get("is_has_whitelist", False)
         white_lists = args.get("white_lists", [])
         description = args.get("description", "")
@@ -154,7 +154,7 @@ class APICreateCoupon(Resource):
         CouponService.create_codes(coupon.id, count_code=max_used, expired_at=expired)
         return Response(
             data=coupon._to_json(),
-            message="Tạo coupon thành công",
+            message="쿠폰 생성 성공",
         ).to_dict()
 
 
@@ -413,7 +413,7 @@ class APIListCouponCodes(Resource):
             "to_used_at": {"type": "string"},
             "page": {"type": ["string", "null"]},
             "limit": {"type": ["string", "null"]},
-            "sort": {"type": "string"},
+            "type_order": {"type": "string"},
         },
         required=[],
     )
@@ -431,7 +431,7 @@ class APIListCouponCodes(Resource):
         to_used_at = args.get("to_used_at", None)
         page = int(args.get("page", 1)) if args.get("page") else 1
         limit = int(args.get("per_page", 10)) if args.get("per_page") else 10
-        sort = args.get("sort", "created_at|desc")
+        type_order = args.get("type_order", "id_desc")
 
         if from_created_at:
             from_created_at = datetime.datetime.strptime(
@@ -476,7 +476,7 @@ class APIListCouponCodes(Resource):
             "to_used_at": to_used_at,
             "page": page,
             "limit": limit,
-            "sort": sort,
+            "type_order": type_order,
         }
         coupon_codes, total_codes = CouponService.get_coupon_codes(query_params)
 
@@ -489,8 +489,7 @@ class APIListCouponCodes(Resource):
             "has_next": total_codes > page * limit,
             "has_prev": page > 1,
         }
-        
-        
+
         return {
             "status": True,
             "message": "Lấy danh sách coupon thành công",
@@ -500,4 +499,3 @@ class APIListCouponCodes(Resource):
             "total_pages": total_pages,
             "data": coupon_codes,
         }, 200
- 
