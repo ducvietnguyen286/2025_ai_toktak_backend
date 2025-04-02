@@ -11,7 +11,9 @@ stages:
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     # Tạo thư mục .ssh và cấu hình known_hosts để tránh xác nhận lần đầu
     - mkdir -p ~/.ssh
-    - ssh-keyscan -H $DEPLOY_SERVER >> ~/.ssh/known_hosts
+    - chmod 700 ~/.ssh
+    - echo "Deploy server: $DEPLOY_SERVER"
+    - ssh-keyscan -H $DEPLOY_SERVER >> ~/.ssh/known_hosts || true
 
 # Job deploy đến server Api
 deploy_server_api:
