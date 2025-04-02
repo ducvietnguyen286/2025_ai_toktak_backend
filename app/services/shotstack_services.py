@@ -113,16 +113,19 @@ class ShotStackService:
                 caption_videos_default,
             )
         else:
+            
+            first_duration = 0
             new_image_sliders = distribute_images_over_audio(
                 images_slider_url, audio_duration, first_duration
             )
             # Man  hinh thong thuong
-            clips_data = create_combined_clips_v2(
+            clips_data = create_combined_clips_normal(
                 new_image_sliders,
                 video_urls,
                 config,
                 caption_videos_default,
             )
+            
 
         file_caption = generate_srt(
             origin_caption,
@@ -483,7 +486,7 @@ class ShotStackService:
             return []
 
 
-def create_combined_clips_v2(
+def create_combined_clips_normal(
     images_slider_url,
     video_urls,
     config=None,
@@ -497,25 +500,24 @@ def create_combined_clips_v2(
 
     clips = []
     current_start = 0
-    intro_length = first_duration
+    intro_length = 0
+    
+    # intro_length = first_duration
+    # clips.append(
+    #     {
+    #         "asset": {"type": "video", "src": first_viral_url},
+    #         "start": current_start,
+    #         "length": intro_length,
+    #     }
+    # )
+    # first_caption_videos_default = ShotStackService.filter_content_by_type(
+    #     caption_videos_default, 1
+    # )
 
-    clips.append(
-        {
-            "asset": {"type": "video", "src": first_viral_url},
-            "start": current_start,
-            "length": intro_length,
-        }
-    )
-    first_caption_videos_default = ShotStackService.filter_content_by_type(
-        caption_videos_default, 1
-    )
-
-    clip_detail = create_header_text(first_caption_videos_default, current_start, 2)
-    clips.append(clip_detail)
+    # clip_detail = create_header_text(first_caption_videos_default, current_start, 2)
+    # clips.append(clip_detail)
 
     current_start += intro_length
-
-    time_show_image = 5
 
     SHOTSTACK_IMAGE_EFFECTS = config["SHOTSTACK_IMAGE_EFFECTS"] or ""
     if SHOTSTACK_IMAGE_EFFECTS == "random":
@@ -584,18 +586,19 @@ def create_combined_clips_v2(
 
     last_viral_url = last_viral_detail["video_url"]
     last_duration = float(last_viral_detail["duration"] or 0)
-    clips.append(
-        {
-            "asset": {"type": "video", "src": last_viral_url},
-            "start": current_start,
-            "length": last_duration,
-        }
-    )
+    last_duration = 0
+    # clips.append(
+    #     {
+    #         "asset": {"type": "video", "src": last_viral_url},
+    #         "start": current_start,
+    #         "length": last_duration,
+    #     }
+    # )
 
-    clip_detail = create_header_text(
-        last_caption_videos_default, current_start, last_duration
-    )
-    clips.append(clip_detail)
+    # clip_detail = create_header_text(
+    #     last_caption_videos_default, current_start, last_duration
+    # )
+    # clips.append(clip_detail)
 
     current_start = current_start + last_duration
 
