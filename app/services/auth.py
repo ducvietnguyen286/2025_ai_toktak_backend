@@ -18,6 +18,7 @@ from google.auth.transport import requests as google_requests
 
 from app.lib.string import get_level_images
 import json
+import const
 
 
 class AuthService:
@@ -176,3 +177,12 @@ class AuthService:
         UserLink.query.filter_by(user_id=id).delete()
         User.query.get(id).delete()
         return True
+
+    @staticmethod
+    def loginAdmin(email, password):
+        user = User.query.filter_by(email=email, user_type=const.ADMIN).first()
+        if not user:
+            user = User.query.filter_by(username=email).first()
+        if not user or not user.check_password(password):
+            return None
+        return user

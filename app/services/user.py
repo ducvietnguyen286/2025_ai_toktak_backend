@@ -1,5 +1,13 @@
 from app.models.user import User
 from app.models.user_link import UserLink
+from datetime import datetime, timedelta
+from app.models.post import Post
+from app.models.batch import Batch
+from app.models.social_account import SocialAccount
+from app.models.notification import Notification
+from app.extensions import db
+from app.lib.logger import logger
+import const
 
 
 class UserService:
@@ -81,3 +89,71 @@ class UserService:
             .all()
         )
         return user_links
+
+    @staticmethod
+    def admin_search_users(data_search):
+        # Query cơ bản với các điều kiện
+        query = User.query.filter(User.user_type == const.USER)
+
+        # Xử lý type_order
+        if data_search["type_order"] == "id_asc":
+            query = query.order_by(User.id.asc())
+        elif data_search["type_order"] == "id_desc":
+            query = query.order_by(User.id.desc())
+        else:
+            query = query.order_by(User.id.desc())
+
+        time_range = data_search.get("time_range")  # Thêm biến time_range
+        # Lọc theo khoảng thời gian
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            query = query.filter(User.created_at >= start_date)
+
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            query = query.filter(User.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            query = query.filter(User.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            query = query.filter(User.created_at >= start_date)
+
+        pagination = query.paginate(
+            page=data_search["page"], per_page=data_search["per_page"], error_out=False
+        )
+        return pagination
+
+    @staticmethod
+    def delete_users_by_ids(user_ids):
+        try:
+            Post.query.filter(Post.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+            Batch.query.filter(Batch.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+
+            Notification.query.filter(Notification.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+
+            SocialAccount.query.filter(SocialAccount.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+            UserLink.query.filter(UserLink.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+
+            User.query.filter(User.id.in_(user_ids)).delete(synchronize_session=False)
+
+            db.session.commit()
+        except Exception as ex:
+            logger.error(f"Exception: Delete user Fail  :  {str(ex)}")
+            db.session.rollback()
+            return 0
+        return 1

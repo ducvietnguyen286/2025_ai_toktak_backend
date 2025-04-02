@@ -15,6 +15,7 @@ from .shorten import ns as shorten_ns  # Thêm module shorten
 from app.api.shorten import ns as shorten_ns
 from app.api.notification import ns as notification_ns
 from app.api.coupon import ns as coupon_ns
+from app.api.admin import ns as admin_ns
 
 bp = Blueprint("api", __name__, url_prefix="/api/v1")
 
@@ -32,3 +33,4 @@ api.add_namespace(ns=shorten_ns)
 api.add_namespace(ns=image_template_ns)
 api.add_namespace(ns=notification_ns)
 api.add_namespace(ns=coupon_ns)
+api.add_namespace(ns=admin_ns)

@@ -13,6 +13,7 @@ class User(db.Model, BaseModel):
     username = db.Column(db.String(100), nullable=True)
     password = db.Column(db.String(200), nullable=True)
     status = db.Column(db.Integer, default=1)
+    user_type = db.Column(db.Integer, default=0)
 
     phone = db.Column(db.String(255), nullable=True)
     contact = db.Column(db.String(255), nullable=True)
@@ -56,4 +57,5 @@ class User(db.Model, BaseModel):
             "level": self.level,
             "level_info": self.level_info,
             "company_name": self.company_name,
+            "created_at": self.created_at,
         }
