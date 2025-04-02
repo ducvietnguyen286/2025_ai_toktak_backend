@@ -876,50 +876,58 @@ class APIAliCallback(Resource):
         required=["code", "state"],
     )
     def get(self, args):
-        code = args.get("code")
-        state = args.get("state")
+        try:
+            code = args.get("code")
+            state = args.get("state")
 
-        PAGE_PROFILE = "https://voda-play.com/profile"
+            PAGE_PROFILE = "https://voda-play.com/profile"
 
-        if not state:
+            if not state:
+                return Response(
+                    message="Invalid or expired state token 1",
+                    status=400,
+                ).to_dict()
+
+            payload = self.verify_state_token(state)
+
+            if not payload:
+                return Response(
+                    message="Invalid or expired state token 2",
+                    status=400,
+                ).to_dict()
+
+            user_id = payload.get("user_id")
+            user = UserService.find_user(user_id)
+            if not user:
+                return Response(
+                    message="Không tìm thấy người dùng",
+                    status=400,
+                ).to_dict()
+
+            access_response = TokenAliExpress().get_access_token(code)
+            if not access_response:
+                return Response(
+                    message="Lỗi kết nối",
+                    status=400,
+                ).to_dict()
+
+            user.ali_express_info = json.dumps(access_response)
+            user.ali_express_active = 1
+            user.save()
+
             return Response(
-                message="Invalid or expired state token 1",
-                status=400,
+                data=access_response,
+                message="AliExpress login success",
             ).to_dict()
 
-        payload = self.verify_state_token(state)
-
-        if not payload:
-            return Response(
-                message="Invalid or expired state token 2",
-                status=400,
-            ).to_dict()
-
-        user_id = payload.get("user_id")
-        user = UserService.find_user(user_id)
-        if not user:
-            return Response(
-                message="Không tìm thấy người dùng",
-                status=400,
-            ).to_dict()
-
-        access_response = TokenAliExpress().get_access_token(code)
-        if not access_response:
+            return redirect(PAGE_PROFILE + "?success=1")
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
             return Response(
                 message="Lỗi kết nối",
                 status=400,
             ).to_dict()
-
-        user.ali_express_info = json.dumps(access_response)
-        user.ali_express_active = 1
-        user.save()
-
-        return Response(
-            data=access_response,
-            message="AliExpress login success",
-        ).to_dict()
-
-        return redirect(PAGE_PROFILE + "?success=1")
 
     def verify_state_token(self, token):
         try:
