@@ -25,7 +25,7 @@ deploy_server_api:
   <<: *setup_ssh
   script:
     - echo "Đang kết nối đến $DEPLOY_SERVER..."
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main && sudo systemctl restart toktak && sudo systemctl restart toktak-tasks.service"
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main &&  systemctl restart toktak &&  systemctl restart toktak-tasks.service"
 
 # Job deploy đến server SNS
 deploy_server_sns:
@@ -39,12 +39,12 @@ deploy_server_sns:
   script:
     - echo "Đang kết nối đến $DEPLOY_SERVER..."
     - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main && \
-      sudo systemctl restart consumer-facebook && \
-      sudo systemctl restart consumer-tiktok && \
-      sudo systemctl restart consumer-twitter && \
-      sudo systemctl restart consumer-youtube && \
-      sudo systemctl restart consumer-thread && \
-      sudo systemctl restart consumer-instagram"
+       systemctl restart consumer-facebook && \
+       systemctl restart consumer-tiktok && \
+       systemctl restart consumer-twitter && \
+       systemctl restart consumer-youtube && \
+       systemctl restart consumer-thread && \
+       systemctl restart consumer-instagram"
 
 
 # Job deploy đến server Toktak
@@ -59,11 +59,11 @@ deploy_server_toktak:
   script:
     - echo "Đang kết nối đến $DEPLOY_SERVER..."
     - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main && \
-      sudo systemctl restart toktak \
-      sudo systemctl restart toktak-tasks.service \
-      sudo systemctl restart consumer_toktak \
-      sudo systemctl restart consumer_toktak_tiktok \
-      sudo systemctl restart consumer_toktak_twitter \
-      sudo systemctl restart consumer_toktak_youtube \
-      sudo systemctl restart consumer_toktak_thread \
-      sudo systemctl restart consumer_toktak_instagram
+       systemctl restart toktak \
+       systemctl restart toktak-tasks.service \
+       systemctl restart consumer_toktak \
+       systemctl restart consumer_toktak_tiktok \
+       systemctl restart consumer_toktak_twitter \
+       systemctl restart consumer_toktak_youtube \
+       systemctl restart consumer_toktak_thread \
+       systemctl restart consumer_toktak_instagram
