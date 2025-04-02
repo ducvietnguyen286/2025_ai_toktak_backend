@@ -42,6 +42,9 @@ class BaseModel:
 
         response = {}
         for column, value in self._to_dict().items():
+            if isinstance(value, db.Model):
+                continue  # Bỏ qua các thuộc tính liên kết
+        
             if column in self.to_json_filter:
                 continue
             if column in self.to_json_parse:
