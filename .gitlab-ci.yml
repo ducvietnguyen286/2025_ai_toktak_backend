@@ -1,69 +1,69 @@
-stages:
-  - deploy
+# stages:
+#   - deploy
 
-# Phần thiết lập SSH dùng chung cho các job deploy
-.before_deploy: &setup_ssh
-  before_script:
-    # Cài đặt ssh-client nếu chưa có
-    - apt-get update -y && apt-get install openssh-client sudo sysvinit-utils -y
-    # Khởi động ssh-agent và thêm private key từ biến môi trường SSH_PRIVATE_KEY
-    - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    # Tạo thư mục .ssh và cấu hình known_hosts để tránh xác nhận lần đầu
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan -H -p $DEPLOY_PORT $DEPLOY_SERVER >> ~/.ssh/known_hosts || true
+# # Phần thiết lập SSH dùng chung cho các job deploy
+# .before_deploy: &setup_ssh
+#   before_script:
+#     # Cài đặt ssh-client nếu chưa có
+#     - apt-get update -y && apt-get install openssh-client sudo sysvinit-utils -y
+#     # Khởi động ssh-agent và thêm private key từ biến môi trường SSH_PRIVATE_KEY
+#     - eval $(ssh-agent -s)
+#     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+#     # Tạo thư mục .ssh và cấu hình known_hosts để tránh xác nhận lần đầu
+#     - mkdir -p ~/.ssh
+#     - chmod 700 ~/.ssh
+#     - ssh-keyscan -H -p $DEPLOY_PORT $DEPLOY_SERVER >> ~/.ssh/known_hosts || true
 
-# Job deploy đến server Api
-deploy_server_api:
-  stage: deploy
-  variables:
-    DEPLOY_SERVER: 1.201.18.142
-    DEPLOY_PORT: "27400"
-    DEPLOY_USER: root
-    PROJECT_DIR: /var/www/2025_ai_toktak_be
-  <<: *setup_ssh
-  script:
-    - echo "Đang kết nối đến $DEPLOY_SERVER..."
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main &&  service toktak restart &&  service toktak-tasks restart"
+# # Job deploy đến server Api
+# deploy_server_api:
+#   stage: deploy
+#   variables:
+#     DEPLOY_SERVER: 1.201.18.142
+#     DEPLOY_PORT: "27400"
+#     DEPLOY_USER: root
+#     PROJECT_DIR: /var/www/2025_ai_toktak_be
+#   <<: *setup_ssh
+#   script:
+#     - echo "Đang kết nối đến $DEPLOY_SERVER..."
+#     - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main &&  service toktak restart &&  service toktak-tasks restart"
 
-# Job deploy đến server SNS
-deploy_server_sns:
-  stage: deploy
-  variables:
-    DEPLOY_SERVER: 1.201.18.231
-    DEPLOY_PORT: "22"
-    DEPLOY_USER: root
-    PROJECT_DIR: /var/www/toktak-consumer
-  <<: *setup_ssh
-  script:
-    - echo "Đang kết nối đến $DEPLOY_SERVER..."
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main && \
-       service consumer-facebook restart && \
-       service consumer-tiktok restart && \
-       service consumer-twitter restart && \
-       service consumer-youtube restart && \
-       service consumer-thread restart && \
-       service consumer-instagram restart"
+# # Job deploy đến server SNS
+# deploy_server_sns:
+#   stage: deploy
+#   variables:
+#     DEPLOY_SERVER: 1.201.18.231
+#     DEPLOY_PORT: "22"
+#     DEPLOY_USER: root
+#     PROJECT_DIR: /var/www/toktak-consumer
+#   <<: *setup_ssh
+#   script:
+#     - echo "Đang kết nối đến $DEPLOY_SERVER..."
+#     - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main && \
+#        service consumer-facebook restart && \
+#        service consumer-tiktok restart && \
+#        service consumer-twitter restart && \
+#        service consumer-youtube restart && \
+#        service consumer-thread restart && \
+#        service consumer-instagram restart"
 
 
-# Job deploy đến server Toktak
-deploy_server_toktak:
-  stage: deploy
-  variables:
-    DEPLOY_SERVER: 103.9.159.82
-    DEPLOY_PORT: "222"
-    DEPLOY_USER: root
-    PROJECT_DIR: /var/www/toktak
-  <<: *setup_ssh
-  script:
-    - echo "Đang kết nối đến $DEPLOY_SERVER..."
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main && \
-       service toktak restart && \
-       service toktak-tasks restart && \
-       service consumer_toktak restart && \
-       service consumer_toktak_tiktok restart && \
-       service consumer_toktak_twitter restart && \
-       service consumer_toktak_youtube restart && \
-       service consumer_toktak_thread restart && \
-       service consumer_toktak_instagram restart
+# # Job deploy đến server Toktak
+# deploy_server_toktak:
+#   stage: deploy
+#   variables:
+#     DEPLOY_SERVER: 103.9.159.82
+#     DEPLOY_PORT: "222"
+#     DEPLOY_USER: root
+#     PROJECT_DIR: /var/www/toktak
+#   <<: *setup_ssh
+#   script:
+#     - echo "Đang kết nối đến $DEPLOY_SERVER..."
+#     - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main && \
+#        service toktak restart && \
+#        service toktak-tasks restart && \
+#        service consumer_toktak restart && \
+#        service consumer_toktak_tiktok restart && \
+#        service consumer_toktak_twitter restart && \
+#        service consumer_toktak_youtube restart && \
+#        service consumer_toktak_thread restart && \
+#        service consumer_toktak_instagram restart
