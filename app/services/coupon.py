@@ -193,8 +193,8 @@ class CouponService:
         total_codes = code_query.count()
 
         # Sắp xếp kết quả nếu có yêu cầu
-        if "sort" in query_params and query_params["sort"]:
-            sort = query_params["sort"].split("_")
+        if "type_order" in query_params and query_params["type_order"]:
+            sort = query_params["type_order"].split("_")
             if len(sort) == 2:
                 field, order = sort
                 order = order.lower()
@@ -202,6 +202,8 @@ class CouponService:
                     code_query = code_query.order_by(getattr(CouponCode, field).asc())
                 elif order == "desc":
                     code_query = code_query.order_by(getattr(CouponCode, field).desc())
+            else:
+                code_query = code_query.order_by(CouponCode.id.desc())
 
         # Phân trang nếu có yêu cầu
         if "page" in query_params and "limit" in query_params:
