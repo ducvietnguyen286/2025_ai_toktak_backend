@@ -50,7 +50,7 @@ class TokenAliExpress:
         params["sign"] = sign
         response = requests.get(f"{BASE_URL}{ACTION}", params=params, timeout=10)
         res = response.json()
-        if res.status_code == 200:
+        if res:
             return res
         else:
             return None
@@ -80,7 +80,7 @@ class TokenAliExpress:
         params["sign"] = sign
         response = requests.get(f"{BASE_URL}{ACTION}", params=params, timeout=10)
         res = response.json()
-        if res.status_code == 200:
+        if res:
             return res
         else:
             return None
@@ -115,7 +115,7 @@ class AliExpressAPI:
         params["sign"] = sign
         response = requests.get(f"{BASE_URL}{ACTION}", params=params, timeout=10)
         res = response.json()
-        if res.status_code == 200:
+        if res:
             return res
         else:
             return None
