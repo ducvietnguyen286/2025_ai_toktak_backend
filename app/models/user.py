@@ -31,9 +31,9 @@ class User(db.Model, BaseModel):
     ali_express_active = db.Column(db.Boolean, default=False)
     ali_express_info = db.Column(db.Text)
 
-    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
-    last_activated = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
-    updated_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    last_activated = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     print_filter = ("password",)
     to_json_filter = ("password", "ali_express_info")
@@ -57,5 +57,19 @@ class User(db.Model, BaseModel):
             "level": self.level,
             "level_info": self.level_info,
             "company_name": self.company_name,
-            "created_at": self.created_at,
+            "created_at": (
+                self.created_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+                if self.created_at
+                else None
+            ),
+            "last_activated": (
+                self.last_activated.strftime("%Y-%m-%dT%H:%M:%SZ")
+                if self.last_activated
+                else None
+            ),
+            "updated_at": (
+                self.updated_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+                if self.updated_at
+                else None
+            ),
         }

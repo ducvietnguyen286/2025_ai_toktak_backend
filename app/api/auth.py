@@ -254,23 +254,37 @@ class APIUserProfile(Resource):
 
     @jwt_required()
     def get(self):
-        user = AuthService.get_current_identity()
-        level = user.level
-        total_link = UserService.get_user_links(user.id)
-        logger.info(f"level : {level} total_link :  {len(total_link)} ")
-        if level != len(total_link):
-            level = len(total_link)
-            level_info = get_level_images(level)
-            user = AuthService.update(
-                user.id,
-                level=level,
-                level_info=json.dumps(level_info),
-            )
+        try:
+            user = AuthService.get_current_identity()
+            level = user.level
+            total_link = UserService.get_user_links(user.id)
 
-        return Response(
-            data=user._to_json(),
-            message="Lấy thông tin người dùng thành công",
-        ).to_dict()
+            if level != len(total_link):
+                print(123123)
+                level = len(total_link)
+                level_info = get_level_images(level)
+                user = AuthService.update(
+                    user.id,
+                    level=level,
+                    level_info=json.dumps(level_info),
+                )
+            logger.info(f"-----------USER DATA: {user.to_dict()}-------------")
+            return Response(
+                data=user.to_dict(),
+                message="Lấy thông tin người dùng thành công",
+            ).to_dict()
+        
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()  # Lấy chi tiết lỗi
+            logger.error(f"Lỗi xảy ra trong API /user_profile:\n{error_details}")
+            
+            return Response(
+                data={},
+                message="Đã xảy ra lỗi trong quá trình xử lý",
+                code=500,
+            ).to_dict()
+
 
 
 @ns.route("/delete_account")
