@@ -12,7 +12,6 @@ stages:
     # Tạo thư mục .ssh và cấu hình known_hosts để tránh xác nhận lần đầu
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - echo "Deploy server: $DEPLOY_SERVER"
     - ssh-keyscan -H $DEPLOY_SERVER >> ~/.ssh/known_hosts || true
 
 # Job deploy đến server Api
