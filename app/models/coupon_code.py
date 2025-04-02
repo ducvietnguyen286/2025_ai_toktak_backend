@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models.base import BaseModel
+import const
 
 
 class CouponCode(db.Model, BaseModel):
@@ -11,5 +12,6 @@ class CouponCode(db.Model, BaseModel):
     is_used = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
     expired_at = db.Column(db.DateTime)
+    num_days = db.Column(db.Integer, default=const.DATE_EXPIRED)
     used_at = db.Column(db.DateTime)
     used_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
