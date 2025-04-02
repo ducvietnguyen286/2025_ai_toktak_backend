@@ -34,19 +34,25 @@ class Post(db.Model, BaseModel):
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )  #
-
+    
+    user = db.relationship("User", backref="posts", lazy="joined")
+    
     to_json_parse = "images"
     to_json_filter = "captions"
 
     def to_dict(self):
         return {
             "id": self.id,
-            "post_id": self.post_id,
-            "ai_type": self.ai_type,
-            "request": self.request,
-            "response": self.response,
+            "user_id": self.user_id,
+            "batch_id": self.batch_id,
+            "thumbnail": self.thumbnail,
+            "title": self.title,
+            "subtitle": self.subtitle,
+            "content": self.content,
+            "description": self.description,
             "status": self.status,
             "status_sns": self.status_sns,
+            "user_email": self.user.email if self.user else None,  # Lấy email từ user
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
