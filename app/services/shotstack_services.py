@@ -171,6 +171,8 @@ class ShotStackService:
             is_video_hooking = template_info["is_video_hooking"]
             is_caption_top = template_info["is_caption_top"]
             is_caption_last = template_info["is_caption_last"]
+            is_product_name = template_info["is_product_name"]
+            is_purchase_guide = template_info["is_purchase_guide"]
 
             output_file_image_tag = add_centered_text_to_png(
                 text=product_name,
@@ -180,8 +182,13 @@ class ShotStackService:
             if len(purchase_guide) > 5:
                 purchase_guide = purchase_guide[:5] + "\n" + purchase_guide[5:]
 
-            layout_advance = {
-                "clips": [
+            is_product_name = int(template_info.get("is_product_name", 0))
+            is_purchase_guide = int(template_info.get("is_purchase_guide", 0))
+            
+            clip_advance = []
+            # Chỉ thêm ảnh nếu is_product_name là 1
+            if is_product_name == 1:
+                clip_advance.append(
                     {
                         "asset": {
                             "type": "image",
@@ -192,7 +199,12 @@ class ShotStackService:
                         "fit": "none",
                         "position": "topLeft",
                         "offset": {"x": 0.04, "y": -0.026},
-                    },
+                    }
+                )
+
+            # Chỉ thêm văn bản nếu is_purchase_guide == 1
+            if is_purchase_guide == 1:
+                clip_advance.append(
                     {
                         "asset": {
                             "type": "text",
@@ -211,10 +223,13 @@ class ShotStackService:
                         "length": "end",
                         "position": "topRight",
                         "offset": {"x": 0.25, "y": 0.0255},
-                    },
-                ]
-            }
+                    }
+                )
 
+            # Chỉ gán `clips` vào `layout_advance` nếu có phần tử
+            if clip_advance:
+                layout_advance["clips"] = clip_advance
+                
             if is_caption_top == 1:
                 layout_advance_caption_top = {}
 

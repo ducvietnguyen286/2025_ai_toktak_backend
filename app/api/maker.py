@@ -159,7 +159,8 @@ class APICreateBatch(Resource):
 
             post_types = ["video", "image", "blog"]
 
-            template_info = get_template_info(is_advance)
+            template_info = get_template_info(is_advance, is_paid_advertisements)
+            logger.info(template_info)
 
             batch = BatchService.create_batch(
                 user_id=user_id_login,
@@ -1228,7 +1229,7 @@ class APITemplateVideo(Resource):
         ).to_dict()
 
 
-def get_template_info(is_advance):
+def get_template_info(is_advance, is_paid_advertisements):
     if is_advance:
         return json.dumps({})
 
@@ -1236,7 +1237,12 @@ def get_template_info(is_advance):
 
     template_image_default = redis_client.get(redis_key)
     if template_image_default:
-        return json.dumps({"image_template_id": template_image_default.decode()})
+        return json.dumps(
+            {
+                "image_template_id": template_image_default.decode(),
+                "is_paid_advertisements": is_paid_advertisements,
+            }
+        )
 
     try:
         image_templates = ImageTemplateService.get_image_templates()
@@ -1246,7 +1252,12 @@ def get_template_info(is_advance):
         template_image_default = str(image_templates[0]["id"])
         redis_client.set(redis_key, template_image_default)
 
-        return json.dumps({"image_template_id": template_image_default})
+        return json.dumps(
+            {
+                "image_template_id": template_image_default,
+                "is_paid_advertisements": is_paid_advertisements,
+            }
+        )
 
     except Exception as ex:
         error_message = (
