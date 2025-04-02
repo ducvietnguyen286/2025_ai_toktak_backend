@@ -955,13 +955,13 @@ class APICheckSNSLink(Resource):
             current_user = AuthService.get_current_identity()
             if not current_user:
                 return Response(
-                    message="Please login",
+                    message="로그인하여 계속 진행하십시오.",
                     code=201,
                 ).to_dict()
 
             if current_user.subscription == "FREE":
                 return Response(
-                    message="SNS 연동이 필요해요",
+                    message="쿠폰을 입력하여 계속 진행하십시오.",
                     code=201,
                 ).to_dict()
 
