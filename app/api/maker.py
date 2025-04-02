@@ -1304,12 +1304,6 @@ class APIAdminHistories(Resource):
             "page": posts.page,
             "per_page": posts.per_page,
             "total_pages": posts.pages,
-            "data": [
-                {
-                    **post[0]._to_json(),   
-                    "user_email": post[1] if post[1] is not None else None,   
-                    # "avatar": post[2].avatar,   
-                }
-                for post in posts.items
-            ],
+            
+            "data": [post.to_dict() for post in posts.items],
         }, 200

@@ -213,11 +213,7 @@ class PostService:
     def admin_get_posts_upload(data_search):
         # Query cơ bản với các điều kiện
         # Aliases for the User table to include email
-        user_alias = aliased(User)
-
-        query = Post.query.join(
-            user_alias, user_alias.id == Post.user_id, isouter=True
-        ).filter(
+        query = Post.query.filter(
             Post.status == data_search["status"],
         )
 
@@ -260,10 +256,7 @@ class PostService:
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
             query = query.filter(Post.created_at >= start_date)
-        
-        query = query.add_columns(user_alias.email)
-        query = query.add_columns(user_alias.avatar)
-        
+
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
