@@ -44,3 +44,24 @@ deploy_server_sns:
       sudo systemctl restart consumer-youtube && \
       sudo systemctl restart consumer-thread && \
       sudo systemctl restart consumer-instagram"
+
+
+# Job deploy đến server Toktak
+deploy_server_toktak:
+  stage: deploy
+  variables:
+    DEPLOY_SERVER: 103.9.159.82
+    DEPLOY_USER: root
+    PROJECT_DIR: /var/www/toktak
+  <<: *setup_ssh
+  script:
+    - echo "Đang kết nối đến $DEPLOY_SERVER..."
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "cd $PROJECT_DIR && git pull origin main && \
+      sudo systemctl restart toktak \
+      sudo systemctl restart toktak-tasks.service \
+      sudo systemctl restart consumer_toktak \
+      sudo systemctl restart consumer_toktak_tiktok \
+      sudo systemctl restart consumer_toktak_twitter \
+      sudo systemctl restart consumer_toktak_youtube \
+      sudo systemctl restart consumer_toktak_thread \
+      sudo systemctl restart consumer_toktak_instagram
