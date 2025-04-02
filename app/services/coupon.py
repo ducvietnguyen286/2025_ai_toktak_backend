@@ -6,7 +6,9 @@ from app.models.user import User
 import random
 import string
 from app.extensions import redis_client, db
-from sqlalchemy.orm import Session , aliased
+from sqlalchemy.orm import Session, aliased
+import time
+import uuid
 
 BATCH_SIZE = 1000
 
@@ -137,11 +139,10 @@ class CouponService:
 
         # Tạo query với LEFT JOIN giữa CouponCode và User
         code_query = db.session.query(
-            CouponCode,
-            user_alias.username,
-            user_alias.name,
-            user_alias.email
-        ).outerjoin(user_alias, CouponCode.used_by == user_alias.id)  # LEFT JOIN
+            CouponCode, user_alias.username, user_alias.name, user_alias.email
+        ).outerjoin(
+            user_alias, CouponCode.used_by == user_alias.id
+        )  # LEFT JOIN
 
         # Áp dụng các bộ lọc nếu có
         if "code" in query_params and query_params["code"]:
@@ -215,19 +216,13 @@ class CouponService:
         coupon_codes = []
         for coupon_code, username, name, email in code_query.all():
             data = coupon_code._to_json()
-            data.update({
-                "username": username,
-                "name": name,
-                "email": email
-            })
+            data.update({"username": username, "name": name, "email": email})
             coupon_codes.append(data)
 
         return coupon_codes, total_codes
 
-
-
     @staticmethod
-    def create_codes(coupon_id, count_code=100, expired_at=None):
+    def create_codes(coupon_id, count_code=100, expired_at=None, num_days=30):
         coupon_codes = []
         code_by_day = CouponService.get_code_by_day()
         code_by_month = CouponService.get_code_by_month()
@@ -245,11 +240,10 @@ class CouponService:
                 "code": code,
                 "is_used": False,
                 "is_active": True,
+                "num_days": num_days,
                 "created_at": datetime.datetime.now(),
                 "updated_at": datetime.datetime.now(),
             }
-            if expired_at:
-                data["expired_at"] = expired_at
             coupon_code = CouponCode(**data)
             coupon_codes.append(coupon_code)
 
@@ -266,17 +260,10 @@ class CouponService:
             session.close()
 
     @staticmethod
-    def generate_code(length=6):
+    def generate_code(length=10):
         """Generate a random coupon code of fixed length"""
-        characters = string.ascii_uppercase + string.digits
-        random_code = "".join(random.choice(characters) for _ in range(length))
-        is_exist = CouponService.get_exist_code(random_code)
-        while is_exist:
-            random_code = "".join(random.choice(characters) for _ in range(length))
-            is_exist = CouponService.get_exist_code(random_code)
-
-        CouponService.set_exist_code(random_code)
-        return random_code
+        raw_string = str(uuid.uuid4()) + str(time.time())
+        return hashlib.sha1(raw_string.encode()).hexdigest().upper()[:length]
 
     @staticmethod
     def get_exist_code(code):

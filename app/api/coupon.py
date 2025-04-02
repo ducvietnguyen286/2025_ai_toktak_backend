@@ -12,6 +12,7 @@ from app.services.coupon import CouponService
 ns = Namespace(name="coupon", description="User API")
 from app.extensions import db
 from sqlalchemy.orm import Session
+import const
 
 
 @ns.route("/used")
@@ -32,43 +33,42 @@ class APIUsedCoupon(Resource):
         if coupon == "not_exist":
             return Response(
                 message="쿠폰 코드가 존재하지 않습니다",
-                code =201,
+                code=201,
             ).to_dict()
         if coupon == "used":
             return Response(
                 message="쿠폰 코드가 이미 사용되었습니다",
-                code =201,
+                code=201,
             ).to_dict()
         if coupon == "not_active":
             return Response(
                 message="쿠폰 코드가 사용 불가능합니다",
-                code =201,
+                code=201,
             ).to_dict()
         if coupon == "expired":
             return Response(
                 message="쿠폰 코드가 만료되었습니다",
-                code =201,
+                code=201,
             ).to_dict()
 
         if coupon.is_has_whitelist:
             if current_user.id not in json.loads(coupon.white_lists):
                 return Response(
                     message="쿠폰 코드가 사용 불가능합니다",
-                    code =201,
+                    code=201,
                 ).to_dict()
 
         if coupon.expired and coupon.expired < datetime.datetime.now():
             return Response(
                 message="쿠폰 코드가 만료되었습니다",
-                code =201,
+                code=201,
             ).to_dict()
 
         if coupon.max_used and coupon.used >= coupon.max_used:
             return Response(
                 message="쿠폰 코드가 더 이상 사용할 수 없습니다",
-                code =201,
+                code=201,
             ).to_dict()
-
 
         session = Session(bind=db.engine)
         try:
@@ -79,6 +79,7 @@ class APIUsedCoupon(Resource):
             coupon_code.is_used = True
             coupon_code.used_by = current_user.id
             coupon_code.used_at = datetime.datetime.now()
+            coupon_code.expired_at = datetime.datetime.now() + datetime.timedelta(days=coupon_code.num_days)
             coupon_code.save()
 
             if coupon.type == "DISCOUNT":
@@ -86,7 +87,8 @@ class APIUsedCoupon(Resource):
             elif coupon.type == "SUB_STANDARD":
                 current_user.subscription = "STANDARD"
                 current_user.subscription_expired = (
-                    datetime.datetime.now() + datetime.timedelta(days=30)
+                    datetime.datetime.now()
+                    + datetime.timedelta(days=const.DATE_EXPIRED)
                 )
                 current_user.save()
             elif coupon.type == "SUB_PREMIUM":
@@ -120,12 +122,13 @@ class APICreateCoupon(Resource):
             "name": {"type": ["string", "null"]},
             "type": {"type": ["string", "null"]},
             "max_used": {"type": ["string", "null"]},
+            "num_days": {"type": ["string", "null"]},
             # "is_has_whitelist": {"type": "boolean"},
             # "white_lists": {"type": "array", "items": {"type": ["string", "null"]}},
             "description": {"type": ["string", "null"]},
             "expired": {"type": ["string", "null"]},
         },
-        required=["name", "max_used"],
+        required=["name", "max_used" ],
     )
     def post(self, args):
         current_user = AuthService.get_current_identity()
@@ -133,6 +136,11 @@ class APICreateCoupon(Resource):
         name = args.get("name", "")
         type = "SUB_STANDARD"
         max_used = int(args.get("max_used", 1)) if args.get("max_used") else 1
+        num_days = (
+            int(args.get("num_days", const.DATE_EXPIRED))
+            if args.get("num_days")
+            else const.DATE_EXPIRED
+        )
         is_has_whitelist = args.get("is_has_whitelist", False)
         white_lists = args.get("white_lists", [])
         description = args.get("description", "")
@@ -151,8 +159,14 @@ class APICreateCoupon(Resource):
             description=description,
             expired=expired,
             created_by=current_user.id,
+            # number_expired=number_expired,
         )
-        CouponService.create_codes(coupon.id, count_code=max_used, expired_at=expired)
+        CouponService.create_codes(
+            coupon.id,
+            count_code=max_used,
+            expired_at=expired,
+            num_days=num_days,
+        )
         return Response(
             data=coupon._to_json(),
             message="쿠폰 생성 성공",
