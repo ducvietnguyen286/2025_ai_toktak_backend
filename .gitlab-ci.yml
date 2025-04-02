@@ -1,0 +1,44 @@
+stages:
+  - deploy
+
+# Phần thiết lập SSH dùng chung cho các job deploy
+.before_deploy: &setup_ssh
+  before_script:
+    # Cài đặt ssh-client nếu chưa có
+    - apt-get update -y && apt-get install openssh-client -y
+    # Khởi động ssh-agent và thêm private key từ biến môi trường SSH_PRIVATE_KEY
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    # Tạo thư mục .ssh và cấu hình known_hosts để tránh xác nhận lần đầu
+    - mkdir -p ~/.ssh
+    - ssh-keyscan -H $DEPLOY_SERVER >> ~/.ssh/known_hosts
+
+# Job deploy đến server Api
+deploy_server_api:
+  stage: deploy
+  variables:
+    DEPLOY_SERVER: 1.201.18.142
+    DEPLOY_USER: root
+    PROJECT_DIR: /var/www/2025_ai_toktak_be
+  <<: *setup_ssh
+  script:
+    - echo "Đang kết nối đến $DEPLOY_SERVER..."
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "cd $PROJECT_DIR && git pull origin main && sudo systemctl restart toktak && sudo systemctl restart toktak-tasks.service"
+
+# Job deploy đến server SNS
+deploy_server_sns:
+  stage: deploy
+  variables:
+    DEPLOY_SERVER: 1.201.18.231
+    DEPLOY_USER: root
+    PROJECT_DIR: /var/www/toktak-consumer
+  <<: *setup_ssh
+  script:
+    - echo "Đang kết nối đến $DEPLOY_SERVER..."
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "cd $PROJECT_DIR && git pull origin main && \
+      sudo systemctl restart consumer-facebook && \
+      sudo systemctl restart consumer-tiktok && \
+      sudo systemctl restart consumer-twitter && \
+      sudo systemctl restart consumer-youtube && \
+      sudo systemctl restart consumer-thread && \
+      sudo systemctl restart consumer-instagram"
