@@ -25,7 +25,7 @@ deploy_server_api:
   <<: *setup_ssh
   script:
     - echo "Đang kết nối đến $DEPLOY_SERVER..."
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main &&  systemctl restart toktak &&  systemctl restart toktak-tasks.service"
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main &&  service toktak restart &&  service toktak-tasks restart"
 
 # Job deploy đến server SNS
 deploy_server_sns:
@@ -39,12 +39,12 @@ deploy_server_sns:
   script:
     - echo "Đang kết nối đến $DEPLOY_SERVER..."
     - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main && \
-       systemctl restart consumer-facebook && \
-       systemctl restart consumer-tiktok && \
-       systemctl restart consumer-twitter && \
-       systemctl restart consumer-youtube && \
-       systemctl restart consumer-thread && \
-       systemctl restart consumer-instagram"
+       service consumer-facebook restart && \
+       service consumer-tiktok restart && \
+       service consumer-twitter restart && \
+       service consumer-youtube restart && \
+       service consumer-thread restart && \
+       service consumer-instagram restart"
 
 
 # Job deploy đến server Toktak
@@ -59,11 +59,11 @@ deploy_server_toktak:
   script:
     - echo "Đang kết nối đến $DEPLOY_SERVER..."
     - ssh $DEPLOY_USER@$DEPLOY_SERVER -p $DEPLOY_PORT "cd $PROJECT_DIR && git pull origin main && \
-       systemctl restart toktak \
-       systemctl restart toktak-tasks.service \
-       systemctl restart consumer_toktak \
-       systemctl restart consumer_toktak_tiktok \
-       systemctl restart consumer_toktak_twitter \
-       systemctl restart consumer_toktak_youtube \
-       systemctl restart consumer_toktak_thread \
-       systemctl restart consumer_toktak_instagram
+       service toktak restart && \
+       service toktak-tasks restart && \
+       service consumer_toktak restart && \
+       service consumer_toktak_tiktok restart && \
+       service consumer_toktak_twitter restart && \
+       service consumer_toktak_youtube restart && \
+       service consumer_toktak_thread restart && \
+       service consumer_toktak_instagram restart
