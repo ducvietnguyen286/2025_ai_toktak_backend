@@ -31,43 +31,44 @@ class APIUsedCoupon(Resource):
         coupon = CouponService.find_coupon_by_code(code)
         if coupon == "not_exist":
             return Response(
-                message="Mã coupon không tồn tại",
-                status=400,
+                message="쿠폰 코드가 존재하지 않습니다",
+                code =201,
             ).to_dict()
         if coupon == "used":
             return Response(
-                message="Mã coupon đã được sử dụng",
-                status=400,
+                message="쿠폰 코드가 이미 사용되었습니다",
+                code =201,
             ).to_dict()
         if coupon == "not_active":
             return Response(
-                message="Mã coupon không khả dụng",
-                status=400,
+                message="쿠폰 코드가 사용 불가능합니다",
+                code =201,
             ).to_dict()
         if coupon == "expired":
             return Response(
-                message="Mã coupon đã hết hạn",
-                status=400,
+                message="쿠폰 코드가 만료되었습니다",
+                code =201,
             ).to_dict()
 
         if coupon.is_has_whitelist:
             if current_user.id not in json.loads(coupon.white_lists):
                 return Response(
-                    message="Mã coupon không khả dụng",
-                    status=400,
+                    message="쿠폰 코드가 사용 불가능합니다",
+                    code =201,
                 ).to_dict()
 
         if coupon.expired and coupon.expired < datetime.datetime.now():
             return Response(
-                message="Mã coupon đã hết hạn",
-                status=400,
+                message="쿠폰 코드가 만료되었습니다",
+                code =201,
             ).to_dict()
 
         if coupon.max_used and coupon.used >= coupon.max_used:
             return Response(
-                message="Mã coupon đã hết lượt sử dụng",
-                status=400,
+                message="쿠폰 코드가 더 이상 사용할 수 없습니다",
+                code =201,
             ).to_dict()
+
 
         session = Session(bind=db.engine)
         try:
@@ -115,23 +116,23 @@ class APICreateCoupon(Resource):
     @parameters(
         type="object",
         properties={
-            "image": {"type": "string"},
-            "name": {"type": "string"},
-            "type": {"type": "string"},
-            "max_used": {"type": "integer"},
-            "is_has_whitelist": {"type": "boolean"},
-            "white_lists": {"type": "array", "items": {"type": "string"}},
-            "description": {"type": "string"},
-            "expired": {"type": "string"},
+            "image": {"type": ["string", "null"]},
+            "name": {"type": ["string", "null"]},
+            "type": {"type": ["string", "null"]},
+            "max_used": {"type": ["string", "null"]},
+            # "is_has_whitelist": {"type": "boolean"},
+            # "white_lists": {"type": "array", "items": {"type": ["string", "null"]}},
+            "description": {"type": ["string", "null"]},
+            "expired": {"type": ["string", "null"]},
         },
-        required=["name", "type", "max_used"],
+        required=["name", "max_used"],
     )
     def post(self, args):
         current_user = AuthService.get_current_identity()
         image = args.get("image", "")
         name = args.get("name", "")
-        type = args.get("type", "")
-        max_used = args.get("max_used", 0)
+        type = "SUB_STANDARD"
+        max_used = int(args.get("max_used", 1)) if args.get("max_used") else 1
         is_has_whitelist = args.get("is_has_whitelist", False)
         white_lists = args.get("white_lists", [])
         description = args.get("description", "")
@@ -154,7 +155,7 @@ class APICreateCoupon(Resource):
         CouponService.create_codes(coupon.id, count_code=max_used, expired_at=expired)
         return Response(
             data=coupon._to_json(),
-            message="Tạo coupon thành công",
+            message="쿠폰 생성 성공",
         ).to_dict()
 
 
@@ -200,18 +201,18 @@ class APIListCoupon(Resource):
         properties={
             "name": {"type": "string"},
             "type": {"type": "string"},
-            "from_max_used": {"type": "integer"},
-            "to_max_used": {"type": "integer"},
-            "from_used": {"type": "integer"},
-            "to_used": {"type": "integer"},
+            "from_max_used": {"type": ["integer", "null"]},
+            "to_max_used": {"type": ["integer", "null"]},
+            "from_used": {"type": ["integer", "null"]},
+            "to_used": {"type": ["integer", "null"]},
             "from_expired": {"type": "string"},
             "to_expired": {"type": "string"},
             "from_created_at": {"type": "string"},
             "to_created_at": {"type": "string"},
-            "created_by": {"type": "array", "items": {"type": "integer"}},
+            "created_by": {"type": "array", "items": {"type": ["integer", "null"]}},
             "is_active": {"type": "boolean"},
-            "page": {"type": "integer"},
-            "limit": {"type": "integer"},
+            "page": {"type": ["string", "null"]},
+            "per_page": {"type": ["string", "null"]},
             "sort": {"type": "string"},
         },
         required=[],
@@ -229,8 +230,8 @@ class APIListCoupon(Resource):
         to_created_at = args.get("to_created_at", None)
         is_active = args.get("is_active", None)
         created_by = args.get("created_by", None)
-        page = args.get("page", 1)
-        limit = args.get("limit", 10)
+        page = int(args.get("page", 1)) if args.get("page") else 1
+        limit = int(args.get("per_page", 10)) if args.get("per_page") else 10
         sort = args.get("sort", "created_at|desc")
 
         if from_expired:
@@ -400,7 +401,7 @@ class APIListCouponCodes(Resource):
     @parameters(
         type="object",
         properties={
-            "coupon_id": {"type": "integer"},
+            "coupon_id": {"type": ["string", "null"]},
             "code": {"type": "string"},
             "is_used": {"type": "boolean"},
             "is_active": {"type": "boolean"},
@@ -408,12 +409,12 @@ class APIListCouponCodes(Resource):
             "to_created_at": {"type": "string"},
             "from_expired": {"type": "string"},
             "to_expired": {"type": "string"},
-            "used_by": {"type": "integer"},
+            "used_by": {"type": ["string", "null"]},
             "from_used_at": {"type": "string"},
             "to_used_at": {"type": "string"},
-            "page": {"type": "integer"},
-            "limit": {"type": "integer"},
-            "sort": {"type": "string"},
+            "page": {"type": ["string", "null"]},
+            "limit": {"type": ["string", "null"]},
+            "type_order": {"type": "string"},
         },
         required=[],
     )
@@ -429,9 +430,9 @@ class APIListCouponCodes(Resource):
         used_by = args.get("used_by", None)
         from_used_at = args.get("from_used_at", None)
         to_used_at = args.get("to_used_at", None)
-        page = args.get("page", 1)
-        limit = args.get("limit", 10)
-        sort = args.get("sort", "created_at|desc")
+        page = int(args.get("page", 1)) if args.get("page") else 1
+        limit = int(args.get("per_page", 10)) if args.get("per_page") else 10
+        type_order = args.get("type_order", "id_desc")
 
         if from_created_at:
             from_created_at = datetime.datetime.strptime(
@@ -476,20 +477,26 @@ class APIListCouponCodes(Resource):
             "to_used_at": to_used_at,
             "page": page,
             "limit": limit,
-            "sort": sort,
+            "type_order": type_order,
         }
         coupon_codes, total_codes = CouponService.get_coupon_codes(query_params)
 
+        total_pages = total_codes // limit + (1 if total_codes % limit > 0 else 0)
         pagination = {
             "page": page,
             "limit": limit,
             "total": total_codes,
-            "total_pages": total_codes // limit + (1 if total_codes % limit > 0 else 0),
+            "total_pages": total_pages,
             "has_next": total_codes > page * limit,
             "has_prev": page > 1,
         }
 
-        return Response(
-            data={"list": coupon_codes, "pagination": pagination},
-            message="Lấy danh sách coupon thành công",
-        ).to_dict()
+        return {
+            "status": True,
+            "message": "Lấy danh sách coupon thành công",
+            "total": total_codes,
+            "page": page,
+            "per_page": limit,
+            "total_pages": total_pages,
+            "data": coupon_codes,
+        }, 200

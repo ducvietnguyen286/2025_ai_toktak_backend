@@ -2,10 +2,11 @@ import datetime
 import hashlib
 from app.models.coupon import Coupon
 from app.models.coupon_code import CouponCode
+from app.models.user import User
 import random
 import string
 from app.extensions import redis_client, db
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session , aliased
 
 BATCH_SIZE = 1000
 
@@ -131,7 +132,18 @@ class CouponService:
 
     @staticmethod
     def get_coupon_codes(query_params={}):
-        code_query = CouponCode.query
+        # Alias bảng User để tránh xung đột trong join
+        user_alias = aliased(User)
+
+        # Tạo query với LEFT JOIN giữa CouponCode và User
+        code_query = db.session.query(
+            CouponCode,
+            user_alias.username,
+            user_alias.name,
+            user_alias.email
+        ).outerjoin(user_alias, CouponCode.used_by == user_alias.id)  # LEFT JOIN
+
+        # Áp dụng các bộ lọc nếu có
         if "code" in query_params and query_params["code"]:
             code_query = code_query.filter(
                 CouponCode.code.ilike(f"%{query_params['code']}%")
@@ -176,9 +188,13 @@ class CouponService:
             code_query = code_query.filter(
                 CouponCode.used_at <= query_params["to_used_at"]
             )
+
+        # Đếm tổng số coupon (trước khi phân trang)
         total_codes = code_query.count()
-        if "sort" in query_params and query_params["sort"]:
-            sort = query_params["sort"].split("|")
+
+        # Sắp xếp kết quả nếu có yêu cầu
+        if "type_order" in query_params and query_params["type_order"]:
+            sort = query_params["type_order"].split("_")
             if len(sort) == 2:
                 field, order = sort
                 order = order.lower()
@@ -186,14 +202,29 @@ class CouponService:
                     code_query = code_query.order_by(getattr(CouponCode, field).asc())
                 elif order == "desc":
                     code_query = code_query.order_by(getattr(CouponCode, field).desc())
+            else:
+                code_query = code_query.order_by(CouponCode.id.desc())
+
+        # Phân trang nếu có yêu cầu
         if "page" in query_params and "limit" in query_params:
             page = int(query_params["page"])
             limit = int(query_params["limit"])
             code_query = code_query.offset((page - 1) * limit).limit(limit)
 
-        coupon_codes = code_query.all()
-        coupon_codes = [coupon_code._to_json() for coupon_code in coupon_codes]
+        # Xử lý kết quả truy vấn
+        coupon_codes = []
+        for coupon_code, username, name, email in code_query.all():
+            data = coupon_code._to_json()
+            data.update({
+                "username": username,
+                "name": name,
+                "email": email
+            })
+            coupon_codes.append(data)
+
         return coupon_codes, total_codes
+
+
 
     @staticmethod
     def create_codes(coupon_id, count_code=100, expired_at=None):
