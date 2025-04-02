@@ -381,7 +381,7 @@ class APIPostToLinks(Resource):
                 ).to_dict()
 
             # Update to Uploads
-            PostService.update_post(post_id, status=1, status_sns=1)
+            PostService.update_post(post_id, status= const.DRAFT_STATUS,   status_sns=1)
 
             batch_id = post.batch_id
 
@@ -945,9 +945,9 @@ class APICheckSNSLink(Resource):
     @parameters(
         type="object",
         properties={
-            "batchId": {"type": "string"},
+            "batchId": {"type": ["string", "null"]},
         },
-        required=[""],
+        required=[],
     )
     def post(self, args):
         try:
