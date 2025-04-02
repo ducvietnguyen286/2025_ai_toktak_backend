@@ -830,8 +830,7 @@ class APITiktokLogin(Resource):
     def get(self, args):
         try:
             user_id = args.get("user_id")
-            link_id = args.get("link_id")
-            state_token = self.generate_state_token(user_id, link_id)
+            state_token = self.generate_state_token(user_id)
 
             ALI_APP_KEY = os.environ.get("ALI_APP_KEY") or ""
             ALI_REDIRECT_URL = os.environ.get("ALI_REDIRECT_URL") or ""
@@ -853,7 +852,7 @@ class APITiktokLogin(Resource):
             print(f"Error send post to link: {str(e)}")
             return False
 
-    def generate_state_token(self, user_id, link_id):
+    def generate_state_token(self, user_id):
         nonce = secrets.token_urlsafe(16)
         ALI_APP_SECRET = os.environ.get("ALI_APP_SECRET") or ""
         payload = {
@@ -914,6 +913,11 @@ class APIAliCallback(Resource):
         user.ali_express_info = json.dumps(access_response)
         user.ali_express_active = 1
         user.save()
+
+        return Response(
+            data=access_response,
+            message="AliExpress login success",
+        ).to_dict()
 
         return redirect(PAGE_PROFILE + "?success=1")
 
