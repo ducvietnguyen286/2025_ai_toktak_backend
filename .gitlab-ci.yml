@@ -5,7 +5,7 @@ stages:
 .before_deploy: &setup_ssh
   before_script:
     # Cài đặt ssh-client nếu chưa có
-    - apt-get update -y && apt-get install openssh-client -y
+    - apt-get update -y && apt-get install openssh-client sudo sysvinit-utils -y
     # Khởi động ssh-agent và thêm private key từ biến môi trường SSH_PRIVATE_KEY
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
