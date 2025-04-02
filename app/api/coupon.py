@@ -31,43 +31,44 @@ class APIUsedCoupon(Resource):
         coupon = CouponService.find_coupon_by_code(code)
         if coupon == "not_exist":
             return Response(
-                message="Mã coupon không tồn tại",
-                status=400,
+                message="쿠폰 코드가 존재하지 않습니다",
+                code =201,
             ).to_dict()
         if coupon == "used":
             return Response(
-                message="Mã coupon đã được sử dụng",
-                status=400,
+                message="쿠폰 코드가 이미 사용되었습니다",
+                code =201,
             ).to_dict()
         if coupon == "not_active":
             return Response(
-                message="Mã coupon không khả dụng",
-                status=400,
+                message="쿠폰 코드가 사용 불가능합니다",
+                code =201,
             ).to_dict()
         if coupon == "expired":
             return Response(
-                message="Mã coupon đã hết hạn",
-                status=400,
+                message="쿠폰 코드가 만료되었습니다",
+                code =201,
             ).to_dict()
 
         if coupon.is_has_whitelist:
             if current_user.id not in json.loads(coupon.white_lists):
                 return Response(
-                    message="Mã coupon không khả dụng",
-                    status=400,
+                    message="쿠폰 코드가 사용 불가능합니다",
+                    code =201,
                 ).to_dict()
 
         if coupon.expired and coupon.expired < datetime.datetime.now():
             return Response(
-                message="Mã coupon đã hết hạn",
-                status=400,
+                message="쿠폰 코드가 만료되었습니다",
+                code =201,
             ).to_dict()
 
         if coupon.max_used and coupon.used >= coupon.max_used:
             return Response(
-                message="Mã coupon đã hết lượt sử dụng",
-                status=400,
+                message="쿠폰 코드가 더 이상 사용할 수 없습니다",
+                code =201,
             ).to_dict()
+
 
         session = Session(bind=db.engine)
         try:
