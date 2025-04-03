@@ -14,6 +14,7 @@ class UserLink(db.Model, BaseModel):
     avatar = db.Column(db.String(1024))
     url = db.Column(db.String(1024))
     meta = db.Column(db.Text, nullable=False)
+    meta_url = db.Column(db.String(1024), nullable=False)
     expired_at = db.Column(db.DateTime, nullable=True)
     expired_date = db.Column(db.Date, nullable=True, index=True)
     status = db.Column(db.Integer, default=1)

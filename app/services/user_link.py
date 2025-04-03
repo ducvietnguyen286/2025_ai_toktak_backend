@@ -45,6 +45,13 @@ class UserLinkService:
             code = args.get("Code")
             is_active = UserLinkService.save_link_instagram(user_link, code)
 
+        if link.type == "BLOG_NAVER":
+            link = args.get("Link")
+            user_link.meta_url = link
+            user_link.save()
+
+            is_active = True
+
         return is_active
 
     @staticmethod
