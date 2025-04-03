@@ -1163,17 +1163,8 @@ class APITemplateVideo(Resource):
     @jwt_required()
     def get(self):
         batch_id = request.args.get("batch_id")
-
-        batch_info = BatchService.find_batch(batch_id)
-        if not batch_info:
-            return Response(
-                message="Batch không tồn tại",
-                code=201,
-            ).to_dict()
-
         current_user = AuthService.get_current_identity()
         user_template = PostService.get_template_video_by_user_id(current_user.id)
-
 
         if not user_template:
             user_template = PostService.create_user_template_make_video(
@@ -1181,10 +1172,11 @@ class APITemplateVideo(Resource):
             )
         user_template_data = user_template.to_dict()
 
-        content_batch = json.loads(batch_info.content)
-
-        user_template_data["product_name_full"] = content_batch.get("name", "")
-        user_template_data["product_name"] = content_batch.get("name", "")[:10]
+        batch_info = BatchService.find_batch(batch_id)
+        if batch_info:
+            content_batch = json.loads(batch_info.content)
+            user_template_data["product_name_full"] = content_batch.get("name", "")
+            user_template_data["product_name"] = content_batch.get("name", "")[:10]
 
         return Response(
             data=user_template_data,
