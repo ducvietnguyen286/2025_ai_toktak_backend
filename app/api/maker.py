@@ -938,10 +938,11 @@ class APIGetStatusUploadBySyncId(Resource):
                 for social_post_each in social_post_detail:
                     status = social_post_each["status"]
                     if status == "PUBLISHED":
-                        status_check_sns = 1
+                        status_check_sns = const.UPLOADED
 
-                if status_check_sns == 1:
-                    update_data["status_sns"] = 1
+                if status_check_sns == const.UPLOADED:
+                    update_data["status_sns"] = const.UPLOADED
+                    update_data["status"] = const.UPLOADED
 
                 PostService.update_post(post_id, **update_data)
 
