@@ -933,6 +933,16 @@ class APIGetStatusUploadBySyncId(Resource):
                 post_id = post["id"]
                 social_post_detail = post["social_posts"]
                 update_data = {"social_sns_description": json.dumps(social_post_detail)}
+
+                status_check_sns = 0
+                for social_post_each in social_post_detail:
+                    status = social_post_each["status"]
+                    if status == "PUBLISHED":
+                        status_check_sns = 1
+
+                if status_check_sns == 1:
+                    update_data["status_sns"] = 1
+
                 PostService.update_post(post_id, **update_data)
 
             return Response(
