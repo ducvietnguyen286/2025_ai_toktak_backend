@@ -300,9 +300,6 @@ class APISendPosts(Resource):
 
             social_sync.social_post_ids = social_post_ids
             social_sync.save()
-
-            PostService.update_posts_by_ids(post_ids, status=1)
-
             redis_client.set(f"toktak:progress-sync:{sync_id}", json.dumps(progress))
 
             return Response(
