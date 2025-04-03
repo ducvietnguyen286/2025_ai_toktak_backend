@@ -10,6 +10,8 @@ class UserLinkService:
 
     @staticmethod
     def update_user_link(link, user_link, args):
+        is_active = False
+
         if link.type == "X":
             user_link.status = 0
             user_link.save()
