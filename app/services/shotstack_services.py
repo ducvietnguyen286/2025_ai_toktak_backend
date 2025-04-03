@@ -557,9 +557,6 @@ def create_combined_clips_normal(
                 clip_detail["effect"] = random_effect
             clips.append(clip_detail)
 
-        if random_effect != "":
-            clip_detail["effect"] = random_effect
-        clips.append(clip_detail)
 
         if j_index == 0:
             first_caption_image_default = ShotStackService.filter_content_by_type(
