@@ -35,7 +35,7 @@ class Post(db.Model, BaseModel):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )  #
     
-    user = db.relationship("User", backref="posts", lazy="joined")
+    user = db.relationship("User", lazy="joined")
     
     to_json_parse = "images"
     to_json_filter = "captions"

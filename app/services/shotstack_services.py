@@ -113,7 +113,7 @@ class ShotStackService:
                 caption_videos_default,
             )
         else:
-            
+
             first_duration = 0
             new_image_sliders = distribute_images_over_audio(
                 images_slider_url, audio_duration, first_duration
@@ -125,7 +125,6 @@ class ShotStackService:
                 config,
                 caption_videos_default,
             )
-            
 
         file_caption = generate_srt(
             origin_caption,
@@ -187,7 +186,7 @@ class ShotStackService:
 
             is_product_name = int(template_info.get("is_product_name", 0))
             is_purchase_guide = int(template_info.get("is_purchase_guide", 0))
-            
+
             clip_advance = []
             # Chỉ thêm ảnh nếu is_product_name là 1
             if is_product_name == 1:
@@ -232,7 +231,7 @@ class ShotStackService:
             # Chỉ gán `clips` vào `layout_advance` nếu có phần tử
             if clip_advance:
                 layout_advance["clips"] = clip_advance
-                
+
             if is_caption_top == 1:
                 layout_advance_caption_top = {}
 
@@ -242,7 +241,7 @@ class ShotStackService:
                         {
                             "asset": {
                                 "type": "video",
-                                "src": "https://apitoktak.voda-play.com/voice/advance/subscribe_video.mp4",
+                                "src": f"{current_domain}/voice/advance/subscribe_video.mp4",
                             },
                             "start": clips_data["current_start"],
                             "length": 5,
@@ -310,23 +309,13 @@ class ShotStackService:
         payload = {
             "timeline": {
                 "fonts": [
-                    {
-                        "src": "http://apitoktak.voda-play.com/voice/font/GmarketSansTTFBold.ttf"
-                    },
-                    {
-                        "src": "http://apitoktak.voda-play.com/voice/font/GmarketSansTTFLight.ttf"
-                    },
-                    {
-                        "src": "http://apitoktak.voda-play.com/voice/font/GmarketSansTTFMedium.ttf"
-                    },
-                    {"src": "http://apitoktak.voda-play.com/voice/font/Jalnan2TTF.ttf"},
-                    {
-                        "src": "http://apitoktak.voda-play.com/voice/font/JalnanGothicTTF.ttf"
-                    },
-                    {
-                        "src": "http://apitoktak.voda-play.com/voice/font/JalnanGothic.otf"
-                    },
-                    {"src": "http://apitoktak.voda-play.com/voice/font/Jalnan2.otf"},
+                    {"src": f"{current_domain}/voice/font/GmarketSansTTFBold.ttf"},
+                    {"src": f"{current_domain}/voice/font/GmarketSansTTFLight.ttf"},
+                    {"src": f"{current_domain}/voice/font/GmarketSansTTFMedium.ttf"},
+                    {"src": f"{current_domain}/voice/font/Jalnan2TTF.ttf"},
+                    {"src": f"{current_domain}/voice/font/JalnanGothicTTF.ttf"},
+                    {"src": f"{current_domain}/voice/font/JalnanGothic.otf"},
+                    {"src": f"{current_domain}/voice/font/Jalnan2.otf"},
                 ],
                 "background": "#FFFFFF",
                 "tracks": tracks,
@@ -501,7 +490,7 @@ def create_combined_clips_normal(
     clips = []
     current_start = 0
     intro_length = 0
-    
+
     # intro_length = first_duration
     # clips.append(
     #     {
@@ -732,14 +721,12 @@ def create_combined_clips_with_advance(
                 "length": last_duration,
             }
         )
-
-    if is_caption_top == 1:
-        clip_detail = create_header_text(
-            last_caption_videos_default, current_start, last_duration
-        )
-        clips.append(clip_detail)
-
-        current_start = current_start + last_duration
+        if is_caption_top == 1:
+            clip_detail = create_header_text(
+                last_caption_videos_default, current_start, last_duration
+            )
+            clips.append(clip_detail)
+            current_start = current_start + last_duration
 
     # Kết hợp hai danh sách clip lại
     combined_clips = clips
