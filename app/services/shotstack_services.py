@@ -547,6 +547,14 @@ def create_combined_clips_normal(
                     "length": length,
                 }
             )
+        elif type_asset == "gif":
+            clips.append(
+                {
+                    "asset": {"type": "video", "src": url},
+                    "start": start_slider_time,
+                    "length": length,
+                }
+            )
         else:
             clip_detail = {
                 "asset": {"type": "image", "src": url},
