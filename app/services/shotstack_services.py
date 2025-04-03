@@ -241,7 +241,7 @@ class ShotStackService:
                         {
                             "asset": {
                                 "type": "video",
-                                "src": "https://apitoktak.voda-play.com/voice/advance/subscribe_video.mp4",
+                                "src": f"{current_domain}/voice/advance/subscribe_video.mp4",
                             },
                             "start": clips_data["current_start"],
                             "length": 5,
@@ -309,23 +309,13 @@ class ShotStackService:
         payload = {
             "timeline": {
                 "fonts": [
-                    {
-                        "src": "http://apitoktak.voda-play.com/voice/font/GmarketSansTTFBold.ttf"
-                    },
-                    {
-                        "src": "http://apitoktak.voda-play.com/voice/font/GmarketSansTTFLight.ttf"
-                    },
-                    {
-                        "src": "http://apitoktak.voda-play.com/voice/font/GmarketSansTTFMedium.ttf"
-                    },
-                    {"src": "http://apitoktak.voda-play.com/voice/font/Jalnan2TTF.ttf"},
-                    {
-                        "src": "http://apitoktak.voda-play.com/voice/font/JalnanGothicTTF.ttf"
-                    },
-                    {
-                        "src": "http://apitoktak.voda-play.com/voice/font/JalnanGothic.otf"
-                    },
-                    {"src": "http://apitoktak.voda-play.com/voice/font/Jalnan2.otf"},
+                    {"src": f"{current_domain}/voice/font/GmarketSansTTFBold.ttf"},
+                    {"src": f"{current_domain}/voice/font/GmarketSansTTFLight.ttf"},
+                    {"src": f"{current_domain}/voice/font/GmarketSansTTFMedium.ttf"},
+                    {"src": f"{current_domain}/voice/font/Jalnan2TTF.ttf"},
+                    {"src": f"{current_domain}/voice/font/JalnanGothicTTF.ttf"},
+                    {"src": f"{current_domain}/voice/font/JalnanGothic.otf"},
+                    {"src": f"{current_domain}/voice/font/Jalnan2.otf"},
                 ],
                 "background": "#FFFFFF",
                 "tracks": tracks,
