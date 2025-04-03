@@ -221,6 +221,21 @@ class APICreateBatch(Resource):
                 current_user.batch_total += 1
                 current_user.save()
 
+                # save config when create
+                user_template = PostService.get_template_video_by_user_id(user_id_login)
+                if not user_template:
+                    user_template = PostService.create_user_template_make_video(
+                        user_id=current_user.id
+                    )
+                data_update_template = {
+                    "is_paid_advertisements": is_paid_advertisements,
+                    "narration": narration,
+                }
+
+                user_template = PostService.update_template(
+                    user_template.id, **data_update_template
+                )
+
             NotificationServices.create_notification(
                 user_id=user_id_login,
                 batch_id=batch.id,
@@ -1158,64 +1173,12 @@ class APITemplateVideo(Resource):
 
         current_user = AuthService.get_current_identity()
         user_template = PostService.get_template_video_by_user_id(current_user.id)
+
+
         if not user_template:
-            image_templates = ImageTemplateService.get_image_templates()
-            video_hooks = [
-                {
-                    "video_name": "NViral Video_41.mp4",
-                    "video_url": "https://apitoktak.voda-play.com/voice/advance/1_advance.mp4",
-                    "duration": 2.9,
-                },
-                {
-                    "video_name": "Video_67.mp4",
-                    "video_url": "https://apitoktak.voda-play.com/voice/advance/2_advance.mp4",
-                    "duration": 2.42,
-                },
-                {
-                    "video_name": "Video_16.mp4",
-                    "video_url": "https://apitoktak.voda-play.com/voice/advance/3_advance.mp4",
-                    "duration": 4.04,
-                },
-            ]
-            viral_messages = [
-                {
-                    "video_name": "",
-                    "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message1.gif",
-                    "duration": 2.42,
-                },
-                {
-                    "video_name": "",
-                    "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message2.gif",
-                    "duration": 4.04,
-                },
-                {
-                    "video_name": "",
-                    "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message3.gif",
-                    "duration": 2.42,
-                },
-                {
-                    "video_name": "",
-                    "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message4.gif",
-                    "duration": 4.04,
-                },
-                {
-                    "video_name": "",
-                    "video_url": "https://apitoktak.voda-play.com/voice/advance/viral_message5.gif",
-                    "duration": 4.04,
-                },
-            ]
-            subscribe_video = (
-                "https://apitoktak.voda-play.com/voice/advance/subscribe_video.mp4"
+            user_template = PostService.create_user_template_make_video(
+                user_id=current_user.id
             )
-
-            user_template = PostService.create_user_template(
-                user_id=current_user.id,
-                video_hooks=json.dumps(video_hooks),
-                image_template=json.dumps(image_templates),
-                viral_messages=json.dumps(viral_messages),
-                subscribe_video=subscribe_video,
-            )
-
         user_template_data = user_template.to_dict()
 
         content_batch = json.loads(batch_info.content)
@@ -1304,6 +1267,5 @@ class APIAdminHistories(Resource):
             "page": posts.page,
             "per_page": posts.per_page,
             "total_pages": posts.pages,
-            
             "data": [post.to_dict() for post in posts.items],
         }, 200

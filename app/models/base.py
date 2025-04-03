@@ -42,8 +42,12 @@ class BaseModel:
 
         response = {}
         for column, value in self._to_dict().items():
+            # Bỏ qua các thuộc tính liên kết (relation)
             if isinstance(value, db.Model):
                 continue  # Bỏ qua các thuộc tính liên kết
+            
+            if isinstance(value, list) and all(isinstance(item, db.Model) for item in value):
+                continue  # Bỏ qua danh sách chứa các đối tượng liên kết (1-N, N-N)
         
             if column in self.to_json_filter:
                 continue
