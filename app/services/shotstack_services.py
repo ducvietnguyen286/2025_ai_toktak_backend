@@ -48,7 +48,7 @@ class ShotStackService:
         video_size_json = config["VIDEO_SIZE"] or '{"width": 1200, "height": 800}'
         video_size = json.loads(video_size_json)
 
-        key_redis = f"caption_videos_default"
+        key_redis = "caption_videos_default"
         progress_json = redis_client.get(key_redis)
         timestamp = datetime.datetime.now().strftime("%H%M%S")
 
@@ -547,6 +547,14 @@ def create_combined_clips_normal(
                     "length": length,
                 }
             )
+        elif type_asset == "gif":
+            clips.append(
+                {
+                    "asset": {"type": "video", "src": url},
+                    "start": start_slider_time,
+                    "length": length,
+                }
+            )
         else:
             clip_detail = {
                 "asset": {"type": "image", "src": url},
@@ -556,7 +564,6 @@ def create_combined_clips_normal(
             if random_effect != "":
                 clip_detail["effect"] = random_effect
             clips.append(clip_detail)
-
 
         if j_index == 0:
             first_caption_image_default = ShotStackService.filter_content_by_type(
@@ -618,7 +625,7 @@ def create_combined_clips_with_advance(
     video_urls,
     config=None,
     caption_videos_default=None,
-):
+):  # sourcery skip: switch
 
     is_advance = data_make_video["is_advance"]
     template_info = data_make_video["template_info"]
@@ -686,6 +693,14 @@ def create_combined_clips_with_advance(
         start_slider_time = start_time
 
         if type_asset == "video":
+            clips.append(
+                {
+                    "asset": {"type": "video", "src": url},
+                    "start": start_slider_time,
+                    "length": length,
+                }
+            )
+        elif type_asset == "gif":
             clips.append(
                 {
                     "asset": {"type": "video", "src": url},
@@ -1393,6 +1408,8 @@ def distribute_images_over_audio(image_list, audio_duration=None, start_offset=0
 
     for img_url in image_only_list:
         end_time = round(start_time + image_duration, 2)
+        is_gif = first_url.lower().endswith(".gif")
+
         timestamps.append(
             {
                 "total_audio_duration": audio_duration,
@@ -1400,7 +1417,7 @@ def distribute_images_over_audio(image_list, audio_duration=None, start_offset=0
                 "start_time": start_time,
                 "end_time": end_time,
                 "length": round(image_duration, 2),
-                "type": "image",
+                "type": "gif" if is_gif else "image",
             }
         )
         start_time = end_time
