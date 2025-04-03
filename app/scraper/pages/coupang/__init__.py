@@ -164,6 +164,7 @@ class CoupangScraper:
 
             images = []
             iframes = []
+            gifs = []
             text = ""
 
             for widget in widget_list:
@@ -232,13 +233,10 @@ class CoupangScraper:
                     if contents == "":
                         continue
 
-                    data = self.extract_images_and_text(contents)
-                    images.extend(data[0])
-                    iframes.extend(data[1])
-                    text += data[2]
+                    images, gifs, iframes, text = self.extract_images_and_text(contents)
 
             logger.info("Get Images Successfully")
-            return {"images": images, "text": text, "iframes": iframes}
+            return {"images": images, "text": text, "gifs": gifs, "iframes": iframes}
         except Exception as e:
             logger.error("Exception GET COUPANG BRF: {0}".format(str(e)))
             traceback.print_exc()
@@ -254,20 +252,24 @@ class CoupangScraper:
         soup = BeautifulSoup(html, "html.parser")
 
         images = []
-        iframs = []
+        gifs = []
+        iframes = []
         for img in soup.find_all("img"):
             src = img.get("src")
             if src:
-                images.append(src)
+                if src.endswith(".gif"):
+                    gifs.append(src)
+                else:
+                    images.append(src)
 
         for iframe in soup.find_all("iframe"):
             src = iframe.get("src")
             if src:
-                iframs.append(src)
+                iframes.append(src)
 
         text = soup.get_text(separator=" ", strip=True)
 
-        return images, iframs, text
+        return images, gifs, iframes, text
 
     def get_page_html(self, url, count=0, added_headers=None):
         try:
