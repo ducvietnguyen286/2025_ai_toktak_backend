@@ -571,6 +571,8 @@ class APIMakePost(Resource):
                     origin_caption = caption
                     hooking = parse_response.get("hooking", [])
 
+                    product_video_url = data.get("video_url", "")
+
                     captions = split_text_by_sentences(caption, len(process_images))
 
                     for image_url in process_images:
@@ -589,6 +591,11 @@ class APIMakePost(Resource):
                         product_name = data["name"]
 
                         voice_google = batch.voice_google or 1
+
+                        product_video_url = data.get("video_url", "")
+                        if product_video_url != "":
+                            image_renders_sliders.insert(0, product_video_url)
+
                         data_make_video = {
                             "post_id": post.id,
                             "batch_id": batch.id,
@@ -598,6 +605,7 @@ class APIMakePost(Resource):
                             "origin_caption": origin_caption,
                             "images_url": image_renders,
                             "images_slider_url": image_renders_sliders,
+                            "product_video_url": product_video_url,
                         }
                         result = ShotStackService.create_video_from_images_v2(
                             data_make_video
