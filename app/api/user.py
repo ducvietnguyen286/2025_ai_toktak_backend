@@ -381,7 +381,7 @@ class APIPostToLinks(Resource):
                 ).to_dict()
 
             # Update to Uploads
-            PostService.update_post(post_id, status= const.DRAFT_STATUS,   status_sns=1)
+            PostService.update_post(post_id, status=const.DRAFT_STATUS)
 
             batch_id = post.batch_id
 
