@@ -7,6 +7,28 @@ def get_domain(url):
     return parsed_url.netloc
 
 
+def extract_images_and_text(html):
+    images = []
+    gifs = []
+    iframes = []
+    for img in html.find_all("img"):
+        src = img.get("src")
+        if src:
+            if src.endswith(".gif"):
+                gifs.append(src)
+            else:
+                images.append(src)
+
+    for iframe in html.find_all("iframe"):
+        src = iframe.get("src")
+        if src:
+            iframes.append(src)
+
+    text = html.get_text(separator=" ", strip=True)
+
+    return images, gifs, iframes, text
+
+
 def parse_response(html, base_url):
     name = html.find("h1", {"id": "lInfoItemTitle"})
     description = html.find("meta", {"property": "og:description"})
@@ -24,8 +46,9 @@ def parse_response(html, base_url):
         else:
             price = ""
     info_view_contents = html.find("div", {"id": "lInfoViewItemContents"})
-    images = info_view_contents.find_all("img")
-    src_images = [image["src"] for image in images]
+
+    images, gifs, iframes, text = extract_images_and_text(info_view_contents)
+
     return {
         "name": name.text.strip() if name else "",
         "description": description["content"],
@@ -40,9 +63,10 @@ def parse_response(html, base_url):
         "store_name": "",
         "url_crawl": base_url,
         "show_free_shipping": 0,
-        "images": src_images,
-        "text": "",
-        "iframes": [],
+        "images": images,
+        "text": text,
+        "iframes": iframes,
+        "gifs": gifs,
     }
 
 
