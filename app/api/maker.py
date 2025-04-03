@@ -587,6 +587,10 @@ class APIMakePost(Resource):
                         image_renders_sliders = maker_images[
                             :10
                         ]  # Lấy tối đa 10 Ảnh đầu tiên
+                        # Add gifs image
+                        gifs = data.get("gifs", [])
+                        if gifs:
+                            image_renders_sliders = gifs + image_renders_sliders
 
                         product_name = data["name"]
 

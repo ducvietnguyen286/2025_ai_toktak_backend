@@ -65,6 +65,10 @@ class CreateVideo(Resource):
         batch = BatchService.find_batch(post.batch_id)
         batch_content = json.loads(batch.content)
 
+        gifs = batch_content.get("gifs", [])
+        if gifs:
+            images_slider_url = gifs + images_slider_url
+
         product_video_url = batch_content.get("video_url", "")
 
         if product_video_url != "":
