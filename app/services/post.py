@@ -8,6 +8,9 @@ from sqlalchemy import and_, func
 from flask import jsonify
 from datetime import datetime, timedelta
 from sqlalchemy.orm import aliased
+from app.services.image_template import ImageTemplateService
+import os
+import json
 
 
 class PostService:
@@ -261,3 +264,62 @@ class PostService:
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
         return pagination
+
+    @staticmethod
+    def create_user_template_make_video(user_id):
+        image_templates = ImageTemplateService.get_image_templates()
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+        video_hooks = [
+            {
+                "video_name": "NViral Video_41.mp4",
+                "video_url": f"{current_domain}/voice/advance/1_advance.mp4",
+                "duration": 2.9,
+            },
+            {
+                "video_name": "Video_67.mp4",
+                "video_url": f"{current_domain}/voice/advance/2_advance.mp4",
+                "duration": 2.42,
+            },
+            {
+                "video_name": "Video_16.mp4",
+                "video_url": f"{current_domain}/voice/advance/3_advance.mp4",
+                "duration": 4.04,
+            },
+        ]
+        viral_messages = [
+            {
+                "video_name": "",
+                "video_url": f"{current_domain}/voice/advance/viral_message1.gif",
+                "duration": 2.42,
+            },
+            {
+                "video_name": "",
+                "video_url": f"{current_domain}/voice/advance/viral_message2.gif",
+                "duration": 4.04,
+            },
+            {
+                "video_name": "",
+                "video_url": f"{current_domain}/voice/advance/viral_message3.gif",
+                "duration": 2.42,
+            },
+            {
+                "video_name": "",
+                "video_url": f"{current_domain}/voice/advance/viral_message4.gif",
+                "duration": 4.04,
+            },
+            {
+                "video_name": "",
+                "video_url": f"{current_domain}/voice/advance/viral_message5.gif",
+                "duration": 4.04,
+            },
+        ]
+        subscribe_video = f"{current_domain}/voice/advance/subscribe_video.mp4"
+
+        user_template = PostService.create_user_template(
+            user_id=user_id,
+            video_hooks=json.dumps(video_hooks),
+            image_template=json.dumps(image_templates),
+            viral_messages=json.dumps(viral_messages),
+            subscribe_video=subscribe_video,
+        )
+        return user_template

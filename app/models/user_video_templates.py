@@ -15,6 +15,7 @@ class UserVideoTemplates(db.Model, BaseModel):
     is_product_name = db.Column(db.Integer, default=0, nullable=False)
 
     purchase_guide = db.Column(db.String(500), default="", nullable=False)
+    narration = db.Column(db.String(10), default="male", nullable=False)
     is_purchase_guide = db.Column(db.Integer, default=0, nullable=False)
     voice_gender = db.Column(db.Integer, default=0, nullable=False)
     voice_id = db.Column(db.Integer, default=0, nullable=False)
@@ -36,6 +37,7 @@ class UserVideoTemplates(db.Model, BaseModel):
             "id": self.id,
             "user_id": self.user_id,
             "is_paid_advertisements": self.is_paid_advertisements,
+            "narration": self.narration,
             "product_name": self.product_name,
             "is_product_name": self.is_product_name,
             "purchase_guide": self.purchase_guide,
