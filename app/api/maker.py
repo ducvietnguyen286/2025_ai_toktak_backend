@@ -1273,3 +1273,36 @@ class APIAdminHistories(Resource):
             "total_pages": posts.pages,
             "data": [post.to_dict() for post in posts.items],
         }, 200
+
+
+@ns.route("/copy-blog")
+class APICopyBlog(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "blog_id": {"type": "integer"},
+        },
+        required=["blog_id"],
+    )
+    def post(self, args):
+        try:
+            blog_id = args.get("blog_id", "")
+            message = "블로그 업데이트 성공"
+            post = PostService.update_post(blog_id, status=const.UPLOADED)
+            if not post:
+                return Response(
+                    message="업데이트 실패",
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                message=message,
+                code=200,
+            ).to_dict()
+        except Exception as e:
+            logger.error(f"Exception: Update Blog Fail  :  {str(e)}")
+            return Response(
+                message="업데이트 실패",
+                code=201,
+            ).to_dict()

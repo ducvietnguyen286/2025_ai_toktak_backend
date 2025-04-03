@@ -50,6 +50,8 @@ class PostService:
     @staticmethod
     def update_post(id, *args, **kwargs):
         post = Post.query.get(id)
+        if not post:
+            return None
         post.update(**kwargs)
         return post
 
