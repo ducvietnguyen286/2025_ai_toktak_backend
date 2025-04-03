@@ -37,6 +37,7 @@ class ShotStackService:
         origin_caption = data_make_video["origin_caption"]
         images_url = data_make_video["images_url"]
         images_slider_url = data_make_video["images_slider_url"]
+        product_video_url = data_make_video["product_video_url"] or ""
 
         config = ShotStackService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
@@ -54,7 +55,6 @@ class ShotStackService:
         if progress_json:
             caption_videos_default = json.loads(progress_json) if progress_json else {}
         else:
-
             caption_videos_default = ShotStackService.get_caption_defaults()
             redis_client.set(key_redis, json.dumps(caption_videos_default))
 
@@ -124,6 +124,7 @@ class ShotStackService:
                 video_urls,
                 config,
                 caption_videos_default,
+                product_video_url,
             )
 
         file_caption = generate_srt(
@@ -480,6 +481,7 @@ def create_combined_clips_normal(
     video_urls,
     config=None,
     caption_videos_default=None,
+    product_video_url=None,
 ):
     first_viral_detail = video_urls[0] or []
     last_viral_detail = video_urls[1] or []
@@ -533,14 +535,27 @@ def create_combined_clips_normal(
         start_time = image_slider_detail["start_time"]
         end_time = image_slider_detail["end_time"]
         length = image_slider_detail["length"]
+        type_asset = image_slider_detail["type"]
         random_effect = random.choice(effects)
         start_slider_time = start_time
 
-        clip_detail = {
-            "asset": {"type": "image", "src": url},
-            "start": start_slider_time,
-            "length": length,
-        }
+        if type_asset == "video":
+            clips.append(
+                {
+                    "asset": {"type": "video", "src": url},
+                    "start": start_slider_time,
+                    "length": length,
+                }
+            )
+        else:
+            clip_detail = {
+                "asset": {"type": "image", "src": url},
+                "start": start_slider_time,
+                "length": length,
+            }
+            if random_effect != "":
+                clip_detail["effect"] = random_effect
+            clips.append(clip_detail)
 
         if random_effect != "":
             clip_detail["effect"] = random_effect
@@ -669,18 +684,27 @@ def create_combined_clips_with_advance(
         start_time = image_slider_detail["start_time"]
         end_time = image_slider_detail["end_time"]
         length = image_slider_detail["length"]
+        type_asset = image_slider_detail["type"]
         random_effect = random.choice(effects)
         start_slider_time = start_time
 
-        clip_detail = {
-            "asset": {"type": "image", "src": url},
-            "start": start_slider_time,
-            "length": length,
-        }
-
-        if random_effect != "":
-            clip_detail["effect"] = random_effect
-        clips.append(clip_detail)
+        if type_asset == "video":
+            clips.append(
+                {
+                    "asset": {"type": "video", "src": url},
+                    "start": start_slider_time,
+                    "length": length,
+                }
+            )
+        else:
+            clip_detail = {
+                "asset": {"type": "image", "src": url},
+                "start": start_slider_time,
+                "length": length,
+            }
+            if random_effect != "":
+                clip_detail["effect"] = random_effect
+            clips.append(clip_detail)
 
         # khi chon 영상 위에 바이럴 문구가 표시됩니다. moi hien thi text tren dau
         if is_caption_top == 1:
@@ -913,13 +937,13 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
             return "", 0.0
 
         os.makedirs(disk_path, exist_ok=True)
-        output_file = os.path.join(disk_path, "google_voice_output.mp3")
+        output_file = f"{disk_path}/google_voice_output.mp3"
+        # output_file =  os.path.join(disk_path, "google_voice_output.mp3")
 
         # Danh sách value của giọng Chirp3-HD (cần bỏ speakingRate)
         chirp3_hd_voices = {
             "ko-KR-Chirp3-HD-Charon",
             "ko-KR-Chirp3-HD-Fenrir",
-            "ko-KR-Chirp3-HD-Orus",
             "ko-KR-Chirp3-HD-Puck",
             "ko-KR-Chirp3-HD-Aoede",
             "ko-KR-Chirp3-HD-Kore",
@@ -1277,37 +1301,112 @@ def generate_srt(text, audio_file, output_srt, start_offset=0.0):
         return ""
 
 
-def distribute_images_over_audio(image_list, audio_duration, start_offset=0.0):
-    """
-    Chia thời gian hiển thị ảnh sao cho khớp với thời gian audio, bắt đầu từ một thời điểm nhất định.
+def get_media_duration(url):
+    """Lấy thời gian của file media (MP3 hoặc MP4) bằng ffmpeg"""
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe",
+                "-i",
+                url,
+                "-show_entries",
+                "format=duration",
+                "-v",
+                "quiet",
+                "-of",
+                "csv=p=0",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        duration = float(result.stdout.strip())
+        return duration
+    except Exception as e:
+        print(f"Lỗi khi lấy thời gian media: {e}")
+        return 0.0
 
-    :param image_list: Danh sách ảnh.
-    :param audio_duration: Tổng thời gian audio.
-    :param start_offset: Thời gian bắt đầu hiển thị ảnh (giây).
-    :return: Danh sách dictionary với key (url, start_time, end_time, length).
+
+def distribute_images_over_audio(image_list, audio_duration=None, start_offset=0.0):
     """
-    num_images = len(image_list)
-    if num_images == 0 or audio_duration == 0:
+    Phân phối thời gian hiển thị ảnh và video dựa trên thời lượng video/audio.
+    Nếu video >= audio_duration thì chỉ trả về video.
+
+    :param image_list: Danh sách URL, có thể chứa video ở đầu.
+    :param audio_duration: Tổng thời lượng audio (bắt buộc nếu không có video).
+    :param start_offset: Thời điểm bắt đầu hiển thị (giây).
+    :return: Danh sách dict gồm url, start_time, end_time, length, type.
+    """
+    if not image_list:
         return []
 
-    image_duration = round(audio_duration / num_images, 2)  # Làm tròn thời gian mỗi ảnh
     timestamps = []
+    first_url = image_list[0]
+    is_video = first_url.lower().endswith(".mp4")
 
-    start_time = round(start_offset, 2)  # Làm tròn thời gian bắt đầu
-    for i in range(num_images):
-        end_time = round(start_time + image_duration, 2)  # Làm tròn thời gian kết thúc
-        length = round(end_time - start_time, 2)  # Tính thời gian xuất hiện của ảnh
+    # Nếu có video
+    if is_video:
+        video_duration = get_media_duration(first_url)
 
+        # Nếu video dài hơn hoặc bằng audio_duration → chỉ dùng video
+        if audio_duration is not None and video_duration >= audio_duration:
+            adjusted_length = round(audio_duration, 2)
+
+            video_entry = {
+                "total_audio_duration": audio_duration,
+                "url": first_url,
+                "start_time": round(start_offset, 2),
+                "end_time": round(start_offset + adjusted_length, 2),
+                "length": adjusted_length,
+                "type": "video",
+            }
+
+            timestamps.append(video_entry)
+            log_make_video_message(timestamps)
+            return timestamps
+
+        # Nếu video ngắn hơn audio, dùng nó và tiếp tục với ảnh
+        video_entry = {
+            "total_audio_duration": audio_duration,
+            "url": first_url,
+            "start_time": round(start_offset, 2),
+            "end_time": round(start_offset + video_duration, 2),
+            "length": round(video_duration, 2),
+            "type": "video",
+        }
+
+        timestamps.append(video_entry)
+        image_only_list = image_list[1:]
+        remaining_duration = (
+            audio_duration - video_duration if audio_duration else video_duration
+        )
+        start_time = video_entry["end_time"]
+    else:
+        image_only_list = image_list
+        remaining_duration = audio_duration
+        start_time = round(start_offset, 2)
+
+    if not image_only_list or not remaining_duration or remaining_duration <= 0:
+        log_make_video_message(timestamps)
+        return timestamps
+
+    # Phân phối thời gian cho ảnh
+    num_images = len(image_only_list)
+    image_duration = round(remaining_duration / num_images, 2)
+
+    for img_url in image_only_list:
+        end_time = round(start_time + image_duration, 2)
         timestamps.append(
             {
-                "url": image_list[i],
+                "total_audio_duration": audio_duration,
+                "url": img_url,
                 "start_time": start_time,
                 "end_time": end_time,
-                "length": length,  # Thêm thông tin thời gian ảnh xuất hiện
+                "length": round(image_duration, 2),
+                "type": "image",
             }
         )
-
-        start_time = end_time  # Cập nhật thời gian bắt đầu ảnh tiếp theo
+        start_time = end_time
 
     log_make_video_message(timestamps)
     return timestamps

@@ -63,6 +63,12 @@ class CreateVideo(Resource):
         post_id = data["post_id"]
         post = PostService.find_post(post_id)
         batch = BatchService.find_batch(post.batch_id)
+        batch_content = json.loads(batch.content)
+
+        product_video_url = batch_content.get("video_url", "")
+
+        if product_video_url != "":
+            images_slider_url.insert(0, product_video_url)
 
         data_make_video = {
             "post_id": post.id,
@@ -73,6 +79,7 @@ class CreateVideo(Resource):
             "origin_caption": product_name,
             "images_url": images_url,
             "images_slider_url": images_slider_url,
+            "product_video_url": product_video_url,
         }
 
         result = ShotStackService.create_video_from_images_v2(data_make_video)
@@ -96,6 +103,7 @@ class CreateVideo(Resource):
             message = result["message"]
 
         return {
+            "data_make_video": data_make_video,
             "post_id": post_id,
             "batch_id": batch_id,
             "status": status,
