@@ -933,6 +933,17 @@ class APIGetStatusUploadBySyncId(Resource):
                 post_id = post["id"]
                 social_post_detail = post["social_posts"]
                 update_data = {"social_sns_description": json.dumps(social_post_detail)}
+
+                status_check_sns = 0
+                for social_post_each in social_post_detail:
+                    status = social_post_each["status"]
+                    if status == "PUBLISHED":
+                        status_check_sns = const.UPLOADED
+
+                if status_check_sns == const.UPLOADED:
+                    update_data["status_sns"] = const.UPLOADED
+                    update_data["status"] = const.UPLOADED
+
                 PostService.update_post(post_id, **update_data)
 
             return Response(
@@ -1273,3 +1284,36 @@ class APIAdminHistories(Resource):
             "total_pages": posts.pages,
             "data": [post.to_dict() for post in posts.items],
         }, 200
+
+
+@ns.route("/copy-blog")
+class APICopyBlog(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "blog_id": {"type": "integer"},
+        },
+        required=["blog_id"],
+    )
+    def post(self, args):
+        try:
+            blog_id = args.get("blog_id", "")
+            message = "블로그 업데이트 성공"
+            post = PostService.update_post(blog_id, status=const.UPLOADED)
+            if not post:
+                return Response(
+                    message="업데이트 실패",
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                message=message,
+                code=200,
+            ).to_dict()
+        except Exception as e:
+            logger.error(f"Exception: Update Blog Fail  :  {str(e)}")
+            return Response(
+                message="업데이트 실패",
+                code=201,
+            ).to_dict()
