@@ -1022,7 +1022,8 @@ class APIGetStatusUploadWithBatch(Resource):
                         "social_sns_description": json.dumps(social_post_detail)
                     }
                     if status_check_sns == 1:
-                        update_data["status_sns"] = 1
+                        update_data["status_sns"] = const.UPLOADED
+                        update_data["status"] = const.UPLOADED
 
                     for sns_post_detail in social_post_detail:
                         try:
