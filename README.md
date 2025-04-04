@@ -31,6 +31,8 @@ sudo systemctl restart consumer_toktak_thread
 sudo systemctl restart consumer_toktak_instagram
 sudo systemctl restart toktak.service
 
+sudo systemctl restart nginx 
+
 
 
 journalctl -u toktak.service -f
