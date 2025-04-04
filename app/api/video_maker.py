@@ -263,7 +263,7 @@ def download_video(video_url, batch_id):
             file_download = f"{current_domain}/{file_path}"
 
             if IS_MOUNT == 1:
-                file_path = video_filename.replace("static/voice", "/mtn")
+                video_filename = video_filename.replace("static/voice", "/mtn")
 
             return {
                 "file_path": video_filename,
