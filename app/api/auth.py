@@ -153,6 +153,18 @@ class APIMe(Resource):
             user_login.id,
             last_activated=datetime.now(),
         )
+
+        current_datetime = datetime.now()
+        if (
+            user_login.subscription_expired
+            and user_login.subscription_expired <= current_datetime
+        ):
+            user_login = AuthService.update(
+                user_login.id,
+                subscription="FREE",
+                subscription_expired=None,
+            )
+
         return Response(
             data=user_login._to_json(),
             message="사용자 정보를 성공적으로 가져왔습니다.",
@@ -230,9 +242,7 @@ class APIMeUpdate(Resource):
             message = f"📞 이름이 변경되었습니다. ({user_login.contact} → {contact})"
         if company_name is not None:
             update_data["company_name"] = company_name
-            message = (
-                f"🏢 회사명이 변경되었습니다. ({user_login.company_name} → {company_name})"
-            )
+            message = f"🏢 회사명이 변경되었습니다. ({user_login.company_name} → {company_name})"
 
         if update_data:  # Chỉ update nếu có dữ liệu
             NotificationServices.create_notification(
@@ -273,18 +283,18 @@ class APIUserProfile(Resource):
                 data=user.to_dict(),
                 message="Lấy thông tin người dùng thành công",
             ).to_dict()
-        
+
         except Exception as e:
             import traceback
+
             error_details = traceback.format_exc()  # Lấy chi tiết lỗi
             logger.error(f"Lỗi xảy ra trong API /user_profile:\n{error_details}")
-            
+
             return Response(
                 data={},
                 message="Đã xảy ra lỗi trong quá trình xử lý",
                 code=500,
             ).to_dict()
-
 
 
 @ns.route("/delete_account")

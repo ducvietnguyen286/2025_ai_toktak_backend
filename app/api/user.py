@@ -964,19 +964,25 @@ class APICheckSNSLink(Resource):
 
             if batchId:
                 current_month = time.strftime("%Y-%m", time.localtime())
-                if current_user.batch_of_month != current_month:
-                    current_user.batch_of_month = current_month
-                    current_user.batch_total = 0
-                    current_user.save()
-                else:
+                if current_user.batch_remain == 0:
                     if (
-                        current_user.batch_total
-                        >= const.LIMIT_BATCH[current_user.subscription]
+                        current_user.subscription == "FREE"
+                        and current_month != current_user.batch_of_month
                     ):
+                        current_user.batch_total += const.LIMIT_BATCH[
+                            current_user.subscription
+                        ]
+                        current_user.batch_remain += const.LIMIT_BATCH[
+                            current_user.subscription
+                        ]
+                        current_user.batch_of_month = current_month
+                        current_user.save()
+                    else:
                         return Response(
                             message="Bạn đã tạo quá số lượng batch cho phép.",
                             code=201,
                         ).to_dict()
+
                 BatchService.update_batch(batchId, user_id=current_user.id)
                 PostService.update_post_by_batch_id(batchId, user_id=current_user.id)
 

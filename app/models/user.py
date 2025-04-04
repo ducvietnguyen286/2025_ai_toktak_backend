@@ -2,6 +2,8 @@ from app.extensions import db, bcrypt
 from app.models.base import BaseModel
 from datetime import datetime
 
+import const
+
 
 class User(db.Model, BaseModel):
     __tablename__ = "users"
@@ -22,7 +24,8 @@ class User(db.Model, BaseModel):
     subscription = db.Column(db.String(255), nullable=False, default="FREE")
     subscription_expired = db.Column(db.DateTime, nullable=True)
 
-    batch_total = db.Column(db.Integer, default=0)
+    batch_total = db.Column(db.Integer, default=const.LIMIT_BATCH["FREE"])
+    batch_remain = db.Column(db.Integer, default=const.LIMIT_BATCH["FREE"])
     batch_of_month = db.Column(db.String(50), default="")
 
     level = db.Column(db.Integer, default=0)
