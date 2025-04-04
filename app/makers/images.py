@@ -996,12 +996,8 @@ class ImageMaker:
             image = Image.open(image_path)
         except IOError:
             return f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
-        if not (
-            image_name.lower().endswith(".jpg") or image_name.lower().endswith(".jpeg")
-        ):
-            image = image.convert("RGBA")
-        else:
-            image = image.convert("RGB")
+
+        image = image.convert("RGB")
 
         if image.height > image.width:
             crop_height = int(image.width / video_ratio)
@@ -1018,8 +1014,7 @@ class ImageMaker:
             background.paste(resized_image, (0, top))
             image = background
 
-        if image_path.lower().endswith(".jpg") or image_path.lower().endswith(".jpeg"):
-            image = image.convert("RGB")
+        image = image.convert("RGB")
 
         image.save(image_path)
 
