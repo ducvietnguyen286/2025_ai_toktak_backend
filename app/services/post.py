@@ -323,5 +323,7 @@ class PostService:
             image_template=json.dumps(image_templates),
             viral_messages=json.dumps(viral_messages),
             subscribe_video=subscribe_video,
+            voice_gender=1,
+            voice_id=3,
         )
         return user_template

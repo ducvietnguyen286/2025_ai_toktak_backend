@@ -222,19 +222,20 @@ class APICreateBatch(Resource):
                 current_user.save()
 
                 # save config when create
-                user_template = PostService.get_template_video_by_user_id(user_id_login)
-                if not user_template:
-                    user_template = PostService.create_user_template_make_video(
-                        user_id=current_user.id
-                    )
-                data_update_template = {
-                    "is_paid_advertisements": is_paid_advertisements,
-                    "narration": narration,
-                }
+                if not is_advance:
+                    user_template = PostService.get_template_video_by_user_id(user_id_login)
+                    if not user_template:
+                        user_template = PostService.create_user_template_make_video(
+                            user_id=current_user.id
+                        )
+                    data_update_template = {
+                        "is_paid_advertisements": is_paid_advertisements,
+                        "narration": narration,
+                    }
 
-                user_template = PostService.update_template(
-                    user_template.id, **data_update_template
-                )
+                    user_template = PostService.update_template(
+                        user_template.id, **data_update_template
+                    )
 
             NotificationServices.create_notification(
                 user_id=user_id_login,
