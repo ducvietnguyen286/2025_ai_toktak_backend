@@ -246,13 +246,13 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
         "IMAGE_URL_2"
     ],
     "content": "<h1>블로그 게시글 제목</h1>
-                <p>제품의 특징 및 장점에 대해 설명하는 첫 번째 단락 https://example.com </p>
+                <p>제품의 특징 및 장점에 대해 설명하는 첫 번째 단락 </p>
                 <p><img src="IMAGE_URL_0" alt="{name}"></p>
                 <p>제품 사용 방법에 대한 설명이 포함된 두 번째 단락</p>
                 <p><img src="IMAGE_URL_1" alt="{name}"></p>
                 <p>제품을 구매하는 방법과 판매처 정보</p>
                 <p><img src="IMAGE_URL_2" alt="{name}"></p>...etc
-                <p>#hashtag1 #hashtag2 #hashtag3</p>"
+                <p>{base_url} <br> #hashtag1 #hashtag2 #hashtag3</p>"
 }
 """
     prompt = prompt.replace("COUNT_IMAGE", str(len(images)))
