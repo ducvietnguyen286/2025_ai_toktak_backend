@@ -256,7 +256,7 @@ class ShotStackService:
                     {
                         "asset": {
                             "type": "image",
-                            "src": "https://admin.lang.canvasee.com/img/watermarker6.png",
+                            "src": f"{current_domain}/voice/advance/watermarker6.png",
                         },
                         "start": 0,
                         "length": 3,
@@ -271,7 +271,7 @@ class ShotStackService:
                     {
                         "asset": {
                             "type": "image",
-                            "src": "https://admin.lang.canvasee.com/img/watermarker6.png",
+                            "src": f"{current_domain}/voice/advance/watermarker6.png",
                         },
                         "start": 3,
                         "length": "end",
