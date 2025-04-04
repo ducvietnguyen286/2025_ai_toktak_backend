@@ -189,7 +189,7 @@ class ShortstackWebhook(Resource):
                     PostService.update_post_by_batch_id(
                         batch_id,
                         video_url=video_url,
-                        video_path=file_download,
+                        video_path=file_path,
                     )
 
             return {
@@ -225,6 +225,7 @@ def download_video(video_url, batch_id):
 
     # Domain hiện tại
     current_domain = os.environ.get("CURRENT_DOMAIN", "http://localhost:5000")
+    IS_MOUNT = os.environ.get("IS_MOUNT", 0)
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -260,6 +261,9 @@ def download_video(video_url, batch_id):
             )
             file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
             file_download = f"{current_domain}/{file_path}"
+
+            if IS_MOUNT == 1:
+                file_path = file_path.replace("static/voice", "/mtn")
 
             return {
                 "file_path": video_filename,
