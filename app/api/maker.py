@@ -245,7 +245,9 @@ class APICreateBatch(Resource):
 
                 # save config when create
                 if not is_advance:
-                    user_template = PostService.get_template_video_by_user_id(user_id_login)
+                    user_template = PostService.get_template_video_by_user_id(
+                        user_id_login
+                    )
                     if not user_template:
                         user_template = PostService.create_user_template_make_video(
                             user_id=current_user.id
@@ -272,9 +274,12 @@ class APICreateBatch(Resource):
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
-            redis_client.set(
-                redis_user_batch_key, current_user.batch_remain + 1, ex=180
-            )
+            if current_user:
+                user_id_login = current_user.id
+                redis_user_batch_key = f"users:batch_remain:{user_id_login}"
+                redis_client.set(
+                    redis_user_batch_key, current_user.batch_remain + 1, ex=180
+                )
             return Response(
                 message="상품 정보를 불러올 수 없어요.(Error code : )",
                 code=201,
