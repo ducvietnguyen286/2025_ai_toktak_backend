@@ -10,7 +10,7 @@ from app.services.auth import AuthService
 from app.services.coupon import CouponService
 
 ns = Namespace(name="coupon", description="User API")
-from app.extensions import db
+from app.extensions import db, redis_client
 from sqlalchemy.orm import Session
 import const
 
@@ -95,6 +95,9 @@ class APIUsedCoupon(Resource):
                     hour=23, minute=59, second=59
                 )
                 current_user.save()
+                current_user_id = current_user.id
+                redis_user_batch_key = f"users:batch_remain:{current_user_id}"
+                redis_client.delete(redis_user_batch_key)
             elif coupon.type == "SUB_PREMIUM":
                 pass
             elif coupon.type == "SUB_PRO":
