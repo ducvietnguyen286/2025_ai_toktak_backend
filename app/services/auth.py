@@ -7,6 +7,7 @@ from app.models.user import User
 from app.models.post import Post
 from app.models.batch import Batch
 from app.models.user_link import UserLink
+from app.models.user_video_templates import UserVideoTemplates
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -170,7 +171,7 @@ class AuthService:
 
     @staticmethod
     def deleteAccount(id):
-
+        UserVideoTemplates.query.filter_by(user_id=id).delete()
         Post.query.filter_by(user_id=id).delete()
         Batch.query.filter_by(user_id=id).delete()
         SocialAccount.query.filter_by(user_id=id).delete()
