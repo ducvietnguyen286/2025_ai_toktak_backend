@@ -189,7 +189,7 @@ class ShortstackWebhook(Resource):
                     PostService.update_post_by_batch_id(
                         batch_id,
                         video_url=video_url,
-                        video_path=file_path,
+                        video_path=file_download,
                     )
 
             return {
