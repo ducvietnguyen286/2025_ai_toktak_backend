@@ -261,9 +261,12 @@ def download_video(video_url, batch_id):
             )
             file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
             file_download = f"{current_domain}/{file_path}"
-
+            log_webhook_message(f"IS_MOUNT: {IS_MOUNT}")
+            log_webhook_message(f"video_filename: {video_filename}")
             if IS_MOUNT == 1:
-                video_filename = video_filename.replace("static/voice", "/mtn")
+                video_filename = video_filename.replace("static/voice", "/mnt")
+
+            log_webhook_message(f"video_filename: {video_filename}")
 
             return {
                 "file_path": video_filename,
