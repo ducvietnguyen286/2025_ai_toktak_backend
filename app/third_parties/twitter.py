@@ -226,8 +226,6 @@ class TwitterService(BaseService):
         log_twitter_message(
             f"POST {self.key_log} Send post IMAGES to Twitter {post.id}"
         )
-        if post.status != 1 or post.thumbnail == "" or post.thumbnail is None:
-            return
         images = post.images
         if images:
             images = json.loads(images)
@@ -324,9 +322,6 @@ class TwitterService(BaseService):
 
     def send_post_video(self, post, link):
         log_twitter_message(f"POST {self.key_log} Send post Video to Twitter {post.id}")
-        if post.status != 1 or post.video_url == "" or post.video_url is None:
-            return
-
         video_path = post.video_path
         time_waited = 0
         while not video_path and time_waited < 30:
