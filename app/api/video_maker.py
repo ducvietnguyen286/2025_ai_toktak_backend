@@ -226,7 +226,7 @@ def download_video(video_url, batch_id):
 
     # Domain hiện tại
     current_domain = os.environ.get("CURRENT_DOMAIN", "http://localhost:5000")
-    IS_MOUNT = os.environ.get("IS_MOUNT", 0)
+    IS_MOUNT = int(os.environ.get("IS_MOUNT", 0))
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -265,7 +265,9 @@ def download_video(video_url, batch_id):
             log_webhook_message(f"IS_MOUNT: {IS_MOUNT}")
             log_webhook_message(f"video_filename: {video_filename}")
             if IS_MOUNT == 1:
-                video_filename = str(Path(video_filename).as_posix().replace("static/voice", "/mnt"))
+                video_filename = (
+                    Path(video_filename).as_posix().replace("static/voice", "/mnt")
+                )
 
             log_webhook_message(f"video_filename: {video_filename}")
 
