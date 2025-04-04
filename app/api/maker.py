@@ -84,7 +84,7 @@ class APICreateBatch(Resource):
                     current_user.save()
                 else:
                     return Response(
-                        message="Bạn đã tạo quá số lượng batch cho phép.",
+                        message="당신은 허용된 수량을 초과하여 생성했습니다.",
                         code=201,
                     ).to_dict()
             redis_user_batch_key = f"users:batch_remain:{user_id_login}"
@@ -94,7 +94,7 @@ class APICreateBatch(Resource):
                 current_remain = int(current_remain)
                 if current_remain <= 0:
                     return Response(
-                        message="Bạn đã tạo quá số lượng batch cho phép.",
+                        message="당신은 허용된 수량을 초과하여 생성했습니다.",
                         code=201,
                     ).to_dict()
 

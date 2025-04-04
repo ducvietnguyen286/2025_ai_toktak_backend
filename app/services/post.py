@@ -320,6 +320,7 @@ class PostService:
         user_template = PostService.create_user_template(
             user_id=user_id,
             video_hooks=json.dumps(video_hooks),
+            image_template_id=image_templates[0]['id'],
             image_template=json.dumps(image_templates),
             viral_messages=json.dumps(viral_messages),
             subscribe_video=subscribe_video,

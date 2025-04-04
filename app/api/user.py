@@ -979,7 +979,7 @@ class APICheckSNSLink(Resource):
                         current_user.save()
                     else:
                         return Response(
-                            message="Bạn đã tạo quá số lượng batch cho phép.",
+                            message="당신은 허용된 수량을 초과하여 생성했습니다.",
                             code=201,
                         ).to_dict()
 
