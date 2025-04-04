@@ -30,6 +30,9 @@ class BaseService:
 
     def get_media_content_by_path(self, media_path, get_content=True, is_photo=False):
         try:
+            self.log_social_message(
+                f"------------START {self.key_log} GET MEDIA : {media_path}----------------"
+            )
             with open(media_path, "rb") as file:
                 content = file.read()
                 if get_content:
