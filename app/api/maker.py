@@ -1029,10 +1029,6 @@ class APIGetStatusUploadWithBatch(Resource):
                             sns_status = sns_post_detail["status"]
                             notification_type = sns_post_detail["title"]
 
-                            logger.info(f"sns_post_detail: {sns_post_detail}")
-                            logger.info(f"sns_post_id: {sns_post_id}")
-                            logger.info(f"sns_status: {sns_status}")
-                            logger.info(f"notification_type: {notification_type}")
                             notification = NotificationServices.find_notification_sns(
                                 sns_post_id, notification_type
                             )
