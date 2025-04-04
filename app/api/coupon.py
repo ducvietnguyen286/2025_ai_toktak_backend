@@ -37,17 +37,17 @@ class APIUsedCoupon(Resource):
             ).to_dict()
         if coupon == "used":
             return Response(
-                message="쿠폰 코드가 이미 사용되었습니다",
+                message="사용된 쿠폰 번호입니다.<br/>쿠폰 번호를 확인해 주세요😭",
                 code=201,
             ).to_dict()
         if coupon == "not_active":
             return Response(
-                message="쿠폰 코드가 사용 불가능합니다",
+                message="쿠폰 코드가 사용 불가능합니다<br/>쿠폰 번호를 확인해 주세요😭",
                 code=201,
             ).to_dict()
         if coupon == "expired":
             return Response(
-                message="쿠폰 코드가 만료되었습니다",
+                message="쿠폰 코드가 만료되었습니다<br/>쿠폰 번호를 확인해 주세요😭",
                 code=201,
             ).to_dict()
 
@@ -133,7 +133,7 @@ class APICreateCoupon(Resource):
             "description": {"type": ["string", "null"]},
             "expired": {"type": ["string", "null"]},
         },
-        required=["name", "max_used", "value"],
+        required=["name", "max_used"],
     )
     def post(self, args):
         current_user = AuthService.get_current_identity()
@@ -521,3 +521,21 @@ class APIListCouponCodes(Resource):
             "total_pages": total_pages,
             "data": coupon_codes,
         }, 200
+
+
+@ns.route("/get_user_coupon")
+class APIGetUserCoupon(Resource):
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        coupon = CouponService.get_last_used(current_user.id)
+        if not coupon:
+            return Response(
+                message="Không tìm thấy coupon",
+                code=201,
+            ).to_dict()
+
+        return Response(
+            data=coupon,
+            message="Lấy coupon user thành công",
+        ).to_dict()

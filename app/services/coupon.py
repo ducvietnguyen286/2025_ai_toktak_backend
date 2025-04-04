@@ -316,3 +316,12 @@ class CouponService:
         index1 = int(year[:2]) % length
         index2 = int(year[-2:]) % length
         return string_for_year[index1] + string_for_year[index2]
+
+    @staticmethod
+    def get_last_used(user_id):
+        coupons = (
+            CouponCode.query.where(CouponCode.used_by == user_id)
+            .order_by(CouponCode.used_at.desc())
+            .all()
+        )
+        return [coupon._to_json() for coupon in coupons]
