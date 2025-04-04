@@ -571,7 +571,8 @@ class ThreadService(BaseService):
                 if status == "FINISHED":
                     return True
                 elif status == "ERROR":
-                    error_message = result["error_message"]
+                    error = result["error"]
+                    error_message = error["message"]
                     self.save_errors(
                         "ERRORED",
                         f"ERROR GET UPLOAD STATUS {self.key_log}: {error_message}",
