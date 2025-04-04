@@ -318,9 +318,9 @@ class CouponService:
 
     @staticmethod
     def get_last_used(user_id):
-        coupon_code = (
+        coupons = (
             CouponCode.query.where(CouponCode.used_by == user_id)
             .order_by(CouponCode.used_at.desc())
-            .first()
+            .all()
         )
-        return coupon_code or None
+        return [coupon._to_json() for coupon in coupons]
