@@ -115,13 +115,13 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
     }
 }
 """
-    prompt = replace_prompt_with_data(prompt, data)
+    # prompt = replace_prompt_with_data(prompt, data)
 
     prompt = prompt.replace("CAPTION_COUNT", str(len(images)))
 
-    content = [{"type": "text", "text": prompt}]
-    for image in images:
-        content.append({"type": "image_url", "image_url": {"url": image}})
+    content = [{"type": "text", "text": data}]
+    # for image in images:
+    #     content.append({"type": "image_url", "image_url": {"url": image}})
 
     response_schema = {
         "name": "response_schema",
@@ -169,7 +169,7 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
         },
     }
 
-    return call_chatgpt(content, response_schema, post_id)
+    return call_chatgpt(content, response_schema, post_id, prompt)
 
 
 def call_chatgpt_create_blog(images=[], data={}, post_id=0):
@@ -262,11 +262,11 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
 """
     prompt = prompt.replace("COUNT_IMAGE", str(len(images)))
 
-    prompt = replace_prompt_with_data(prompt, data)
+    # prompt = replace_prompt_with_data(prompt, data)
 
-    content = [{"type": "text", "text": prompt}]
-    for image in images:
-        content.append({"type": "image_url", "image_url": {"url": image}})
+    content = [{"type": "text", "text": data}]
+    # for image in images:
+    #     content.append({"type": "image_url", "image_url": {"url": image}})
 
     response_schema = {
         "name": "response_schema",
@@ -304,7 +304,7 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
         "strict": True,
     }
 
-    return call_chatgpt(content, response_schema, post_id)
+    return call_chatgpt(content, response_schema, post_id, prompt)
 
 
 def call_chatgpt_create_social(images=[], data={}, post_id=0):
@@ -390,11 +390,9 @@ https://example.com
 
     data["image_count"] = len(images)
 
-    prompt = replace_prompt_with_data(prompt, data)
+    # prompt = replace_prompt_with_data(prompt, data)
 
-    content = [{"type": "text", "text": prompt}]
-    for image in images:
-        content.append({"type": "image_url", "image_url": {"url": image}})
+    content = [{"type": "text", "text": data}]
 
     response_schema = {
         "name": "response_schema",
@@ -428,7 +426,7 @@ https://example.com
         "strict": True,
     }
 
-    return call_chatgpt(content, response_schema, post_id)
+    return call_chatgpt(content, response_schema, post_id, prompt)
 
 
 def call_chatgpt_clear_product_name(name):
@@ -482,9 +480,8 @@ def call_chatgpt_get_main_text_and_color_for_image(
 }
 
 """
-    prompt = replace_prompt_with_data(
-        prompt, {"input_text": input_text, "requested_fields": requested_fields}
-    )
+
+    input = {"input_text": input_text, "requested_fields": requested_fields}
 
     response_schema = {
         "name": "response_schema",
@@ -509,7 +506,7 @@ def call_chatgpt_get_main_text_and_color_for_image(
         },
         "strict": True,
     }
-    return call_chatgpt(prompt, response_schema, post_id)
+    return call_chatgpt(input, response_schema, post_id, prompt)
 
 
 def replace_prompt_with_data(prompt, data):
@@ -537,7 +534,7 @@ def call_chatgpt(
                 "type": "json_schema",
                 "json_schema": response_schema,
             },
-            "max_tokens": 3000,
+            "max_tokens": 10000,
             "temperature": temperature,
         }
     )
