@@ -162,7 +162,7 @@ class CoupangScraper:
             if widget_list is None:
                 return {}
 
-            images = []
+            result_images = []
             iframes = []
             gifs = []
             text = ""
@@ -216,7 +216,8 @@ class CoupangScraper:
                                 no_space_images.append(
                                     vendor_item_content_description.get("contents")
                                 )
-                images.extend(no_space_images)
+
+                result_images.extend(no_space_images)
                 if is_html:
                     contents = ""
                     for (
@@ -235,8 +236,15 @@ class CoupangScraper:
 
                     images, gifs, iframes, text = self.extract_images_and_text(contents)
 
+                    result_images.extend(images)
+
             logger.info("Get Images Successfully")
-            return {"images": images, "text": text, "gifs": gifs, "iframes": iframes}
+            return {
+                "images": result_images,
+                "text": text,
+                "gifs": gifs,
+                "iframes": iframes,
+            }
         except Exception as e:
             logger.error("Exception GET COUPANG BRF: {0}".format(str(e)))
             traceback.print_exc()
