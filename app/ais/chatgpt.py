@@ -119,7 +119,7 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
 
     prompt = prompt.replace("CAPTION_COUNT", str(len(images)))
 
-    content = [{"type": "text", "text": data}]
+    content = [{"type": "text", "text": json.dumps(data)}]
     # for image in images:
     #     content.append({"type": "image_url", "image_url": {"url": image}})
 
@@ -264,7 +264,7 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
 
     # prompt = replace_prompt_with_data(prompt, data)
 
-    content = [{"type": "text", "text": data}]
+    content = [{"type": "text", "text": json.dumps(data)}]
     # for image in images:
     #     content.append({"type": "image_url", "image_url": {"url": image}})
 
@@ -392,7 +392,7 @@ https://example.com
 
     # prompt = replace_prompt_with_data(prompt, data)
 
-    content = [{"type": "text", "text": data}]
+    content = [{"type": "text", "text": json.dumps(data)}]
 
     response_schema = {
         "name": "response_schema",
