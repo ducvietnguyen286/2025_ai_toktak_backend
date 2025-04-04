@@ -958,6 +958,7 @@ class ImageMaker:
                 temp_avif.write(response)
 
             with Image.open(image_temp_path) as temp_image:
+                temp_image = temp_image.convert("RGB")
                 temp_image.save(image_path, "JPEG", quality=90, optimize=True)
 
             time.sleep(0.1)
@@ -1013,8 +1014,7 @@ class ImageMaker:
             top = (video_height - new_height) // 2
             background.paste(resized_image, (0, top))
             image = background
-
-        image = image.convert("RGB")
+            image = image.convert("RGB")
 
         image.save(image_path)
 
@@ -1050,12 +1050,8 @@ class ImageMaker:
                 "mime_type": mime_type,
                 "image_url": f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}",
             }
-        if not (
-            image_name.lower().endswith(".jpg") or image_name.lower().endswith(".jpeg")
-        ):
-            image = image.convert("RGBA")
-        else:
-            image = image.convert("RGB")
+
+        image = image.convert("RGB")
 
         image_width, image_height = target_size
         image_ratio = image_width / image_height
@@ -1074,6 +1070,7 @@ class ImageMaker:
             top = (image_height - new_height) // 2
             background.paste(resized_image, (0, top))
             image = background
+            image = image.convert("RGB")
 
         # Resize ảnh về kích thước chuẩn (1080x1080) với chất lượng cao
         image = image.resize(target_size, Image.LANCZOS)
