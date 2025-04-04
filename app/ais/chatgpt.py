@@ -536,7 +536,7 @@ def call_chatgpt(
                 "type": "json_schema",
                 "json_schema": response_schema,
             },
-            "max_tokens": 20000,
+            "max_tokens": 16384,
             "temperature": temperature,
         }
     )
@@ -554,7 +554,7 @@ def call_chatgpt(
                 "type": "json_schema",
                 "json_schema": response_schema,
             },
-            max_tokens=20000,
+            max_tokens=16384,
             temperature=0.9,
         )
         response_log = json.dumps(response.to_dict())
