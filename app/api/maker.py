@@ -642,6 +642,7 @@ class APIMakePost(Resource):
                             "images_slider_url": image_renders_sliders,
                             "product_video_url": product_video_url,
                         }
+                        logger.info("data_make_video: {0}".format(data_make_video))
                         result = ShotStackService.create_video_from_images_v2(
                             data_make_video
                         )
