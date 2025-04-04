@@ -265,6 +265,7 @@ def download_video(video_url, batch_id):
             log_webhook_message(f"IS_MOUNT: {IS_MOUNT}")
             log_webhook_message(f"video_filename: {video_filename}")
             if IS_MOUNT == 1:
+                log_webhook_message(f"Replace video_filename: {Path(video_filename).as_posix().replace("static/voice", "/mnt")}")
                 video_filename = (
                     Path(video_filename).as_posix().replace("static/voice", "/mnt")
                 )
