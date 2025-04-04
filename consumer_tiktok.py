@@ -111,7 +111,7 @@ async def process_message_async(body, app):
     return result
 
 
-async def on_message(message: IncomingMessage, app):
+async def on_message(message: IncomingMessage, app, semaphore):
     """
     Hàm callback bất đồng bộ để xử lý từng message.
     Sử dụng create_task để xử lý message nền, giúp event loop không bị block.
@@ -121,7 +121,8 @@ async def on_message(message: IncomingMessage, app):
         body = message.body.decode()
         log_tiktok_message(f"Received message: {body}")
         # Tạo task nền để xử lý message, không chặn việc nhận message mới
-        asyncio.create_task(process_message_async(body, app))
+        async with semaphore:
+            await process_message_async(body, app)
 
 
 async def main():
@@ -134,8 +135,10 @@ async def main():
     channel = await connection.channel()
     queue = await channel.declare_queue(RABBITMQ_QUEUE_TIKTOK, durable=True)
 
+    semaphore = asyncio.Semaphore(20)
+
     log_tiktok_message("Đang chờ message. Nhấn CTRL+C để dừng.")
-    await queue.consume(partial(on_message, app=app), no_ack=False)
+    await queue.consume(partial(on_message, app=app, semaphore=semaphore), no_ack=False)
     return connection
 
 
