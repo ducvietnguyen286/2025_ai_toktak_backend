@@ -117,7 +117,7 @@ class APICreateBatch(Resource):
 
             data = Scraper().scraper({"url": url})
 
-            # return data
+            return data
             if not data:
                 NotificationServices.create_notification(
                     user_id=user_id_login,
