@@ -3,8 +3,6 @@ import time
 from openai import OpenAI
 from app.services.request_log import RequestLogService
 import os
-from openai.error import OpenAIError
-from app.lib.logger import logger
 
 chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
 
@@ -437,57 +435,30 @@ https://example.com
     return call_chatgpt(content, response_schema, post_id)
 
 
-def call_chatgpt_clear_product_name(name, chatgpt_api_key):
-    try:
-        client = OpenAI(api_key=chatgpt_api_key)
-        assistant_id = "asst_EK0uKR3AbhB2Js9cESzqRIxa"
-
-        # Tạo một thread mới
-        empty_thread = client.beta.threads.create()
-
-        # Gửi tin nhắn ban đầu
-        client.beta.threads.messages.create(
-            empty_thread.id,
-            role="user",
-            content=[{"type": "text", "text": name}],
+def call_chatgpt_clear_product_name(name):
+    client = OpenAI(api_key=chatgpt_api_key)
+    assistant_id = "asst_EK0uKR3AbhB2Js9cESzqRIxa"
+    empty_thread = client.beta.threads.create()
+    client.beta.threads.messages.create(
+        empty_thread.id,
+        role="user",
+        content=[{"type": "text", "text": name}],
+    )
+    run = client.beta.threads.runs.create(
+        thread_id=empty_thread.id, assistant_id=assistant_id
+    )
+    while True:
+        run = client.beta.threads.runs.retrieve(
+            run_id=run.id, thread_id=empty_thread.id
         )
+        if run.status == "completed":
+            break
 
-        # Tạo một run mới cho thread
-        run = client.beta.threads.runs.create(
-            thread_id=empty_thread.id, assistant_id=assistant_id
-        )
-
-        # Chờ cho đến khi quá trình hoàn thành
-        attempts = 0
-        max_attempts = 5
-        while attempts < max_attempts:
-            try:
-                run = client.beta.threads.runs.retrieve(
-                    run_id=run.id, thread_id=empty_thread.id
-                )
-                if run.status == "completed":
-                    break
-                time.sleep(0.5)  # Thời gian chờ ngắn hơn (0.5 giây)
-                attempts += 1
-            except OpenAIError as e:
-                logger.error(f"Error retrieving run status: {e}")
-                attempts += 1
-                time.sleep(0.5)  # Thời gian chờ ngắn hơn (0.5 giây)
-
-        # Lấy các tin nhắn từ thread
-        thread_messages = client.beta.threads.messages.list(empty_thread.id)
-        for message in thread_messages:
-            if message.role == "assistant":
-                return message.content[0].text.value
-
-        return name  # Trả về tên ban đầu nếu không có phản hồi từ assistant
-
-    except OpenAIError as e:
-        logger.error(f"OpenAI API error occurred: {e}")
-        return name  # Trả về tên ban đầu nếu có lỗi
-    except Exception as e:
-        logger.error(f"Unexpected error occurred: {e}")
-        return name  # Trả về tên ban đầu nếu có lỗi không mong muốn
+    thread_messages = client.beta.threads.messages.list(empty_thread.id)
+    for message in thread_messages:
+        if message.role == "assistant":
+            return message.content[0].text.value
+    return name
 
 
 def call_chatgpt_get_main_text_and_color_for_image(
