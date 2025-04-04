@@ -246,12 +246,13 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
         "IMAGE_URL_2"
     ],
     "content": "<h1>블로그 게시글 제목</h1>
-                <p>제품의 특징 및 장점에 대해 설명하는 첫 번째 단락</p>
+                <p>제품의 특징 및 장점에 대해 설명하는 첫 번째 단락 https://example.com </p>
                 <p><img src="IMAGE_URL_0" alt="{name}"></p>
                 <p>제품 사용 방법에 대한 설명이 포함된 두 번째 단락</p>
                 <p><img src="IMAGE_URL_1" alt="{name}"></p>
                 <p>제품을 구매하는 방법과 판매처 정보</p>
-                <p><img src="IMAGE_URL_2" alt="{name}"></p>...etc"
+                <p><img src="IMAGE_URL_2" alt="{name}"></p>...etc
+                <p>#hashtag1 #hashtag2 #hashtag3</p>"
 }
 """
     prompt = prompt.replace("COUNT_IMAGE", str(len(images)))
@@ -322,6 +323,8 @@ def call_chatgpt_create_social(images=[], data={}, post_id=0):
 
 caption:  
 - 총 {image_count}개의 이미지에 대응하는 캡션을 생성합니다.  
+- [1번 이미지]는 썸네일입니다. 썸네일에 맞는 자극적이고 궁금증을 유발하는 문구를 작성하세요. 
+- [2번 이미지], [3번 이미지], [4번 이미지], [5번 이미지]는 스토리텔링 형식으로 이어지게 문구를 작성하세요. 
 - 실제 사용자가 SNS에 쓰는 것처럼 자연스럽고 감정이 담긴 문장으로 작성하세요.  
 - 이모티콘은 사용하지 않습니다.  
 

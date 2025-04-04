@@ -499,7 +499,7 @@ class InstagramService(BaseService):
                 if status == "FINISHED":
                     return True
                 elif status == "ERROR":
-                    error_message = result["error_message"]
+                    error_message = result["message"] if "message" in result else ""
                     self.save_errors(
                         "ERRORED",
                         f"ERROR GET UPLOAD STATUS {self.key_log}: {error_message}",
