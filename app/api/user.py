@@ -378,7 +378,7 @@ class APIPostToLinks(Resource):
                 ).to_dict()
 
             # Update to Uploads
-            PostService.update_post(post_id, status=const.DRAFT_STATUS)
+            PostService.update_post(post_id, status=const.DRAFT_STATUS, status_sns=1)
 
             batch_id = post.batch_id
 
@@ -912,10 +912,10 @@ class APIAliCallback(Resource):
             user.ali_express_active = 1
             user.save()
 
-            return Response(
-                data=access_response,
-                message="AliExpress login success",
-            ).to_dict()
+            # return Response(
+            #     data=access_response,
+            #     message="AliExpress login success",
+            # ).to_dict()
 
             return redirect(PAGE_PROFILE + "?success=1")
         except Exception as e:
