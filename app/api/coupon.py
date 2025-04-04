@@ -531,6 +531,6 @@ class APIGetUserCoupon(Resource):
             ).to_dict()
 
         return Response(
-            data=coupon._to_json(),
+            data=coupon,
             message="Lấy coupon user thành công",
         ).to_dict()
