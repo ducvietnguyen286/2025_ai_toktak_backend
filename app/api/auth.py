@@ -278,7 +278,16 @@ class APIUserProfile(Resource):
                     level=level,
                     level_info=json.dumps(level_info),
                 )
-            logger.info(f"-----------USER DATA: {user.to_dict()}-------------")
+            current_datetime = datetime.now()
+            if (
+                user.subscription_expired
+                and user.subscription_expired <= current_datetime
+            ):
+                user = AuthService.update(
+                    user.id,
+                    subscription="FREE",
+                    subscription_expired=None,
+                )
             return Response(
                 data=user.to_dict(),
                 message="Lấy thông tin người dùng thành công",
