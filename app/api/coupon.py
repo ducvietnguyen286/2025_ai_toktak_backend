@@ -79,7 +79,9 @@ class APIUsedCoupon(Resource):
             coupon_code.is_used = True
             coupon_code.used_by = current_user.id
             coupon_code.used_at = datetime.datetime.now()
-            coupon_code.expired_at = datetime.datetime.now() + datetime.timedelta(days=coupon_code.num_days)
+            coupon_code.expired_at = datetime.datetime.now() + datetime.timedelta(
+                days=coupon_code.num_days
+            )
             coupon_code.save()
 
             if coupon.type == "DISCOUNT":
@@ -128,7 +130,7 @@ class APICreateCoupon(Resource):
             "description": {"type": ["string", "null"]},
             "expired": {"type": ["string", "null"]},
         },
-        required=["name", "max_used" ],
+        required=["name", "max_used"],
     )
     def post(self, args):
         current_user = AuthService.get_current_identity()
@@ -514,3 +516,21 @@ class APIListCouponCodes(Resource):
             "total_pages": total_pages,
             "data": coupon_codes,
         }, 200
+
+
+@ns.route("/get_user_coupon")
+class APIGetUserCoupon(Resource):
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        coupon = CouponService.get_last_used(current_user.id)
+        if not coupon:
+            return Response(
+                message="Không tìm thấy coupon",
+                code=201,
+            ).to_dict()
+
+        return Response(
+            data=coupon._to_json(),
+            message="Lấy coupon user thành công",
+        ).to_dict()
