@@ -34,9 +34,9 @@ class Post(db.Model, BaseModel):
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )  #
-    
+
     user = db.relationship("User", lazy="joined")
-    
+
     to_json_parse = "images"
     to_json_filter = "captions"
 
@@ -46,13 +46,33 @@ class Post(db.Model, BaseModel):
             "user_id": self.user_id,
             "batch_id": self.batch_id,
             "thumbnail": self.thumbnail,
+            "captions": self.captions,
+            "images": self.images,
             "title": self.title,
             "subtitle": self.subtitle,
             "content": self.content,
             "description": self.description,
+            "hashtag": self.hashtag,
+            "video_url": self.video_url,
+            "docx_url": self.docx_url,
+            "file_size": self.file_size,
+            "mime_type": self.mime_type,
+            "type": self.type,
             "status": self.status,
             "status_sns": self.status_sns,
+            "process_number": self.process_number,
+            "render_id": self.render_id,
+            "video_path": self.video_path,
+            "social_sns_description": self.social_sns_description,
             "user_email": self.user.email if self.user else None,  # Lấy email từ user
-            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "created_at": (
+                self.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.created_at
+                else None
+            ),
+            "updated_at": (
+                self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.updated_at
+                else None
+            ),
         }
