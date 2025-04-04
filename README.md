@@ -39,3 +39,6 @@ journalctl -u toktak.service -f
 
 
 journalctl -u toktak.service
+
+
+Do server SNS là khác server lên cần mount folder 
