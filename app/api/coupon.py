@@ -79,18 +79,20 @@ class APIUsedCoupon(Resource):
             coupon_code.is_used = True
             coupon_code.used_by = current_user.id
             coupon_code.used_at = datetime.datetime.now()
-            coupon_code.expired_at = datetime.datetime.now() + datetime.timedelta(
-                days=coupon_code.num_days
-            )
             coupon_code.save()
 
             if coupon.type == "DISCOUNT":
                 pass
             elif coupon.type == "SUB_STANDARD":
+                current_user.batch_total += (
+                    coupon_code.value if coupon_code.value else 30
+                )
+                current_user.batch_remain += (
+                    coupon_code.value if coupon_code.value else 30
+                )
                 current_user.subscription = "STANDARD"
-                current_user.subscription_expired = (
-                    datetime.datetime.now()
-                    + datetime.timedelta(days=const.DATE_EXPIRED)
+                current_user.subscription_expired = coupon_code.expired_at.replace(
+                    hour=23, minute=59, second=59
                 )
                 current_user.save()
             elif coupon.type == "SUB_PREMIUM":
@@ -125,6 +127,7 @@ class APICreateCoupon(Resource):
             "type": {"type": ["string", "null"]},
             "max_used": {"type": ["string", "null"]},
             "num_days": {"type": ["string", "null"]},
+            "value": {"type": ["string", "null"]},
             # "is_has_whitelist": {"type": "boolean"},
             # "white_lists": {"type": "array", "items": {"type": ["string", "null"]}},
             "description": {"type": ["string", "null"]},
@@ -143,6 +146,7 @@ class APICreateCoupon(Resource):
             if args.get("num_days")
             else const.DATE_EXPIRED
         )
+        value = args.get("value")
         is_has_whitelist = args.get("is_has_whitelist", False)
         white_lists = args.get("white_lists", [])
         description = args.get("description", "")
@@ -156,6 +160,7 @@ class APICreateCoupon(Resource):
             name=name,
             type=type,
             max_used=max_used,
+            value=value,
             is_has_whitelist=is_has_whitelist,
             white_lists=json.dumps(white_lists),
             description=description,
@@ -166,7 +171,7 @@ class APICreateCoupon(Resource):
         CouponService.create_codes(
             coupon.id,
             count_code=max_used,
-            expired_at=expired,
+            value=value,
             num_days=num_days,
         )
         return Response(

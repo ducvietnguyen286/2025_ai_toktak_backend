@@ -222,7 +222,7 @@ class CouponService:
         return coupon_codes, total_codes
 
     @staticmethod
-    def create_codes(coupon_id, count_code=100, expired_at=None, num_days=30):
+    def create_codes(coupon_id, count_code=100, value=0, num_days=30):
         coupon_codes = []
         code_by_day = CouponService.get_code_by_day()
         code_by_month = CouponService.get_code_by_month()
@@ -238,6 +238,7 @@ class CouponService:
             data = {
                 "coupon_id": coupon_id,
                 "code": code,
+                "value": value,
                 "is_used": False,
                 "is_active": True,
                 "num_days": num_days,

@@ -63,27 +63,46 @@ class APICreateBatch(Resource):
         required=["url"],
     )
     def post(self, args):
-        try:
-            current_month = time.strftime("%Y-%m", time.localtime())
-            verify_jwt_in_request(optional=True)
-            user_id_login = 0
-            current_user = AuthService.get_current_identity() or None
-            if current_user:
-                user_id_login = current_user.id
-                if current_user.batch_of_month != current_month:
+        current_month = time.strftime("%Y-%m", time.localtime())
+        verify_jwt_in_request(optional=True)
+        user_id_login = 0
+        current_user = AuthService.get_current_identity() or None
+        if current_user:
+            user_id_login = current_user.id
+            if current_user.batch_remain == 0:
+                if (
+                    current_user.subscription == "FREE"
+                    and current_month != current_user.batch_of_month
+                ):
+                    current_user.batch_total += const.LIMIT_BATCH[
+                        current_user.subscription
+                    ]
+                    current_user.batch_remain += const.LIMIT_BATCH[
+                        current_user.subscription
+                    ]
                     current_user.batch_of_month = current_month
-                    current_user.batch_total = 0
                     current_user.save()
                 else:
-                    if (
-                        current_user.batch_total
-                        >= const.LIMIT_BATCH[current_user.subscription]
-                    ):
-                        return Response(
-                            message="Bạn đã tạo quá số lượng batch cho phép.",
-                            code=201,
-                        ).to_dict()
+                    return Response(
+                        message="Bạn đã tạo quá số lượng batch cho phép.",
+                        code=201,
+                    ).to_dict()
+            redis_user_batch_key = f"users:batch_remain:{user_id_login}"
 
+            current_remain = redis_client.get(redis_user_batch_key)
+            if current_remain:
+                current_remain = int(current_remain)
+                if current_remain <= 0:
+                    return Response(
+                        message="Bạn đã tạo quá số lượng batch cho phép.",
+                        code=201,
+                    ).to_dict()
+
+            redis_client.set(
+                redis_user_batch_key, current_user.batch_remain - 1, ex=180
+            )
+
+        try:
             url = args.get("url", "")
             voice = args.get("voice", 1)
             narration = args.get("narration", "female")
@@ -103,6 +122,9 @@ class APICreateBatch(Resource):
                 NotificationServices.create_notification(
                     user_id=user_id_login,
                     title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                )
+                redis_client.set(
+                    redis_user_batch_key, current_user.batch_remain + 1, ex=180
                 )
 
                 return Response(
@@ -218,7 +240,7 @@ class APICreateBatch(Resource):
             redis_client.set(redis_key, json.dumps(posts), ex=3600)
 
             if current_user:
-                current_user.batch_total += 1
+                current_user.batch_remain -= 1
                 current_user.save()
 
                 # save config when create
@@ -250,6 +272,9 @@ class APICreateBatch(Resource):
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
+            redis_client.set(
+                redis_user_batch_key, current_user.batch_remain + 1, ex=180
+            )
             return Response(
                 message="상품 정보를 불러올 수 없어요.(Error code : )",
                 code=201,
