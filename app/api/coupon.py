@@ -243,7 +243,11 @@ class APIAddCouponCodes(Resource):
         num_days = (expired_at - datetime.datetime.now()).days
 
         CouponService.create_codes(
-            coupon.id, count_code=count, num_days=num_days, expired_at=expired_at
+            coupon.id,
+            value=coupon.value,
+            count_code=count,
+            num_days=num_days,
+            expired_at=expired_at,
         )
 
         return Response(
