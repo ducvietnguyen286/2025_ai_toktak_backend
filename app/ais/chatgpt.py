@@ -363,6 +363,10 @@ hashtag:
 - 반드시 `#`으로 시작하며, 실사용자가 검색할 법한 키워드 위주로 작성하세요.  
 - 캡션 및 description과는 구분된 별도 항목으로 제공하세요.  
 
+Note:
+캡션 목록에는 반드시 5개의 항목이 모두 있어야 합니다.
+caption: ["caption1", "caption2", "caption3", "caption4", "caption5"]
+
 [출력 형식 예시]
 ```json
 {
