@@ -121,9 +121,9 @@ class APIUsedCoupon(Resource):
             elif coupon.type == "SUB_PRO":
                 pass
 
-            session.add(coupon)
-            session.add(coupon_code)
-            session.add(current_user)
+            session.merge(coupon)
+            session.merge(coupon_code)
+            session.merge(current_user)
 
             session.commit()
         except Exception as e:
