@@ -7,8 +7,6 @@ import random
 import string
 from app.extensions import redis_client, db
 from sqlalchemy.orm import Session, aliased
-import time
-import uuid
 
 BATCH_SIZE = 1000
 
@@ -222,7 +220,7 @@ class CouponService:
         return coupon_codes, total_codes
 
     @staticmethod
-    def create_codes(coupon_id, count_code=100, value=0, num_days=30):
+    def create_codes(coupon_id, count_code=100, value=0, num_days=30, expired_at=None):
         coupon_codes = []
         code_by_day = CouponService.get_code_by_day()
         code_by_month = CouponService.get_code_by_month()
@@ -230,7 +228,7 @@ class CouponService:
         inserted_codes = set()
 
         for _ in range(count_code):
-            code = CouponService.generate_code()
+            code = CouponService.generate_code(6)
             code = f"{code_by_year}{code_by_month}{code_by_day}{code}"
             if code in inserted_codes:
                 continue
@@ -245,6 +243,8 @@ class CouponService:
                 "created_at": datetime.datetime.now(),
                 "updated_at": datetime.datetime.now(),
             }
+            if expired_at:
+                data["expired_at"] = expired_at
             coupon_code = CouponCode(**data)
             coupon_codes.append(coupon_code)
 
@@ -263,8 +263,19 @@ class CouponService:
     @staticmethod
     def generate_code(length=10):
         """Generate a random coupon code of fixed length"""
-        raw_string = str(uuid.uuid4()) + str(time.time())
-        return hashlib.sha1(raw_string.encode()).hexdigest().upper()[:length]
+        random_code = CouponService.generate_random_code(length)
+        code_exist = CouponService.get_exist_code(random_code)
+        while code_exist:
+            random_code = CouponService.generate_random_code(length)
+            code_exist = CouponService.get_exist_code(random_code)
+        CouponService.set_exist_code(random_code)
+        return random_code
+
+    @staticmethod
+    def generate_random_code(length=10):
+        """Generate a random coupon code of fixed length"""
+        characters = string.ascii_uppercase + string.digits
+        return "".join(random.choice(characters) for _ in range(length))
 
     @staticmethod
     def get_exist_code(code):

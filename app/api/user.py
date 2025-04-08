@@ -185,11 +185,19 @@ class APISendPosts(Resource):
         required=["post_ids"],
     )
     def post(self, args):
+        current_user = AuthService.get_current_identity()
+        current_user_id = current_user.id
+        redis_user_batch_key = f"toktak:users:batch_sns_remain:{current_user_id}"
+
+        current_time = int(time.time())
+        unique_id = uuid.uuid4().hex
+        unique_key = f"{current_time}_{unique_id}"
+        redis_unique_key = f"toktak:users:batch_sns_count:{unique_key}"
+
         try:
-            current_user = AuthService.get_current_identity()
             id_posts = args.get("post_ids", [])
             active_links = []
-            user_links = UserService.get_original_user_links(current_user.id)
+            user_links = UserService.get_original_user_links(current_user_id)
             active_links = [link.link_id for link in user_links if link.status == 1]
             if not active_links:
                 return Response(
@@ -205,7 +213,41 @@ class APISendPosts(Resource):
             links = LinkService.get_not_json_links()
             link_pluck_by_id = {link.id: link for link in links}
 
-            post_ids = [post.id for post in posts]
+            post_ids = []
+            count_images = 0
+            count_videos = 0
+            for post in posts:
+                post_ids.append(post.id)
+                if post.type == "image":
+                    count_images += 1
+                if post.type == "video":
+                    count_videos += 1
+
+            if current_user.batch_no_limit_sns == 0:
+                total_sns_content = count_images + count_videos
+                if current_user.batch_sns_remain < total_sns_content:
+                    return Response(
+                        message="Không đủ số lượng bài viết còn lại",
+                        status=400,
+                    ).to_dict()
+
+                redis_client.set(redis_unique_key, total_sns_content, ex=180)
+
+                current_remain = redis_client.get(redis_user_batch_key)
+                if current_remain:
+                    current_remain = int(current_remain)
+                    if current_remain < total_sns_content:
+                        return Response(
+                            message="Không đủ số lượng bài viết còn lại",
+                            status=400,
+                        ).to_dict()
+
+                if current_remain is None:
+                    current_remain = current_user.batch_sns_remain
+
+                redis_client.set(
+                    redis_user_batch_key, current_remain - total_sns_content, ex=180
+                )
 
             social_sync = SocialPostService.create_social_sync(
                 user_id=current_user.id,
@@ -302,6 +344,9 @@ class APISendPosts(Resource):
             social_sync.save()
             redis_client.set(f"toktak:progress-sync:{sync_id}", json.dumps(progress))
 
+            current_user.batch_sns_remain -= total_sns_content
+            current_user.save()
+
             return Response(
                 data={
                     "sync_id": sync_id,
@@ -312,6 +357,12 @@ class APISendPosts(Resource):
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
+            if current_user.batch_no_limit_sns == 0:
+                current_remain = redis_client.get(redis_user_batch_key)
+                total_sns = redis_client.get(redis_unique_key)
+                redis_client.set(
+                    redis_user_batch_key, current_remain + int(total_sns), ex=180
+                )
             return Response(
                 message="Tạo bài viết that bai",
                 status=400,
@@ -337,8 +388,15 @@ class APIPostToLinks(Resource):
         required=["post_id"],
     )
     def post(self, args):
+        current_user = AuthService.get_current_identity()
+        current_user_id = current_user.id
+        redis_user_batch_key = f"toktak:users:batch_sns_remain:{current_user_id}"
+
+        current_time = int(time.time())
+        unique_id = uuid.uuid4().hex
+        unique_key = f"{current_time}_{unique_id}"
+        redis_unique_key = f"toktak:users:batch_sns_type:{unique_key}"
         try:
-            current_user = AuthService.get_current_identity()
             is_all = args.get("is_all", 0)
             post_id = args.get("post_id", 0)
             page_id = args.get("page_id", "")
@@ -376,6 +434,31 @@ class APIPostToLinks(Resource):
                     message="Không tìm thấy bài viết",
                     status=400,
                 ).to_dict()
+
+            redis_client.set(redis_unique_key, post.type, ex=180)
+
+            if current_user.batch_no_limit_sns == 0 and (
+                post.type == "video" or post.type == "image"
+            ):
+                if current_user.batch_sns_remain < 1:
+                    return Response(
+                        message="Không đủ số lượng bài viết còn lại",
+                        status=400,
+                    ).to_dict()
+
+                current_remain = redis_client.get(redis_user_batch_key)
+                if current_remain:
+                    current_remain = int(current_remain)
+                    if current_remain < 1:
+                        return Response(
+                            message="Không đủ số lượng bài viết còn lại",
+                            status=400,
+                        ).to_dict()
+
+                if current_remain is None:
+                    current_remain = current_user.batch_sns_remain
+
+                redis_client.set(redis_user_batch_key, current_remain - 1, ex=180)
 
             # Update to Uploads
             PostService.update_post(post_id, status=const.DRAFT_STATUS, status_sns=1)
@@ -519,6 +602,12 @@ class APIPostToLinks(Resource):
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
+            current_type = redis_client.get(redis_unique_key)
+            if current_user.batch_no_limit_sns == 0 and (
+                current_type == "video" or current_type == "image"
+            ):
+                current_remain = redis_client.get(redis_user_batch_key)
+                redis_client.set(redis_user_batch_key, int(current_remain) + 1, ex=180)
             return Response(
                 message="Tạo bài viết that bai",
                 status=400,
@@ -982,6 +1071,14 @@ class APICheckSNSLink(Resource):
                             message="당신은 허용된 수량을 초과하여 생성했습니다.",
                             code=201,
                         ).to_dict()
+                if (
+                    current_user.batch_sns_remain == 0
+                    and current_user.batch_no_limit_sns == 0
+                ):
+                    return Response(
+                        message="Bạn đã tạo quá số lượng bài viết cho phép.",
+                        code=201,
+                    ).to_dict()
 
                 BatchService.update_batch(batchId, user_id=current_user.id)
                 PostService.update_post_by_batch_id(batchId, user_id=current_user.id)

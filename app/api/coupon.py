@@ -1,6 +1,7 @@
 # coding: utf8
 import datetime
 import json
+import traceback
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
 from app.decorators import parameters
@@ -13,6 +14,7 @@ ns = Namespace(name="coupon", description="User API")
 from app.extensions import db, redis_client
 from sqlalchemy.orm import Session
 import const
+from app.lib.logger import logger
 
 
 @ns.route("/used")
@@ -73,31 +75,47 @@ class APIUsedCoupon(Resource):
         session = Session(bind=db.engine)
         try:
             coupon.used += 1
-            coupon.save()
 
             coupon_code = CouponService.find_coupon_code(code)
             coupon_code.is_used = True
             coupon_code.used_by = current_user.id
             coupon_code.used_at = datetime.datetime.now()
-            coupon_code.save()
 
             if coupon.type == "DISCOUNT":
                 pass
-            elif coupon.type == "SUB_STANDARD":
-                current_user.batch_total += (
-                    coupon_code.value if coupon_code.value else 30
-                )
-                current_user.batch_remain += (
-                    coupon_code.value if coupon_code.value else 30
-                )
+            elif coupon.type == "SUB_STANDARD" or coupon.type == "SUB_STANDARD_2":
+                value_coupon = coupon_code.value if coupon_code.value else 30
+
+                current_user.batch_total += value_coupon
+                current_user.batch_remain += value_coupon
+                if coupon.type == "SUB_STANDARD_2":
+                    current_user.batch_no_limit_sns = 1
+                else:
+                    current_user.batch_sns_remain += value_coupon * 2
+                    current_user.batch_sns_total += value_coupon * 2
+
                 current_user.subscription = "STANDARD"
-                current_user.subscription_expired = coupon_code.expired_at.replace(
-                    hour=23, minute=59, second=59
-                )
-                current_user.save()
+                if coupon_code.expired_at:
+                    current_user.subscription_expired = coupon_code.expired_at.replace(
+                        hour=23, minute=59, second=59
+                    )
+                else:
+                    expired_at = datetime.datetime.now() + datetime.timedelta(
+                        days=coupon_code.num_days
+                    )
+                    end_of_expired_at = expired_at.replace(
+                        hour=23, minute=59, second=59
+                    )
+                    current_user.subscription_expired = end_of_expired_at
+
                 current_user_id = current_user.id
-                redis_user_batch_key = f"users:batch_remain:{current_user_id}"
+                redis_user_batch_key = f"toktak:users:batch_remain:{current_user_id}"
+                redis_user_batch_sns_key = (
+                    f"toktak:users:batch_sns_remain:{current_user_id}"
+                )
                 redis_client.delete(redis_user_batch_key)
+                redis_client.delete(redis_user_batch_sns_key)
+
             elif coupon.type == "SUB_PREMIUM":
                 pass
             elif coupon.type == "SUB_PRO":
@@ -105,6 +123,9 @@ class APIUsedCoupon(Resource):
             session.commit()
         except Exception as e:
             session.rollback()
+            traceback.print_exc()
+            print(f"Error: {e}")
+            logger.error(f"Error: {e}")
             return Response(
                 message="Có lỗi xảy ra khi sử dụng coupon",
                 status=400,
@@ -127,7 +148,16 @@ class APICreateCoupon(Resource):
         properties={
             "image": {"type": ["string", "null"]},
             "name": {"type": ["string", "null"]},
-            "type": {"type": ["string", "null"]},
+            "type": {
+                "type": ["string", "null"],
+                "enum": [
+                    "DISCOUNT",
+                    "SUB_STANDARD",
+                    "SUB_STANDARD_2",
+                    "SUB_PREMIUM",
+                    "SUB_PRO",
+                ],
+            },
             "max_used": {"type": ["string", "null"]},
             "num_days": {"type": ["string", "null"]},
             "value": {"type": ["string", "null"]},
@@ -142,7 +172,7 @@ class APICreateCoupon(Resource):
         current_user = AuthService.get_current_identity()
         image = args.get("image", "")
         name = args.get("name", "")
-        type = "SUB_STANDARD"
+        type = args.get("type", "SUB_STANDARD")
         max_used = int(args.get("max_used", 1)) if args.get("max_used") else 1
         num_days = (
             int(args.get("num_days", const.DATE_EXPIRED))
@@ -176,6 +206,7 @@ class APICreateCoupon(Resource):
             count_code=max_used,
             value=value,
             num_days=num_days,
+            expired_at=expired,
         )
         return Response(
             data=coupon._to_json(),
@@ -209,7 +240,11 @@ class APIAddCouponCodes(Resource):
         if not expired_at:
             expired_at = coupon.expired
 
-        CouponService.create_codes(coupon.id, count_code=count, expired_at=expired_at)
+        num_days = (expired_at - datetime.datetime.now()).days
+
+        CouponService.create_codes(
+            coupon.id, count_code=count, num_days=num_days, expired_at=expired_at
+        )
 
         return Response(
             message="Thêm mã coupon thành công",
