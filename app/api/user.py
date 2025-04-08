@@ -187,12 +187,12 @@ class APISendPosts(Resource):
     def post(self, args):
         current_user = AuthService.get_current_identity()
         current_user_id = current_user.id
-        redis_user_batch_key = f"users:batch_sns_remain:{current_user_id}"
+        redis_user_batch_key = f"toktak:users:batch_sns_remain:{current_user_id}"
 
         current_time = int(time.time())
         unique_id = uuid.uuid4().hex
         unique_key = f"{current_time}_{unique_id}"
-        redis_unique_key = f"users:batch_sns_count:{unique_key}"
+        redis_unique_key = f"toktak:users:batch_sns_count:{unique_key}"
 
         try:
             id_posts = args.get("post_ids", [])
@@ -390,12 +390,12 @@ class APIPostToLinks(Resource):
     def post(self, args):
         current_user = AuthService.get_current_identity()
         current_user_id = current_user.id
-        redis_user_batch_key = f"users:batch_sns_remain:{current_user_id}"
+        redis_user_batch_key = f"toktak:users:batch_sns_remain:{current_user_id}"
 
         current_time = int(time.time())
         unique_id = uuid.uuid4().hex
         unique_key = f"{current_time}_{unique_id}"
-        redis_unique_key = f"users:batch_sns_type:{unique_key}"
+        redis_unique_key = f"toktak:users:batch_sns_type:{unique_key}"
         try:
             is_all = args.get("is_all", 0)
             post_id = args.get("post_id", 0)
