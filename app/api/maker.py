@@ -1,6 +1,7 @@
 # coding: utf8
 import hashlib
 import time
+import datetime
 import json
 import os
 from flask_restx import Namespace, Resource
@@ -50,7 +51,7 @@ ns = Namespace(name="maker", description="Maker API")
 
 @ns.route("/create-batch")
 class APICreateBatch(Resource):
-
+    @jwt_required()
     @parameters(
         type="object",
         properties={
@@ -64,11 +65,21 @@ class APICreateBatch(Resource):
     )
     def post(self, args):
         current_month = time.strftime("%Y-%m", time.localtime())
-        verify_jwt_in_request(optional=True)
+        is_advance = args.get("is_advance", False)
+        # verify_jwt_in_request(optional=True)
         user_id_login = 0
         current_user = AuthService.get_current_identity() or None
+        batch_type = const.TYPE_NORMAL
+
         if current_user:
             user_id_login = current_user.id
+
+            if is_advance and current_user.subscription == "FREE":
+                return Response(
+                    message="쿠폰을 입력하여 계속 진행하십시오.",
+                    code=201,
+                ).to_dict()
+
             if current_user.batch_remain == 0:
                 if (
                     current_user.subscription == "FREE"
@@ -87,6 +98,13 @@ class APICreateBatch(Resource):
                         message="당신은 허용된 수량을 초과하여 생성했습니다.",
                         code=201,
                     ).to_dict()
+
+            if (
+                current_user.subscription != "FREE"
+                and current_user.subscription_expired >= datetime.datetime.now()
+            ):
+                batch_type = const.TYPE_PRO
+
             redis_user_batch_key = f"users:batch_remain:{user_id_login}"
 
             current_remain = redis_client.get(redis_user_batch_key)
@@ -112,7 +130,7 @@ class APICreateBatch(Resource):
                 voice = random.randint(1, 2)
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
-            is_advance = args.get("is_advance", False)
+
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
             data = Scraper().scraper({"url": url})
@@ -190,7 +208,7 @@ class APICreateBatch(Resource):
                 thumbnail=thumbnail_url,
                 thumbnails=json.dumps(thumbnails),
                 content="",
-                type=1,
+                type=batch_type,
                 count_post=len(post_types),
                 status=0,
                 process_status="PENDING",
@@ -635,6 +653,7 @@ class APIMakePost(Resource):
                             "batch_id": batch.id,
                             "is_advance": batch.is_advance,
                             "template_info": batch.template_info,
+                            "batch_type": batch.type,
                             "voice_google": voice_google,
                             "origin_caption": origin_caption,
                             "images_url": image_renders,

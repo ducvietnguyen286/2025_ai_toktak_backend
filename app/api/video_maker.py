@@ -79,6 +79,7 @@ class CreateVideo(Resource):
             "post_id": post.id,
             "batch_id": batch.id,
             "is_advance": batch.is_advance,
+            "batch_type": batch.type,
             "template_info": batch.template_info,
             "voice_google": voice_google,
             "origin_caption": product_name,
@@ -266,7 +267,6 @@ def download_video(video_url, batch_id):
                 video_filename = (
                     Path(video_filename).as_posix().replace("static/voice", "/mnt")
                 )
-
 
             return {
                 "file_path": video_filename,
