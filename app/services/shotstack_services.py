@@ -143,13 +143,13 @@ class ShotStackService:
                     "lineHeight": 1,
                     "family": "Jalnan2",
                     "color": "#ffffff",
-                    "size": 38,
-                    "stroke": "#000000",
-                    "strokeWidth": 1.8,
+                    "size": 50,
                 },
-                "alignment": {"horizontal": "center"},
+                "width": 450,
+                "stroke": {"width": 2, "color": "#000000"},
+                "alignment": {"horizontal": "center", "vertical": "bottom"},
             },
-            "offset": {"x": 0, "y": 0.02},
+            "offset": {"x": 0, "y": -0.33},
             "start": 0,
             "length": "end",
             "position": "center",
@@ -572,8 +572,8 @@ def create_combined_clips_normal(
         # lấy thời gian cuối
         current_start = end_time
 
-    #last_viral_url = last_viral_detail["video_url"]
-    #last_duration = float(last_viral_detail["duration"] or 0)
+    # last_viral_url = last_viral_detail["video_url"]
+    # last_duration = float(last_viral_detail["duration"] or 0)
     last_duration = 0
     # clips.append(
     #     {
