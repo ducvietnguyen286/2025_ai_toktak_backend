@@ -83,13 +83,17 @@ class APIUsedCoupon(Resource):
 
             if coupon.type == "DISCOUNT":
                 pass
-            elif coupon.type == "SUB_STANDARD":
-                current_user.batch_total += (
-                    coupon_code.value if coupon_code.value else 30
-                )
-                current_user.batch_remain += (
-                    coupon_code.value if coupon_code.value else 30
-                )
+            elif coupon.type == "SUB_STANDARD" or coupon.type == "SUB_STANDARD_2":
+                value_coupon = coupon_code.value if coupon_code.value else 30
+
+                current_user.batch_total += value_coupon
+                current_user.batch_remain += value_coupon
+                if coupon.type == "SUB_STANDARD_2":
+                    current_user.batch_no_limit_sns = 1
+                else:
+                    current_user.batch_sns_remain += value_coupon * 2
+                    current_user.batch_sns_total += value_coupon * 2
+
                 current_user.subscription = "STANDARD"
                 current_user.subscription_expired = coupon_code.expired_at.replace(
                     hour=23, minute=59, second=59
@@ -98,6 +102,7 @@ class APIUsedCoupon(Resource):
                 current_user_id = current_user.id
                 redis_user_batch_key = f"users:batch_remain:{current_user_id}"
                 redis_client.delete(redis_user_batch_key)
+
             elif coupon.type == "SUB_PREMIUM":
                 pass
             elif coupon.type == "SUB_PRO":

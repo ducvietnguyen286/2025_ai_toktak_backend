@@ -26,6 +26,10 @@ class User(db.Model, BaseModel):
 
     batch_total = db.Column(db.Integer, default=const.LIMIT_BATCH["FREE"])
     batch_remain = db.Column(db.Integer, default=const.LIMIT_BATCH["FREE"])
+
+    batch_no_limit_sns = db.Column(db.Integer, default=0)
+    batch_sns_total = db.Column(db.Integer, default=const.LIMIT_BATCH["FREE"] * 2)
+    batch_sns_remain = db.Column(db.Integer, default=const.LIMIT_BATCH["FREE"] * 2)
     batch_of_month = db.Column(db.String(50), default="")
 
     level = db.Column(db.Integer, default=0)
