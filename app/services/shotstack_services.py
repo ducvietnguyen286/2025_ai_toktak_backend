@@ -149,7 +149,7 @@ class ShotStackService:
                 },
                 "alignment": {"horizontal": "center"},
             },
-            "offset": {"x": 0.04, "y": 0.02},
+            "offset": {"x": 0, "y": 0.02},
             "start": 0,
             "length": "end",
             "position": "center",
@@ -642,7 +642,7 @@ def create_combined_clips_with_advance(
                 caption_videos_default, 1
             )
 
-            clip_detail = create_header_text(
+            clip_detail = create_first_header_text(
                 first_caption_videos_default, current_start, 2
             )
             clips.append(clip_detail)
@@ -704,7 +704,7 @@ def create_combined_clips_with_advance(
                 first_caption_image_default = ShotStackService.filter_content_by_type(
                     caption_videos_default, 2
                 )
-                clip_detail = create_first_header_text(
+                clip_detail = create_header_text(
                     first_caption_image_default, start_slider_time, 2
                 )
                 clips.append(clip_detail)
