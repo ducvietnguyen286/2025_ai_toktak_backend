@@ -227,8 +227,11 @@ class APISendPosts(Resource):
                 total_sns_content = count_images + count_videos
                 if current_user.batch_sns_remain < total_sns_content:
                     return Response(
-                        message="Không đủ số lượng bài viết còn lại",
-                        status=400,
+                        message="⚠️ 쿠폰 등록 후 업로드를 할 수 있어요!",
+                        data={
+                            "error_message": "🎟️ 참여 방법은 도매꾹 홈페이지 톡탁 이벤트를 확인하세요. 😊"
+                        },
+                        code=201,
                     ).to_dict()
 
                 redis_client.set(redis_unique_key, total_sns_content, ex=180)
@@ -238,8 +241,11 @@ class APISendPosts(Resource):
                     current_remain = int(current_remain)
                     if current_remain < total_sns_content:
                         return Response(
-                            message="Không đủ số lượng bài viết còn lại",
-                            status=400,
+                            message="⚠️ 쿠폰 등록 후 업로드를 할 수 있어요!",
+                            data={
+                                "error_message": "🎟️ 참여 방법은 도매꾹 홈페이지 톡탁 이벤트를 확인하세요. 😊"
+                            },
+                            code=201,
                         ).to_dict()
 
                 if current_remain is None:
@@ -1047,36 +1053,40 @@ class APICheckSNSLink(Resource):
 
             if current_user.subscription == "FREE":
                 return Response(
-                    message="쿠폰을 입력하여 계속 진행하십시오.",
+                    message="⚠️ 쿠폰 등록 후 업로드를 할 수 있어요!",
+                    data={
+                        "error_message": "🎟️ 참여 방법은 도매꾹 홈페이지 톡탁 이벤트를 확인하세요. 😊"
+                    },
                     code=201,
                 ).to_dict()
 
             if batchId:
-                current_month = time.strftime("%Y-%m", time.localtime())
                 if current_user.batch_remain == 0:
-                    if (
-                        current_user.subscription == "FREE"
-                        and current_month != current_user.batch_of_month
-                    ):
-                        current_user.batch_total += const.LIMIT_BATCH[
-                            current_user.subscription
-                        ]
-                        current_user.batch_remain += const.LIMIT_BATCH[
-                            current_user.subscription
-                        ]
-                        current_user.batch_of_month = current_month
-                        current_user.save()
-                    else:
-                        return Response(
-                            message="당신은 허용된 수량을 초과하여 생성했습니다.",
-                            code=201,
-                        ).to_dict()
+                    return Response(
+                        message="당신은 허용된 수량을 초과하여 생성했습니다.",
+                        code=201,
+                    ).to_dict()
                 if (
-                    current_user.batch_sns_remain == 0
+                    current_user.batch_sns_remain < 2
                     and current_user.batch_no_limit_sns == 0
                 ):
                     return Response(
-                        message="Bạn đã tạo quá số lượng bài viết cho phép.",
+                        message="⚠️ 쿠폰 등록 후 업로드를 할 수 있어요!",
+                        data={
+                            "error_message": "🎟️ 참여 방법은 도매꾹 홈페이지 톡탁 이벤트를 확인하세요. 😊"
+                        },
+                        code=201,
+                    ).to_dict()
+
+                current_batch_sns = redis_client.get(
+                    f"toktak:users:batch_sns_remain:{current_user.id}"
+                )
+                if current_batch_sns and int(current_batch_sns) < 2:
+                    return Response(
+                        message="⚠️ 쿠폰 등록 후 업로드를 할 수 있어요!",
+                        data={
+                            "error_message": "🎟️ 참여 방법은 도매꾹 홈페이지 톡탁 이벤트를 확인하세요. 😊"
+                        },
                         code=201,
                     ).to_dict()
 
