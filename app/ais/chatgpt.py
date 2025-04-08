@@ -365,7 +365,7 @@ hashtag:
 
 Note:
 캡션 목록에는 반드시 5개의 항목이 모두 있어야 합니다.
-caption: ["caption1", "caption2", "caption3", "caption4", "caption5"]
+caption:["caption1","caption2","caption3","caption4","caption5"]
 
 [출력 형식 예시]
 ```json
