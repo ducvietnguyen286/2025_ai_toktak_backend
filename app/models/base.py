@@ -37,7 +37,7 @@ class BaseModel:
         """Define a base way to jsonify models
         Columns inside `to_json_filter` are excluded"""
         # timezone = os.environ.get("TZ", "UTC")
-        timezone ="UTC"
+        timezone = "UTC"
         tz = pytz.timezone(timezone)
 
         response = {}
@@ -45,10 +45,12 @@ class BaseModel:
             # Bỏ qua các thuộc tính liên kết (relation)
             if isinstance(value, db.Model):
                 continue  # Bỏ qua các thuộc tính liên kết
-            
-            if isinstance(value, list) and all(isinstance(item, db.Model) for item in value):
+
+            if isinstance(value, list) and all(
+                isinstance(item, db.Model) for item in value
+            ):
                 continue  # Bỏ qua danh sách chứa các đối tượng liên kết (1-N, N-N)
-        
+
             if column in self.to_json_filter:
                 continue
             if column in self.to_json_parse:
@@ -77,6 +79,10 @@ class BaseModel:
     def save(self):
         db.session.add(self)
         db.session.commit()
+        return self
+
+    def save_session(self):
+        db.session.add(self)
         return self
 
     def update(self, **kwargs):

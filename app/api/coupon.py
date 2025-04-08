@@ -75,11 +75,13 @@ class APIUsedCoupon(Resource):
         session = Session(bind=db.engine)
         try:
             coupon.used += 1
+            coupon.save_session()
 
             coupon_code = CouponService.find_coupon_code(code)
             coupon_code.is_used = True
             coupon_code.used_by = current_user.id
             coupon_code.used_at = datetime.datetime.now()
+            coupon_code.save_session()
 
             if coupon.type == "DISCOUNT":
                 pass
@@ -108,6 +110,7 @@ class APIUsedCoupon(Resource):
                     )
                     current_user.subscription_expired = end_of_expired_at
 
+                current_user.save_session()
                 current_user_id = current_user.id
                 redis_user_batch_key = f"toktak:users:batch_remain:{current_user_id}"
                 redis_user_batch_sns_key = (
@@ -120,10 +123,6 @@ class APIUsedCoupon(Resource):
                 pass
             elif coupon.type == "SUB_PRO":
                 pass
-
-            session.merge(coupon)
-            session.merge(coupon_code)
-            session.merge(current_user)
 
             session.commit()
         except Exception as e:
