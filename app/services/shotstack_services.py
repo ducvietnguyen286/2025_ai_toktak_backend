@@ -17,11 +17,11 @@ import base64
 from app.services.post import PostService
 
 import srt
+import const
 
 # import ffmpeg
 import textwrap
 import re  # Thêm thư viện để xử lý dấu câu
-from const import EFFECTS_CONST, KOREAN_VOICES
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -38,6 +38,7 @@ class ShotStackService:
         images_url = data_make_video["images_url"]
         images_slider_url = data_make_video["images_slider_url"]
         product_video_url = data_make_video["product_video_url"] or ""
+        batch_type = data_make_video["batch_type"] or ""
 
         config = ShotStackService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
@@ -146,10 +147,12 @@ class ShotStackService:
                     "stroke": "#000000",
                     "strokeWidth": 1.8,
                 },
+                "alignment": {"horizontal": "center"},
             },
-            "offset": {"x": 0.04, "y": 0.05},
+            "offset": {"x": 0.04, "y": 0.02},
             "start": 0,
             "length": "end",
+            "position": "center",
         }
 
         mp3_file = mp3_file.replace("static/", "")
@@ -250,37 +253,36 @@ class ShotStackService:
                     ]
                 }
 
-        tracks = [
-            {
+        clips_watermarker = {}
+        if batch_type == const.TYPE_NORMAL:
+            clips_watermarker = {
                 "clips": [
                     {
                         "asset": {
                             "type": "image",
-                            "src": "https://admin.lang.canvasee.com/img/watermarker6.png",
+                            "src": f"{current_domain}/voice/advance/watermarker6.png",
                         },
                         "start": 0,
                         "length": 3,
                         "fit": "none",
                         "position": "left",
                         "offset": {"x": 0.05, "y": 0},
-                    }
-                ]
-            },
-            {
-                "clips": [
+                    },
                     {
                         "asset": {
                             "type": "image",
-                            "src": "https://admin.lang.canvasee.com/img/watermarker6.png",
+                            "src": f"{current_domain}/voice/advance/watermarker6.png",
                         },
                         "start": 3,
                         "length": "end",
                         "fit": "none",
                         "position": "bottomRight",
                         "offset": {"x": -0.05, "y": 0.22},
-                    }
+                    },
                 ]
-            },
+            }
+
+        tracks = [
             {"clips": [clips_caption]},
             {"clips": [clips_audio_sub]},
             clips_data["clips"],
@@ -299,6 +301,8 @@ class ShotStackService:
                 ]
             },
         ]
+        if clips_watermarker:
+            tracks.insert(0, clips_watermarker)
 
         # Nếu layout_advance có dữ liệu thì thêm vào
         if layout_advance:
@@ -671,7 +675,7 @@ def create_combined_clips_with_advance(
 
     SHOTSTACK_IMAGE_EFFECTS = config["SHOTSTACK_IMAGE_EFFECTS"] or ""
     if SHOTSTACK_IMAGE_EFFECTS == "random":
-        effects = EFFECTS_CONST
+        effects = const.EFFECTS_CONST
     else:
         effects = [
             SHOTSTACK_IMAGE_EFFECTS,
@@ -1153,8 +1157,8 @@ def google_speech_to_text(audio_file, config=None):
 
 def get_korean_voice(index):
     # Điều chỉnh index để luôn nằm trong phạm vi hợp lệ
-    adjusted_index = (index - 1) % len(KOREAN_VOICES)
-    return KOREAN_VOICES[adjusted_index]
+    adjusted_index = (index - 1) % len(const.KOREAN_VOICES)
+    return const.KOREAN_VOICES[adjusted_index]
 
 
 def format_time_caption(seconds):

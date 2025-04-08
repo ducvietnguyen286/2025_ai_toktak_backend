@@ -14,6 +14,7 @@ from datetime import datetime, date
 import time
 import os
 import requests
+from pathlib import Path
 
 ns = Namespace(name="video_maker", description="Video Maker API")
 
@@ -78,6 +79,7 @@ class CreateVideo(Resource):
             "post_id": post.id,
             "batch_id": batch.id,
             "is_advance": batch.is_advance,
+            "batch_type": batch.type,
             "template_info": batch.template_info,
             "voice_google": voice_google,
             "origin_caption": product_name,
@@ -225,6 +227,7 @@ def download_video(video_url, batch_id):
 
     # Domain hiện tại
     current_domain = os.environ.get("CURRENT_DOMAIN", "http://localhost:5000")
+    IS_MOUNT = int(os.environ.get("IS_MOUNT", 0))
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -260,6 +263,10 @@ def download_video(video_url, batch_id):
             )
             file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
             file_download = f"{current_domain}/{file_path}"
+            if IS_MOUNT == 1:
+                video_filename = (
+                    Path(video_filename).as_posix().replace("static/voice", "/mnt")
+                )
 
             return {
                 "file_path": video_filename,

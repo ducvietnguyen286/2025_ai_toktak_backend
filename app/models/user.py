@@ -64,6 +64,11 @@ class User(db.Model, BaseModel):
             "level": self.level,
             "level_info": self.level_info,
             "company_name": self.company_name,
+            "subscription_expired": (
+                self.subscription_expired.strftime("%Y-%m-%dT%H:%M:%SZ")
+                if self.subscription_expired
+                else None
+            ),
             "created_at": (
                 self.created_at.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.created_at
