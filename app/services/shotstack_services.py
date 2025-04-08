@@ -149,7 +149,7 @@ class ShotStackService:
                 },
                 "alignment": {"horizontal": "center"},
             },
-            "offset": {"x": 0.04, "y": 0.02},
+            "offset": {"x": 0, "y": 0.02},
             "start": 0,
             "length": "end",
             "position": "center",
@@ -569,35 +569,11 @@ def create_combined_clips_normal(
                 clip_detail["effect"] = random_effect
             clips.append(clip_detail)
 
-        if j_index == 0:
-            first_caption_image_default = ShotStackService.filter_content_by_type(
-                caption_videos_default, 2
-            )
-            clip_detail = create_first_header_text(
-                first_caption_image_default, start_slider_time, 2
-            )
-            clips.append(clip_detail)
-        elif j_index == 2:
-            # When 3rd image start, display for 2 sec
-            first_caption_image_default = ShotStackService.filter_content_by_type(
-                caption_videos_default, 3
-            )
-            clip_detail = create_header_text(
-                first_caption_image_default, start_slider_time, 2
-            )
-            clips.append(clip_detail)
-
-        elif j_index == 4:
-            # When 5th image start, display for 2 sec & When start last hooking video, display for 2 sec in the middle of screen until end of video
-            clip_detail = create_header_text(
-                last_caption_videos_default, start_slider_time, 2
-            )
-            clips.append(clip_detail)
         # lấy thời gian cuối
         current_start = end_time
 
-    last_viral_url = last_viral_detail["video_url"]
-    last_duration = float(last_viral_detail["duration"] or 0)
+    #last_viral_url = last_viral_detail["video_url"]
+    #last_duration = float(last_viral_detail["duration"] or 0)
     last_duration = 0
     # clips.append(
     #     {
@@ -666,7 +642,7 @@ def create_combined_clips_with_advance(
                 caption_videos_default, 1
             )
 
-            clip_detail = create_header_text(
+            clip_detail = create_first_header_text(
                 first_caption_videos_default, current_start, 2
             )
             clips.append(clip_detail)
@@ -728,7 +704,7 @@ def create_combined_clips_with_advance(
                 first_caption_image_default = ShotStackService.filter_content_by_type(
                     caption_videos_default, 2
                 )
-                clip_detail = create_first_header_text(
+                clip_detail = create_header_text(
                     first_caption_image_default, start_slider_time, 2
                 )
                 clips.append(clip_detail)
