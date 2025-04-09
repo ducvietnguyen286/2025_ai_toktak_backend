@@ -28,8 +28,8 @@ class User(db.Model, BaseModel):
     batch_remain = db.Column(db.Integer, default=const.LIMIT_BATCH["FREE"])
 
     batch_no_limit_sns = db.Column(db.Integer, default=0)
-    batch_sns_total = db.Column(db.Integer, default=const.LIMIT_BATCH["FREE"] * 2)
-    batch_sns_remain = db.Column(db.Integer, default=const.LIMIT_BATCH["FREE"] * 2)
+    batch_sns_total = db.Column(db.Integer, default=0)
+    batch_sns_remain = db.Column(db.Integer, default=0)
     batch_of_month = db.Column(db.String(50), default="")
 
     level = db.Column(db.Integer, default=0)
@@ -41,6 +41,7 @@ class User(db.Model, BaseModel):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
     last_activated = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime)
 
     print_filter = ("password",)
     to_json_filter = ("password", "ali_express_info")

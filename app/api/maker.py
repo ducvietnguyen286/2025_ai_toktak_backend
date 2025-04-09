@@ -80,6 +80,14 @@ class APICreateBatch(Resource):
                     code=201,
                 ).to_dict()
 
+            if current_user.subscription == "FREE":
+                today_used = redis_client.get(f"toktak:users:free:used:{user_id_login}")
+                if today_used:
+                    return Response(
+                        message="당신은 허용된 수량을 초과하여 생성했습니다.",
+                        code=201,
+                    ).to_dict()
+
             if current_user.batch_remain == 0:
                 if (
                     current_user.subscription == "FREE"
@@ -105,7 +113,7 @@ class APICreateBatch(Resource):
             ):
                 batch_type = const.TYPE_PRO
 
-            redis_user_batch_key = f"users:batch_remain:{user_id_login}"
+            redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
 
             current_remain = redis_client.get(redis_user_batch_key)
             if current_remain:
@@ -201,7 +209,6 @@ class APICreateBatch(Resource):
             post_types = ["video", "image", "blog"]
 
             template_info = get_template_info(is_advance, is_paid_advertisements)
-            logger.info(template_info)
 
             batch = BatchService.create_batch(
                 user_id=user_id_login,
@@ -262,6 +269,27 @@ class APICreateBatch(Resource):
                 current_user.batch_remain -= 1
                 current_user.save()
 
+                time_to_end_of_day = (
+                    datetime.datetime.combine(datetime.date.today(), datetime.time.max)
+                    - datetime.datetime.now()
+                ).total_seconds() + 1
+
+                time_to_end_of_day = int(
+                    (
+                        datetime.datetime.combine(
+                            datetime.date.today(), datetime.time.max
+                        )
+                        - datetime.datetime.now()
+                    ).total_seconds()
+                    + 1
+                )
+
+                redis_client.set(
+                    f"toktak:users:free:used:{user_id_login}",
+                    "1",
+                    ex=time_to_end_of_day,
+                )
+
                 # save config when create
                 if not is_advance:
                     user_template = PostService.get_template_video_by_user_id(
@@ -295,7 +323,8 @@ class APICreateBatch(Resource):
             logger.error("Exception: {0}".format(str(e)))
             if current_user:
                 user_id_login = current_user.id
-                redis_user_batch_key = f"users:batch_remain:{user_id_login}"
+                redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
+                redis_client.delete(f"toktak:users:free:used:{user_id_login}")
                 redis_client.set(
                     redis_user_batch_key, current_user.batch_remain + 1, ex=180
                 )

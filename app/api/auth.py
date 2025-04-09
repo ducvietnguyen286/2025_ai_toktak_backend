@@ -1,4 +1,5 @@
 # coding: utf8
+import traceback
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
 from app.decorators import parameters
@@ -12,6 +13,7 @@ import json
 from app.services.auth import AuthService
 from app.services.notification import NotificationServices
 from app.lib.string import get_level_images
+import const
 
 ns = Namespace(name="auth", description="Auth API")
 
@@ -32,6 +34,15 @@ class APILogin(Resource):
         password = args.get("password", "")
 
         user = AuthService.login(email, password)
+        if user.deleted_at and (datetime.now() - user.deleted_at).days <= 30:
+            return Response(
+                message="시스템에 로그인해주세요.",
+                data={
+                    "error_message": "🚫 탈퇴하신 계정은 30일간 재가입하실 수 없습니다."
+                },
+                code=201,
+            ).to_dict()
+
         tokens = AuthService.generate_token(user)
         tokens.update(
             {
@@ -68,6 +79,15 @@ class APISocialLogin(Resource):
             access_token=access_token,
             person_id=person_id,
         )
+
+        if user.deleted_at and (datetime.now() - user.deleted_at).days <= 30:
+            return Response(
+                message="시스템에 로그인해주세요.",
+                data={
+                    "error_message": "🚫 탈퇴하신 계정은 30일간 재가입하실 수 없습니다."
+                },
+                code=201,
+            ).to_dict()
 
         tokens = AuthService.generate_token(user)
         tokens.update(
@@ -142,33 +162,86 @@ class APIMe(Resource):
 
     @jwt_required()
     def get(self):
-        user_login = AuthService.get_current_identity()
-        if not user_login:
-            return Response(
-                status=401,
-                message="Can't User login",
-            ).to_dict()
+        try:
+            user_login = AuthService.get_current_identity()
+            if not user_login:
+                return Response(
+                    status=401,
+                    message="Can't User login",
+                ).to_dict()
 
-        user_login = AuthService.update(
-            user_login.id,
-            last_activated=datetime.now(),
-        )
+            if (
+                user_login.deleted_at
+                and (datetime.now() - user_login.deleted_at).days <= 30
+            ):
+                return Response(
+                    message="시스템에 로그인해주세요.",
+                    data={
+                        "error_message": "🚫 탈퇴하신 계정은 30일간 재가입하실 수 없습니다."
+                    },
+                    code=201,
+                ).to_dict()
 
-        current_datetime = datetime.now()
-        if (
-            user_login.subscription_expired
-            and user_login.subscription_expired <= current_datetime
-        ):
             user_login = AuthService.update(
                 user_login.id,
-                subscription="FREE",
-                subscription_expired=None,
+                last_activated=datetime.now(),
             )
 
-        return Response(
-            data=user_login._to_json(),
-            message="사용자 정보를 성공적으로 가져왔습니다.",
-        ).to_dict()
+            current_datetime = datetime.now()
+            if (
+                user_login.subscription_expired
+                and user_login.subscription_expired <= current_datetime
+            ):
+                user_login = AuthService.update(
+                    user_login.id,
+                    subscription="FREE",
+                    subscription_expired=None,
+                    batch_total=const.LIMIT_BATCH["FREE"],
+                    batch_remain=const.LIMIT_BATCH["FREE"],
+                    batch_sns_total=0,
+                    batch_sns_remain=0,
+                    batch_no_limit_sns=0,
+                )
+
+            subscription_name = user_login.subscription
+            if user_login.subscription == "FREE":
+                subscription_name = "무료 체험"
+            elif user_login.subscription == "STANDARD":
+                subscription_name = "기업형 스탠다드 플랜"
+
+            first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
+
+            start_used = None
+            if first_coupon:
+                start_used = first_coupon.get("used_at")
+            elif latest_coupon:
+                start_used = latest_coupon.get("used_at")
+
+            last_used = latest_coupon.get("expired_at") if latest_coupon else None
+
+            used_date_range = ""
+            if start_used and last_used:
+                start_used = datetime.strptime(start_used, "%Y-%m-%dT%H:%M:%SZ")
+                last_used = datetime.strptime(last_used, "%Y-%m-%dT%H:%M:%SZ")
+                used_date_range = f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
+
+            user_dict = user_login._to_json()
+            user_dict["subscription_name"] = subscription_name
+            user_dict["latest_coupon"] = latest_coupon
+            user_dict["used_date_range"] = used_date_range
+
+            return Response(
+                data=user_dict,
+                message="사용자 정보를 성공적으로 가져왔습니다.",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.exception(f"APIMe: {e}")
+            return Response(
+                data={},
+                message="Đã xảy ra lỗi trong quá trình xử lý",
+                code=500,
+            ).to_dict()
 
 
 @ns.route("/login_by_input")
@@ -266,11 +339,18 @@ class APIUserProfile(Resource):
     def get(self):
         try:
             user = AuthService.get_current_identity()
+            if user.deleted_at and (datetime.now() - user.deleted_at).days <= 30:
+                return Response(
+                    message="시스템에 로그인해주세요.",
+                    data={
+                        "error_message": "🚫 탈퇴하신 계정은 30일간 재가입하실 수 없습니다."
+                    },
+                    code=201,
+                ).to_dict()
             level = user.level
             total_link = UserService.get_user_links(user.id)
 
             if level != len(total_link):
-                print(123123)
                 level = len(total_link)
                 level_info = get_level_images(level)
                 user = AuthService.update(
@@ -287,17 +367,64 @@ class APIUserProfile(Resource):
                     user.id,
                     subscription="FREE",
                     subscription_expired=None,
+                    batch_total=const.LIMIT_BATCH["FREE"],
+                    batch_remain=const.LIMIT_BATCH["FREE"],
+                    batch_sns_total=0,
+                    batch_sns_remain=0,
+                    batch_no_limit_sns=0,
                 )
+
+            batch_remain = user.batch_remain
+
+            latest_coupon, first_coupon, coupons = UserService.get_user_coupons(user.id)
+            subscription_name = user.subscription
+            if user.subscription == "FREE":
+                subscription_name = "무료 체험"
+            elif user.subscription == "STANDARD":
+                subscription_name = "기업형 스탠다드 플랜"
+
+            result_coupons = []
+
+            for coupon in coupons:
+                coupon_value = coupon.get("value", 0)
+                coupon_remain = (
+                    coupon_value
+                    if batch_remain > coupon_value
+                    else batch_remain - coupon_value
+                )
+                if coupon_remain < 0:
+                    coupon_remain = 0
+                coupon["remain"] = coupon_remain
+                result_coupons.append(coupon)
+
+            start_used = None
+            if first_coupon:
+                start_used = first_coupon.get("used_at")
+            elif latest_coupon:
+                start_used = latest_coupon.get("used_at")
+
+            last_used = latest_coupon.get("expired_at") if latest_coupon else None
+
+            used_date_range = ""
+            if start_used and last_used:
+                start_used = datetime.strptime(start_used, "%Y-%m-%dT%H:%M:%SZ")
+                last_used = datetime.strptime(last_used, "%Y-%m-%dT%H:%M:%SZ")
+                used_date_range = f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
+
+            user_dict = user._to_json()
+            user_dict["subscription_name"] = subscription_name
+            user_dict["coupons"] = result_coupons
+            user_dict["latest_coupon"] = latest_coupon
+            user_dict["used_date_range"] = used_date_range
+
             return Response(
-                data=user.to_dict(),
+                data=user_dict,
                 message="Lấy thông tin người dùng thành công",
             ).to_dict()
 
         except Exception as e:
-            import traceback
-
-            error_details = traceback.format_exc()  # Lấy chi tiết lỗi
-            logger.error(f"Lỗi xảy ra trong API /user_profile:\n{error_details}")
+            traceback.print_exc()
+            logger.exception(f"APIUserProfile: {e}")
 
             return Response(
                 data={},
