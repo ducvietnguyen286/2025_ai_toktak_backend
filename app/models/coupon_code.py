@@ -28,6 +28,7 @@ class CouponCode(db.Model, BaseModel):
     def to_dict(self):
         return {
             "type": self.coupon.type if self.coupon else None,
+            "coupon_name": self.coupon.name if self.coupon else None,
             "username": self.user.username if self.user else None,
             "email": self.user.email if self.user else None,
             "id": self.id,

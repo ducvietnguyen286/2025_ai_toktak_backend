@@ -281,9 +281,11 @@ class CoupangScraper:
 
     def get_page_html(self, url, count=0, added_headers=None):
         try:
+            print("111111")
             if count > 10:
                 return False
-
+            
+            print("22222222")
             cookie_jar = CookieJar()
             session = requests.Session()
             session.cookies = cookie_jar
@@ -295,11 +297,13 @@ class CoupangScraper:
 
             response = session.get(url, headers=headers, timeout=5)
             info = response.content
+            print(info)
             html = BeautifulSoup(info, "html.parser")
             # file_html = open("demo.html", "w", encoding="utf-8")
             # file_html.write(info.decode("utf-8"))
             # file_html.close()
             ld_json = html.find("script", {"type": "application/ld+json"})
+            print(ld_json)
             if ld_json is None:
                 count = count + 1
                 return self.get_page_html(url, count, added_headers)
