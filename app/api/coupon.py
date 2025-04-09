@@ -479,6 +479,7 @@ class APIListCouponCodes(Resource):
             "used_by": {"type": ["string", "null"]},
             "from_used_at": {"type": "string"},
             "to_used_at": {"type": "string"},
+            "type_coupon": {"type": ["string", "null"]},
             "page": {"type": ["string", "null"]},
             "limit": {"type": ["string", "null"]},
             "type_order": {"type": "string"},
@@ -497,6 +498,7 @@ class APIListCouponCodes(Resource):
         used_by = args.get("used_by", None)
         from_used_at = args.get("from_used_at", None)
         to_used_at = args.get("to_used_at", None)
+        type_coupon = args.get("type_coupon", None)
         page = int(args.get("page", 1)) if args.get("page") else 1
         limit = int(args.get("per_page", 10)) if args.get("per_page") else 10
         type_order = args.get("type_order", "id_desc")
@@ -542,6 +544,7 @@ class APIListCouponCodes(Resource):
             "used_by": used_by,
             "from_used_at": from_used_at,
             "to_used_at": to_used_at,
+            "type_coupon": type_coupon,
             "page": page,
             "limit": limit,
             "type_order": type_order,
