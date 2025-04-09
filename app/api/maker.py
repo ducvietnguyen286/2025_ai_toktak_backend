@@ -1391,7 +1391,7 @@ class APICopyBlog(Resource):
         try:
             blog_id = args.get("blog_id", "")
             message = "블로그 업데이트 성공"
-            post = PostService.update_post(blog_id, status=const.UPLOADED)
+            post = PostService.update_post(blog_id, status=const.UPLOADED , status_sns=const.UPLOADED)
             if not post:
                 return Response(
                     message="업데이트 실패",
