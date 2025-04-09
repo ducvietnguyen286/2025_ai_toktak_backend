@@ -60,10 +60,10 @@ class APICheckCreateBatch(Resource):
         required=[],
     )
     def get(self, args):
-        user_id_login = 0
         is_advance = args.get("is_advance", False)
         current_month = time.strftime("%Y-%m", time.localtime())
         current_user = AuthService.get_current_identity() or None
+        user_id_login = current_user.id
         if is_advance and current_user.subscription == "FREE":
             return Response(
                 message="쿠폰을 입력하여 계속 진행하십시오.",

@@ -397,13 +397,20 @@ class APIUserProfile(Resource):
 
             result_coupons = []
 
+            30 / 30
+
+            17 / 30
+
             for coupon in coupons:
                 coupon_value = coupon.get("value", 0)
-                coupon_remain = (
-                    coupon_value
-                    if batch_remain > coupon_value
-                    else batch_remain - coupon_value
-                )
+                coupon_remain = 0
+                if batch_remain >= coupon_value:
+                    coupon_remain = coupon_value
+                    batch_remain = batch_remain - coupon_value
+                else:
+                    coupon_remain = batch_remain
+                    batch_remain = 0
+
                 if coupon_remain < 0:
                     coupon_remain = 0
                 coupon["remain"] = coupon_remain
