@@ -223,6 +223,7 @@ class APISendPosts(Resource):
                 if post.type == "video":
                     count_videos += 1
 
+            total_sns_content = 0
             if current_user.batch_no_limit_sns == 0:
                 total_sns_content = count_images + count_videos
                 if current_user.batch_sns_remain < total_sns_content:
