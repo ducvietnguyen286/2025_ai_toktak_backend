@@ -65,8 +65,10 @@ class AliExpressScraper:
 
     def run_scraper(self):
         try:
+            is_shorted_link = False
             if "https://s.click.aliexpress.com/" in self.url:
                 request_url = self.un_shortend_url(self.url)
+                is_shorted_link = True
             else:
                 request_url = self.url
             parsed_url = urlparse(request_url)
@@ -133,7 +135,7 @@ class AliExpressScraper:
                 "price": price_show,
                 "url": real_url,
                 "url_crawl": real_url,
-                "base_url": real_url,
+                "base_url": self.url,
                 "store_name": store_name,
                 "show_free_shipping": 0,
                 "meta_url": "",

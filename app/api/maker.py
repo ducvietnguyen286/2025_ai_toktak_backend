@@ -207,7 +207,6 @@ class APICreateBatch(Resource):
             post_types = ["video", "image", "blog"]
 
             template_info = get_template_info(is_advance, is_paid_advertisements)
-            logger.info(template_info)
 
             batch = BatchService.create_batch(
                 user_id=user_id_login,
