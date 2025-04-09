@@ -9,6 +9,7 @@ class Coupon(db.Model, BaseModel):
     image = db.Column(db.String(500))
     name = db.Column(db.String(250), nullable=False)
     description = db.Column(db.Text)
+    expired_from = db.Column(db.DateTime)
     expired = db.Column(db.DateTime)
     type = db.Column(db.String(20), nullable=False, default="DISCOUNT")
     value = db.Column(db.Float, nullable=False, default=0)

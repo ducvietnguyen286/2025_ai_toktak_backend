@@ -185,6 +185,7 @@ class APICreateCoupon(Resource):
             # "white_lists": {"type": "array", "items": {"type": ["string", "null"]}},
             "description": {"type": ["string", "null"]},
             "expired": {"type": ["string", "null"]},
+            "expired_from": {"type": ["string", "null"]},
         },
         required=["name", "max_used"],
     )
@@ -193,6 +194,7 @@ class APICreateCoupon(Resource):
         image = args.get("image", "")
         name = args.get("name", "")
         type = args.get("type", "SUB_STANDARD")
+        expired_from = args.get("expired_from", "")
         max_used = int(args.get("max_used", 1)) if args.get("max_used") else 1
         num_days = (
             int(args.get("num_days", const.DATE_EXPIRED))
@@ -218,6 +220,7 @@ class APICreateCoupon(Resource):
             white_lists=json.dumps(white_lists),
             description=description,
             expired=expired,
+            expired_from=expired_from,
             created_by=current_user.id,
             # number_expired=number_expired,
         )

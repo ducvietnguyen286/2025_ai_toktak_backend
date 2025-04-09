@@ -27,6 +27,16 @@ class CouponCode(db.Model, BaseModel):
 
     def to_dict(self):
         return {
+            "expired_from": (
+                self.coupon.expired_from.strftime("%Y-%m-%d %H:%M:%S")
+                if self.coupon.expired_from
+                else None
+            ),
+            "expired": (
+                self.coupon.expired.strftime("%Y-%m-%d %H:%M:%S")
+                if self.coupon.expired
+                else None
+            ),
             "type": self.coupon.type if self.coupon else None,
             "coupon_name": self.coupon.name if self.coupon else None,
             "username": self.user.username if self.user else None,
