@@ -194,7 +194,23 @@ class APICreateCoupon(Resource):
         image = args.get("image", "")
         name = args.get("name", "")
         type = args.get("type", "SUB_STANDARD")
-        expired_from = args.get("expired_from", "")
+        try:
+            expired_from = datetime.datetime.strptime(
+                args.get("expired_from", ""), "%Y-%m-%d"
+            ).date()  
+        except ValueError:
+            expired_from = None
+        try:
+            expired = datetime.datetime.strptime(
+                args.get("expired", ""), "%Y-%m-%d"
+            ).date()  
+            expired = datetime.datetime.combine(expired, datetime.time(23, 59, 59))
+        except ValueError:
+            expired = None
+        
+        print(expired_from)
+        print(expired)
+
         max_used = int(args.get("max_used", 1)) if args.get("max_used") else 1
         num_days = (
             int(args.get("num_days", const.DATE_EXPIRED))
@@ -205,11 +221,7 @@ class APICreateCoupon(Resource):
         is_has_whitelist = args.get("is_has_whitelist", False)
         white_lists = args.get("white_lists", [])
         description = args.get("description", "")
-        expired = args.get("expired", None)
-        if expired:
-            expired = datetime.datetime.strptime(expired, "%Y-%m-%dT%H:%M:%SZ")
-        else:
-            expired = datetime.datetime.now() + datetime.timedelta(days=30)
+        
         coupon = CouponService.create_coupon(
             image=image,
             name=name,
