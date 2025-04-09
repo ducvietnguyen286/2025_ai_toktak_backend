@@ -860,7 +860,7 @@ class APIMakePost(Resource):
 
                         content = pre_content + content
 
-                    for index, image_url in enumerate(blog_images):
+                    for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
 
             else:
