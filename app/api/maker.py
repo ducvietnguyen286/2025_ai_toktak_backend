@@ -275,8 +275,20 @@ class APICreateBatch(Resource):
                     - datetime.datetime.now()
                 ).total_seconds() + 1
 
+                time_to_end_of_day = int(
+                    (
+                        datetime.datetime.combine(
+                            datetime.date.today(), datetime.time.max
+                        )
+                        - datetime.datetime.now()
+                    ).total_seconds()
+                    + 1
+                )
+
                 redis_client.set(
-                    f"toktak:users:free:used:{user_id_login}", 1, ex=time_to_end_of_day
+                    f"toktak:users:free:used:{user_id_login}",
+                    "1",
+                    ex=time_to_end_of_day,
                 )
 
                 # save config when create

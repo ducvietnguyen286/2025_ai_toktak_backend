@@ -51,7 +51,8 @@ class UserService:
         coupon = latest_coupon.coupon._to_json() if latest_coupon else None
         latest_coupon = latest_coupon._to_json() if latest_coupon else None
         first_coupon = first_coupon._to_json() if first_coupon else None
-        latest_coupon["coupon_name"] = coupon["name"] if coupon else None
+        if latest_coupon:
+            latest_coupon["coupon_name"] = coupon["name"] if coupon else None
         return latest_coupon, first_coupon, coupons
 
     @staticmethod
@@ -77,7 +78,8 @@ class UserService:
         coupon = latest_coupon.coupon._to_json() if latest_coupon else None
         latest_coupon = latest_coupon._to_json() if latest_coupon else None
         first_coupon = first_coupon._to_json() if first_coupon else None
-        latest_coupon["coupon_name"] = coupon["name"] if coupon else None
+        if latest_coupon:
+            latest_coupon["coupon_name"] = coupon["name"] if coupon else None
         return first_coupon, latest_coupon
 
     @staticmethod
