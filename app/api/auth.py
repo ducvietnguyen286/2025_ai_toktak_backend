@@ -187,6 +187,18 @@ class APIMe(Resource):
                 last_activated=datetime.now(),
             )
 
+            level = user_login.level
+            total_link = UserService.get_user_links(user_login.id)
+
+            if level != len(total_link):
+                level = len(total_link)
+                level_info = get_level_images(level)
+                user_login = AuthService.update(
+                    user_login.id,
+                    level=level,
+                    level_info=json.dumps(level_info),
+                )
+
             current_datetime = datetime.now()
             if (
                 user_login.subscription_expired
