@@ -517,68 +517,6 @@ class APIUpdateTemplateVideoUser(Resource):
             ).to_dict()
 
 
-@ns.route("/test-create-video/<int:id>")
-class APITestCreateVideo(Resource):
-
-    def post(self, id):
-        try:
-            post = PostService.find_post(id)
-            batch = BatchService.find_batch(post.batch_id)
-            data = json.loads(batch.content)
-            images = data.get("images", [])
-
-            thumbnails = batch.thumbnails
-
-            need_count = 5
-
-            process_images = json.loads(thumbnails)
-            if process_images and len(process_images) < need_count:
-                current_length = len(process_images)
-                need_length = need_count - current_length
-                process_images = process_images + images[:need_length]
-            elif process_images and len(process_images) >= need_count:
-                process_images = process_images[:need_count]
-            else:
-                process_images = images
-                process_images = process_images[:need_count]
-
-            response = None
-            captions = []
-            response = call_chatgpt_create_caption(process_images, data, post.id)
-            if response:
-                parse_caption = json.loads(response)
-                parse_response = parse_caption.get("response", {})
-
-                captions = parse_response.get("captions", [])
-
-                video_path = MakerVideo().make_video_with_moviepy(
-                    process_images, captions
-                )
-
-                visual_path_1 = os.path.join(os.getcwd(), "uploads", "visual_1.mp4")
-                visual_path_2 = os.path.join(os.getcwd(), "uploads", "visual_2.mp4")
-
-                merged_video_path = MakerVideo().merge_videos(
-                    [visual_path_1, video_path, visual_path_2]
-                )
-
-            return Response(
-                data={
-                    "video_path": video_path,
-                    "merged_video_path": merged_video_path,
-                },
-                message="비디오 생성이 성공적으로 완료되었습니다.",
-            ).to_dict()
-        except Exception as e:
-            traceback.print_exc()
-            logger.error("Exception: {0}".format(str(e)))
-            return Response(
-                message="Tạo video that bai",
-                status=200,
-                code=201,
-            ).to_dict()
-
-
 @ns.route("/make-post/<int:id>")
 class APIMakePost(Resource):
 
@@ -810,14 +748,14 @@ class APIMakePost(Resource):
                     blog_images = process_images
                     blog_images = blog_images[:need_count]
 
-                response = call_chatgpt_create_blog(blog_images, data, post.id)
+                response = call_chatgpt_create_blog(process_images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
                     parse_response = parse_caption.get("response", {})
                     docx_title = parse_response.get("title", "")
                     docx_content = parse_response.get("docx_content", "")
                     res_docx = DocxMaker().make(
-                        docx_title, docx_content, blog_images, batch_id=batch_id
+                        docx_title, docx_content, process_images, batch_id=batch_id
                     )
 
                     docx_url = res_docx.get("docx_url", "")
