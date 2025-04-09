@@ -41,7 +41,6 @@ class AliExpressScraper:
             # file_html = open("demo.html", "w", encoding="utf-8")
             # file_html.write(response.content.decode("utf-8"))
             # file_html.close()
-            logger.info("Unshortend URL AFTER: {0}".format(response.url))
 
             # logger.info("Unshortend Text: {0}".format(response.content))
             # print(response)
@@ -53,6 +52,7 @@ class AliExpressScraper:
                         ._replace(path=redirect_url)
                         .geturl()
                     )
+                logger.info("Unshortend URL AFTER: {0}".format(redirect_url))
                 return redirect_url
             else:
                 return url
