@@ -82,6 +82,7 @@ class APICheckCreateBatch(Resource):
         if current_user.batch_remain == 0:
             if (
                 current_user.subscription == "FREE"
+                and current_user.batch_of_month
                 and current_month != current_user.batch_of_month
             ):
                 current_user.batch_total += const.LIMIT_BATCH[current_user.subscription]
@@ -132,6 +133,7 @@ class APICreateBatch(Resource):
     )
     def post(self, args):
         is_advance = args.get("is_advance", False)
+        current_month = time.strftime("%Y-%m", time.localtime())
         # verify_jwt_in_request(optional=True)
         user_id_login = 0
         current_user = AuthService.get_current_identity() or None
@@ -146,11 +148,65 @@ class APICreateBatch(Resource):
             ):
                 batch_type = const.TYPE_PRO
 
+            if is_advance and current_user.subscription == "FREE":
+                return Response(
+                    message="쿠폰을 입력하여 계속 진행하십시오.",
+                    code=201,
+                ).to_dict()
+
+            if current_user.subscription == "FREE":
+                today_used = redis_client.get(f"toktak:users:free:used:{user_id_login}")
+                if today_used:
+                    return Response(
+                        message="⚠️ 콘텐츠 생성 한도를 초과했어요!",
+                        data={
+                            "error_message": "🚫 더 이상 콘텐츠를 생성할 수 없습니다."
+                        },
+                        code=201,
+                    ).to_dict()
+
+            if current_user.batch_remain == 0:
+                if (
+                    current_user.subscription == "FREE"
+                    and current_user.batch_of_month
+                    and current_month != current_user.batch_of_month
+                ):
+                    current_user.batch_total += const.LIMIT_BATCH[
+                        current_user.subscription
+                    ]
+                    current_user.batch_remain += const.LIMIT_BATCH[
+                        current_user.subscription
+                    ]
+                    current_user.batch_of_month = current_month
+                    current_user.save()
+                else:
+                    return Response(
+                        message="⚠️ 콘텐츠 생성 한도를 초과했어요!",
+                        data={
+                            "error_message": "🚫 더 이상 콘텐츠를 생성할 수 없습니다."
+                        },
+                        code=201,
+                    ).to_dict()
+
             redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
+
+            current_remain = redis_client.get(redis_user_batch_key)
+            if current_remain:
+                current_remain = int(current_remain)
+                if current_remain <= 0:
+                    return Response(
+                        message="⚠️ 콘텐츠 생성 한도를 초과했어요!",
+                        data={
+                            "error_message": "🚫 더 이상 콘텐츠를 생성할 수 없습니다."
+                        },
+                        code=201,
+                    ).to_dict()
 
             redis_client.set(
                 redis_user_batch_key, current_user.batch_remain - 1, ex=180
             )
+            current_user.batch_of_month = current_month
+            current_user.save()
 
         try:
             url = args.get("url", "")
