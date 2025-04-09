@@ -253,6 +253,10 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
                 <p><img src="IMAGE_URL_1" alt="{name}"></p>
                 <p>제품을 구매하는 방법과 판매처 정보</p>
                 <p><img src="IMAGE_URL_2" alt="{name}"></p>...etc
+                <p>제품을 구매하는 방법과 판매처 정보</p>
+                <p><img src="IMAGE_URL_3" alt="{name}"></p>...etc
+                <p>제품을 구매하는 방법과 판매처 정보</p>
+                <p><img src="IMAGE_URL_4" alt="{name}"></p>...etc
                 <p>{base_url} <br> #hashtag1 #hashtag2 #hashtag3</p>"
 }
 """
