@@ -267,11 +267,6 @@ class APICreateBatch(Resource):
                 current_user.batch_remain -= 1
                 current_user.save()
 
-                time_to_end_of_day = (
-                    datetime.datetime.combine(datetime.date.today(), datetime.time.max)
-                    - datetime.datetime.now()
-                ).total_seconds() + 1
-
                 time_to_end_of_day = int(
                     (
                         datetime.datetime.combine(
