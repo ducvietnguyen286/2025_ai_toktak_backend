@@ -16,3 +16,5 @@ class CouponCode(db.Model, BaseModel):
     num_days = db.Column(db.Integer, default=const.DATE_EXPIRED)
     used_at = db.Column(db.DateTime)
     used_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    coupon = db.relationship("Coupon", foreign_keys=[coupon_id], lazy="joined")

@@ -1,3 +1,4 @@
+from app.models.coupon_code import CouponCode
 from app.models.user import User
 from app.models.user_link import UserLink
 from datetime import datetime, timedelta
@@ -11,6 +12,73 @@ import const
 
 
 class UserService:
+
+    @staticmethod
+    def get_user_coupons(user_id):
+        list_coupons = (
+            CouponCode.query.filter(
+                CouponCode.is_active == 1, CouponCode.used_by == user_id
+            )
+            .order_by(CouponCode.used_at.desc())
+            .all()
+        )
+        coupons = []
+        for coupon in list_coupons:
+            coupon_dict = coupon.coupon._to_json()
+            coupon_code = coupon._to_json()
+            coupon_code["coupon_name"] = coupon_dict["name"]
+            coupons.append(coupon_code)
+
+        first_coupon = (
+            CouponCode.query.filter(
+                CouponCode.is_active == 1,
+                CouponCode.used_by == user_id,
+                CouponCode.expired_at >= datetime.now(),
+            )
+            .order_by(CouponCode.used_at.asc())
+            .first()
+        )
+
+        latest_coupon = (
+            CouponCode.query.filter(
+                CouponCode.is_active == 1,
+                CouponCode.used_by == user_id,
+                CouponCode.expired_at >= datetime.now(),
+            )
+            .order_by(CouponCode.used_at.desc())
+            .first()
+        )
+        coupon = latest_coupon.coupon._to_json() if latest_coupon else None
+        latest_coupon = latest_coupon._to_json() if latest_coupon else None
+        first_coupon = first_coupon._to_json() if first_coupon else None
+        latest_coupon["coupon_name"] = coupon["name"] if coupon else None
+        return latest_coupon, first_coupon, coupons
+
+    @staticmethod
+    def get_latest_coupon(user_id):
+        first_coupon = (
+            CouponCode.query.filter(
+                CouponCode.is_active == 1,
+                CouponCode.used_by == user_id,
+                CouponCode.expired_at >= datetime.now(),
+            )
+            .order_by(CouponCode.used_at.asc())
+            .first()
+        )
+        latest_coupon = (
+            CouponCode.query.filter(
+                CouponCode.is_active == 1,
+                CouponCode.used_by == user_id,
+                CouponCode.expired_at >= datetime.now(),
+            )
+            .order_by(CouponCode.used_at.desc())
+            .first()
+        )
+        coupon = latest_coupon.coupon._to_json() if latest_coupon else None
+        latest_coupon = latest_coupon._to_json() if latest_coupon else None
+        first_coupon = first_coupon._to_json() if first_coupon else None
+        latest_coupon["coupon_name"] = coupon["name"] if coupon else None
+        return first_coupon, latest_coupon
 
     @staticmethod
     def find_user(id):
