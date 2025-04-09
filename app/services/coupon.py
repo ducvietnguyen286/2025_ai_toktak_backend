@@ -8,6 +8,8 @@ import string
 from app.extensions import redis_client, db
 from sqlalchemy.orm import Session, aliased
 
+from app.lib.logger import logger
+
 BATCH_SIZE = 1000
 
 
@@ -127,20 +129,18 @@ class CouponService:
             coupon_query = coupon_query.offset((page - 1) * limit).limit(limit)
 
         coupons = coupon_query.all()
-        coupons = [coupon._to_json() for coupon in coupons]
+        coupons = [coupon.to_dict() for coupon in coupons]
         return coupons, total_coupons
 
     @staticmethod
     def get_coupon_codes(query_params={}):
-        # Alias bảng User để tránh xung đột trong join
-        user_alias = aliased(User)
-
-        # Tạo query với LEFT JOIN giữa CouponCode và User
-        code_query = db.session.query(
-            CouponCode, user_alias.username, user_alias.name, user_alias.email
-        ).outerjoin(
-            user_alias, CouponCode.used_by == user_alias.id
-        )  # LEFT JOIN
+        code_query = CouponCode.query
+        
+        if "type_coupon" in query_params and query_params["type_coupon"]:
+            code_query = code_query.join(Coupon).filter(
+                Coupon.type == query_params["type_coupon"]
+            )
+        
 
         # Áp dụng các bộ lọc nếu có
         if "code" in query_params and query_params["code"]:
@@ -212,9 +212,8 @@ class CouponService:
 
         # Xử lý kết quả truy vấn
         coupon_codes = []
-        for coupon_code, username, name, email in code_query.all():
-            data = coupon_code._to_json()
-            data.update({"username": username, "name": name, "email": email})
+        for coupon_code in code_query.all():
+            data = coupon_code.to_dict()
             coupon_codes.append(data)
 
         return coupon_codes, total_codes
