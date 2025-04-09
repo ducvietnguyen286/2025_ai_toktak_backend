@@ -72,73 +72,89 @@ class APIUsedCoupon(Resource):
                 code=201,
             ).to_dict()
 
-        session = Session(bind=db.engine)
-        try:
-            coupon.used += 1
-            coupon.save()
+        coupon_code = CouponService.find_coupon_code(code)
 
-            coupon_code = CouponService.find_coupon_code(code)
-            coupon_code.is_used = True
-            coupon_code.used_by = current_user.id
-            coupon_code.used_at = datetime.datetime.now()
-            coupon_code.save()
+        result = None
 
-            if coupon.type == "DISCOUNT":
-                pass
-            elif coupon.type == "SUB_STANDARD" or coupon.type == "SUB_STANDARD_2":
-                value_coupon = coupon_code.value if coupon_code.value else 30
+        coupon.expunge()
+        coupon_code.expunge()
+        current_user.expunge()
 
-                current_user.batch_total += value_coupon
-                current_user.batch_remain += value_coupon
-                if coupon.type == "SUB_STANDARD_2":
-                    current_user.batch_no_limit_sns = 1
-                else:
-                    current_user.batch_sns_remain += value_coupon * 2
-                    current_user.batch_sns_total += value_coupon * 2
+        with Session(bind=db.engine) as session:
+            try:
+                with session.begin():
+                    coupon.used += 1
 
-                current_user.subscription = "STANDARD"
-                if coupon_code.expired_at:
-                    current_user.subscription_expired = coupon_code.expired_at.replace(
-                        hour=23, minute=59, second=59
-                    )
-                else:
-                    expired_at = datetime.datetime.now() + datetime.timedelta(
-                        days=coupon_code.num_days
-                    )
-                    end_of_expired_at = expired_at.replace(
-                        hour=23, minute=59, second=59
-                    )
-                    current_user.subscription_expired = end_of_expired_at
+                    coupon_code.is_used = True
+                    coupon_code.used_by = current_user.id
+                    coupon_code.used_at = datetime.datetime.now()
 
-                current_user.save()
-                current_user_id = current_user.id
-                redis_user_batch_key = f"toktak:users:batch_remain:{current_user_id}"
-                redis_user_batch_sns_key = (
-                    f"toktak:users:batch_sns_remain:{current_user_id}"
-                )
-                redis_client.delete(redis_user_batch_key)
-                redis_client.delete(redis_user_batch_sns_key)
+                    if coupon.type == "DISCOUNT":
+                        pass
+                    elif (
+                        coupon.type == "SUB_STANDARD" or coupon.type == "SUB_STANDARD_2"
+                    ):
+                        value_coupon = coupon_code.value if coupon_code.value else 30
 
-            elif coupon.type == "SUB_PREMIUM":
-                pass
-            elif coupon.type == "SUB_PRO":
-                pass
+                        if current_user.subscription == "FREE":
+                            current_user.batch_total = value_coupon
+                            current_user.batch_remain = value_coupon
+                        else:
+                            current_user.batch_total += value_coupon
+                            current_user.batch_remain += value_coupon
 
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            traceback.print_exc()
-            print(f"Error: {e}")
-            logger.error(f"Error: {e}")
-            return Response(
-                message="Có lỗi xảy ra khi sử dụng coupon",
-                status=400,
-            ).to_dict()
-        finally:
-            session.close()
+                        if coupon.type == "SUB_STANDARD_2":
+                            current_user.batch_no_limit_sns = 1
+                        else:
+                            if current_user.subscription == "FREE":
+                                current_user.batch_sns_remain = value_coupon * 2
+                                current_user.batch_sns_total = value_coupon * 2
+                            else:
+                                current_user.batch_sns_remain += value_coupon * 2
+                                current_user.batch_sns_total += value_coupon * 2
+
+                        current_user.subscription = "STANDARD"
+                        expired_at = datetime.datetime.now() + datetime.timedelta(
+                            days=coupon_code.num_days
+                        )
+                        end_of_expired_at = expired_at.replace(
+                            hour=23, minute=59, second=59
+                        )
+                        coupon_code.expired_at = end_of_expired_at
+                        current_user.subscription_expired = end_of_expired_at
+
+                        current_user_id = current_user.id
+                        redis_user_batch_key = (
+                            f"toktak:users:batch_remain:{current_user_id}"
+                        )
+                        redis_user_batch_sns_key = (
+                            f"toktak:users:batch_sns_remain:{current_user_id}"
+                        )
+                        redis_client.delete(redis_user_batch_key)
+                        redis_client.delete(redis_user_batch_sns_key)
+
+                    elif coupon.type == "SUB_PREMIUM":
+                        pass
+                    elif coupon.type == "SUB_PRO":
+                        pass
+
+                    coupon = session.merge(coupon)
+                    coupon_code = session.merge(coupon_code)
+                    current_user = session.merge(current_user)
+
+                    result = coupon_code._to_json()
+
+            except Exception as e:
+                traceback.print_exc()
+                print(f"Error: {e}")
+                logger.error(f"Error: {e}")
+                return Response(
+                    message="Có lỗi xảy ra khi sử dụng coupon",
+                    status=400,
+                ).to_dict()
 
         return Response(
-            data=coupon_code._to_json(),
+            data=result,
             message="Sử dụng thành công",
         ).to_dict()
 

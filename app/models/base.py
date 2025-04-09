@@ -81,8 +81,8 @@ class BaseModel:
         db.session.commit()
         return self
 
-    def save_session(self):
-        db.session.add(self)
+    def expunge(self):
+        db.session.expunge(self)
         return self
 
     def update(self, **kwargs):
@@ -94,3 +94,8 @@ class BaseModel:
     def delete(self):
         db.session.delete(self)
         db.session.commit()
+
+    def soft_delete(self):
+        setattr(self, "deleted_at", datetime.now())
+        db.session.commit()
+        return self

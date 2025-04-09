@@ -171,12 +171,12 @@ class AuthService:
 
     @staticmethod
     def deleteAccount(id):
-        UserVideoTemplates.query.filter_by(user_id=id).delete()
-        Post.query.filter_by(user_id=id).delete()
-        Batch.query.filter_by(user_id=id).delete()
-        SocialAccount.query.filter_by(user_id=id).delete()
-        UserLink.query.filter_by(user_id=id).delete()
-        User.query.get(id).delete()
+        # UserVideoTemplates.query.filter_by(user_id=id).delete()
+        # Post.query.filter_by(user_id=id).delete()
+        # Batch.query.filter_by(user_id=id).delete()
+        # SocialAccount.query.filter_by(user_id=id).delete()
+        # UserLink.query.filter_by(user_id=id).delete()
+        User.query.get(id).soft_delete()
         return True
 
     @staticmethod

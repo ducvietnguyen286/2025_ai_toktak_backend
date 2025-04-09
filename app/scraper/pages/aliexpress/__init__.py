@@ -1,11 +1,13 @@
 import hashlib
 import hmac
+from http.cookiejar import CookieJar
 import json
 import os
 import traceback
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import requests
+from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
 from app.services.crawl_data import CrawlDataService
 
@@ -17,93 +19,57 @@ class AliExpressScraper:
     def run(self):
         return self.run_scraper()
 
-    def run_call_api(self):
-        return None
-
-    def sign_api_request(self, api, parameters, secret):
-        sort_dict = sorted(parameters)
-        if "/" in api:
-            parameters_str = "%s%s" % (
-                api,
-                str().join("%s%s" % (key, parameters[key]) for key in sort_dict),
-            )
-        else:
-            parameters_str = str().join(
-                "%s%s" % (key, parameters[key]) for key in sort_dict
-            )
-
-        h = hmac.new(
-            secret.encode(encoding="utf-8"),
-            parameters_str.encode(encoding="utf-8"),
-            digestmod=hashlib.sha256,
-        )
-
-        return h.hexdigest().upper()
-
-    def sign_business_request(self, params, app_secret, sign_method, api_name):
-        """
-        Sinh chữ ký API request dựa theo:
-        1. Sắp xếp các tham số theo thứ tự ASCII của key.
-        2. Nối chuỗi: api_name + (key + value của các tham số nếu không rỗng).
-        3. Tính HMAC-SHA256 của chuỗi đã nối.
-        4. Chuyển kết quả về dạng chuỗi hex in HOA.
-
-        Nếu sử dụng Business Interface, có thể cần thêm:
-            params['method'] = api_name
-        """
-        # Sắp xếp các key
-        sorted_keys = sorted(params.keys())
-
-        # Khởi tạo chuỗi với API name (với System Interface)
-        query = api_name
-        for key in sorted_keys:
-            value = params.get(key)
-            if self.are_not_empty(key, value):
-                query += key + value
-
-        # Sinh chữ ký
-        if sign_method == "sha256":
-            signature_bytes = self.encrypt_hmac_sha256(query, app_secret)
-        else:
-            raise ValueError("Unsupported sign method")
-
-        # Trả về chữ ký dạng hex in hoa
-        return self.byte2hex(signature_bytes)
-
-    def encrypt_hmac_sha256(self, data, secret):
-        """
-        Tính HMAC-SHA256 của dữ liệu với secret.
-        Trả về mảng byte kết quả.
-        """
+    def un_shortend_url(self, url, retry=0):
         try:
-            secret_bytes = secret.encode("utf-8")
-            data_bytes = data.encode("utf-8")
-            signature = hmac.new(secret_bytes, data_bytes, hashlib.sha256).digest()
-            return signature
+            cookie_jar = CookieJar()
+            session = requests.Session()
+            session.cookies = cookie_jar
+            user_agent = generate_desktop_user_agent()
+            headers = {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-encoding": "gzip, deflate, br, zstd",
+                "accept-language": "en",
+                "priority": "u=0, i",
+                "referer": "",
+                "upgrade-insecure-requests": "1",
+                "user-agent": user_agent,
+            }
+            logger.info("Unshortend URL: {0}".format(url))
+            response = session.get(
+                url, allow_redirects=False, headers=headers, timeout=5
+            )
+            # file_html = open("demo.html", "w", encoding="utf-8")
+            # file_html.write(response.content.decode("utf-8"))
+            # file_html.close()
+            logger.info("Unshortend URL AFTER: {0}".format(response.url))
+
+            # logger.info("Unshortend Text: {0}".format(response.content))
+            # print(response)
+            if "Location" in response.headers:
+                redirect_url = response.headers["Location"]
+                if not urlparse(redirect_url).netloc:
+                    redirect_url = (
+                        urlparse("https://ko.aliexpress.com")
+                        ._replace(path=redirect_url)
+                        .geturl()
+                    )
+                return redirect_url
+            else:
+                return url
         except Exception as e:
-            raise Exception(str(e))
-
-    def byte2hex(self, byte_arr):
-        """
-        Chuyển đổi mảng byte sang chuỗi hex in hoa.
-        """
-        return "".join("{:02X}".format(b) for b in byte_arr)
-
-    def are_not_empty(self, key, value):
-        """Kiểm tra key và value không rỗng."""
-        return key is not None and value is not None and key != "" and value != ""
-
-    def generate_sign(self, parameters, api_secret):
-        sorted_params = sorted(parameters.items())
-        sorted_string = "".join(f"{key}{value}" for key, value in sorted_params)
-        sign_string = f"{api_secret}{sorted_string}{api_secret}"
-        md5_hash = hashlib.md5(sign_string.encode("utf-8")).hexdigest().upper()
-        return md5_hash
+            logger.error("Exception: {0}".format(str(e)))
+            traceback.print_exc()
+            if retry < 3:
+                return self.un_shortend_url(url, retry + 1)
+            return url
 
     def run_scraper(self):
         try:
-
-            parsed_url = urlparse(self.url)
+            if "https://s.click.aliexpress.com/" in self.url:
+                request_url = self.un_shortend_url(self.url)
+            else:
+                request_url = self.url
+            parsed_url = urlparse(request_url)
             real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
 
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
