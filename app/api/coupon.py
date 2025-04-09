@@ -103,15 +103,15 @@ class APIUsedCoupon(Resource):
                             current_user.batch_total += value_coupon
                             current_user.batch_remain += value_coupon
 
-                        if coupon.type == "SUB_STANDARD_2":
-                            current_user.batch_no_limit_sns = 1
-                        else:
-                            if current_user.subscription == "FREE":
-                                current_user.batch_sns_remain = value_coupon * 2
-                                current_user.batch_sns_total = value_coupon * 2
-                            else:
-                                current_user.batch_sns_remain += value_coupon * 2
-                                current_user.batch_sns_total += value_coupon * 2
+                            # if coupon.type == "SUB_STANDARD_2":
+                        current_user.batch_no_limit_sns = 1
+                        # else:
+                        #     if current_user.subscription == "FREE":
+                        #         current_user.batch_sns_remain = value_coupon * 2
+                        #         current_user.batch_sns_total = value_coupon * 2
+                        #     else:
+                        #         current_user.batch_sns_remain += value_coupon * 2
+                        #         current_user.batch_sns_total += value_coupon * 2
 
                         current_user.subscription = "STANDARD"
                         expired_at = datetime.datetime.now() + datetime.timedelta(
