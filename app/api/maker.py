@@ -27,6 +27,7 @@ from app.makers.videos import MakerVideo
 from app.scraper import Scraper
 import traceback
 import random
+from app.services.user import UserService
 
 from app.services.batch import BatchService
 from app.services.image_template import ImageTemplateService
@@ -229,6 +230,7 @@ class APICreateBatch(Resource):
             data = Scraper().scraper({"url": url})
             # return data
             if not data:
+
                 NotificationServices.create_notification(
                     user_id=user_id_login,
                     title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
@@ -949,6 +951,7 @@ class APIMakePost(Resource):
 class APIGetBatch(Resource):
 
     def get(self, id):
+        verify_jwt_in_request(optional=True)
         batch = BatchService.find_batch(id)
         if not batch:
             return Response(
@@ -960,6 +963,10 @@ class APIGetBatch(Resource):
 
         batch_res = batch._to_json()
         batch_res["posts"] = posts
+
+        user_login = AuthService.get_current_identity()
+        user_info = UserService.get_user_info_detail(user_login.id)
+        batch_res["user_info"] = user_info
 
         return Response(
             data=batch_res,
