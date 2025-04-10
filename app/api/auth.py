@@ -397,10 +397,6 @@ class APIUserProfile(Resource):
 
             result_coupons = []
 
-            30 / 30
-
-            17 / 30
-
             for coupon in coupons:
                 coupon_value = coupon.get("value", 0)
                 coupon_remain = 0

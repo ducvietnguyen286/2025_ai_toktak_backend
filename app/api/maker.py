@@ -12,6 +12,7 @@ from app.ais.chatgpt import (
     call_chatgpt_create_social,
 )
 from app.decorators import jwt_optional, parameters
+from app.enums.messages import MessageError, MessageSuccess
 from app.lib.caller import get_shorted_link_coupang
 from app.lib.logger import logger
 from app.lib.response import Response
@@ -49,6 +50,81 @@ from flask_jwt_extended import (
 ns = Namespace(name="maker", description="Maker API")
 
 
+def validater_create_batch(current_user, is_advance, url=""):
+    allowed_domains = [
+        "coupang.com",
+        "aliexpress.com",
+        "domeggook.com",
+    ]
+    if url != "" and not any(url in allowed_domains):
+        return Response(
+            message=MessageError.INVALID_URL.value["message"],
+            data={"error_message": MessageError.INVALID_URL.value["error_message"]},
+            code=201,
+        ).to_dict()
+
+    user_id_login = current_user.id
+    if current_user.subscription == "FREE":
+        if is_advance:
+            return Response(
+                message=MessageError.REQUIRED_COUPON.value["message"],
+                data={
+                    "error_message": MessageError.REQUIRED_COUPON.value["error_message"]
+                },
+                code=201,
+            ).to_dict()
+
+        today_used = redis_client.get(f"toktak:users:free:used:{user_id_login}")
+        if today_used:
+            return Response(
+                message=MessageError.WAIT_TOMORROW.value["message"],
+                data={
+                    "error_message": MessageError.WAIT_TOMORROW.value["error_message"]
+                },
+                code=201,
+            ).to_dict()
+
+    current_month = time.strftime("%Y-%m", time.localtime())
+
+    if current_user.batch_remain == 0:
+        if (
+            current_user.subscription == "FREE"
+            and current_user.batch_of_month
+            and current_month != current_user.batch_of_month
+        ):
+            current_user.batch_total += const.LIMIT_BATCH[current_user.subscription]
+            current_user.batch_remain += const.LIMIT_BATCH[current_user.subscription]
+            current_user.batch_of_month = current_month
+            current_user.save()
+        else:
+            return Response(
+                message=MessageError.NO_BATCH_REMAINING.value["message"],
+                data={
+                    "error_message": MessageError.NO_BATCH_REMAINING.value[
+                        "error_message"
+                    ]
+                },
+                code=201,
+            ).to_dict()
+
+    redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
+
+    current_remain = redis_client.get(redis_user_batch_key)
+    if current_remain:
+        current_remain = int(current_remain)
+        if current_remain <= 0:
+            return Response(
+                message=MessageError.NO_BATCH_REMAINING.value["message"],
+                data={
+                    "error_message": MessageError.NO_BATCH_REMAINING.value[
+                        "error_message"
+                    ]
+                },
+                code=201,
+            ).to_dict()
+    return None
+
+
 @ns.route("/check-create-batch")
 class APICheckCreateBatch(Resource):
     @jwt_required()
@@ -61,54 +137,10 @@ class APICheckCreateBatch(Resource):
     )
     def get(self, args):
         is_advance = args.get("is_advance", False)
-        current_month = time.strftime("%Y-%m", time.localtime())
         current_user = AuthService.get_current_identity() or None
-        user_id_login = current_user.id
-        if is_advance and current_user.subscription == "FREE":
-            return Response(
-                message="쿠폰을 입력하여 계속 진행하십시오.",
-                code=201,
-            ).to_dict()
-
-        if current_user.subscription == "FREE":
-            today_used = redis_client.get(f"toktak:users:free:used:{user_id_login}")
-            if today_used:
-                return Response(
-                    message="⚠️ 콘텐츠 생성 한도를 초과했어요!",
-                    data={"error_message": "🚫 더 이상 콘텐츠를 생성할 수 없습니다."},
-                    code=201,
-                ).to_dict()
-
-        if current_user.batch_remain == 0:
-            if (
-                current_user.subscription == "FREE"
-                and current_user.batch_of_month
-                and current_month != current_user.batch_of_month
-            ):
-                current_user.batch_total += const.LIMIT_BATCH[current_user.subscription]
-                current_user.batch_remain += const.LIMIT_BATCH[
-                    current_user.subscription
-                ]
-                current_user.batch_of_month = current_month
-                current_user.save()
-            else:
-                return Response(
-                    message="⚠️ 콘텐츠 생성 한도를 초과했어요!",
-                    data={"error_message": "🚫 더 이상 콘텐츠를 생성할 수 없습니다."},
-                    code=201,
-                ).to_dict()
-
-        redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
-
-        current_remain = redis_client.get(redis_user_batch_key)
-        if current_remain:
-            current_remain = int(current_remain)
-            if current_remain <= 0:
-                return Response(
-                    message="⚠️ 콘텐츠 생성 한도를 초과했어요!",
-                    data={"error_message": "🚫 더 이상 콘텐츠를 생성할 수 없습니다."},
-                    code=201,
-                ).to_dict()
+        errors = validater_create_batch(current_user, is_advance)
+        if errors:
+            return errors
 
         return Response(
             message="Allow Create Batch",
@@ -132,12 +164,17 @@ class APICreateBatch(Resource):
         required=["url"],
     )
     def post(self, args):
+        url = args.get("url", "")
         is_advance = args.get("is_advance", False)
         current_month = time.strftime("%Y-%m", time.localtime())
-        # verify_jwt_in_request(optional=True)
+
         user_id_login = 0
         current_user = AuthService.get_current_identity() or None
         batch_type = const.TYPE_NORMAL
+
+        errors = validater_create_batch(current_user, is_advance, url)
+        if errors:
+            return errors
 
         if current_user:
             user_id_login = current_user.id
@@ -148,60 +185,7 @@ class APICreateBatch(Resource):
             ):
                 batch_type = const.TYPE_PRO
 
-            if is_advance and current_user.subscription == "FREE":
-                return Response(
-                    message="쿠폰을 입력하여 계속 진행하십시오.",
-                    code=201,
-                ).to_dict()
-
-            if current_user.subscription == "FREE":
-                today_used = redis_client.get(f"toktak:users:free:used:{user_id_login}")
-                if today_used:
-                    return Response(
-                        message="⚠️ 콘텐츠 생성 한도를 초과했어요!",
-                        data={
-                            "error_message": "🚫 더 이상 콘텐츠를 생성할 수 없습니다."
-                        },
-                        code=201,
-                    ).to_dict()
-
-            if current_user.batch_remain == 0:
-                if (
-                    current_user.subscription == "FREE"
-                    and current_user.batch_of_month
-                    and current_month != current_user.batch_of_month
-                ):
-                    current_user.batch_total += const.LIMIT_BATCH[
-                        current_user.subscription
-                    ]
-                    current_user.batch_remain += const.LIMIT_BATCH[
-                        current_user.subscription
-                    ]
-                    current_user.batch_of_month = current_month
-                    current_user.save()
-                else:
-                    return Response(
-                        message="⚠️ 콘텐츠 생성 한도를 초과했어요!",
-                        data={
-                            "error_message": "🚫 더 이상 콘텐츠를 생성할 수 없습니다."
-                        },
-                        code=201,
-                    ).to_dict()
-
             redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
-
-            current_remain = redis_client.get(redis_user_batch_key)
-            if current_remain:
-                current_remain = int(current_remain)
-                if current_remain <= 0:
-                    return Response(
-                        message="⚠️ 콘텐츠 생성 한도를 초과했어요!",
-                        data={
-                            "error_message": "🚫 더 이상 콘텐츠를 생성할 수 없습니다."
-                        },
-                        code=201,
-                    ).to_dict()
-
             redis_client.set(
                 redis_user_batch_key, current_user.batch_remain - 1, ex=180
             )
@@ -209,7 +193,6 @@ class APICreateBatch(Resource):
             current_user.save()
 
         try:
-            url = args.get("url", "")
             voice = args.get("voice", 1)
             narration = args.get("narration", "female")
             if narration == "female":
@@ -220,7 +203,6 @@ class APICreateBatch(Resource):
                 voice = 2
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
-
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
             data = Scraper().scraper({"url": url})
@@ -230,53 +212,29 @@ class APICreateBatch(Resource):
                     user_id=user_id_login,
                     title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
                 )
+
                 redis_client.set(
                     redis_user_batch_key, current_user.batch_remain + 1, ex=180
                 )
 
                 return Response(
-                    message="상품의 URL을 분석할 수 없어요.",
+                    message=MessageError.NO_ANALYZE_URL.value["message"],
+                    data={
+                        "error_message": MessageError.NO_ANALYZE_URL.value[
+                            "error_message"
+                        ]
+                    },
                     code=201,
                 ).to_dict()
 
-            shorten_link = ""
-
-            # if "coupang.com" in url and "link.coupang.com" not in url:
-            #     shorten_link = get_shorted_link_coupang(url)
-            # elif "link.coupang.com" in url:
-            #     shorten_link = url
-
-            # Kiểm tra nếu URL đã tồn tại trong DB
-
-            if should_replace_shortlink(url):
-                origin_hash = hashlib.sha256(url.encode()).hexdigest()
-                existing_entry = ShortenServices.get_short_by_original_url(origin_hash)
-                domain_share_url = "https://s.toktak.ai/"
-                if not existing_entry:
-                    short_code = ShortenServices.make_short_url(url)
-
-                    existing_entry = ShortenServices.create_shorten(
-                        original_url=url,
-                        original_url_hash=origin_hash,
-                        short_code=short_code,
-                    )
-
-                shorten_link = f"{domain_share_url}{existing_entry.short_code}"
-                data["base_url"] = shorten_link
-
-            data["shorten_link"] = shorten_link
+            shorten_link, is_shorted = ShortenServices.shorted_link(url)
+            data["base_url"] = shorten_link
+            data["shorten_link"] = shorten_link if is_shorted else ""
 
             product_name = data.get("name", "")
-
             product_name_cleared = call_chatgpt_clear_product_name(product_name)
             if product_name_cleared:
                 data["name"] = product_name_cleared
-
-            # if is_advance:
-            #     return Response(
-            #         data=data,
-            #         message="상품 정보를 성공적으로 가져왔습니다.",
-            #     ).to_dict()
 
             thumbnail_url = data.get("image", "")
             thumbnails = data.get("thumbnails", [])
@@ -290,13 +248,15 @@ class APICreateBatch(Resource):
 
             template_info = get_template_info(is_advance, is_paid_advertisements)
 
+            data["cleared_images"] = []
+
             batch = BatchService.create_batch(
                 user_id=user_id_login,
                 url=url,
                 shorten_link=shorten_link,
                 thumbnail=thumbnail_url,
                 thumbnails=json.dumps(thumbnails),
-                content="",
+                content=json.dumps(data),
                 type=batch_type,
                 count_post=len(post_types),
                 status=0,
@@ -306,25 +266,6 @@ class APICreateBatch(Resource):
                 is_advance=is_advance,
                 template_info=template_info,
             )
-
-            data["cleared_images"] = []
-            if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
-                images = data.get("images", [])
-
-                non_text_images = ImageMaker.get_only_beauty_images(
-                    images, batch_id=batch.id
-                )
-
-                cleared_images = []
-                for image in non_text_images:
-                    cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(
-                        image, batch_id=batch.id
-                    )
-                    cleared_images.extend(cutout_images)
-                data["cleared_images"] = cleared_images
-
-            batch.content = json.dumps(data)
-            batch.save()
 
             posts = []
             for post_type in post_types:
@@ -341,31 +282,13 @@ class APICreateBatch(Resource):
             batch_res = batch._to_json()
             batch_res["posts"] = posts
 
+            # Save batch for batch-make-image
             batch_id = batch.id
             redis_key = f"batch_info_{batch_id}"
             redis_client.set(redis_key, json.dumps(posts), ex=3600)
 
             if current_user:
-                current_user.batch_remain -= 1
-                current_user.save()
 
-                time_to_end_of_day = int(
-                    (
-                        datetime.datetime.combine(
-                            datetime.date.today(), datetime.time.max
-                        )
-                        - datetime.datetime.now()
-                    ).total_seconds()
-                    + 1
-                )
-
-                redis_client.set(
-                    f"toktak:users:free:used:{user_id_login}",
-                    "1",
-                    ex=time_to_end_of_day,
-                )
-
-                # save config when create
                 if not is_advance:
                     user_template = PostService.get_template_video_by_user_id(
                         user_id_login
@@ -383,16 +306,39 @@ class APICreateBatch(Resource):
                         user_template.id, **data_update_template
                     )
 
+                    current_user.batch_remain -= 1
+                    current_user.save()
+
+                time_to_end_of_day = int(
+                    (
+                        datetime.datetime.combine(
+                            datetime.date.today(), datetime.time.max
+                        )
+                        - datetime.datetime.now()
+                    ).total_seconds()
+                    + 1
+                )
+
+                redis_client.set(
+                    f"toktak:users:free:used:{user_id_login}",
+                    "1",
+                    ex=time_to_end_of_day,
+                )
+
             NotificationServices.create_notification(
                 user_id=user_id_login,
                 batch_id=batch.id,
                 title=f"제품 정보를 성공적으로 가져왔습니다. {url}",
             )
 
+            batch_res["batch_remain"] = current_user.batch_remain if current_user else 0
+            batch_res["batch_total"] = current_user.batch_total if current_user else 0
+
             return Response(
                 data=batch_res,
-                message="제품 정보를 성공적으로 가져왔습니다.",
+                message=MessageSuccess.CREATE_BATCH.value,
             ).to_dict()
+
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
@@ -404,7 +350,10 @@ class APICreateBatch(Resource):
                     redis_user_batch_key, current_user.batch_remain + 1, ex=180
                 )
             return Response(
-                message="상품 정보를 불러올 수 없어요.(Error code : )",
+                message=MessageError.NO_ANALYZE_URL.value["message"],
+                data={
+                    "error_message": MessageError.NO_ANALYZE_URL.value["error_message"]
+                },
                 code=201,
             ).to_dict()
 
@@ -422,17 +371,17 @@ class APIBatchMakeImage(Resource):
     def post(self, args):
         try:
             batch_id = args.get("batch_id", 0)
-
-            batch_detail = BatchService.find_batch(batch_id)
-            if not batch_detail:
-                return Response(
-                    message="Batch không tồn tại",
-                    code=201,
-                ).to_dict()
-
-            content = json.loads(batch_detail.content)
-            data = []
             if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
+
+                batch_detail = BatchService.find_batch(batch_id)
+                if not batch_detail:
+                    return Response(
+                        message="Batch không tồn tại",
+                        code=201,
+                    ).to_dict()
+
+                content = json.loads(batch_detail.content)
+
                 images = content["images"] or []
                 cleared_images = []
                 for image in images:
@@ -559,6 +508,30 @@ class APIUpdateTemplateVideoUser(Resource):
             }
             BatchService.update_batch(batch_id, **data_update_batch)
 
+            current_user.batch_remain -= 1
+            current_user.save()
+
+            time_to_end_of_day = int(
+                (
+                    datetime.datetime.combine(datetime.date.today(), datetime.time.max)
+                    - datetime.datetime.now()
+                ).total_seconds()
+                + 1
+            )
+
+            redis_client.set(
+                f"toktak:users:free:used:{user_id_login}",
+                "1",
+                ex=time_to_end_of_day,
+            )
+
+            user_template_data["batch_remain"] = (
+                current_user.batch_remain if current_user else 0
+            )
+            user_template_data["batch_total"] = (
+                current_user.batch_total if current_user else 0
+            )
+
             return Response(
                 data=user_template_data,
                 message="제품 정보를 성공적으로 가져왔습니다.",
@@ -581,9 +554,8 @@ class APIMakePost(Resource):
         properties={},
         required=[],
     )
-    def post(self, id, **kwargs):
+    def post(self, id):
         try:
-            args = kwargs.get("req_args", False)
             verify_jwt_in_request(optional=True)
             current_user_id = 0
             current_user = AuthService.get_current_identity() or None
@@ -770,21 +742,6 @@ class APIMakePost(Resource):
                     mime_type = img_res.get("mime_type", "")
                     maker_images = image_urls
 
-                    # if is_advance:
-
-                    # else:
-                    #     for index, image_url in enumerate(process_images):
-                    #         image_caption = (
-                    #             captions[index] if index < len(captions) else ""
-                    #         )
-                    #         img_res = ImageMaker.save_image_and_write_text(
-                    #             image_url, image_caption, font_size=80
-                    #         )
-                    #         image_url = img_res.get("image_url", "")
-                    #         file_size += img_res.get("file_size", 0)
-                    #         mime_type = img_res.get("mime_type", "")
-                    #         maker_images.append(image_url)
-
                 logger.info(
                     "-------------------- PROCESSED CREATE IMAGES -------------------"
                 )
@@ -864,8 +821,14 @@ class APIMakePost(Resource):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
 
             else:
+                message = {
+                    "video": MessageError.CREATE_POST_VIDEO.value,
+                    "image": MessageError.CREATE_POST_IMAGE.value,
+                    "blog": MessageError.CREATE_POST_BLOG.value,
+                }
+
                 return Response(
-                    message=f"Tạo {type} that bai.!",
+                    message=message[type],
                     status=200,
                     code=201,
                 ).to_dict()
@@ -909,9 +872,9 @@ class APIMakePost(Resource):
                 BatchService.update_batch(batch.id, status=1)
 
             if type == "video":
-                message = "비디오 생성이 성공적으로 완료되었습니다."
+                message = MessageSuccess.CREATE_POST_VIDEO.value
             elif type == "image":
-                message = "🖼 이미지 생성이 완료되었습니다."
+                message = MessageSuccess.CREATE_POST_IMAGE.value
                 NotificationServices.create_notification(
                     user_id=current_user_id,
                     batch_id=batch.id,
@@ -919,7 +882,7 @@ class APIMakePost(Resource):
                 )
 
             elif type == "blog":
-                message = "✍️ 블로그 콘텐츠가 생성되었습니다."
+                message = MessageSuccess.CREATE_POST_BLOG.value
                 NotificationServices.create_notification(
                     user_id=current_user_id,
                     batch_id=batch.id,
@@ -935,9 +898,9 @@ class APIMakePost(Resource):
             traceback.print_exc()
 
             if type == "video":
-                message = "비디오 생성이 성공적으로 완료되었습니다."
+                message = MessageError.CREATE_POST_VIDEO.value
             elif type == "image":
-                message = "⚠️ 이미지 생성에 실패했습니다. 다시 시도해주세요."
+                message = MessageError.CREATE_POST_IMAGE.value
                 NotificationServices.create_notification(
                     user_id=current_user_id,
                     batch_id=batch.id,
@@ -945,7 +908,7 @@ class APIMakePost(Resource):
                 )
 
             elif type == "blog":
-                message = "⚠️ 블로그 생성에 실패했습니다. 다시 시도해주세요."
+                message = MessageError.CREATE_POST_BLOG.value
                 NotificationServices.create_notification(
                     user_id=current_user_id,
                     batch_id=batch.id,

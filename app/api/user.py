@@ -12,6 +12,7 @@ from flask_restx import Namespace, Resource
 import jwt
 import requests
 from app.decorators import parameters
+from app.enums.messages import MessageError
 from app.lib.logger import logger
 from app.lib.response import Response
 from app.extensions import redis_client
@@ -1054,9 +1055,11 @@ class APICheckSNSLink(Resource):
 
             if current_user.subscription == "FREE":
                 return Response(
-                    message="⚠️ 쿠폰 등록 후 업로드를 할 수 있어요!",
+                    message=MessageError.REQUIRED_COUPON.value["message"],
                     data={
-                        "error_message": "🎟️ 참여 방법은 도매꾹 홈페이지 톡탁 이벤트를 확인하세요. 😊"
+                        "error_message": MessageError.REQUIRED_COUPON.value[
+                            "error_message"
+                        ]
                     },
                     code=201,
                 ).to_dict()
@@ -1064,7 +1067,12 @@ class APICheckSNSLink(Resource):
             if batchId:
                 if current_user.batch_remain == 0:
                     return Response(
-                        message="당신은 허용된 수량을 초과하여 생성했습니다.",
+                        message=MessageError.NO_BATCH_REMAINING.value["message"],
+                        data={
+                            "error_message": MessageError.NO_BATCH_REMAINING.value[
+                                "error_message"
+                            ]
+                        },
                         code=201,
                     ).to_dict()
                 if (
@@ -1072,9 +1080,11 @@ class APICheckSNSLink(Resource):
                     and current_user.batch_no_limit_sns == 0
                 ):
                     return Response(
-                        message="⚠️ 쿠폰 등록 후 업로드를 할 수 있어요!",
+                        message=MessageError.REQUIRED_COUPON.value["message"],
                         data={
-                            "error_message": "🎟️ 참여 방법은 도매꾹 홈페이지 톡탁 이벤트를 확인하세요. 😊"
+                            "error_message": MessageError.REQUIRED_COUPON.value[
+                                "error_message"
+                            ]
                         },
                         code=201,
                     ).to_dict()
@@ -1084,9 +1094,11 @@ class APICheckSNSLink(Resource):
                 )
                 if current_batch_sns and int(current_batch_sns) < 2:
                     return Response(
-                        message="⚠️ 쿠폰 등록 후 업로드를 할 수 있어요!",
+                        message=MessageError.REQUIRED_COUPON.value["message"],
                         data={
-                            "error_message": "🎟️ 참여 방법은 도매꾹 홈페이지 톡탁 이벤트를 확인하세요. 😊"
+                            "error_message": MessageError.REQUIRED_COUPON.value[
+                                "error_message"
+                            ]
                         },
                         code=201,
                     ).to_dict()
@@ -1099,7 +1111,7 @@ class APICheckSNSLink(Resource):
 
                 if not active_links:
                     return Response(
-                        message="SNS 연동이 필요해요",
+                        message=MessageError.REQUIRE_LINK.value["message"],
                         code=201,
                     ).to_dict()
 
