@@ -1396,3 +1396,38 @@ class APICopyBlog(Resource):
                 message="업데이트 실패",
                 code=201,
             ).to_dict()
+
+
+
+@ns.route("/create-scraper")
+class APICreateScraper(Resource):
+    @parameters(
+        type="object",
+        properties={
+            "url": {"type": "string"},
+        },
+        required=["url"],
+    )
+    def post(self, args):
+        try:
+            url = args.get("url", "")
+
+            data_scraper = Scraper().scraper({"url": url})
+            logger.error(data_scraper)
+            if not data_scraper:
+                return Response(
+                    message="Khong co data scraper",
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                data=data_scraper,
+                message="Data scraper.",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="상품 정보를 불러올 수 없어요.(Error code : )",
+                code=201,
+            ).to_dict()
