@@ -1123,6 +1123,11 @@ class APICheckSNSLink(Resource):
                 if not active_links:
                     return Response(
                         message=MessageError.REQUIRE_LINK.value["message"],
+                        data={
+                            "error_message": MessageError.REQUIRE_LINK.value[
+                                "error_message"
+                            ]
+                        },
                         code=202,
                     ).to_dict()
 
