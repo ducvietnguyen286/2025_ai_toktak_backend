@@ -37,6 +37,7 @@ class Scraper:
                 "https://apitoktak.voda-play.com/api/v1/maker/create-scraper",
                 "https://scraper.play-tube.net/api/v1/maker/create-scraper",
                 "https://scraper.canvasee.com/api/v1/maker/create-scraper",
+                "https://scraper.bodaplay.ai/api/v1/maker/create-scraper",
             ]
             url = random.choice(urls)
             new_response = Scraper().call_api_and_get_data(url, params)
