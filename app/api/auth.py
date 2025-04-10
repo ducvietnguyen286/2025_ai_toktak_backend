@@ -351,7 +351,11 @@ class APIUserProfile(Resource):
     def get(self):
         try:
             user = AuthService.get_current_identity()
-            if user.deleted_at and (datetime.now() - user.deleted_at).days <= 30:
+            if (
+                user
+                and user.deleted_at
+                and (datetime.now() - user.deleted_at).days <= 30
+            ):
                 return Response(
                     message="시스템에 로그인해주세요.",
                     data={
