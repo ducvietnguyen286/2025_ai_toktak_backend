@@ -575,8 +575,9 @@ class APIMakePost(Resource):
         properties={},
         required=[],
     )
-    def post(self, id):
+    def post(self, id, **kwargs):
         try:
+            args = kwargs.get("req_args", False)
             verify_jwt_in_request(optional=True)
             current_user_id = 0
             current_user = AuthService.get_current_identity() or None
@@ -842,14 +843,14 @@ class APIMakePost(Resource):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
 
             else:
-                message = {
+                message_error = {
                     "video": MessageError.CREATE_POST_VIDEO.value,
                     "image": MessageError.CREATE_POST_IMAGE.value,
                     "blog": MessageError.CREATE_POST_BLOG.value,
                 }
 
                 return Response(
-                    message=message[type],
+                    message=message_error.get(type, ""),
                     status=200,
                     code=201,
                 ).to_dict()
@@ -915,6 +916,7 @@ class APIMakePost(Resource):
                 message=message,
             ).to_dict()
         except Exception as e:
+            print(e)
             logger.error(f"Exception: create {type} that bai  :  {str(e)}")
             traceback.print_exc()
 
