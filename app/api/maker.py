@@ -27,7 +27,6 @@ from app.makers.videos import MakerVideo
 from app.scraper import Scraper
 import traceback
 import random
-from app.services.user import UserService
 
 from app.services.batch import BatchService
 from app.services.image_template import ImageTemplateService
@@ -230,7 +229,6 @@ class APICreateBatch(Resource):
             data = Scraper().scraper({"url": url})
             # return data
             if not data:
-
                 NotificationServices.create_notification(
                     user_id=user_id_login,
                     title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
@@ -951,7 +949,6 @@ class APIMakePost(Resource):
 class APIGetBatch(Resource):
 
     def get(self, id):
-        verify_jwt_in_request(optional=True)
         batch = BatchService.find_batch(id)
         if not batch:
             return Response(
@@ -963,10 +960,6 @@ class APIGetBatch(Resource):
 
         batch_res = batch._to_json()
         batch_res["posts"] = posts
-
-        user_login = AuthService.get_current_identity()
-        user_info = UserService.get_user_info_detail(user_login.id)
-        batch_res["user_info"] = user_info
 
         return Response(
             data=batch_res,
@@ -1401,39 +1394,5 @@ class APICopyBlog(Resource):
             logger.error(f"Exception: Update Blog Fail  :  {str(e)}")
             return Response(
                 message="업데이트 실패",
-                code=201,
-            ).to_dict()
-
-
-@ns.route("/create-scraper")
-class APICreateScraper(Resource):
-    @parameters(
-        type="object",
-        properties={
-            "url": {"type": "string"},
-        },
-        required=["url"],
-    )
-    def post(self, args):
-        try:
-            url = args.get("url", "")
-
-            data_scraper = Scraper().scraper({"url": url})
-            logger.error(data_scraper)
-            if not data_scraper:
-                return Response(
-                    message="Khong co data scraper",
-                    code=201,
-                ).to_dict()
-
-            return Response(
-                data=data_scraper,
-                message="Data scraper.",
-            ).to_dict()
-        except Exception as e:
-            traceback.print_exc()
-            logger.error("Exception: {0}".format(str(e)))
-            return Response(
-                message="상품 정보를 불러올 수 없어요.(Error code : )",
                 code=201,
             ).to_dict()

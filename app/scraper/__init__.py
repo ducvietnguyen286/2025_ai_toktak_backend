@@ -31,7 +31,7 @@ class Scraper:
     def scraper(self, params):
         response = get_page_scraper(params)
         if not response:
-            
+
             urls = [
                 "https://scraper.vodaplay.vn/api/v1/maker/create-scraper",
                 "https://apitoktak.voda-play.com/api/v1/maker/create-scraper",
@@ -39,9 +39,11 @@ class Scraper:
                 "https://scraper.canvasee.com/api/v1/maker/create-scraper",
                 "https://scraper.bodaplay.ai/api/v1/maker/create-scraper",
             ]
-            url = random.choice(urls)
-            new_response = Scraper().call_api_and_get_data(url, params)
-            return new_response
+            for url in urls:
+                new_response = Scraper().call_api_and_get_data(url, params)
+                if new_response:
+                    response = new_response
+                    break
 
         return response
 
