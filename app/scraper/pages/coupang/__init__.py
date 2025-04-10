@@ -279,7 +279,7 @@ class CoupangScraper:
 
     def get_page_html(self, url, count=0, added_headers=None):
         try:
-            if count > 10:
+            if count > 3:
                 return False
 
             cookie_jar = CookieJar()
