@@ -41,8 +41,8 @@ class MessageError(Enum):
     }
 
     REQUIRE_LINK = {
-        "message": "SNS 연동이 필요해요",
-        "error_message": "",
+        "message": "아직 SNS 연결 전이에요😢</br>지금 계정 연동하고 업로드 해보세요!",
+        "error_message": "설정에서 SNS 계정을 먼저 연결해 주세요. 😊",
     }
 
     CREATE_POST_VIDEO = "비디오 생성이 성공적으로 완료되었습니다."

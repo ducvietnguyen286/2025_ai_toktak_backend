@@ -1107,12 +1107,23 @@ class APICheckSNSLink(Resource):
                 PostService.update_post_by_batch_id(batchId, user_id=current_user.id)
 
                 user_links = UserService.get_original_user_links(current_user.id)
-                active_links = [link.link_id for link in user_links if link.status == 1]
+                links = LinkService.get_not_json_links()
+                link_pluck_by_id = {link.id: link for link in links}
+
+                active_links = []
+                for user_link in user_links:
+                    if user_link.link_id not in link_pluck_by_id:
+                        continue
+                    if user_link.status == 0:
+                        continue
+                    link = link_pluck_by_id.get(user_link.link_id)
+                    if link.type != "BLOG_NAVER":
+                        active_links.append(user_link.link_id)
 
                 if not active_links:
                     return Response(
                         message=MessageError.REQUIRE_LINK.value["message"],
-                        code=201,
+                        code=202,
                     ).to_dict()
 
                 batch_detail = BatchService.find_batch(batchId)
