@@ -6,6 +6,7 @@ from app.scraper.pages.shopee import ShopeeScarper
 from urllib.parse import urlparse
 import requests
 from app.lib.logger import logger
+import random
 
 
 def get_page_scraper(params):
@@ -30,7 +31,14 @@ class Scraper:
     def scraper(self, params):
         response = get_page_scraper(params)
         if not response:
-            url = "https://scraper.vodaplay.vn/api/v1/maker/create-scraper"
+            
+            urls = [
+                "https://scraper.vodaplay.vn/api/v1/maker/create-scraper",
+                "https://apitoktak.voda-play.com/api/v1/maker/create-scraper",
+                "https://scraper.play-tube.net/api/v1/maker/create-scraper",
+                "https://scraper.canvasee.com/api/v1/maker/create-scraper",
+            ]
+            url = random.choice(urls)
             new_response = Scraper().call_api_and_get_data(url, params)
             return new_response
 
