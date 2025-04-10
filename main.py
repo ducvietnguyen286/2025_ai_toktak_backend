@@ -31,4 +31,5 @@ def serve_static(filename):
 
 
 if __name__ == "__main__":
-    application.run()
+    is_debug = config_name == "develop"
+    application.run(debug=is_debug)

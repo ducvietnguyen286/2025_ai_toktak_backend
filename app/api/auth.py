@@ -351,7 +351,11 @@ class APIUserProfile(Resource):
     def get(self):
         try:
             user = AuthService.get_current_identity()
-            if user.deleted_at and (datetime.now() - user.deleted_at).days <= 30:
+            if (
+                user
+                and user.deleted_at
+                and (datetime.now() - user.deleted_at).days <= 30
+            ):
                 return Response(
                     message="시스템에 로그인해주세요.",
                     data={
@@ -396,10 +400,6 @@ class APIUserProfile(Resource):
                 subscription_name = "기업형 스탠다드 플랜"
 
             result_coupons = []
-
-            30 / 30
-
-            17 / 30
 
             for coupon in coupons:
                 coupon_value = coupon.get("value", 0)
