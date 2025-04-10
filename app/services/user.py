@@ -251,8 +251,8 @@ class UserService:
 
         used_date_range = ""
         if start_used and last_used:
-            start_used = datetime.datetime.strptime(start_used, "%Y-%m-%dT%H:%M:%SZ")
-            last_used = datetime.datetime.strptime(last_used, "%Y-%m-%dT%H:%M:%SZ")
+            start_used = datetime.strptime(start_used, "%Y-%m-%dT%H:%M:%SZ")
+            last_used = datetime.strptime(last_used, "%Y-%m-%dT%H:%M:%SZ")
             used_date_range = (
                 f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
             )
