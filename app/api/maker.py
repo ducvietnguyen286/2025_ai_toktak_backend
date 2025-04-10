@@ -51,78 +51,96 @@ ns = Namespace(name="maker", description="Maker API")
 
 
 def validater_create_batch(current_user, is_advance, url=""):
-    allowed_domains = [
-        "coupang.com",
-        "aliexpress.com",
-        "domeggook.com",
-    ]
-    if url != "" and not any(url in allowed_domains):
+    try:
+        allowed_domains = [
+            "coupang.com",
+            "aliexpress.com",
+            "domeggook.com",
+        ]
+        if url and url != "":
+            if not any(domain in url for domain in allowed_domains):
+                return Response(
+                    message=MessageError.INVALID_URL.value["message"],
+                    data={
+                        "error_message": MessageError.INVALID_URL.value["error_message"]
+                    },
+                    code=201,
+                ).to_dict()
+
+        user_id_login = current_user.id
+        if current_user.subscription == "FREE":
+            if is_advance:
+                return Response(
+                    message=MessageError.REQUIRED_COUPON.value["message"],
+                    data={
+                        "error_message": MessageError.REQUIRED_COUPON.value[
+                            "error_message"
+                        ]
+                    },
+                    code=201,
+                ).to_dict()
+
+            today_used = redis_client.get(f"toktak:users:free:used:{user_id_login}")
+            if today_used:
+                return Response(
+                    message=MessageError.WAIT_TOMORROW.value["message"],
+                    data={
+                        "error_message": MessageError.WAIT_TOMORROW.value[
+                            "error_message"
+                        ]
+                    },
+                    code=201,
+                ).to_dict()
+
+        current_month = time.strftime("%Y-%m", time.localtime())
+
+        if current_user.batch_remain == 0:
+            if (
+                current_user.subscription == "FREE"
+                and current_user.batch_of_month
+                and current_month != current_user.batch_of_month
+            ):
+                current_user.batch_total += const.LIMIT_BATCH[current_user.subscription]
+                current_user.batch_remain += const.LIMIT_BATCH[
+                    current_user.subscription
+                ]
+                current_user.batch_of_month = current_month
+                current_user.save()
+            else:
+                return Response(
+                    message=MessageError.NO_BATCH_REMAINING.value["message"],
+                    data={
+                        "error_message": MessageError.NO_BATCH_REMAINING.value[
+                            "error_message"
+                        ]
+                    },
+                    code=201,
+                ).to_dict()
+
+        redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
+
+        current_remain = redis_client.get(redis_user_batch_key)
+        if current_remain:
+            current_remain = int(current_remain)
+            if current_remain <= 0:
+                return Response(
+                    message=MessageError.NO_BATCH_REMAINING.value["message"],
+                    data={
+                        "error_message": MessageError.NO_BATCH_REMAINING.value[
+                            "error_message"
+                        ]
+                    },
+                    code=201,
+                ).to_dict()
+        return None
+    except Exception as e:
+        traceback.print_exc()
+        logger.error("Exception: {0}".format(str(e)))
         return Response(
-            message=MessageError.INVALID_URL.value["message"],
-            data={"error_message": MessageError.INVALID_URL.value["error_message"]},
+            message=MessageError.NO_ANALYZE_URL.value["message"],
+            data={"error_message": MessageError.NO_ANALYZE_URL.value["error_message"]},
             code=201,
         ).to_dict()
-
-    user_id_login = current_user.id
-    if current_user.subscription == "FREE":
-        if is_advance:
-            return Response(
-                message=MessageError.REQUIRED_COUPON.value["message"],
-                data={
-                    "error_message": MessageError.REQUIRED_COUPON.value["error_message"]
-                },
-                code=201,
-            ).to_dict()
-
-        today_used = redis_client.get(f"toktak:users:free:used:{user_id_login}")
-        if today_used:
-            return Response(
-                message=MessageError.WAIT_TOMORROW.value["message"],
-                data={
-                    "error_message": MessageError.WAIT_TOMORROW.value["error_message"]
-                },
-                code=201,
-            ).to_dict()
-
-    current_month = time.strftime("%Y-%m", time.localtime())
-
-    if current_user.batch_remain == 0:
-        if (
-            current_user.subscription == "FREE"
-            and current_user.batch_of_month
-            and current_month != current_user.batch_of_month
-        ):
-            current_user.batch_total += const.LIMIT_BATCH[current_user.subscription]
-            current_user.batch_remain += const.LIMIT_BATCH[current_user.subscription]
-            current_user.batch_of_month = current_month
-            current_user.save()
-        else:
-            return Response(
-                message=MessageError.NO_BATCH_REMAINING.value["message"],
-                data={
-                    "error_message": MessageError.NO_BATCH_REMAINING.value[
-                        "error_message"
-                    ]
-                },
-                code=201,
-            ).to_dict()
-
-    redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
-
-    current_remain = redis_client.get(redis_user_batch_key)
-    if current_remain:
-        current_remain = int(current_remain)
-        if current_remain <= 0:
-            return Response(
-                message=MessageError.NO_BATCH_REMAINING.value["message"],
-                data={
-                    "error_message": MessageError.NO_BATCH_REMAINING.value[
-                        "error_message"
-                    ]
-                },
-                code=201,
-            ).to_dict()
-    return None
 
 
 @ns.route("/check-create-batch")
@@ -167,36 +185,39 @@ class APICreateBatch(Resource):
         url = args.get("url", "")
         is_advance = args.get("is_advance", False)
         current_month = time.strftime("%Y-%m", time.localtime())
-
-        user_id_login = 0
         current_user = AuthService.get_current_identity() or None
-        batch_type = const.TYPE_NORMAL
 
-        errors = validater_create_batch(current_user, is_advance, url)
-        if errors:
-            return errors
-
-        if current_user:
-            user_id_login = current_user.id
-
-            if (
-                current_user.subscription != "FREE"
-                and current_user.subscription_expired >= datetime.datetime.now()
-            ):
-                batch_type = const.TYPE_PRO
-
-            redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
-            redis_client.set(
-                redis_user_batch_key, current_user.batch_remain - 1, ex=180
-            )
-            current_user.batch_of_month = current_month
-            current_user.save()
+        user_id_login = current_user.id if current_user else 0
 
         try:
+            user_id_login = 0
+            current_user = AuthService.get_current_identity() or None
+            batch_type = const.TYPE_NORMAL
+
+            errors = validater_create_batch(current_user, is_advance, url)
+            if errors:
+                return errors
+
+            if current_user:
+                user_id_login = current_user.id
+
+                if (
+                    current_user.subscription != "FREE"
+                    and current_user.subscription_expired >= datetime.datetime.now()
+                ):
+                    batch_type = const.TYPE_PRO
+
+                redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
+                redis_client.set(
+                    redis_user_batch_key, current_user.batch_remain - 1, ex=180
+                )
+                current_user.batch_of_month = current_month
+                current_user.save()
+
             voice = args.get("voice", 1)
             narration = args.get("narration", "female")
             if narration == "female":
-                #voice = random.randint(3, 4)
+                # voice = random.randint(3, 4)
                 voice = 3
             else:
                 # voice = random.randint(1, 2)
@@ -206,7 +227,7 @@ class APICreateBatch(Resource):
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
             data = Scraper().scraper({"url": url})
-
+            return data
             if not data:
                 NotificationServices.create_notification(
                     user_id=user_id_login,
@@ -1354,7 +1375,9 @@ class APICopyBlog(Resource):
         try:
             blog_id = args.get("blog_id", "")
             message = "블로그 업데이트 성공"
-            post = PostService.update_post(blog_id, status=const.UPLOADED , status_sns=const.UPLOADED)
+            post = PostService.update_post(
+                blog_id, status=const.UPLOADED, status_sns=const.UPLOADED
+            )
             if not post:
                 return Response(
                     message="업데이트 실패",
