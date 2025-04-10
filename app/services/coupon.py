@@ -147,6 +147,11 @@ class CouponService:
             code_query = code_query.filter(
                 CouponCode.code.ilike(f"%{query_params['code']}%")
             )
+        if "type_use_coupon" in query_params and query_params["type_use_coupon"] and query_params["type_use_coupon"] !="":
+            code_query = code_query.filter(
+                CouponCode.is_used == query_params["type_use_coupon"]
+            )
+            
         if "coupon_id" in query_params and query_params["coupon_id"]:
             code_query = code_query.filter(
                 CouponCode.coupon_id == query_params["coupon_id"]
