@@ -291,6 +291,8 @@ class CoupangScraper:
             mobile_user_agent = generate_user_agent()
             headers.update({"user-agent": mobile_user_agent})
 
+            print("headers", headers)
+
             response = session.get(url, headers=headers, timeout=5)
             info = response.content
             html = BeautifulSoup(info, "html.parser")
