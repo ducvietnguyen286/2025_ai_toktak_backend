@@ -31,7 +31,7 @@ class Scraper:
     def scraper(self, params):
         response = get_page_scraper(params)
         if not response:
-            
+
             urls = [
                 "https://scraper.vodaplay.vn/api/v1/maker/create-scraper",
                 "https://apitoktak.voda-play.com/api/v1/maker/create-scraper",
