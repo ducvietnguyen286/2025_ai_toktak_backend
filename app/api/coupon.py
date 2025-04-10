@@ -185,6 +185,7 @@ class APICreateCoupon(Resource):
             # "white_lists": {"type": "array", "items": {"type": ["string", "null"]}},
             "description": {"type": ["string", "null"]},
             "expired": {"type": ["string", "null"]},
+            "expired_from": {"type": ["string", "null"]},
         },
         required=["name", "max_used"],
     )
@@ -193,6 +194,23 @@ class APICreateCoupon(Resource):
         image = args.get("image", "")
         name = args.get("name", "")
         type = args.get("type", "SUB_STANDARD")
+        try:
+            expired_from = datetime.datetime.strptime(
+                args.get("expired_from", ""), "%Y-%m-%d"
+            ).date()  
+        except ValueError:
+            expired_from = None
+        try:
+            expired = datetime.datetime.strptime(
+                args.get("expired", ""), "%Y-%m-%d"
+            ).date()  
+            expired = datetime.datetime.combine(expired, datetime.time(23, 59, 59))
+        except ValueError:
+            expired = None
+        
+        print(expired_from)
+        print(expired)
+
         max_used = int(args.get("max_used", 1)) if args.get("max_used") else 1
         num_days = (
             int(args.get("num_days", const.DATE_EXPIRED))
@@ -203,11 +221,7 @@ class APICreateCoupon(Resource):
         is_has_whitelist = args.get("is_has_whitelist", False)
         white_lists = args.get("white_lists", [])
         description = args.get("description", "")
-        expired = args.get("expired", None)
-        if expired:
-            expired = datetime.datetime.strptime(expired, "%Y-%m-%dT%H:%M:%SZ")
-        else:
-            expired = datetime.datetime.now() + datetime.timedelta(days=30)
+        
         coupon = CouponService.create_coupon(
             image=image,
             name=name,
@@ -218,6 +232,7 @@ class APICreateCoupon(Resource):
             white_lists=json.dumps(white_lists),
             description=description,
             expired=expired,
+            expired_from=expired_from,
             created_by=current_user.id,
             # number_expired=number_expired,
         )
@@ -495,6 +510,7 @@ class APIListCouponCodes(Resource):
             "used_by": {"type": ["string", "null"]},
             "from_used_at": {"type": "string"},
             "to_used_at": {"type": "string"},
+            "type_coupon": {"type": ["string", "null"]},
             "page": {"type": ["string", "null"]},
             "limit": {"type": ["string", "null"]},
             "type_order": {"type": "string"},
@@ -513,6 +529,7 @@ class APIListCouponCodes(Resource):
         used_by = args.get("used_by", None)
         from_used_at = args.get("from_used_at", None)
         to_used_at = args.get("to_used_at", None)
+        type_coupon = args.get("type_coupon", None)
         page = int(args.get("page", 1)) if args.get("page") else 1
         limit = int(args.get("per_page", 10)) if args.get("per_page") else 10
         type_order = args.get("type_order", "id_desc")
@@ -558,6 +575,7 @@ class APIListCouponCodes(Resource):
             "used_by": used_by,
             "from_used_at": from_used_at,
             "to_used_at": to_used_at,
+            "type_coupon": type_coupon,
             "page": page,
             "limit": limit,
             "type_order": type_order,

@@ -196,9 +196,11 @@ class APICreateBatch(Resource):
             voice = args.get("voice", 1)
             narration = args.get("narration", "female")
             if narration == "female":
-                voice = random.randint(3, 4)
+                #voice = random.randint(3, 4)
+                voice = 3
             else:
-                voice = random.randint(1, 2)
+                # voice = random.randint(1, 2)
+                voice = 2
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -1352,7 +1354,7 @@ class APICopyBlog(Resource):
         try:
             blog_id = args.get("blog_id", "")
             message = "블로그 업데이트 성공"
-            post = PostService.update_post(blog_id, status=const.UPLOADED)
+            post = PostService.update_post(blog_id, status=const.UPLOADED , status_sns=const.UPLOADED)
             if not post:
                 return Response(
                     message="업데이트 실패",
