@@ -227,3 +227,38 @@ class UserService:
             db.session.rollback()
             return 0
         return 1
+
+    def get_user_info_detail(user_id):
+        user_login = User.query.get(user_id)
+        if not user_login:
+            return None
+
+        subscription_name = user_login.subscription
+        if user_login.subscription == "FREE":
+            subscription_name = "무료 체험"
+        elif user_login.subscription == "STANDARD":
+            subscription_name = "기업형 스탠다드 플랜"
+
+        first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
+
+        start_used = None
+        if first_coupon:
+            start_used = first_coupon.get("used_at")
+        elif latest_coupon:
+            start_used = latest_coupon.get("used_at")
+
+        last_used = latest_coupon.get("expired_at") if latest_coupon else None
+
+        used_date_range = ""
+        if start_used and last_used:
+            start_used = datetime.datetime.strptime(start_used, "%Y-%m-%dT%H:%M:%SZ")
+            last_used = datetime.datetime.strptime(last_used, "%Y-%m-%dT%H:%M:%SZ")
+            used_date_range = (
+                f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
+            )
+
+        user_dict = user_login._to_json()
+        user_dict["subscription_name"] = subscription_name
+        user_dict["latest_coupon"] = latest_coupon
+        user_dict["used_date_range"] = used_date_range
+        return user_dict
