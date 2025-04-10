@@ -17,10 +17,10 @@ from app.services.crawl_data import CrawlDataService
 class CoupangScraper:
     def __init__(self, params):
         self.url = params["url"]
-        self.fire_crawl_key = "fc-9417ebea76774389980d7a404898bba9"
+        self.fire_crawl_key = ""
 
     def run(self):
-        return self.run_fire_crawler()
+        return self.run_crawler()
 
     def run_fire_crawler(self):
         try:
