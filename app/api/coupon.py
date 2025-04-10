@@ -501,7 +501,7 @@ class APIListCouponCodes(Resource):
         properties={
             "coupon_id": {"type": ["string", "null"]},
             "code": {"type": "string"},
-            "is_used": {"type": "boolean"},
+            "is_used": {"type": ["string", "null"]},
             "is_active": {"type": "boolean"},
             "from_created_at": {"type": "string"},
             "to_created_at": {"type": "string"},
@@ -511,6 +511,7 @@ class APIListCouponCodes(Resource):
             "from_used_at": {"type": "string"},
             "to_used_at": {"type": "string"},
             "type_coupon": {"type": ["string", "null"]},
+            "type_use_coupon": {"type": ["string", "null"]},
             "page": {"type": ["string", "null"]},
             "limit": {"type": ["string", "null"]},
             "type_order": {"type": "string"},
@@ -528,8 +529,8 @@ class APIListCouponCodes(Resource):
         to_expired = args.get("to_expired", None)
         used_by = args.get("used_by", None)
         from_used_at = args.get("from_used_at", None)
-        to_used_at = args.get("to_used_at", None)
-        type_coupon = args.get("type_coupon", None)
+        to_used_at = args.get("to_used_at", None) 
+        type_use_coupon = args.get("type_use_coupon", None)
         page = int(args.get("page", 1)) if args.get("page") else 1
         limit = int(args.get("per_page", 10)) if args.get("per_page") else 10
         type_order = args.get("type_order", "id_desc")
@@ -556,8 +557,10 @@ class APIListCouponCodes(Resource):
             to_used_at = datetime.datetime.strptime(to_used_at, "%Y-%m-%dT%H:%M:%SZ")
         if coupon_id:
             coupon_id = int(coupon_id)
+            
         if is_used:
             is_used = bool(is_used)
+        
         if is_active:
             is_active = bool(is_active)
         if used_by:
@@ -574,8 +577,8 @@ class APIListCouponCodes(Resource):
             "to_expired": to_expired,
             "used_by": used_by,
             "from_used_at": from_used_at,
-            "to_used_at": to_used_at,
-            "type_coupon": type_coupon,
+            "to_used_at": to_used_at, 
+            "type_use_coupon": type_use_coupon,
             "page": page,
             "limit": limit,
             "type_order": type_order,
