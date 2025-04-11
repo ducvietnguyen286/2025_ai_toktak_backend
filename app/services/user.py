@@ -92,9 +92,11 @@ class UserService:
         return [user._to_json() for user in users]
 
     @staticmethod
-    def update_user(id, *args):
+    def update_user(id, *args, **kwargs):
         user = User.query.get(id)
-        user.update(*args)
+        if not user:
+            return None
+        user.update(**kwargs)
         return user
 
     @staticmethod
