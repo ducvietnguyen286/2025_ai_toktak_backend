@@ -1,7 +1,7 @@
 # coding: utf8
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
-from app.decorators import parameters
+from app.decorators import parameters ,admin_required
 from app.lib.response import Response
 from app.services.user import UserService
 from datetime import datetime
@@ -58,6 +58,7 @@ class APIAdminLoginByInput(Resource):
 class APIUsers(Resource):
 
     @jwt_required()
+    @admin_required()
     def get(self):
         page = request.args.get("page", const.DEFAULT_PAGE, type=int)
         per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
@@ -88,6 +89,7 @@ class APIUsers(Resource):
 @ns.route("/delete_user")
 class APIDeleteUser(Resource):
     @jwt_required()
+    @admin_required()
     @parameters(
         type="object",
         properties={
@@ -127,6 +129,7 @@ class APIDeleteUser(Resource):
             return Response(
                 message=message,
                 code=200,
+                data=id_list
             ).to_dict()
 
         except Exception as e:

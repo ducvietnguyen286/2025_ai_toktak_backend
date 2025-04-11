@@ -6,7 +6,8 @@ from flask_jwt_extended import verify_jwt_in_request
 from jsonschema import FormatChecker, validate
 from jsonschema.exceptions import ValidationError
 from app.errors.exceptions import BadRequest, Unauthorized
-
+from app.services.auth import AuthService
+from app.lib.response import Response
 
 def jwt_optional(fn):
     @wraps(fn)
@@ -83,3 +84,18 @@ def parameters(**schema):
         return wrapper
 
     return decorated
+
+
+def admin_required():
+    def wrapper(fn):
+        @wraps(fn)
+        def decorator(*args, **kwargs):
+            current_user = AuthService.get_current_identity()
+            if not current_user or getattr(current_user, 'user_type', 0) != 1:
+                return Response(
+                    message="Bạn không có quyền",
+                    code=201,
+                ).to_dict()
+            return fn(*args, **kwargs)
+        return decorator
+    return wrapper
