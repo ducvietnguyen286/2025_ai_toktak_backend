@@ -328,8 +328,8 @@ class APICreateBatch(Resource):
                         user_template.id, **data_update_template
                     )
 
-                    current_user.batch_remain -= 1
-                    current_user.save()
+                    # current_user.batch_remain -= 1
+                    # current_user.save()
 
                 time_to_end_of_day = int(
                     (
@@ -530,8 +530,8 @@ class APIUpdateTemplateVideoUser(Resource):
             }
             BatchService.update_batch(batch_id, **data_update_batch)
 
-            current_user.batch_remain -= 1
-            current_user.save()
+            # current_user.batch_remain -= 1
+            # current_user.save()
 
             time_to_end_of_day = int(
                 (

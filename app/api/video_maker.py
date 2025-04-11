@@ -15,6 +15,7 @@ import time
 import os
 import requests
 from pathlib import Path
+from app.services.user import UserService
 
 ns = Namespace(name="video_maker", description="Video Maker API")
 
@@ -157,6 +158,7 @@ class ShortstackWebhook(Resource):
             video_url = payload.get("url")
             action = payload.get("action")
             render = payload.get("render", "")
+            user_id = 0
 
             # Ghi log thông tin nhận được
             log_webhook_message(f"Received Shotstack webhook: %{payload}")
@@ -169,6 +171,7 @@ class ShortstackWebhook(Resource):
                     post_detail = PostService.find_post(post_id)
                     if post_detail:
                         batch_id = post_detail.batch_id
+                        user_id = post_detail.user_id
                         # PostService.update_post_by_batch_id(batch_id, video_url=video_url)
 
                         if status == "failed":
@@ -193,6 +196,14 @@ class ShortstackWebhook(Resource):
                         video_url=video_url,
                         video_path=file_path,
                     )
+                    print(user_id)
+                    current_user = UserService.find_user(user_id)
+                    
+                    if current_user:
+                        new_batch_remain = max(current_user.batch_remain - 1, 0)
+                        UserService.update_user(user_id, batch_remain=new_batch_remain)
+
+                    # trừ số lần được tạo của người dùng
 
             return {
                 "message": "Webhook received successfully",
@@ -207,7 +218,7 @@ class ShortstackWebhook(Resource):
 
         except Exception as e:
             # Ghi log lỗi kèm stack trace
-            log_webhook_message("Error processing webhook: %s", e)
+            log_webhook_message(f"Error processing webhook: {e}")
             return {"message": "Internal Server Error"}, 500
 
 
