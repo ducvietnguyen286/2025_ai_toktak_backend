@@ -36,6 +36,7 @@ from app.services.video_service import VideoService
 from app.services.shotstack_services import ShotStackService
 from app.services.shorten_services import ShortenServices
 from app.services.notification import NotificationServices
+from app.services.user import UserService
 
 from app.extensions import redis_client
 from flask import request
@@ -960,6 +961,10 @@ class APIGetBatch(Resource):
 
         batch_res = batch._to_json()
         batch_res["posts"] = posts
+        
+        user_login = AuthService.get_current_identity()
+        user_info = UserService.get_user_info_detail(user_login.id)
+        batch_res["user_info"] = user_info
 
         return Response(
             data=batch_res,
