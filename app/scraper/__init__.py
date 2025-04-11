@@ -39,6 +39,7 @@ class Scraper:
                 "https://scraper.canvasee.com/api/v1/maker/create-scraper",
                 "https://scraper.bodaplay.ai/api/v1/maker/create-scraper",
             ]
+            random.shuffle(urls)
             for url in urls:
                 new_response = Scraper().call_api_and_get_data(url, params)
                 if new_response:
