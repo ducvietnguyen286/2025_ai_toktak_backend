@@ -229,9 +229,11 @@ class APISendPosts(Resource):
                 total_sns_content = count_images + count_videos
                 if current_user.batch_sns_remain < total_sns_content:
                     return Response(
-                        message="⚠️ 쿠폰 등록 후 업로드를 할 수 있어요!",
+                        message=MessageError.REQUIRED_COUPON.value["message"],
                         data={
-                            "error_message": "🎟️ 참여 방법은 도매꾹 홈페이지 톡탁 이벤트를 확인하세요. 😊"
+                            "error_message": MessageError.REQUIRED_COUPON.value[
+                                "error_message"
+                            ],
                         },
                         code=201,
                     ).to_dict()
@@ -243,9 +245,11 @@ class APISendPosts(Resource):
                     current_remain = int(current_remain)
                     if current_remain < total_sns_content:
                         return Response(
-                            message="⚠️ 쿠폰 등록 후 업로드를 할 수 있어요!",
+                            message=MessageError.REQUIRED_COUPON.value["message"],
                             data={
-                                "error_message": "🎟️ 참여 방법은 도매꾹 홈페이지 톡탁 이벤트를 확인하세요. 😊"
+                                "error_message": MessageError.REQUIRED_COUPON.value[
+                                    "error_message"
+                                ],
                             },
                             code=201,
                         ).to_dict()
@@ -410,6 +414,16 @@ class APIPostToLinks(Resource):
             page_id = args.get("page_id", "")
             link_ids = args.get("link_ids", [])
 
+            redis_check_posting = f"toktak:posts:{post_id}:posting_sns"
+            is_posting = redis_client.get(redis_check_posting)
+            if is_posting:
+                return Response(
+                    message="Bài viết đang được gửi đi",
+                    status=400,
+                ).to_dict()
+
+            redis_client.set(redis_check_posting, 1, ex=180)
+
             if not link_ids and is_all == 0:
                 return Response(
                     message="Thiếu thông tin link",
@@ -450,7 +464,12 @@ class APIPostToLinks(Resource):
             ):
                 if current_user.batch_sns_remain < 1:
                     return Response(
-                        message="Không đủ số lượng bài viết còn lại",
+                        message=MessageError.REQUIRED_COUPON.value["message"],
+                        data={
+                            "error_message": MessageError.REQUIRED_COUPON.value[
+                                "error_message"
+                            ],
+                        },
                         status=400,
                     ).to_dict()
 
@@ -459,7 +478,12 @@ class APIPostToLinks(Resource):
                     current_remain = int(current_remain)
                     if current_remain < 1:
                         return Response(
-                            message="Không đủ số lượng bài viết còn lại",
+                            message=MessageError.REQUIRED_COUPON.value["message"],
+                            data={
+                                "error_message": MessageError.REQUIRED_COUPON.value[
+                                    "error_message"
+                                ],
+                            },
                             status=400,
                         ).to_dict()
 
@@ -556,8 +580,6 @@ class APIPostToLinks(Resource):
                     status="PROCESSING",
                 )
 
-                print("Social post:", social_post)
-
                 progress["upload"].append(
                     {
                         "title": link.title,
@@ -581,8 +603,6 @@ class APIPostToLinks(Resource):
                         "is_all": is_all,
                     },
                 }
-
-                print("Message:", message)
 
                 if link.type == "FACEBOOK":
                     send_facebook_message(message)
