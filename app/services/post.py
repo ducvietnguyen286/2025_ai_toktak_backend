@@ -227,6 +227,13 @@ class PostService:
         # NHững thằng bắn lên SNS thì có status_sns = 1
         if data_search["status"] == 1:
             query = query.filter(Post.status_sns == 1)
+        
+        search_text = data_search.get("search_text", "")
+        
+        if search_text != "":
+            search_pattern = f"%{search_text}%"
+            query = query.filter(Post.title.like(search_pattern))
+            
 
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":
