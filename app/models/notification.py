@@ -21,6 +21,7 @@ class Notification(db.Model, BaseModel):
     video_url = db.Column(db.String(255), nullable=False, default="")
     status = db.Column(db.Integer, default=1)
     status_sns = db.Column(db.Integer, default=0)
+    is_read = db.Column(db.Integer, default=0)
     render_id = db.Column(db.String(500), nullable=False, default="")
 
     social_sns_description = db.Column(db.Text, nullable=True)
@@ -51,6 +52,7 @@ class Notification(db.Model, BaseModel):
             "status": self.status,
             "status_sns": self.status_sns,
             "render_id": self.render_id,
+            "is_read": self.is_read,
             "social_sns_description": self.social_sns_description,
             "created_at": self.created_at,
             "updated_at": self.updated_at,

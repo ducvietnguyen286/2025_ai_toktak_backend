@@ -95,3 +95,45 @@ class APIDeleteNotification(Resource):
                 message="Delete Post Fail",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/get_total_notification")
+class APIGetTotalNotification(Resource):
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        type_read = request.args.get("type_read", "", type=str)
+        data_search = {
+            "user_id": current_user.id,
+            "type_read": type_read,
+        }
+        total_pages = NotificationServices.getTotalNotification(data_search)
+        return Response(
+            data={"total_pages": total_pages},
+            message="Get Total Notification",
+        ).to_dict()
+
+
+@ns.route("/update_read_notification")
+class APIUpdateReadNotification(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            current_user = AuthService.get_current_identity()
+            user_id = current_user.id
+
+            NotificationServices.update_post_by_user_id(user_id, is_read=1)
+            message = "Update Notification Successfully"
+
+            return Response(
+                # data={"user_id": user_id},
+                message=message,
+                code=200,
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Exception: Update Notification Fail  :  {str(e)}")
+            return Response(
+                message="Update Notification Fail",
+                code=201,
+            ).to_dict()
