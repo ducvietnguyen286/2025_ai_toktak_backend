@@ -8,6 +8,7 @@ from app.models.social_account import SocialAccount
 from app.models.notification import Notification
 from app.extensions import db
 from app.lib.logger import logger
+from sqlalchemy import or_
 import const
 
 
@@ -166,6 +167,14 @@ class UserService:
     def admin_search_users(data_search):
         # Query cơ bản với các điều kiện
         query = User.query.filter(User.user_type == const.USER)
+
+        if "search" in data_search and data_search["search"]:
+            search_term = f"%{data_search['search']}%"
+            query = query.filter(
+                or_(User.email.ilike(search_term), User.name.ilike(search_term))
+            )
+        if "member_type" in data_search and data_search["member_type"]:
+            query = query.filter(User.subscription == data_search["member_type"])
 
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":

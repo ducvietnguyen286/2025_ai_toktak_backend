@@ -66,6 +66,8 @@ class APIUsers(Resource):
         type_order = request.args.get("type_order", "", type=str)
         type_post = request.args.get("type_post", "", type=str)
         time_range = request.args.get("time_range", "", type=str)
+        search = request.args.get("search", "", type=str)
+        member_type = request.args.get("member_type", "", type=str)
         data_search = {
             "page": page,
             "per_page": per_page,
@@ -73,6 +75,8 @@ class APIUsers(Resource):
             "type_order": type_order,
             "type_post": type_post,
             "time_range": time_range,
+            "search": search,
+            "member_type": member_type,
         }
         users = UserService.admin_search_users(data_search)
         return {
