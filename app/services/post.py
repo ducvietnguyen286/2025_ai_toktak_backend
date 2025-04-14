@@ -156,6 +156,8 @@ class PostService:
             query = query.filter(Post.type == "image")
         elif data_search["type_post"] == "blog":
             query = query.filter(Post.type == "blog")
+        elif data_search["type_post"] == "error_blog":
+            query = query.filter(Post.social_sns_description.like('%ERRORED%'))
 
         time_range = data_search.get("time_range")  # Thêm biến time_range
         # Lọc theo khoảng thời gian
@@ -241,6 +243,9 @@ class PostService:
             query = query.filter(Post.type == "image")
         elif data_search["type_post"] == "blog":
             query = query.filter(Post.type == "blog")
+        
+        elif data_search["type_post"] == "error_blog":
+            query = query.filter(Post.social_sns_description.like('%ERRORED%'))
 
         time_range = data_search.get("time_range")  # Thêm biến time_range
         # Lọc theo khoảng thời gian
