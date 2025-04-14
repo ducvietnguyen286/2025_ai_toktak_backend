@@ -14,22 +14,20 @@ class NotificationServices:
     @staticmethod
     def find(id):
         return Notification.query.get(id)
-    
-    
+
     @staticmethod
     def update_notification(id, *args, **kwargs):
         notification = Notification.query.get(id)
         notification.update(**kwargs)
         return notification
-    
+
     @staticmethod
-    def find_notification_sns(post_id , notification_type):
+    def find_notification_sns(post_id, notification_type):
         notification = Notification.query.filter(
             Notification.post_id == post_id,
             Notification.notification_type == notification_type,
         ).first()
         return notification
-        
 
     @staticmethod
     def delete(id):
@@ -102,3 +100,27 @@ class NotificationServices:
             db.session.rollback()
             return 0
         return 1
+
+    @staticmethod
+    def getTotalNotification(data_search):
+        # Query cơ bản với các điều kiện
+        query = Notification.query.filter(
+            Notification.user_id == data_search["user_id"],
+        )
+
+        type_read = data_search.get("type_read", "")
+
+        if type_read == "0":
+            query = query.filter(Notification.is_read == 0)
+        elif type_read == "1":
+            query = query.filter(Notification.is_read == 1)
+        total = query.count()
+        return total
+
+    @staticmethod
+    def update_post_by_user_id(user_id, *args, **kwargs):
+        updated_rows = Notification.query.filter_by(user_id=user_id).update(
+            kwargs
+        )   
+        db.session.commit()   
+        return updated_rows
