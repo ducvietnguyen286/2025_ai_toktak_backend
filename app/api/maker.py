@@ -1346,6 +1346,7 @@ class APIAdminHistories(Resource):
         type_order = request.args.get("type_order", "", type=str)
         type_post = request.args.get("type_post", "", type=str)
         time_range = request.args.get("time_range", "", type=str)
+        search_text = request.args.get("search_text", "", type=str)
         data_search = {
             "page": page,
             "per_page": per_page,
@@ -1353,6 +1354,7 @@ class APIAdminHistories(Resource):
             "type_order": type_order,
             "type_post": type_post,
             "time_range": time_range,
+            "search_text": search_text,
         }
         posts = PostService.admin_get_posts_upload(data_search)
         logger.info(posts.items)
