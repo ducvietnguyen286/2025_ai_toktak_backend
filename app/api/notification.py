@@ -97,15 +97,14 @@ class APIDeleteNotification(Resource):
             ).to_dict()
 
 
-@ns.route("/get_total_notification")
+@ns.route("/get_total_unread_notification")
 class APIGetTotalNotification(Resource):
     @jwt_required()
     def get(self):
         current_user = AuthService.get_current_identity()
-        type_read = request.args.get("type_read", "", type=str)
         data_search = {
             "user_id": current_user.id,
-            "type_read": type_read,
+            "type_read": "0",
         }
         total_pages = NotificationServices.getTotalNotification(data_search)
         return Response(
