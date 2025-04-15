@@ -119,8 +119,52 @@ class NotificationServices:
 
     @staticmethod
     def update_post_by_user_id(user_id, *args, **kwargs):
-        updated_rows = Notification.query.filter_by(user_id=user_id).update(
-            kwargs
-        )   
-        db.session.commit()   
+        updated_rows = Notification.query.filter_by(user_id=user_id).update(kwargs)
+        db.session.commit()
         return updated_rows
+
+    @staticmethod
+    def get_adminnotifications(data_search):
+        # Query cơ bản với các điều kiện
+        query = Notification.query
+
+        # Xử lý type_order
+        if data_search["type_order"] == "id_asc":
+            query = query.order_by(Notification.id.asc())
+        elif data_search["type_order"] == "id_desc":
+            query = query.order_by(Notification.id.desc())
+        else:
+            query = query.order_by(Notification.id.desc())
+
+        # Xử lý type_post
+        if data_search["type_post"] == "video":
+            query = query.filter(Notification.type == "video")
+        elif data_search["type_post"] == "image":
+            query = query.filter(Notification.type == "image")
+        elif data_search["type_post"] == "blog":
+            query = query.filter(Notification.type == "blog")
+
+        time_range = data_search.get("time_range")  # Thêm biến time_range
+        # Lọc theo khoảng thời gian
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            query = query.filter(Notification.created_at >= start_date)
+
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            query = query.filter(Notification.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            query = query.filter(Notification.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            query = query.filter(Notification.created_at >= start_date)
+
+        pagination = query.paginate(
+            page=data_search["page"], per_page=data_search["per_page"], error_out=False
+        )
+        return pagination

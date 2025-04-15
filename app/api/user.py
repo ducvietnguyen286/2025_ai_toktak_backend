@@ -148,6 +148,7 @@ class APINewLink(Resource):
             if not is_active:
                 NotificationServices.create_notification(
                     user_id=current_user.id,
+                    status=const.NOTIFICATION_FALSE,
                     title=f"{link.type}이름 연결에 실패했습니다. 계정 정보를 확인해주세요.",
                 )
 

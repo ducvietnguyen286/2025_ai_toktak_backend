@@ -6,7 +6,7 @@ from flask_restx import Namespace, Resource
 from app.lib.logger import logger
 from app.lib.response import Response
 from app.services.notification import NotificationServices
-from app.decorators import parameters
+from app.decorators import parameters, admin_required
 from flask import request
 
 from flask_jwt_extended import jwt_required
@@ -136,3 +136,36 @@ class APIUpdateReadNotification(Resource):
                 message="Update Notification Fail",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/admin/histories")
+class APIAdminNotificationHistories(Resource):
+    @jwt_required()
+    @admin_required()
+    def get(self):
+        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+        status = request.args.get("status", const.UPLOADED, type=int)
+        type_order = request.args.get("type_order", "", type=str)
+        type_post = request.args.get("type_post", "", type=str)
+        time_range = request.args.get("time_range", "", type=str)
+        type_notion = request.args.get("type_notion", "", type=str)
+        data_search = {
+            "page": page,
+            "per_page": per_page,
+            "status": status,
+            "type_order": type_order,
+            "type_post": type_post,
+            "time_range": time_range,
+            "type_notion": type_notion,
+        }
+        posts = NotificationServices.get_adminnotifications(data_search)
+        return {
+            "status": True,
+            "message": "Success",
+            "total": posts.total,
+            "page": posts.page,
+            "per_page": posts.per_page,
+            "total_pages": posts.pages,
+            "data": [post._to_json() for post in posts.items],
+        }, 200

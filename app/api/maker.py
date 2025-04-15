@@ -232,6 +232,7 @@ class APICreateBatch(Resource):
             if not data:
                 NotificationServices.create_notification(
                     user_id=user_id_login,
+                    status=const.NOTIFICATION_FALSE,
                     title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
                 )
 
@@ -927,6 +928,7 @@ class APIMakePost(Resource):
                 message = MessageError.CREATE_POST_IMAGE.value
                 NotificationServices.create_notification(
                     user_id=current_user_id,
+                    status=const.NOTIFICATION_FALSE,
                     batch_id=batch.id,
                     title=message,
                 )
@@ -935,6 +937,7 @@ class APIMakePost(Resource):
                 message = MessageError.CREATE_POST_BLOG.value
                 NotificationServices.create_notification(
                     user_id=current_user_id,
+                    status=const.NOTIFICATION_FALSE,
                     batch_id=batch.id,
                     title=message,
                 )
@@ -961,7 +964,7 @@ class APIGetBatch(Resource):
 
         batch_res = batch._to_json()
         batch_res["posts"] = posts
-        
+
         user_login = AuthService.get_current_identity()
         user_info = UserService.get_user_info_detail(user_login.id)
         batch_res["user_info"] = user_info
@@ -1087,7 +1090,6 @@ class APIGetStatusUploadWithBatch(Resource):
                             notification = NotificationServices.find_notification_sns(
                                 sns_post_id, notification_type
                             )
-                            logger.info(f"notification: {notification}")
                             if not notification:
                                 notification = NotificationServices.create_notification(
                                     user_id=post_detail["user_id"],
@@ -1104,6 +1106,7 @@ class APIGetStatusUploadWithBatch(Resource):
                             elif sns_status == "ERRORED":
                                 NotificationServices.update_notification(
                                     notification.id,
+                                    status=const.NOTIFICATION_FALSE,
                                     title=f"❌{notification_type} 업로드에 실패했습니다.",
                                 )
                         except Exception as e:
@@ -1403,7 +1406,6 @@ class APICopyBlog(Resource):
                 message="업데이트 실패",
                 code=201,
             ).to_dict()
-
 
 
 @ns.route("/create-scraper")
