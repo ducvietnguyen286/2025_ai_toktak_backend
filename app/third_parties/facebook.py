@@ -474,11 +474,8 @@ class FacebookService(BaseService):
             "description": post.description + " " + post.hashtag,
         }
 
-        final_url = (
-            URL_PUBLISH + "?" + "&".join([f"{k}={v}" for k, v in post_data.items()])
-        )
         try:
-            post_response = requests.post(final_url, timeout=20)
+            post_response = requests.post(URL_PUBLISH, data=post_data, timeout=20)
         except Exception as e:
             self.save_errors(
                 "ERRORED", f"POST {self.key_log}: PUBLISH THE REEL: {str(e)}"
