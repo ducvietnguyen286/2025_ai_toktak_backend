@@ -2,6 +2,8 @@ from app.extensions import db
 from app.models.base import BaseModel
 import const
 from datetime import datetime
+from app.models.coupon import Coupon
+from app.models.user import User
 
 
 class CouponCode(db.Model, BaseModel):
@@ -22,8 +24,8 @@ class CouponCode(db.Model, BaseModel):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )  #
 
-    coupon = db.relationship("Coupon", foreign_keys=[coupon_id], lazy="joined")
-    user = db.relationship("User", lazy="joined", foreign_keys=[used_by])
+    coupon = db.relationship(Coupon, foreign_keys=[coupon_id], lazy="joined")
+    user = db.relationship(User, lazy="joined", foreign_keys=[used_by])
 
     def to_dict(self):
         return {
