@@ -417,8 +417,6 @@ class APIBatchMakeImage(Resource):
                         base_images, batch_id=batch_id
                     )
 
-                logger.info(f"-------------------IMAGE: {images}--------------------")
-
                 cleared_images = []
                 for image in images:
                     cutout_images = ImageMaker.cut_out_long_height_images_by_sam(
