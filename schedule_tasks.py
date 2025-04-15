@@ -164,7 +164,7 @@ def start_scheduler(app):
 
     scheduler.add_job(
         func=lambda: cleanup_pending_batches(app),
-        trigger=three_am_kst_trigger,
+        trigger=every_5_minutes_trigger,
         id="cleanup_pending_batches",
     )
 
