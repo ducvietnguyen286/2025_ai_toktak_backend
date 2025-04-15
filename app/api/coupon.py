@@ -72,6 +72,14 @@ class APIUsedCoupon(Resource):
                 code=201,
             ).to_dict()
 
+        if coupon.is_check_user:
+            count_used = CouponService.coount_coupon_used(coupon.id, current_user.id)
+            if coupon.max_per_user and count_used >= coupon.max_per_user:
+                return Response(
+                    message="쿠폰 코드가 더 이상 사용할 수 없습니다",
+                    code=201,
+                ).to_dict()
+
         coupon_code = CouponService.find_coupon_code(code)
 
         result = None
@@ -178,6 +186,8 @@ class APICreateCoupon(Resource):
                     "SUB_PRO",
                 ],
             },
+            "is_check_user": {"type": "string"},
+            "max_per_user": {"type": "string"},
             "max_used": {"type": ["string", "null"]},
             "num_days": {"type": ["string", "null"]},
             "value": {"type": ["string", "null"]},
@@ -194,22 +204,21 @@ class APICreateCoupon(Resource):
         image = args.get("image", "")
         name = args.get("name", "")
         type = args.get("type", "SUB_STANDARD")
+        is_check_user = args.get("is_check_user", False)
+        max_per_user = args.get("max_per_user", 1)
         try:
             expired_from = datetime.datetime.strptime(
                 args.get("expired_from", ""), "%Y-%m-%d"
-            ).date()  
+            ).date()
         except ValueError:
             expired_from = None
         try:
             expired = datetime.datetime.strptime(
                 args.get("expired", ""), "%Y-%m-%d"
-            ).date()  
+            ).date()
             expired = datetime.datetime.combine(expired, datetime.time(23, 59, 59))
         except ValueError:
             expired = None
-        
-        print(expired_from)
-        print(expired)
 
         max_used = int(args.get("max_used", 1)) if args.get("max_used") else 1
         num_days = (
@@ -221,7 +230,7 @@ class APICreateCoupon(Resource):
         is_has_whitelist = args.get("is_has_whitelist", False)
         white_lists = args.get("white_lists", [])
         description = args.get("description", "")
-        
+
         coupon = CouponService.create_coupon(
             image=image,
             name=name,
@@ -229,6 +238,8 @@ class APICreateCoupon(Resource):
             max_used=max_used,
             value=value,
             is_has_whitelist=is_has_whitelist,
+            is_check_user=is_check_user,
+            max_per_user=max_per_user,
             white_lists=json.dumps(white_lists),
             description=description,
             expired=expired,
@@ -529,7 +540,7 @@ class APIListCouponCodes(Resource):
         to_expired = args.get("to_expired", None)
         used_by = args.get("used_by", None)
         from_used_at = args.get("from_used_at", None)
-        to_used_at = args.get("to_used_at", None) 
+        to_used_at = args.get("to_used_at", None)
         type_use_coupon = args.get("type_use_coupon", None)
         page = int(args.get("page", 1)) if args.get("page") else 1
         limit = int(args.get("per_page", 10)) if args.get("per_page") else 10
@@ -557,10 +568,10 @@ class APIListCouponCodes(Resource):
             to_used_at = datetime.datetime.strptime(to_used_at, "%Y-%m-%dT%H:%M:%SZ")
         if coupon_id:
             coupon_id = int(coupon_id)
-            
+
         if is_used:
             is_used = bool(is_used)
-        
+
         if is_active:
             is_active = bool(is_active)
         if used_by:
@@ -577,7 +588,7 @@ class APIListCouponCodes(Resource):
             "to_expired": to_expired,
             "used_by": used_by,
             "from_used_at": from_used_at,
-            "to_used_at": to_used_at, 
+            "to_used_at": to_used_at,
             "type_use_coupon": type_use_coupon,
             "page": page,
             "limit": limit,

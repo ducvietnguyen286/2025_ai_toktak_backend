@@ -278,6 +278,13 @@ class ThreadService(BaseService):
 
     def send_post_image(self, post):
         try:
+            hashtag = post.hashtag
+            if "#광고" in hashtag:
+                hashtags = hashtag.split()
+                if "#광고" in hashtags:
+                    hashtags.remove("#광고")
+                    hashtags.insert(4, "#광고")
+                hashtag = " ".join(hashtags)
             text = (
                 (
                     post.description
@@ -285,7 +292,7 @@ class ThreadService(BaseService):
                     else post.title
                 )
                 + "\n\n"
-                + post.hashtag
+                + hashtag
             )
             images = json.loads(post.images)
             media_ids = []
@@ -320,6 +327,14 @@ class ThreadService(BaseService):
 
     def send_post_video(self, post):
         try:
+            hashtag = post.hashtag
+            if "#광고" in hashtag:
+                hashtags = hashtag.split()
+                if "#광고" in hashtags:
+                    hashtags.remove("#광고")
+                    hashtags.insert(4, "#광고")
+                hashtag = " ".join(hashtags)
+
             text = (
                 (
                     post.description
@@ -327,7 +342,7 @@ class ThreadService(BaseService):
                     else post.title
                 )
                 + "\n\n"
-                + post.hashtag
+                + hashtag
             )
             video = post.video_url
             media_id = self.upload_media(video, text, is_video=True)
