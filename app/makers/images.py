@@ -221,11 +221,6 @@ class ImageMaker:
 
         print(f"Image size: {image_width}x{image_height}")
 
-        is_gpu = torch.cuda.is_available()
-        reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
-
-        logger.info(f"--------------------is_gpu: {is_gpu}--------------------")
-
         if image_height > (image_width * 4):
 
             model_path = os.path.join(os.getcwd(), "app/ais/models")
@@ -233,6 +228,10 @@ class ImageMaker:
             yolo_path = os.path.join(model_path, "yolov8s-seg.pt")
 
             try:
+                is_gpu = torch.cuda.is_available()
+                reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
+
+                logger.info(f"--------------------is_gpu: {is_gpu}--------------------")
                 if is_gpu:
                     model = FastSAM(fast_sam_path).cuda()
                     # model = YOLO(yolo_path).cuda()
