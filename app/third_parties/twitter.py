@@ -299,6 +299,12 @@ class TwitterService(BaseService):
                 )
                 self.meta = json.loads(self.user_link.meta)
                 return self.send_post_images(media_ids, post, link, retry + 1)
+            elif status == 403:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} SEND POST IMAGES: {parsed_response}",
+                )
+                return False
             errors = parsed_response.get("errors")
             if errors:
                 self.save_errors(
@@ -398,6 +404,12 @@ class TwitterService(BaseService):
                 )
                 self.meta = json.loads(self.user_link.meta)
                 return self.send_post_video_to_x(media, post, link, media_id, retry + 1)
+            elif status == 403:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} SEND POST VIDEO: {parsed_response}",
+                )
+                return False
             errors = parsed_response.get("errors")
             if errors:
                 self.save_errors(
