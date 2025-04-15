@@ -406,15 +406,18 @@ class APIBatchMakeImage(Resource):
                 content = json.loads(batch_detail.content)
 
                 base_images = content["images"] or []
-
+                images = []
                 if os.environ.get("USE_OCR") == "true":
                     images = ImageMaker.get_only_beauty_images(
                         base_images, batch_id=batch_id
                     )
                 else:
+                    logger.info("-------------------USE_OCR: false--------------------")
                     images = ImageMaker.save_normal_images(
                         base_images, batch_id=batch_id
                     )
+
+                logger.info(f"-------------------IMAGE: {images}--------------------")
 
                 cleared_images = []
                 for image in images:
