@@ -232,7 +232,6 @@ class ImageMaker:
                 is_gpu = torch.cuda.is_available()
                 reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
 
-                logger.info(f"--------------------is_gpu: {is_gpu}--------------------")
                 if is_gpu:
                     model = FastSAM(fast_sam_path).cuda()
                     # model = YOLO(yolo_path).cuda()

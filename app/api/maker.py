@@ -412,7 +412,6 @@ class APIBatchMakeImage(Resource):
                         base_images, batch_id=batch_id
                     )
                 else:
-                    logger.info("-------------------USE_OCR: false--------------------")
                     images = ImageMaker.save_normal_images(
                         base_images, batch_id=batch_id
                     )
