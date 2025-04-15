@@ -323,6 +323,7 @@ class ImageMaker:
 
             except Exception as e:
                 print(f"Error: {e}")
+                logger.error(f"Error: {e}")
                 traceback.print_exc()
                 image_name = image_path.split("/")[-1]
                 image_url = (
