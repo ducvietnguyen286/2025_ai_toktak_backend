@@ -262,6 +262,8 @@ class ImageMaker:
                         label = result.names[int(box.cls[0])]
                         conf = box.conf[0].item()
 
+                        logger.info(f"Step5: {label}")
+
                         if label.lower() in excluded_labels:
                             continue
 
@@ -271,10 +273,16 @@ class ImageMaker:
                         if w < 100 or h < 100:
                             continue
 
+                        logger.info(f"Step6")
+
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
+
+                        logger.info(f"Step7")
                         ocr_result = reader.readtext(cropped)
+                        logger.info(f"Step8")
                         text = "".join([item[1] for item in ocr_result]).strip()
                         # Nếu độ dài văn bản vượt quá 25 ký tự, có thể cho rằng đây là vùng chứa chữ/table
+                        logger.info(f"Step9")
                         if len(text) > 20:
                             continue
 
@@ -282,6 +290,8 @@ class ImageMaker:
                         unique_id = uuid.uuid4().hex
                         new_name = f"{timestamp}_{unique_id}.jpg"
                         cropped_path = os.path.join(output_folder, new_name)
+
+                        logger.info(f"Step10")
 
                         # Resize the cropped image to the target size (1350x1080)
                         target_size = (1350, 1080)
@@ -292,15 +302,19 @@ class ImageMaker:
                         resized = cv2.resize(
                             cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
                         )
+                        logger.info(f"Step11")
 
                         cropped_resized = np.zeros(
                             (target_size[1], target_size[0], 3), dtype=np.uint8
                         )
+                        logger.info(f"Step12")
                         y_offset = (target_size[1] - new_h) // 2
                         x_offset = (target_size[0] - new_w) // 2
                         cropped_resized[
                             y_offset : y_offset + new_h, x_offset : x_offset + new_w
                         ] = resized
+
+                        logger.info(f"Step13")
 
                         cv2.imwrite(
                             cropped_path, cropped_resized
@@ -310,7 +324,9 @@ class ImageMaker:
 
                         cropped_images.append((cropped_url, conf))
 
-                logger.info(f"Step5: {cropped_images}")
+                        logger.info(f"Step14")
+
+                logger.info(f"Step15: {cropped_images}")
 
                 if cropped_images:
                     needed_length = 5
