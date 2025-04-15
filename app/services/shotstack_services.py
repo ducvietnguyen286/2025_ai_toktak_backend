@@ -471,6 +471,7 @@ class ShotStackService:
                 ]
                 video_viral_s = video_data
                 redis_client.set(key_redis, json.dumps(video_viral_s))
+            log_make_video_message(video_viral_s)
 
             random_items = random.sample(video_viral_s, limit)
             return random_items
