@@ -212,6 +212,7 @@ class ImageMaker:
         try:
             image = Image.open(image_path)
         except IOError:
+            logger.error(f"Cannot identify image file {image_path}")
             print(f"Cannot identify image file {image_path}")
             image_name = image_path.split("/")[-1]
             image_url = f"{CURRENT_DOMAIN}/{date_create}/{batch_id}/{image_name}"
