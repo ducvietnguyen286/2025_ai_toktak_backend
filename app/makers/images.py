@@ -278,13 +278,14 @@ class ImageMaker:
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
 
                         logger.info(f"Step7")
-                        ocr_result = reader.readtext(cropped)
-                        logger.info(f"Step8")
-                        text = "".join([item[1] for item in ocr_result]).strip()
-                        # Nếu độ dài văn bản vượt quá 25 ký tự, có thể cho rằng đây là vùng chứa chữ/table
-                        logger.info(f"Step9")
-                        if len(text) > 20:
-                            continue
+                        if os.environ.get("USE_OCR") == "true":
+                            ocr_result = reader.readtext(cropped)
+                            logger.info(f"Step8")
+                            text = "".join([item[1] for item in ocr_result]).strip()
+                            # Nếu độ dài văn bản vượt quá 25 ký tự, có thể cho rằng đây là vùng chứa chữ/table
+                            logger.info(f"Step9")
+                            if len(text) > 20:
+                                continue
 
                         timestamp = int(time.time())
                         unique_id = uuid.uuid4().hex
