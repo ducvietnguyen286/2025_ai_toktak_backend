@@ -193,7 +193,11 @@ class ImageMaker:
         return cleared_images
 
     @staticmethod
-    def cut_out_long_heihgt_images_by_sam(image_path, batch_id=0):
+    def cut_out_long_height_images_by_sam(image_path, batch_id=0):
+        logger.info(
+            f"--------------------PROCESS IMAGE :{image_path}--------------------"
+        )
+
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
             return [image_path]
@@ -220,7 +224,7 @@ class ImageMaker:
         is_gpu = torch.cuda.is_available()
         reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
 
-        logger.info("--------------------is_gpu:", is_gpu, "--------------------")
+        logger.info(f"--------------------is_gpu: {is_gpu}--------------------")
 
         if image_height > (image_width * 4):
 
