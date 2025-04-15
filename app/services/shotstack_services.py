@@ -1173,7 +1173,7 @@ def get_audio_duration(file_path):
         return duration
 
     except Exception as e:
-        print(f"Lỗi khi lấy thời gian audio: {e}")
+        log_make_video_message(f"Lỗi khi lấy thời gian audio: {e}")
         return 0.0
 
 
@@ -1289,7 +1289,7 @@ def generate_srt(text, audio_file, output_srt, start_offset=0.0):
         return file_url
 
     except Exception as e:
-        print(f"❌ Lỗi khi tạo SRT: {e}")
+        log_make_video_message(f"❌ Lỗi khi tạo SRT: {e}")
         return ""
 
 
@@ -1315,7 +1315,7 @@ def get_media_duration(url):
         duration = float(result.stdout.strip())
         return duration
     except Exception as e:
-        print(f"Lỗi khi lấy thời gian media: {e}")
+        log_make_video_message(f"Lỗi khi lấy thời gian media: {e}")
         return 0.0
 
 
