@@ -32,4 +32,4 @@ def serve_static(filename):
 
 if __name__ == "__main__":
     is_debug = config_name == "develop"
-    application.run(debug=is_debug)
+    application.run(debug=True)

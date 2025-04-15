@@ -178,6 +178,33 @@ def start_redis_subscriber(app):
     thread.start()
 
 
+def start_notification_subscriber(app):
+    """
+    Khởi chạy một thread lắng nghe channel Redis (NOTIFICATION_CHANNEL) và xử lý message.
+    """
+
+    def redis_listener():
+        with app.app_context():
+            NOTIFICATION_CHANNEL = (
+                os.environ.get("REDIS_NOTIFICATION_CHANNEL") or "progessbar"
+            )
+
+            pubsub = redis_client.pubsub()
+            pubsub.subscribe(NOTIFICATION_CHANNEL)
+            log_socket_message(
+                f"Started Redis subscriber on channel '{NOTIFICATION_CHANNEL}'"
+            )
+            for item in pubsub.listen():
+                if item.get("type") != "message":
+                    continue
+                message_str = item.get("data").decode("utf-8")
+                process_redis_message(message_str)
+
+    thread = threading.Thread(target=redis_listener)
+    thread.daemon = True
+    thread.start()
+
+
 @socketio.on("ready-to-listen")
 def handle_ready_to_listen(data):
     """

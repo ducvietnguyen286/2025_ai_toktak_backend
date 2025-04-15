@@ -18,8 +18,11 @@ import torch
 import easyocr
 from multiprocessing import Pool
 import numpy as np
+from app.lib.logger import logger
 
 from app.lib.header import generate_desktop_user_agent
+
+torch.autograd.set_detect_anomaly(True)
 
 
 date_create = datetime.datetime.now().strftime("%Y_%m_%d")
@@ -108,6 +111,20 @@ def process_beauty_image(image_path):
 class ImageMaker:
 
     @staticmethod
+    def save_normal_images(images, batch_id=0):
+        downloaded_images = []
+        with ThreadPoolExecutor(max_workers=15) as executor:
+            future_to_image = {
+                executor.submit(
+                    ImageMaker.save_image_url_get_path, image_url, batch_id
+                ): image_url
+                for image_url in images
+            }
+            downloaded_images = [future.result() for future in future_to_image]
+
+        return downloaded_images
+
+    @staticmethod
     def get_only_beauty_images(images, batch_id=0):
         output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
 
@@ -178,7 +195,11 @@ class ImageMaker:
         return cleared_images
 
     @staticmethod
-    def cut_out_long_heihgt_images_by_sam(image_path, batch_id=0):
+    def cut_out_long_height_images_by_sam(image_path, batch_id=0):
+        logger.info(
+            f"--------------------PROCESS IMAGE :{image_path}--------------------"
+        )
+
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
             return [image_path]
@@ -193,6 +214,7 @@ class ImageMaker:
         try:
             image = Image.open(image_path)
         except IOError:
+            logger.error(f"Cannot identify image file {image_path}")
             print(f"Cannot identify image file {image_path}")
             image_name = image_path.split("/")[-1]
             image_url = f"{CURRENT_DOMAIN}/{date_create}/{batch_id}/{image_name}"
@@ -202,9 +224,6 @@ class ImageMaker:
 
         print(f"Image size: {image_width}x{image_height}")
 
-        is_gpu = torch.cuda.is_available()
-        reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
-
         if image_height > (image_width * 4):
 
             model_path = os.path.join(os.getcwd(), "app/ais/models")
@@ -212,17 +231,25 @@ class ImageMaker:
             yolo_path = os.path.join(model_path, "yolov8s-seg.pt")
 
             try:
+                logger.info("Step1")
+                is_gpu = torch.cuda.is_available()
+                reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
+                logger.info(f"Step1: {is_gpu}")
                 if is_gpu:
                     model = FastSAM(fast_sam_path).cuda()
                     # model = YOLO(yolo_path).cuda()
                 else:
                     model = FastSAM(fast_sam_path)
                     # model = YOLO(yolo_path)
+                logger.info("Step2")
                 results = model.predict(source=image_path, conf=0.5)
+                logger.info("Step3")
                 # results = model(image_path, conf=0.5)
                 image_cv = cv2.imread(image_path)
                 if image_cv is None:
                     return [image_path]
+
+                logger.info(f"Step4: {results}")
 
                 cropped_images = []
 
@@ -237,26 +264,40 @@ class ImageMaker:
                         label = result.names[int(box.cls[0])]
                         conf = box.conf[0].item()
 
+                        logger.info(f"Step5: {label}")
+
                         if label.lower() in excluded_labels:
                             continue
 
                         # Kiểm tra kích thước của bounding box
                         w = x2 - x1
                         h = y2 - y1
+
+                        logger.info(f"Clear image: {w}x{h}")
+
                         if w < 100 or h < 100:
                             continue
 
+                        logger.info(f"Step6")
+
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
-                        ocr_result = reader.readtext(cropped)
-                        text = "".join([item[1] for item in ocr_result]).strip()
-                        # Nếu độ dài văn bản vượt quá 25 ký tự, có thể cho rằng đây là vùng chứa chữ/table
-                        if len(text) > 20:
-                            continue
+
+                        logger.info(f"Step7")
+                        if os.environ.get("USE_OCR") == "true":
+                            ocr_result = reader.readtext(cropped)
+                            logger.info(f"Step8")
+                            text = "".join([item[1] for item in ocr_result]).strip()
+                            # Nếu độ dài văn bản vượt quá 25 ký tự, có thể cho rằng đây là vùng chứa chữ/table
+                            logger.info(f"Step9")
+                            if len(text) > 20:
+                                continue
 
                         timestamp = int(time.time())
                         unique_id = uuid.uuid4().hex
                         new_name = f"{timestamp}_{unique_id}.jpg"
                         cropped_path = os.path.join(output_folder, new_name)
+
+                        logger.info(f"Step10")
 
                         # Resize the cropped image to the target size (1350x1080)
                         target_size = (1350, 1080)
@@ -267,15 +308,19 @@ class ImageMaker:
                         resized = cv2.resize(
                             cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
                         )
+                        logger.info(f"Step11")
 
                         cropped_resized = np.zeros(
                             (target_size[1], target_size[0], 3), dtype=np.uint8
                         )
+                        logger.info(f"Step12")
                         y_offset = (target_size[1] - new_h) // 2
                         x_offset = (target_size[0] - new_w) // 2
                         cropped_resized[
                             y_offset : y_offset + new_h, x_offset : x_offset + new_w
                         ] = resized
+
+                        logger.info(f"Step13")
 
                         cv2.imwrite(
                             cropped_path, cropped_resized
@@ -284,6 +329,10 @@ class ImageMaker:
                         cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
 
                         cropped_images.append((cropped_url, conf))
+
+                        logger.info(f"Step14")
+
+                logger.info(f"Step15")
 
                 if cropped_images:
                     needed_length = 5
@@ -303,6 +352,7 @@ class ImageMaker:
 
             except Exception as e:
                 print(f"Error: {e}")
+                logger.error(f"Error: {e}")
                 traceback.print_exc()
                 image_name = image_path.split("/")[-1]
                 image_url = (
