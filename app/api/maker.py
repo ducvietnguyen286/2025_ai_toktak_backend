@@ -351,6 +351,7 @@ class APICreateBatch(Resource):
             NotificationServices.create_notification(
                 user_id=user_id_login,
                 batch_id=batch.id,
+                notification_type="create_batch",
                 title=f"제품 정보를 성공적으로 가져왔습니다. {url}",
             )
 
@@ -912,6 +913,8 @@ class APIMakePost(Resource):
                     user_id=current_user_id,
                     batch_id=batch.id,
                     title=message,
+                    post_id=post.id,
+                    notification_type="image",
                 )
 
             elif type == "blog":
@@ -920,6 +923,8 @@ class APIMakePost(Resource):
                     user_id=current_user_id,
                     batch_id=batch.id,
                     title=message,
+                    post_id=post.id,
+                    notification_type="blog",
                 )
 
             return Response(
@@ -940,6 +945,8 @@ class APIMakePost(Resource):
                     status=const.NOTIFICATION_FALSE,
                     batch_id=batch.id,
                     title=message,
+                    post_id=post.id,
+                    notification_type="image",
                 )
 
             elif type == "blog":
@@ -949,6 +956,8 @@ class APIMakePost(Resource):
                     status=const.NOTIFICATION_FALSE,
                     batch_id=batch.id,
                     title=message,
+                    post_id=post.id,
+                    notification_type="blog",
                 )
 
             return Response(
@@ -1428,6 +1437,15 @@ class APICopyBlog(Resource):
                     message="업데이트 실패",
                     code=201,
                 ).to_dict()
+
+            NotificationServices.create_notification(
+                    user_id=post.user_id,
+                    batch_id=post.batch_id,
+                    title="블로그를 성공적으로 복사하였습니다.",
+                    post_id=post.id,
+                    notification_type="copy_blog",
+                )
+
 
             return Response(
                 message=message,

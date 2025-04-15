@@ -188,6 +188,7 @@ class ShortstackWebhook(Resource):
                                 user_id=post_detail.user_id,
                                 batch_id=post_detail.batch_id,
                                 title="🎥 비디오 생성이 완료되었습니다. 이제 공유할 수 있습니다.",
+                                description=json.dumps(payload),
                             )
                 file_download_attr = download_video(video_url, batch_id)
                 if file_download_attr:
