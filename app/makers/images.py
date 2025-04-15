@@ -229,20 +229,25 @@ class ImageMaker:
             yolo_path = os.path.join(model_path, "yolov8s-seg.pt")
 
             try:
+                logger.info("Step1")
                 is_gpu = torch.cuda.is_available()
                 reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
-
+                logger.info(f"Step1: {is_gpu}")
                 if is_gpu:
                     model = FastSAM(fast_sam_path).cuda()
                     # model = YOLO(yolo_path).cuda()
                 else:
                     model = FastSAM(fast_sam_path)
                     # model = YOLO(yolo_path)
+                logger.info("Step2")
                 results = model.predict(source=image_path, conf=0.5)
+                logger.info("Step3")
                 # results = model(image_path, conf=0.5)
                 image_cv = cv2.imread(image_path)
                 if image_cv is None:
                     return [image_path]
+
+                logger.info(f"Step4: {results}")
 
                 cropped_images = []
 
@@ -304,6 +309,8 @@ class ImageMaker:
                         cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
 
                         cropped_images.append((cropped_url, conf))
+
+                logger.info(f"Step5: {cropped_images}")
 
                 if cropped_images:
                     needed_length = 5
