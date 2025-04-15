@@ -205,6 +205,8 @@ class ImageMaker:
         is_gpu = torch.cuda.is_available()
         reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
 
+        print("--------------------is_gpu:", is_gpu, "--------------------")
+
         if image_height > (image_width * 4):
 
             model_path = os.path.join(os.getcwd(), "app/ais/models")
