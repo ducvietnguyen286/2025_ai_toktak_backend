@@ -109,6 +109,20 @@ def process_beauty_image(image_path):
 class ImageMaker:
 
     @staticmethod
+    def save_normal_images(images, batch_id=0):
+        downloaded_images = []
+        with ThreadPoolExecutor(max_workers=15) as executor:
+            future_to_image = {
+                executor.submit(
+                    ImageMaker.save_image_url_get_path, image_url, batch_id
+                ): image_url
+                for image_url in images
+            }
+            downloaded_images = [future.result() for future in future_to_image]
+
+        return downloaded_images
+
+    @staticmethod
     def get_only_beauty_images(images, batch_id=0):
         output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
 

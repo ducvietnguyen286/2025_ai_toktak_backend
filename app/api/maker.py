@@ -412,7 +412,9 @@ class APIBatchMakeImage(Resource):
                         base_images, batch_id=batch_id
                     )
                 else:
-                    images = base_images
+                    images = ImageMaker.save_normal_images(
+                        base_images, batch_id=batch_id
+                    )
 
                 cleared_images = []
                 for image in images:
