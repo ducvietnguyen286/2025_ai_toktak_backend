@@ -546,7 +546,7 @@ def create_combined_clips_normal(
         if type_asset == "video":
             clips.append(
                 {
-                    "asset": {"type": "video", "src": url},
+                    "asset": {"type": "video", "src": url, "volume": 0},
                     "start": start_slider_time,
                     "length": length,
                 }
@@ -675,7 +675,7 @@ def create_combined_clips_with_advance(
         if type_asset == "video":
             clips.append(
                 {
-                    "asset": {"type": "video", "src": url},
+                    "asset": {"type": "video", "src": url, "volume": 0},
                     "start": start_slider_time,
                     "length": length,
                 }
