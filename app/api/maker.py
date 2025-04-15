@@ -393,6 +393,7 @@ class APIBatchMakeImage(Resource):
     def post(self, args):
         try:
             batch_id = args.get("batch_id", 0)
+            posts = []
             if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
 
                 batch_detail = BatchService.find_batch(batch_id)
@@ -961,7 +962,7 @@ class APIGetBatch(Resource):
 
         batch_res = batch._to_json()
         batch_res["posts"] = posts
-        
+
         user_login = AuthService.get_current_identity()
         user_info = UserService.get_user_info_detail(user_login.id)
         batch_res["user_info"] = user_info
@@ -1403,7 +1404,6 @@ class APICopyBlog(Resource):
                 message="업데이트 실패",
                 code=201,
             ).to_dict()
-
 
 
 @ns.route("/create-scraper")
