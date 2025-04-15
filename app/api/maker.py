@@ -1029,13 +1029,37 @@ class APIGetStatusUploadBySyncId(Resource):
             for post in posts:
                 post_id = post["id"]
                 social_post_detail = post["social_posts"]
+                notification_type = post["type"]
                 update_data = {"social_sns_description": json.dumps(social_post_detail)}
 
                 status_check_sns = 0
                 for social_post_each in social_post_detail:
-                    status = social_post_each["status"]
-                    if status == "PUBLISHED":
+                    sns_status = social_post_each["status"]
+                    if sns_status == "PUBLISHED":
                         status_check_sns = const.UPLOADED
+
+                    notification = NotificationServices.find_notification_sns(
+                        post_id, notification_type
+                    )
+                    if not notification:
+                        notification = NotificationServices.create_notification(
+                            user_id=post["user_id"],
+                            batch_id=post["batch_id"],
+                            post_id=post_id,
+                            notification_type=notification_type,
+                            title=f"🔄{notification_type}에 업로드 중입니다.",
+                        )
+                    if sns_status == "PUBLISHED":
+                        NotificationServices.update_notification(
+                            notification.id,
+                            title=f"✅{notification_type} 업로드에 성공했습니다.",
+                        )
+                    elif sns_status == "ERRORED":
+                        NotificationServices.update_notification(
+                            notification.id,
+                            status=const.NOTIFICATION_FALSE,
+                            title=f"❌{notification_type} 업로드에 실패했습니다.",
+                        )
 
                 if status_check_sns == const.UPLOADED:
                     update_data["status_sns"] = const.UPLOADED
