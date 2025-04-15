@@ -18,6 +18,7 @@ import torch
 import easyocr
 from multiprocessing import Pool
 import numpy as np
+from app.lib.logger import logger
 
 from app.lib.header import generate_desktop_user_agent
 
@@ -205,7 +206,7 @@ class ImageMaker:
         is_gpu = torch.cuda.is_available()
         reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
 
-        print("--------------------is_gpu:", is_gpu, "--------------------")
+        logger.info("--------------------is_gpu:", is_gpu, "--------------------")
 
         if image_height > (image_width * 4):
 
