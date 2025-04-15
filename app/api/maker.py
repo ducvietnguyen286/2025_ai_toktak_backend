@@ -394,6 +394,7 @@ class APIBatchMakeImage(Resource):
     def post(self, args):
         try:
             batch_id = args.get("batch_id", 0)
+            posts = []
             if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
 
                 batch_detail = BatchService.find_batch(batch_id)
@@ -405,7 +406,15 @@ class APIBatchMakeImage(Resource):
 
                 content = json.loads(batch_detail.content)
 
-                images = content["images"] or []
+                base_images = content["images"] or []
+
+                if os.environ.get("USE_OCR") == "true":
+                    images = ImageMaker.get_only_beauty_images(
+                        base_images, batch_id=batch_id
+                    )
+                else:
+                    images = base_images
+
                 cleared_images = []
                 for image in images:
                     cutout_images = ImageMaker.cut_out_long_heihgt_images_by_sam(

@@ -26,6 +26,13 @@ class CouponService:
         return Coupon.query.get(id)
 
     @staticmethod
+    def coount_coupon_used(coupon_id, user_id):
+        count_used = CouponCode.query.filter(
+            CouponCode.coupon_id == coupon_id, CouponCode.used_by == user_id
+        ).count()
+        return count_used
+
+    @staticmethod
     def find_coupon_by_code(code):
         coupon_code = CouponCode.query.where(CouponCode.code == code).first()
         if not coupon_code:
@@ -135,23 +142,26 @@ class CouponService:
     @staticmethod
     def get_coupon_codes(query_params={}):
         code_query = CouponCode.query
-        
+
         if "type_coupon" in query_params and query_params["type_coupon"]:
             code_query = code_query.join(Coupon).filter(
                 Coupon.type == query_params["type_coupon"]
             )
-        
 
         # Áp dụng các bộ lọc nếu có
         if "code" in query_params and query_params["code"]:
             code_query = code_query.filter(
                 CouponCode.code.ilike(f"%{query_params['code']}%")
             )
-        if "type_use_coupon" in query_params and query_params["type_use_coupon"] and query_params["type_use_coupon"] !="":
+        if (
+            "type_use_coupon" in query_params
+            and query_params["type_use_coupon"]
+            and query_params["type_use_coupon"] != ""
+        ):
             code_query = code_query.filter(
                 CouponCode.is_used == query_params["type_use_coupon"]
             )
-            
+
         if "coupon_id" in query_params and query_params["coupon_id"]:
             code_query = code_query.filter(
                 CouponCode.coupon_id == query_params["coupon_id"]

@@ -17,6 +17,8 @@ class Coupon(db.Model, BaseModel):
     max_used = db.Column(db.Integer, default=0)
     is_has_whitelist = db.Column(db.Boolean, default=False)
     white_lists = db.Column(db.Text)
+    is_check_user = db.Column(db.Boolean, default=False)
+    max_per_user = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 

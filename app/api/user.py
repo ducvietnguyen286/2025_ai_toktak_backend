@@ -766,7 +766,10 @@ class APIGetCallbackTiktok(Resource):
             state = args.get("state")
             error = args.get("error") or ""
             error_description = args.get("error_description") or ""
-            PAGE_PROFILE = "https://toktak.ai/profile"
+            PAGE_PROFILE = (
+                os.environ.get("TIKTOK_REDIRECT_TO_PROFILE")
+                or "https://toktak.ai/profile"
+            )
 
             if not state:
                 return Response(
