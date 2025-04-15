@@ -471,7 +471,7 @@ class FacebookService(BaseService):
             "access_token": access_token,
             "video_state": "PUBLISHED",
             "title": post.title,
-            "description": post.description + " " + post.hashtag,
+            "description": post.description + "\n\n" + post.hashtag,
         }
 
         try:
