@@ -159,12 +159,15 @@ def start_scheduler(app):
     kst = timezone("Asia/Seoul")
 
     every_5_minutes_trigger = CronTrigger(minute="*/5", timezone=kst)
+    one_am_kst_trigger = CronTrigger(hour=1, minute=0, timezone=kst)
+    two_am_kst_trigger = CronTrigger(hour=2, minute=0, timezone=kst)
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
+    four_am_kst_trigger = CronTrigger(hour=4, minute=0, timezone=kst)
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
 
     scheduler.add_job(
         func=lambda: cleanup_pending_batches(app),
-        trigger=every_5_minutes_trigger,
+        trigger=one_am_kst_trigger,
         id="cleanup_pending_batches",
     )
 
@@ -176,7 +179,7 @@ def start_scheduler(app):
 
     scheduler.add_job(
         func=exchange_facebook_token,
-        trigger=three_am_kst_trigger,
+        trigger=two_am_kst_trigger,
         id="exchange_facebook_token",
     )
     scheduler.add_job(
@@ -186,7 +189,7 @@ def start_scheduler(app):
     )
     scheduler.add_job(
         func=exchange_thread_token,
-        trigger=three_am_kst_trigger,
+        trigger=four_am_kst_trigger,
         id="exchange_thread_token",
     )
 

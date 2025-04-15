@@ -54,11 +54,7 @@ Do server SNS là khác server lên cần mount folder
 
 
 
-rm -rf /var/www/logs/*
-rm -rf /var/www/2025_ai_toktak_be/logs/*
-sudo systemctl restart nginx 
-sudo systemctl restart toktak.service
-sudo systemctl restart toktak_watchdog.service
+rm -rf /var/www/logs/* && rm -rf /var/www/2025_ai_toktak_be/logs/* && sudo systemctl restart nginx && sudo systemctl restart toktak.service && sudo systemctl restart toktak_watchdog.service
 
 sudo systemctl restart toktak_watchdog.service
 
