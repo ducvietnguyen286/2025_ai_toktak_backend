@@ -1044,6 +1044,7 @@ class APIGetStatusUploadBySyncId(Resource):
                 post_id = post["id"]
                 social_post_detail = post["social_posts"]
                 notification_type = post["type"]
+                error_message = post["error_message"]
                 update_data = {"social_sns_description": json.dumps(social_post_detail)}
 
                 status_check_sns = 0
@@ -1067,12 +1068,15 @@ class APIGetStatusUploadBySyncId(Resource):
                         NotificationServices.update_notification(
                             notification.id,
                             title=f"✅{notification_type} 업로드에 성공했습니다.",
+                            status=const.NOTIFICATION_SUCCESS,
+                            description=error_message,
                         )
                     elif sns_status == "ERRORED":
                         NotificationServices.update_notification(
                             notification.id,
                             status=const.NOTIFICATION_FALSE,
                             title=f"❌{notification_type} 업로드에 실패했습니다.",
+                            description=error_message,
                         )
 
                 if status_check_sns == const.UPLOADED:
@@ -1133,6 +1137,7 @@ class APIGetStatusUploadWithBatch(Resource):
                             sns_post_id = sns_post_detail["post_id"]
                             sns_status = sns_post_detail["status"]
                             notification_type = sns_post_detail["title"]
+                            error_message = sns_post_detail["error_message"]
 
                             notification = NotificationServices.find_notification_sns(
                                 sns_post_id, notification_type
@@ -1149,12 +1154,15 @@ class APIGetStatusUploadWithBatch(Resource):
                                 NotificationServices.update_notification(
                                     notification.id,
                                     title=f"✅{notification_type} 업로드에 성공했습니다.",
+                                    status=const.NOTIFICATION_SUCCESS,
+                                    description=error_message,
                                 )
                             elif sns_status == "ERRORED":
                                 NotificationServices.update_notification(
                                     notification.id,
                                     status=const.NOTIFICATION_FALSE,
                                     title=f"❌{notification_type} 업로드에 실패했습니다.",
+                                    description=error_message,
                                 )
                         except Exception as e:
                             logger.error(
@@ -1231,7 +1239,6 @@ class APIUpdateStatusBatch(Resource):
 
 @ns.route("/histories")
 class APIHistories(Resource):
-
     @jwt_required()
     def get(self):
         current_user = AuthService.get_current_identity()
@@ -1443,13 +1450,12 @@ class APICopyBlog(Resource):
                 ).to_dict()
 
             NotificationServices.create_notification(
-                    user_id=post.user_id,
-                    batch_id=post.batch_id,
-                    title="블로그를 성공적으로 복사하였습니다.",
-                    post_id=post.id,
-                    notification_type="copy_blog",
-                )
-
+                user_id=post.user_id,
+                batch_id=post.batch_id,
+                title="블로그를 성공적으로 복사하였습니다.",
+                post_id=post.id,
+                notification_type="copy_blog",
+            )
 
             return Response(
                 message=message,
