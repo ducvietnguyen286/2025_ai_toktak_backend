@@ -149,7 +149,7 @@ class APIAdminNotificationHistories(Resource):
         type_order = request.args.get("type_order", "", type=str)
         type_post = request.args.get("type_post", "", type=str)
         time_range = request.args.get("time_range", "", type=str)
-        type_notion = request.args.get("type_notion", "", type=str)
+        type_notification = request.args.get("type_notification", "", type=str)
         data_search = {
             "page": page,
             "per_page": per_page,
@@ -157,7 +157,7 @@ class APIAdminNotificationHistories(Resource):
             "type_order": type_order,
             "type_post": type_post,
             "time_range": time_range,
-            "type_notion": type_notion,
+            "type_notification": type_notification,
         }
         posts = NotificationServices.get_adminnotifications(data_search)
         return {

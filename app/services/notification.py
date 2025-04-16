@@ -1,6 +1,7 @@
 from app.models.notification import Notification
 from app.extensions import db
 from datetime import datetime, timedelta
+import const
 
 
 class NotificationServices:
@@ -127,6 +128,11 @@ class NotificationServices:
     def get_adminnotifications(data_search):
         # Query cơ bản với các điều kiện
         query = Notification.query
+        type_notification = int(data_search.get("type_notification", ""))
+        if type_notification == 0:
+            query = query.filter(Notification.status == const.NOTIFICATION_FALSE)
+        elif type_notification == 1:
+            query = query.filter(Notification.status == const.NOTIFICATION_SUCCESS)
 
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":

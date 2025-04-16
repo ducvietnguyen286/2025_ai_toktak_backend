@@ -159,6 +159,7 @@ class ShortstackWebhook(Resource):
             video_url = payload.get("url")
             action = payload.get("action")
             render = payload.get("render", "")
+            error = payload.get("error", "")
             user_id = 0
 
             # Ghi log thông tin nhận được
@@ -182,6 +183,8 @@ class ShortstackWebhook(Resource):
                                 batch_id=post_detail.batch_id,
                                 status=const.NOTIFICATION_FALSE,
                                 title="⚠️ 비디오 생성에 실패했습니다. 다시 시도해주세요.",
+                                
+                                description=f"AI Shotstack  {str(error)}",
                             )
                         else:
                             NotificationServices.create_notification(

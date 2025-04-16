@@ -22,6 +22,7 @@ class Notification(db.Model, BaseModel):
     status = db.Column(db.Integer, default=1)
     status_sns = db.Column(db.Integer, default=0)
     is_read = db.Column(db.Integer, default=0)
+    send_telegram = db.Column(db.Integer, default=0)
     render_id = db.Column(db.String(500), nullable=False, default="")
 
     social_sns_description = db.Column(db.Text, nullable=True)

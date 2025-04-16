@@ -234,6 +234,7 @@ class APICreateBatch(Resource):
                     user_id=user_id_login,
                     status=const.NOTIFICATION_FALSE,
                     title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                    description=f"Scraper False {url}",
                 )
 
                 redis_client.set(
@@ -947,6 +948,7 @@ class APIMakePost(Resource):
                     title=message,
                     post_id=post.id,
                     notification_type="image",
+                    description=f"Create Image False {str(e)}",
                 )
 
             elif type == "blog":
@@ -958,6 +960,7 @@ class APIMakePost(Resource):
                     title=message,
                     post_id=post.id,
                     notification_type="blog",
+                    description=f"Create Blog False {str(e)}",
                 )
 
             return Response(

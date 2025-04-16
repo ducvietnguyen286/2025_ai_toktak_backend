@@ -4,7 +4,7 @@ from app.models.user_video_templates import UserVideoTemplates
 from app.models.link import Link
 from app.models.social_post import SocialPost
 from app.extensions import db
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 from flask import jsonify
 from datetime import datetime, timedelta
 from sqlalchemy.orm import aliased
@@ -236,7 +236,13 @@ class PostService:
 
         if search_text != "":
             search_pattern = f"%{search_text}%"
-            query = query.filter(Post.title.like(search_pattern))
+            query = query.filter(
+                or_(
+                    Post.title.ilike(search_pattern),
+                    Post.description.ilike(search_pattern),
+                    Post.user.has(User.email.ilike(search_pattern)),
+                )
+            )
 
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":
