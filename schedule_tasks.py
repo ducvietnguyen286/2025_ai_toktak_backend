@@ -25,6 +25,7 @@ from pytz import timezone
 import requests
 
 from pathlib import Path
+import const
 
 # Load biến môi trường
 env_path = Path(__file__).parent / ".env"
@@ -114,14 +115,16 @@ def send_telegram_notifications(app):
     with app.app_context():
         try:
             notifications = (
-                Notification.query.filter_by(send_telegram=0)
+                Notification.query.filter(
+                    Notification.send_telegram == 0,
+                    Notification.status == const.NOTIFICATION_FALSE,
+                )
                 .order_by(Notification.created_at.asc())
                 .limit(5)
                 .all()
             )
-            
-            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
             for noti in notifications:
                 try:
