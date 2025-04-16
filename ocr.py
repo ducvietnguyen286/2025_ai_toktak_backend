@@ -1,6 +1,39 @@
-from app.lib.logger import logger
+import os
+import datetime
+from logging import handlers
+import logging
 from fastapi import FastAPI, Request
 from paddleocr import PaddleOCR
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"
+)
+
+os.makedirs("logs", exist_ok=True)
+now_date = datetime.datetime.now()
+filename = now_date.strftime("%d-%m-%Y")
+
+handler = handlers.TimedRotatingFileHandler(
+    "logs/paddleocr-{0}.log".format(filename),
+    when="midnight",
+    interval=1,
+    backupCount=14,
+    encoding="utf-8",
+)
+handler.setLevel(logging.INFO)
+handler.setFormatter(formatter)
+
+errorLogHandler = handlers.RotatingFileHandler(
+    "logs/paddleocr-error-{0}.log".format(filename), backupCount=14, encoding="utf-8"
+)
+errorLogHandler.setLevel(logging.ERROR)
+errorLogHandler.setFormatter(formatter)
+
+logger.addHandler(handler)
+logger.addHandler(errorLogHandler)
 
 app = FastAPI()
 ocr = PaddleOCR(use_gpu=True, lang="korean")
