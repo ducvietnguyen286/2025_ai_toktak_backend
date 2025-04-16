@@ -35,8 +35,24 @@ errorLogHandler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.addHandler(errorLogHandler)
 
+MODEL_DIR = os.path.join(os.getcwd(), "app/ais/models/paddleocr_models")
+det_model_dir = os.path.join(MODEL_DIR, "det/Multilingual_PP-OCRv3_det_infer")
+rec_model_dir = os.path.join(MODEL_DIR, "rec/korean_PP-OCRv3_rec_infer")
+
 app = FastAPI()
-ocr = PaddleOCR(use_gpu=True, lang="korean")
+
+try:
+    logger.info("Initializing PaddleOCR...")
+    ocr = PaddleOCR(
+        use_gpu=True,
+        lang="korean",
+        det_model_dir=det_model_dir,
+        rec_model_dir=rec_model_dir,
+    )
+    logger.info("PaddleOCR initialized successfully.")
+except Exception as e:
+    logger.error(f"Error initializing PaddleOCR: {e}")
+    raise
 
 
 @app.post("/check_text")
