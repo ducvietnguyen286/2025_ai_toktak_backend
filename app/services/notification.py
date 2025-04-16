@@ -1,7 +1,9 @@
 from app.models.notification import Notification
+from app.models.user import User
 from app.extensions import db
 from datetime import datetime, timedelta
 import const
+from sqlalchemy import and_, func, or_
 
 
 class NotificationServices:
@@ -125,7 +127,7 @@ class NotificationServices:
         return updated_rows
 
     @staticmethod
-    def get_adminnotifications(data_search):
+    def get_admin_notifications(data_search):
         # Query cơ bản với các điều kiện
         query = Notification.query
         type_notification = int(data_search.get("type_notification", ""))
@@ -133,6 +135,19 @@ class NotificationServices:
             query = query.filter(Notification.status == const.NOTIFICATION_FALSE)
         elif type_notification == 1:
             query = query.filter(Notification.status == const.NOTIFICATION_SUCCESS)
+            
+        search_key = data_search.get("search_key", "")
+
+        if search_key != "":
+            search_pattern = f"%{search_key}%"
+            query = query.filter(
+                or_(
+                    Notification.title.ilike(search_pattern),
+                    Notification.description.ilike(search_pattern),
+                    Notification.user.has(User.email.ilike(search_pattern)),
+                )
+            )
+            
 
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":
