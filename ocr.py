@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Request
-from paddleocr import PaddleOCR
+from ocr import PaddleOCR
 
 app = FastAPI()
-ocr = PaddleOCR(use_gpu=True, lang="korean_en")
+ocr = PaddleOCR(use_gpu=True, lang="korean")
 
 
 @app.post("/check_text")
