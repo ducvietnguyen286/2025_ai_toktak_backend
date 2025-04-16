@@ -6,6 +6,7 @@ from app.models.user import User
 import random
 import string
 from app.extensions import redis_client, db
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, aliased
 
 from app.lib.logger import logger
@@ -150,9 +151,17 @@ class CouponService:
 
         # Áp dụng các bộ lọc nếu có
         if "code" in query_params and query_params["code"]:
+            search_term = f"%{query_params['code']}%"
+    
+            # Chắc chắn join bảng Coupon để dùng filter
+            code_query = code_query.join(Coupon)
+
             code_query = code_query.filter(
-                CouponCode.code.ilike(f"%{query_params['code']}%")
-            )
+                or_(
+                    CouponCode.code.ilike(search_term),
+                    Coupon.name.ilike(search_term)
+                )
+            ) 
         if (
             "type_use_coupon" in query_params
             and query_params["type_use_coupon"]
