@@ -233,8 +233,13 @@ class ImageMaker:
             try:
                 logger.info("Step1")
                 is_gpu = torch.cuda.is_available()
+                count_gpu = torch.cuda.device_count()
+                device_name = torch.cuda.get_device_name(0)
+                open_cv_version = cv2.__version__
                 reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
-                logger.info(f"Step1: {is_gpu}")
+                logger.info(
+                    f"Step1: {is_gpu}, {count_gpu}, {device_name}, {open_cv_version}"
+                )
                 if is_gpu:
                     model = FastSAM(fast_sam_path).cuda()
                     # model = YOLO(yolo_path).cuda()
