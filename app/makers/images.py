@@ -93,17 +93,12 @@ def process_beauty_image(image_path):
     extension = image_path.split(".")[-1].lower()
     if extension == "gif":
         return image_path
-    try:
-        image = Image.open(image_path)
-    except IOError:
-        print(f"Cannot identify image file {image_path}")
-        return ""
 
     text = ""
-    response = requests.get(PADDLE_URL, json={"image_path": image_path})
+    response = requests.post(PADDLE_URL, json={"image_path": image_path})
     if response.status_code == 200:
         result = response.json()
-        text = result["text"]
+        text = result["text"] or ""
     if len(text) > 50:
         os.remove(image_path)
         return ""
@@ -272,13 +267,13 @@ class ImageMaker:
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
 
                         if os.environ.get("USE_OCR") == "true":
-                            response = requests.get(
+                            response = requests.post(
                                 PADDLE_URL, json={"image_path": image_path}
                             )
                             text = ""
                             if response.status_code == 200:
                                 result = response.json()
-                                text = result["text"]
+                                text = result["text"] or ""
                             if len(text) > 25:
                                 continue
 
