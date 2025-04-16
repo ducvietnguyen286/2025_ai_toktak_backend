@@ -186,7 +186,7 @@ class APICreateCoupon(Resource):
                     "SUB_PRO",
                 ],
             },
-            "is_check_user": {"type": "string"},
+            "is_check_user": {"type": "boolean"},
             "max_per_user": {"type": "string"},
             "max_used": {"type": ["string", "null"]},
             "num_days": {"type": ["string", "null"]},
