@@ -193,10 +193,6 @@ class ImageMaker:
 
     @staticmethod
     def cut_out_long_height_images_by_sam(image_path, batch_id=0):
-        logger.info(
-            f"--------------------PROCESS IMAGE :{image_path}--------------------"
-        )
-
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
             return [image_path]
