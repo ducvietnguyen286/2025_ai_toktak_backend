@@ -186,7 +186,6 @@ class ShortstackWebhook(Resource):
                                 
                                 description=f"AI Shotstack  {str(error)}",
                             )
-                            
                         else:
                             NotificationServices.create_notification(
                                 user_id=post_detail.user_id,
