@@ -1405,7 +1405,6 @@ class APIAdminHistories(Resource):
             "search_text": search_text,
         }
         posts = PostService.admin_get_posts_upload(data_search)
-        logger.info(posts.items)
         return {
             "current_user": current_user.id,
             "status": True,

@@ -150,6 +150,7 @@ class APIAdminNotificationHistories(Resource):
         type_post = request.args.get("type_post", "", type=str)
         time_range = request.args.get("time_range", "", type=str)
         type_notification = request.args.get("type_notification", "", type=str)
+        search_key = request.args.get("search_key", "", type=str)
         data_search = {
             "page": page,
             "per_page": per_page,
@@ -158,16 +159,17 @@ class APIAdminNotificationHistories(Resource):
             "type_post": type_post,
             "time_range": time_range,
             "type_notification": type_notification,
+            "search_key": search_key,
         }
-        posts = NotificationServices.get_adminnotifications(data_search)
+        notifications = NotificationServices.get_admin_notifications(data_search)
         return {
             "status": True,
             "message": "Success",
-            "total": posts.total,
-            "page": posts.page,
-            "per_page": posts.per_page,
-            "total_pages": posts.pages,
-            "data": [post._to_json() for post in posts.items],
+            "total": notifications.total,
+            "page": notifications.page,
+            "per_page": notifications.per_page,
+            "total_pages": notifications.pages,
+            "data": [post.to_dict() for post in notifications.items],
         }, 200
         
 @ns.route("/admin/delete_notification")
