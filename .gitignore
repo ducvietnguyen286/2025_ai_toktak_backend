@@ -1,5 +1,7 @@
 .venv/
 venv/
+.paddleocr_env/
+paddleocr_env/
 
 *.pyc
 __pycache__/
