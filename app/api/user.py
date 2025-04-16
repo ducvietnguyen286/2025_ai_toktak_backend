@@ -494,7 +494,7 @@ class APIPostToLinks(Resource):
                 redis_client.set(redis_user_batch_key, current_remain - 1, ex=180)
 
             # Update to Uploads
-            PostService.update_post(post_id, status=const.DRAFT_STATUS, status_sns=1)
+            PostService.update_post(post_id, status=const.DRAFT_STATUS )
 
             batch_id = post.batch_id
 
