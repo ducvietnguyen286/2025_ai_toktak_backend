@@ -4,7 +4,7 @@ from app.models.user_video_templates import UserVideoTemplates
 from app.models.link import Link
 from app.models.social_post import SocialPost
 from app.extensions import db
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 from flask import jsonify
 from datetime import datetime, timedelta
 from sqlalchemy.orm import aliased
@@ -134,13 +134,20 @@ class PostService:
         # Query cơ bản với các điều kiện
         query = Post.query.filter(
             Post.user_id == data_search["user_id"],
-            Post.status == data_search["status"],
         )
 
         # NHững thằng bắn lên SNS thì có status_sns = 1
         if data_search["status"] == 1:
-            query = query.filter(Post.status_sns == 1)
-
+            # query = query.filter(Post.status_sns == 1)
+            query = query.filter(
+                (Post.social_sns_description.like("%PUBLISHED%"))
+                | (Post.status_sns == data_search["status"])
+            )
+        elif data_search["status"] == 99:
+            query = query.filter(
+                (Post.social_sns_description.like("%ERRORED%"))
+                | (Post.status == data_search["status"])
+            )
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":
             query = query.order_by(Post.id.asc())
@@ -157,7 +164,7 @@ class PostService:
         elif data_search["type_post"] == "blog":
             query = query.filter(Post.type == "blog")
         elif data_search["type_post"] == "error_blog":
-            query = query.filter(Post.social_sns_description.like('%ERRORED%'))
+            query = query.filter(Post.social_sns_description.like("%ERRORED%"))
 
         time_range = data_search.get("time_range")  # Thêm biến time_range
         # Lọc theo khoảng thời gian
@@ -227,13 +234,18 @@ class PostService:
         # NHững thằng bắn lên SNS thì có status_sns = 1
         if data_search["status"] == 1:
             query = query.filter(Post.status_sns == 1)
-        
+
         search_text = data_search.get("search_text", "")
-        
+
         if search_text != "":
             search_pattern = f"%{search_text}%"
-            query = query.filter(Post.title.like(search_pattern))
-            
+            query = query.filter(
+                or_(
+                    Post.title.ilike(search_pattern),
+                    Post.description.ilike(search_pattern),
+                    Post.user.has(User.email.ilike(search_pattern)),
+                )
+            )
 
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":
@@ -250,9 +262,9 @@ class PostService:
             query = query.filter(Post.type == "image")
         elif data_search["type_post"] == "blog":
             query = query.filter(Post.type == "blog")
-        
+
         elif data_search["type_post"] == "error_blog":
-            query = query.filter(Post.social_sns_description.like('%ERRORED%'))
+            query = query.filter(Post.social_sns_description.like("%ERRORED%"))
 
         time_range = data_search.get("time_range")  # Thêm biến time_range
         # Lọc theo khoảng thời gian
@@ -332,7 +344,7 @@ class PostService:
         user_template = PostService.create_user_template(
             user_id=user_id,
             video_hooks=json.dumps(video_hooks),
-            image_template_id=image_templates[0]['id'],
+            image_template_id=image_templates[0]["id"],
             image_template=json.dumps(image_templates),
             viral_messages=json.dumps(viral_messages),
             subscribe_video=subscribe_video,

@@ -22,8 +22,10 @@ from app.models.batch import Batch
 from app.models.post import Post
 from app.models.notification import Notification
 from pytz import timezone
+import requests
 
 from pathlib import Path
+import const
 
 # Load biến môi trường
 env_path = Path(__file__).parent / ".env"
@@ -97,6 +99,62 @@ def delete_folder_if_exists(folder_path, app):
         app.logger.error(f"Error deleting folder {folder_path}: {str(e)}")
 
 
+def send_telegram_notifications(app):
+    """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
+    app.logger.info("Start send_telegram_notifications...")
+
+    telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+
+    if not telegram_token or not chat_id:
+        app.logger.error("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env")
+        return
+
+    telegram_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+
+    with app.app_context():
+        try:
+            notifications = (
+                Notification.query.filter(
+                    Notification.send_telegram == 0,
+                    Notification.status == const.NOTIFICATION_FALSE,
+                )
+                .order_by(Notification.created_at.asc())
+                .limit(5)
+                .all()
+            )
+
+            fe_current_domain = os.environ.get("FE_DOMAIN") or "http://localhost:5000"
+
+            for noti in notifications:
+                try:
+                    message = f" {fe_current_domain} \n [BatchId :  {noti.batch_id}  Notification Id : {noti.id}]\n{noti.title}"
+
+                    response = requests.post(
+                        telegram_url,
+                        data={"chat_id": chat_id, "text": message},
+                        timeout=10,
+                    )
+
+                    if response.status_code == 200:
+                        noti.send_telegram = 1
+                        app.logger.info(f"Sent notification ID {noti.id} to Telegram.")
+                    else:
+                        app.logger.warning(
+                            f"Failed to send notification ID {noti.id}. Response: {response.text}"
+                        )
+
+                except Exception as single_error:
+                    app.logger.error(
+                        f"Error sending notification ID {noti.id}: {str(single_error)}"
+                    )
+
+            db.session.commit()
+
+        except Exception as e:
+            app.logger.error(f"Error in send_telegram_notifications: {str(e)}")
+
+
 def cleanup_pending_batches(app):
     """Xóa Batch có process_status = 'PENDING', các Post liên quan và thư mục"""
     app.logger.info("Begin cleanup_pending_batches.")
@@ -158,12 +216,18 @@ def start_scheduler(app):
     scheduler = BackgroundScheduler()
     kst = timezone("Asia/Seoul")
 
-    every_5_minutes_trigger = CronTrigger(minute="*/5", timezone=kst)
+    every_5_minutes_trigger = CronTrigger(minute="*/2", timezone=kst)
     one_am_kst_trigger = CronTrigger(hour=1, minute=0, timezone=kst)
     two_am_kst_trigger = CronTrigger(hour=2, minute=0, timezone=kst)
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
     four_am_kst_trigger = CronTrigger(hour=4, minute=0, timezone=kst)
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
+
+    scheduler.add_job(
+        func=lambda: send_telegram_notifications(app),
+        trigger=every_5_minutes_trigger,
+        id="send_telegram_notifications",
+    )
 
     scheduler.add_job(
         func=lambda: cleanup_pending_batches(app),

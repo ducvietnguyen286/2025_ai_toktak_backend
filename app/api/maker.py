@@ -232,7 +232,9 @@ class APICreateBatch(Resource):
             if not data:
                 NotificationServices.create_notification(
                     user_id=user_id_login,
+                    status=const.NOTIFICATION_FALSE,
                     title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                    description=f"Scraper False {url}",
                 )
 
                 redis_client.set(
@@ -350,6 +352,7 @@ class APICreateBatch(Resource):
             NotificationServices.create_notification(
                 user_id=user_id_login,
                 batch_id=batch.id,
+                notification_type="create_batch",
                 title=f"제품 정보를 성공적으로 가져왔습니다. {url}",
             )
 
@@ -913,6 +916,8 @@ class APIMakePost(Resource):
                     user_id=current_user_id,
                     batch_id=batch.id,
                     title=message,
+                    post_id=post.id,
+                    notification_type="image",
                 )
 
             elif type == "blog":
@@ -921,6 +926,8 @@ class APIMakePost(Resource):
                     user_id=current_user_id,
                     batch_id=batch.id,
                     title=message,
+                    post_id=post.id,
+                    notification_type="blog",
                 )
 
             return Response(
@@ -938,16 +945,24 @@ class APIMakePost(Resource):
                 message = MessageError.CREATE_POST_IMAGE.value
                 NotificationServices.create_notification(
                     user_id=current_user_id,
+                    status=const.NOTIFICATION_FALSE,
                     batch_id=batch.id,
                     title=message,
+                    post_id=post.id,
+                    notification_type="image",
+                    description=f"Create Image False {str(e)}",
                 )
 
             elif type == "blog":
                 message = MessageError.CREATE_POST_BLOG.value
                 NotificationServices.create_notification(
                     user_id=current_user_id,
+                    status=const.NOTIFICATION_FALSE,
                     batch_id=batch.id,
                     title=message,
+                    post_id=post.id,
+                    notification_type="blog",
+                    description=f"Create Blog False {str(e)}",
                 )
 
             return Response(
@@ -1028,13 +1043,37 @@ class APIGetStatusUploadBySyncId(Resource):
             for post in posts:
                 post_id = post["id"]
                 social_post_detail = post["social_posts"]
+                notification_type = post["type"]
                 update_data = {"social_sns_description": json.dumps(social_post_detail)}
 
                 status_check_sns = 0
                 for social_post_each in social_post_detail:
-                    status = social_post_each["status"]
-                    if status == "PUBLISHED":
+                    sns_status = social_post_each["status"]
+                    if sns_status == "PUBLISHED":
                         status_check_sns = const.UPLOADED
+
+                    notification = NotificationServices.find_notification_sns(
+                        post_id, notification_type
+                    )
+                    if not notification:
+                        notification = NotificationServices.create_notification(
+                            user_id=post["user_id"],
+                            batch_id=post["batch_id"],
+                            post_id=post_id,
+                            notification_type=notification_type,
+                            title=f"🔄{notification_type}에 업로드 중입니다.",
+                        )
+                    if sns_status == "PUBLISHED":
+                        NotificationServices.update_notification(
+                            notification.id,
+                            title=f"✅{notification_type} 업로드에 성공했습니다.",
+                        )
+                    elif sns_status == "ERRORED":
+                        NotificationServices.update_notification(
+                            notification.id,
+                            status=const.NOTIFICATION_FALSE,
+                            title=f"❌{notification_type} 업로드에 실패했습니다.",
+                        )
 
                 if status_check_sns == const.UPLOADED:
                     update_data["status_sns"] = const.UPLOADED
@@ -1098,7 +1137,6 @@ class APIGetStatusUploadWithBatch(Resource):
                             notification = NotificationServices.find_notification_sns(
                                 sns_post_id, notification_type
                             )
-                            logger.info(f"notification: {notification}")
                             if not notification:
                                 notification = NotificationServices.create_notification(
                                     user_id=post_detail["user_id"],
@@ -1115,6 +1153,7 @@ class APIGetStatusUploadWithBatch(Resource):
                             elif sns_status == "ERRORED":
                                 NotificationServices.update_notification(
                                     notification.id,
+                                    status=const.NOTIFICATION_FALSE,
                                     title=f"❌{notification_type} 업로드에 실패했습니다.",
                                 )
                         except Exception as e:
@@ -1403,6 +1442,15 @@ class APICopyBlog(Resource):
                     message="업데이트 실패",
                     code=201,
                 ).to_dict()
+
+            NotificationServices.create_notification(
+                    user_id=post.user_id,
+                    batch_id=post.batch_id,
+                    title="블로그를 성공적으로 복사하였습니다.",
+                    post_id=post.id,
+                    notification_type="copy_blog",
+                )
+
 
             return Response(
                 message=message,

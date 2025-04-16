@@ -59,3 +59,8 @@ rm -rf /var/www/logs/* && rm -rf /var/www/2025_ai_toktak_be/logs/* && sudo syste
 sudo systemctl restart toktak_watchdog.service
 
 sudo systemctl status toktak_watchdog.service
+
+sudo systemctl status toktak.service
+
+
+/etc/systemd/system

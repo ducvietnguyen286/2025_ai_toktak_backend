@@ -16,6 +16,7 @@ import os
 import requests
 from pathlib import Path
 from app.services.user import UserService
+import const
 
 ns = Namespace(name="video_maker", description="Video Maker API")
 
@@ -158,6 +159,7 @@ class ShortstackWebhook(Resource):
             video_url = payload.get("url")
             action = payload.get("action")
             render = payload.get("render", "")
+            error = payload.get("error", "")
             user_id = 0
 
             # Ghi log thông tin nhận được
@@ -179,13 +181,17 @@ class ShortstackWebhook(Resource):
                             NotificationServices.create_notification(
                                 user_id=post_detail.user_id,
                                 batch_id=post_detail.batch_id,
+                                status=const.NOTIFICATION_FALSE,
                                 title="⚠️ 비디오 생성에 실패했습니다. 다시 시도해주세요.",
+                                
+                                description=f"AI Shotstack  {str(error)}",
                             )
                         else:
                             NotificationServices.create_notification(
                                 user_id=post_detail.user_id,
                                 batch_id=post_detail.batch_id,
                                 title="🎥 비디오 생성이 완료되었습니다. 이제 공유할 수 있습니다.",
+                                description=json.dumps(payload),
                             )
                 file_download_attr = download_video(video_url, batch_id)
                 if file_download_attr:
@@ -198,7 +204,7 @@ class ShortstackWebhook(Resource):
                     )
                     print(user_id)
                     current_user = UserService.find_user(user_id)
-                    
+
                     if current_user:
                         new_batch_remain = max(current_user.batch_remain - 1, 0)
                         UserService.update_user(user_id, batch_remain=new_batch_remain)
