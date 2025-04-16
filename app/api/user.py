@@ -183,6 +183,19 @@ class APISendPosts(Resource):
         type="object",
         properties={
             "post_ids": {"type": "array", "items": {"type": "integer"}},
+            "disable_comment": {"type": "boolean"},
+            "disable_duet": {"type": "boolean"},
+            "disable_stitch": {"type": "boolean"},
+            "privacy_level": {
+                "type": "string",
+                "enum": [
+                    "PUBLIC_TO_EVERYONE",
+                    "MUTUAL_FOLLOW_FRIENDS",
+                    "FOLLOWER_OF_CREATOR",
+                    "SELF_ONLY",
+                ],
+            },
+            "auto_add_music": {"type": "boolean"},
         },
         required=["post_ids"],
     )
@@ -198,6 +211,12 @@ class APISendPosts(Resource):
 
         try:
             id_posts = args.get("post_ids", [])
+            disable_comment = args.get("disable_comment", False)
+            privacy_level = args.get("privacy_level", "SELF_ONLY")
+            auto_add_music = args.get("auto_add_music", False)
+            disable_duet = args.get("disable_duet", False)
+            disable_stitch = args.get("disable_stitch", False)
+
             active_links = []
             user_links = UserService.get_original_user_links(current_user_id)
             active_links = [link.link_id for link in user_links if link.status == 1]
@@ -301,6 +320,11 @@ class APISendPosts(Resource):
                         session_key=session_key,
                         sync_id=sync_id,
                         status="PROCESSING",
+                        disable_comment=disable_comment,
+                        privacy_level=privacy_level,
+                        auto_add_music=auto_add_music,
+                        disable_duet=disable_duet,
+                        disable_stitch=disable_stitch,
                     )
 
                     social_post_ids.append(social_post.id)
@@ -397,6 +421,19 @@ class APIPostToLinks(Resource):
             },
             "post_id": {"type": "integer"},
             "page_id": {"type": "string"},
+            "disable_comment": {"type": "boolean"},
+            "disable_duet": {"type": "boolean"},
+            "disable_stitch": {"type": "boolean"},
+            "privacy_level": {
+                "type": "string",
+                "enum": [
+                    "PUBLIC_TO_EVERYONE",
+                    "MUTUAL_FOLLOW_FRIENDS",
+                    "FOLLOWER_OF_CREATOR",
+                    "SELF_ONLY",
+                ],
+            },
+            "auto_add_music": {"type": "boolean"},
         },
         required=["post_id"],
     )
@@ -414,6 +451,11 @@ class APIPostToLinks(Resource):
             post_id = args.get("post_id", 0)
             page_id = args.get("page_id", "")
             link_ids = args.get("link_ids", [])
+            disable_comment = args.get("disable_comment", False)
+            privacy_level = args.get("privacy_level", "SELF_ONLY")
+            auto_add_music = args.get("auto_add_music", False)
+            disable_duet = args.get("disable_duet", False)
+            disable_stitch = args.get("disable_stitch", False)
 
             redis_check_posting = f"toktak:posts:{post_id}:posting_sns"
             is_posting = redis_client.get(redis_check_posting)
@@ -578,6 +620,11 @@ class APIPostToLinks(Resource):
                     post_id=post.id,
                     batch_id=batch_id,
                     session_key=session_key,
+                    disable_comment=disable_comment,
+                    privacy_level=privacy_level,
+                    auto_add_music=auto_add_music,
+                    disable_duet=disable_duet,
+                    disable_stitch=disable_stitch,
                     status="PROCESSING",
                 )
 

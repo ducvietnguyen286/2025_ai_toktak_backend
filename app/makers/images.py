@@ -1,8 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 import io
 import os
-import subprocess
-import tempfile
 import time
 import datetime
 import traceback
@@ -30,6 +28,9 @@ UPLOAD_FOLDER = os.path.join(os.getcwd(), f"uploads/{date_create}")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 FONT_FOLDER = os.path.join(os.getcwd(), "app/makers/fonts")
 CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+
+PADDLE_OCR_URL = os.environ.get("PADDLE_OCR_URL")
+PADDLE_URL = f"{PADDLE_OCR_URL}/check_text"
 
 
 def wrap_text_by_pixel(draw, text, font, max_width):
@@ -92,17 +93,13 @@ def process_beauty_image(image_path):
     extension = image_path.split(".")[-1].lower()
     if extension == "gif":
         return image_path
-    try:
-        image = Image.open(image_path)
-    except IOError:
-        print(f"Cannot identify image file {image_path}")
-        return ""
-    is_gpu = torch.cuda.is_available()
-    ocr = easyocr.Reader(["ko", "en"], gpu=is_gpu)
-    ocr_result = ocr.readtext(image)
-    text = "".join([item[1] for item in ocr_result]).strip()
+
+    text = ""
+    response = requests.post(PADDLE_URL, json={"image_path": image_path})
+    if response.status_code == 200:
+        result = response.json()
+        text = result["text"] or ""
     if len(text) > 50:
-        image.close()
         os.remove(image_path)
         return ""
     return image_path
@@ -196,10 +193,6 @@ class ImageMaker:
 
     @staticmethod
     def cut_out_long_height_images_by_sam(image_path, batch_id=0):
-        logger.info(
-            f"--------------------PROCESS IMAGE :{image_path}--------------------"
-        )
-
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
             return [image_path]
@@ -231,25 +224,18 @@ class ImageMaker:
             yolo_path = os.path.join(model_path, "yolov8s-seg.pt")
 
             try:
-                logger.info("Step1")
                 is_gpu = torch.cuda.is_available()
-                reader = easyocr.Reader(["ko", "en"], gpu=is_gpu)
-                logger.info(f"Step1: {is_gpu}")
                 if is_gpu:
                     model = FastSAM(fast_sam_path).cuda()
                     # model = YOLO(yolo_path).cuda()
                 else:
                     model = FastSAM(fast_sam_path)
                     # model = YOLO(yolo_path)
-                logger.info("Step2")
                 results = model.predict(source=image_path, conf=0.5)
-                logger.info("Step3")
                 # results = model(image_path, conf=0.5)
                 image_cv = cv2.imread(image_path)
                 if image_cv is None:
                     return [image_path]
-
-                logger.info(f"Step4: {results}")
 
                 cropped_images = []
 
@@ -264,8 +250,6 @@ class ImageMaker:
                         label = result.names[int(box.cls[0])]
                         conf = box.conf[0].item()
 
-                        logger.info(f"Step5: {label}")
-
                         if label.lower() in excluded_labels:
                             continue
 
@@ -273,31 +257,26 @@ class ImageMaker:
                         w = x2 - x1
                         h = y2 - y1
 
-                        logger.info(f"Clear image: {w}x{h}")
-
                         if w < 100 or h < 100:
                             continue
 
-                        logger.info(f"Step6")
-
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
 
-                        logger.info(f"Step7")
                         if os.environ.get("USE_OCR") == "true":
-                            ocr_result = reader.readtext(cropped)
-                            logger.info(f"Step8")
-                            text = "".join([item[1] for item in ocr_result]).strip()
-                            # Nếu độ dài văn bản vượt quá 25 ký tự, có thể cho rằng đây là vùng chứa chữ/table
-                            logger.info(f"Step9")
-                            if len(text) > 20:
+                            response = requests.post(
+                                PADDLE_URL, json={"image_path": image_path}
+                            )
+                            text = ""
+                            if response.status_code == 200:
+                                result = response.json()
+                                text = result["text"] or ""
+                            if len(text) > 25:
                                 continue
 
                         timestamp = int(time.time())
                         unique_id = uuid.uuid4().hex
                         new_name = f"{timestamp}_{unique_id}.jpg"
                         cropped_path = os.path.join(output_folder, new_name)
-
-                        logger.info(f"Step10")
 
                         # Resize the cropped image to the target size (1350x1080)
                         target_size = (1350, 1080)
@@ -308,19 +287,15 @@ class ImageMaker:
                         resized = cv2.resize(
                             cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
                         )
-                        logger.info(f"Step11")
 
                         cropped_resized = np.zeros(
                             (target_size[1], target_size[0], 3), dtype=np.uint8
                         )
-                        logger.info(f"Step12")
                         y_offset = (target_size[1] - new_h) // 2
                         x_offset = (target_size[0] - new_w) // 2
                         cropped_resized[
                             y_offset : y_offset + new_h, x_offset : x_offset + new_w
                         ] = resized
-
-                        logger.info(f"Step13")
 
                         cv2.imwrite(
                             cropped_path, cropped_resized
@@ -329,10 +304,6 @@ class ImageMaker:
                         cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
 
                         cropped_images.append((cropped_url, conf))
-
-                        logger.info(f"Step14")
-
-                logger.info(f"Step15")
 
                 if cropped_images:
                     needed_length = 5

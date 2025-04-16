@@ -509,13 +509,20 @@ class TiktokService(BaseService):
         if total_chunk <= 0:
             total_chunk = 1
 
+        disable_comment = self.social_post.disable_comment or False
+        privacy_level = self.social_post.privacy_level or "SELF_ONLY"
+        auto_add_music = self.social_post.auto_add_music or False
+        disable_duet = self.social_post.disable_duet or False
+        disable_stitch = self.social_post.disable_stitch or False
+
         payload = {
             "post_info": {
                 "title": self.post.description + "\n\n  #tiktok " + self.post.hashtag,
-                "privacy_level": "SELF_ONLY",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
-                "disable_duet": False,
-                "disable_comment": False,
-                "disable_stitch": False,
+                "privacy_level": privacy_level,  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
+                "disable_duet": disable_duet,
+                "disable_comment": disable_comment,
+                "disable_stitch": disable_stitch,
+                "auto_add_music": auto_add_music,
                 "video_cover_timestamp_ms": 1000,
             },
             "source_info": {
