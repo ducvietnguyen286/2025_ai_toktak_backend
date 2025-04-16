@@ -124,11 +124,11 @@ def send_telegram_notifications(app):
                 .all()
             )
 
-            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+            fe_current_domain = os.environ.get("FE_DOMAIN") or "http://localhost:5000"
 
             for noti in notifications:
                 try:
-                    message = f" {current_domain} \n [BatchId :  {noti.batch_id}  Notification Id : {noti.id}]\n{noti.title}"
+                    message = f" {fe_current_domain} \n [BatchId :  {noti.batch_id}  Notification Id : {noti.id}]\n{noti.title}"
 
                     response = requests.post(
                         telegram_url,
