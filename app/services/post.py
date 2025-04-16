@@ -138,16 +138,17 @@ class PostService:
 
         # NHững thằng bắn lên SNS thì có status_sns = 1
         if data_search["status"] == 1:
-            # query = query.filter(Post.status_sns == 1)
-            query = query.filter(
-                (Post.social_sns_description.like("%PUBLISHED%"))
-                | (Post.status_sns == data_search["status"])
-            )
+            query = query.filter(Post.status_sns == 1)
+            # query = query.filter(
+            #     (Post.social_sns_description.like("%PUBLISHED%"))
+            #     | (Post.status_sns == data_search["status"])
+            # )
         elif data_search["status"] == 99:
-            query = query.filter(
-                (Post.social_sns_description.like("%ERRORED%"))
-                | (Post.status == data_search["status"])
-            )
+            query = query.filter(Post.status == 99)
+            # query = query.filter(
+            #     (Post.social_sns_description.like("%ERRORED%"))
+            #     | (Post.status == data_search["status"])
+            # )
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":
             query = query.order_by(Post.id.asc())
