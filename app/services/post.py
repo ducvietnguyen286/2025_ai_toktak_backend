@@ -134,12 +134,15 @@ class PostService:
         # Query cơ bản với các điều kiện
         query = Post.query.filter(
             Post.user_id == data_search["user_id"],
-            Post.status == data_search["status"],
         )
 
         # NHững thằng bắn lên SNS thì có status_sns = 1
         if data_search["status"] == 1:
-            query = query.filter(Post.status_sns == 1)
+            # query = query.filter(Post.status_sns == 1)
+            query = query.filter(
+                (Post.social_sns_description.like("%PUBLISHED%"))
+                | (Post.status_sns == data_search["status"])
+            )
         elif data_search["status"] == 99:
             query = query.filter(
                 (Post.social_sns_description.like("%ERRORED%"))
