@@ -184,6 +184,7 @@ class APISendPosts(Resource):
         properties={
             "post_ids": {"type": "array", "items": {"type": "integer"}},
             "link_ids": {"type": "array", "items": {"type": "integer"}},
+            "is_all": {"type": "integer"},
             "disable_comment": {"type": "boolean"},
             "disable_duet": {"type": "boolean"},
             "disable_stitch": {"type": "boolean"},
@@ -212,6 +213,7 @@ class APISendPosts(Resource):
 
         try:
             id_posts = args.get("post_ids", [])
+            is_all = args.get("is_all", 0)
             link_ids = args.get("link_ids", [])
             disable_comment = args.get("disable_comment", False)
             privacy_level = args.get("privacy_level", "SELF_ONLY")
@@ -219,14 +221,14 @@ class APISendPosts(Resource):
             disable_duet = args.get("disable_duet", False)
             disable_stitch = args.get("disable_stitch", False)
 
-            if not link_ids:
+            if not link_ids and is_all == 0:
                 return Response(
                     message="Thiếu thông tin link",
                     status=400,
                 ).to_dict()
 
             active_links = []
-            if len(link_ids) > 0:
+            if is_all == 0 and len(link_ids) > 0:
                 for link_id in link_ids:
                     user_link = UserService.find_user_link(link_id, current_user.id)
                     if not user_link:
@@ -234,6 +236,10 @@ class APISendPosts(Resource):
                     if user_link.status == 0:
                         continue
                     active_links.append(link_id)
+
+            if is_all == 1:
+                user_links = UserService.get_original_user_links(current_user.id)
+                active_links = [link.link_id for link in user_links if link.status == 1]
 
             if not active_links:
                 return Response(
