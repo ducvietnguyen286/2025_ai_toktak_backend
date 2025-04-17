@@ -1042,6 +1042,9 @@ class APIGetStatusUploadBySyncId(Resource):
 
             posts = sync_status["posts"]
             for post in posts:
+                
+                logger.info("+++++++++++++++++++++++++")
+                logger.info(post)
 
                 social_post_detail = post["social_posts"]
                 logger.info(social_post_detail)
