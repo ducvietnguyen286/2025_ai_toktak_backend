@@ -99,6 +99,22 @@ def delete_folder_if_exists(folder_path, app):
         app.logger.error(f"Error deleting folder {folder_path}: {str(e)}")
 
 
+def split_message(text, max_length=4000):
+    """Chia tin nhắn thành nhiều đoạn dưới max_length ký tự"""
+    return [text[i : i + max_length] for i in range(0, len(text), max_length)]
+
+
+def format_notification_message(notification_detail, fe_current_domain):
+    return (
+        f"[Toktak Notification {fe_current_domain}]\n"
+        f"- User Email: {notification_detail.get('email')}\n"
+        f"- Notification ID: {notification_detail.get('id')}\n"
+        f"- Batch ID: {notification_detail.get('batch_id')}\n"
+        f"- Title: {notification_detail.get('title')}\n"
+        f"- Description: {notification_detail.get('description')}\n"
+    )
+
+
 def send_telegram_notifications(app):
     """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
     app.logger.info("Start send_telegram_notifications...")
@@ -120,33 +136,42 @@ def send_telegram_notifications(app):
                     Notification.status == const.NOTIFICATION_FALSE,
                 )
                 .order_by(Notification.created_at.asc())
-                .limit(5)
+                .limit(10)
                 .all()
             )
 
             fe_current_domain = os.environ.get("FE_DOMAIN") or "http://localhost:5000"
 
-            for noti in notifications:
+            for notification in notifications:
                 try:
-                    message = f" {fe_current_domain} \n [BatchId :  {noti.batch_id}  Notification Id : {noti.id}]\n{noti.title}"
-
-                    response = requests.post(
-                        telegram_url,
-                        data={"chat_id": chat_id, "text": message},
-                        timeout=10,
+                    notification_detail = notification.to_dict()
+                    message = format_notification_message(
+                        notification_detail, fe_current_domain
                     )
 
-                    if response.status_code == 200:
-                        noti.send_telegram = 1
-                        app.logger.info(f"Sent notification ID {noti.id} to Telegram.")
-                    else:
-                        app.logger.warning(
-                            f"Failed to send notification ID {noti.id}. Response: {response.text}"
+                    # Tự chia nhỏ nếu tin nhắn quá dài
+                    message_parts = split_message(message)
+                    for idx, part in enumerate(message_parts):
+                        response = requests.post(
+                            telegram_url,
+                            data={"chat_id": chat_id, "text": part},
+                            timeout=10,
                         )
+
+                        if response.status_code == 200:
+                            app.logger.info(
+                                f"Sent part {idx+1}/{len(message_parts)} for notification ID {notification.id}"
+                            )
+                        else:
+                            app.logger.warning(
+                                f"Failed to send part {idx+1} of notification ID {notification.id}. Response: {response.text}"
+                            )
+
+                    notification.send_telegram = 1
 
                 except Exception as single_error:
                     app.logger.error(
-                        f"Error sending notification ID {noti.id}: {str(single_error)}"
+                        f"Error sending notification ID {notification.id}: {str(single_error)}"
                     )
 
             db.session.commit()
