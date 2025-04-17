@@ -67,3 +67,9 @@ sudo systemctl status toktak.service
 
 
 journalctl -u toktak_watchdog.service -f
+
+
+
+rm -rf /var/www/logs/* && rm -rf /var/www/toktak/logs/* && sudo systemctl restart nginx && sudo systemctl restart toktak.service && sudo systemctl restart toktak_watchdog.service
+
+sudo systemctl restart nginx 
