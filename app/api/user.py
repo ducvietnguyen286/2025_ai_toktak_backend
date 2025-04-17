@@ -182,9 +182,21 @@ class APISendPosts(Resource):
     @parameters(
         type="object",
         properties={
-            "post_ids": {"type": "array", "items": {"type": "integer"}},
-            "link_ids": {"type": "array", "items": {"type": "integer"}},
-            "is_all": {"type": "integer"},
+            "post_ids": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "is_all": {"type": "integer"},
+                        "link_ids": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "uniqueItems": True,
+                        },
+                    },
+                },
+            },
             "disable_comment": {"type": "boolean"},
             "disable_duet": {"type": "boolean"},
             "disable_stitch": {"type": "boolean"},
@@ -213,33 +225,14 @@ class APISendPosts(Resource):
 
         try:
             id_posts = args.get("post_ids", [])
-            is_all = args.get("is_all", 0)
-            link_ids = args.get("link_ids", [])
             disable_comment = args.get("disable_comment", False)
             privacy_level = args.get("privacy_level", "SELF_ONLY")
             auto_add_music = args.get("auto_add_music", False)
             disable_duet = args.get("disable_duet", False)
             disable_stitch = args.get("disable_stitch", False)
 
-            if not link_ids and is_all == 0:
-                return Response(
-                    message="Thiếu thông tin link",
-                    status=400,
-                ).to_dict()
-
-            active_links = []
-            if is_all == 0 and len(link_ids) > 0:
-                for link_id in link_ids:
-                    user_link = UserService.find_user_link(link_id, current_user.id)
-                    if not user_link:
-                        continue
-                    if user_link.status == 0:
-                        continue
-                    active_links.append(link_id)
-
-            if is_all == 1:
-                user_links = UserService.get_original_user_links(current_user.id)
-                active_links = [link.link_id for link in user_links if link.status == 1]
+            user_links = UserService.get_original_user_links(current_user.id)
+            active_links = [link.link_id for link in user_links if link.status == 1]
 
             if not active_links:
                 return Response(
@@ -247,7 +240,22 @@ class APISendPosts(Resource):
                     status=400,
                 ).to_dict()
 
-            posts = PostService.get_posts__by_ids(id_posts)
+            link_ids = {}
+            is_all = {}
+            ids = []
+            for post in id_posts:
+                post_id = post.get("id", 0)
+                id_links = post.get("link_ids", [])
+
+                ids.append(post_id)
+                push_links = []
+                for link_id in id_links:
+                    if link_id in active_links:
+                        push_links.append(link_id)
+                link_ids[post_id] = push_links
+                is_all[post_id] = post.get("is_all", 0)
+
+            posts = PostService.get_posts__by_ids(ids)
             if not posts:
                 return Response(
                     message="Không tìm thấy bài viết",
@@ -321,7 +329,13 @@ class APISendPosts(Resource):
 
                 session_key = f"{timestamp}_{unique_id}"
 
-                for link_id in active_links:
+                check_is_all = is_all.get(post.id, 0)
+                check_links = link_ids.get(post.id, [])
+
+                if check_is_all == 1:
+                    check_links = active_links
+
+                for link_id in check_links:
                     link = link_pluck_by_id.get(link_id)
                     if not link:
                         continue
@@ -403,8 +417,9 @@ class APISendPosts(Resource):
             social_sync.save()
             redis_client.set(f"toktak:progress-sync:{sync_id}", json.dumps(progress))
 
-            current_user.batch_sns_remain -= total_sns_content
-            current_user.save()
+            if current_user.batch_no_limit_sns == 0:
+                current_user.batch_sns_remain -= total_sns_content
+                current_user.save()
 
             return Response(
                 data={
