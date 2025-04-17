@@ -93,6 +93,11 @@ class UserService:
         return [user._to_json() for user in users]
 
     @staticmethod
+    def all_users():
+        users = User.query.all()
+        return [user._to_json() for user in users]
+
+    @staticmethod
     def update_user(id, *args, **kwargs):
         user = User.query.get(id)
         if not user:
@@ -109,6 +114,13 @@ class UserService:
         user_link = UserLink(**kwargs)
         user_link.save()
         return user_link
+
+    @staticmethod
+    def update_by_link_multiple_user_links(link_id=0, *args, **kwargs):
+        UserLink.query.filter(UserLink.link_id == link_id).update(
+            kwargs, synchronize_session=False
+        )
+        db.session.commit()
 
     @staticmethod
     def find_user_link(link_id=0, user_id=0):

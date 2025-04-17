@@ -2,11 +2,8 @@ from app.models.base_mongo import BaseDocument
 from mongoengine import StringField, IntField, ListField
 
 
-class YoutubeProject(BaseDocument):
-    meta = {
-        "collection": "youtube_projects",
-        "indexes": ["user_id"],
-    }
+class YoutubeClient(BaseDocument):
+    meta = {"collection": "youtube_clients"}
 
     user_ids = ListField(default=[])
     member_count = IntField(default=0)

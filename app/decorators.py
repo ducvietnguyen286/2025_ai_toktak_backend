@@ -9,6 +9,7 @@ from app.errors.exceptions import BadRequest, Unauthorized
 from app.services.auth import AuthService
 from app.lib.response import Response
 
+
 def jwt_optional(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -16,7 +17,26 @@ def jwt_optional(fn):
             try:
                 verify_jwt_in_request()
             except Exception as e:
-                raise Unauthorized(description=str(e))
+                raise Unauthorized(message="Unauthorized")
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def required_admin(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            verify_jwt_in_request()
+        except Exception as e:
+            raise Unauthorized(message="Unauthorized")
+
+        current_user = AuthService.get_current_identity()
+        if not current_user or getattr(current_user, "user_type", 0) != 1:
+            return Response(
+                message="Bạn không có quyền",
+                code=201,
+            ).to_dict()
         return fn(*args, **kwargs)
 
     return wrapper
@@ -91,11 +111,13 @@ def admin_required():
         @wraps(fn)
         def decorator(*args, **kwargs):
             current_user = AuthService.get_current_identity()
-            if not current_user or getattr(current_user, 'user_type', 0) != 1:
+            if not current_user or getattr(current_user, "user_type", 0) != 1:
                 return Response(
                     message="Bạn không có quyền",
                     code=201,
                 ).to_dict()
             return fn(*args, **kwargs)
+
         return decorator
+
     return wrapper

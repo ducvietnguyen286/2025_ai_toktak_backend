@@ -67,15 +67,17 @@ class YoutubeTokenService:
             log_youtube_message(f"Error fetch_channel_info: {str(e)}")
             return None
 
-    def exchange_code_for_token(self, code, user_link):
+    def exchange_code_for_token(self, code, user_link, client=None):
         try:
             REDIRECT_URI = os.environ.get("YOUTUBE_REDIRECT_URI") or ""
-
+            YOUTUBE_REDIRECT_URL = (
+                os.environ.get("CURRENT_DOMAIN") + "/api/v1/user/oauth/youtube-callback"
+            )
             data = {
                 "code": code,
-                "client_id": CLIENT_ID,
-                "client_secret": CLIENT_SECRET,
-                "redirect_uri": REDIRECT_URI,
+                "client_id": client.client_id if client else CLIENT_ID,
+                "client_secret": client.client_secret if client else CLIENT_SECRET,
+                "redirect_uri": YOUTUBE_REDIRECT_URL,
                 "grant_type": "authorization_code",
             }
 
@@ -154,6 +156,7 @@ class YoutubeService(BaseService):
         )
         try:
             meta = json.loads(user_link.meta)
+            youtube_client = json.loads(user_link.youtube_client)
             access_token = meta.get("access_token")
             refresh_token = meta.get("refresh_token")
 
@@ -163,8 +166,8 @@ class YoutubeService(BaseService):
                 token=access_token,
                 refresh_token=refresh_token,
                 token_uri=TOKEN_URI,
-                client_id=CLIENT_ID,
-                client_secret=CLIENT_SECRET,
+                client_id=youtube_client.get("client_id") or CLIENT_ID,
+                client_secret=youtube_client.get("client_secret") or CLIENT_SECRET,
                 scopes=SCOPES,
             )
 
