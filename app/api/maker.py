@@ -1038,6 +1038,8 @@ class APIGetStatusUploadBySyncId(Resource):
             sync_status = SocialPostService.get_status_social_sycns__by_id(
                 social_sync.id
             )
+            post_status_sns =0
+            post_status =0
 
             posts = sync_status["posts"]
             for post in posts:
@@ -1082,6 +1084,9 @@ class APIGetStatusUploadBySyncId(Resource):
                 if status_check_sns == const.UPLOADED:
                     update_data["status_sns"] = const.UPLOADED
                     update_data["status"] = const.UPLOADED
+                else:
+                    update_data["status_sns"] = 0
+                    update_data["status"] = const.DRAFT_STATUS
 
                 PostService.update_post(post_id, **update_data)
 
@@ -1132,6 +1137,7 @@ class APIGetStatusUploadWithBatch(Resource):
                     if status_check_sns == 1:
                         update_data["status_sns"] = const.UPLOADED
                         update_data["status"] = const.UPLOADED
+                    
 
                     for sns_post_detail in social_post_detail:
                         try:
