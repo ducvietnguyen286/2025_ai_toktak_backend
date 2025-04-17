@@ -1044,8 +1044,10 @@ class APIGetStatusUploadBySyncId(Resource):
             for post in posts:
 
                 social_post_detail = post["social_posts"]
+                logger.info(social_post_detail)
                 social_sns_description = json.loads(post["social_posts"])
-
+                logger.info(social_sns_description)
+                logger.info("+++++++++++++++++++++++++")
                 new_social_sns_description = merge_by_key(
                     social_sns_description, social_post_detail
                 )
