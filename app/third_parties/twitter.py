@@ -306,23 +306,40 @@ class TwitterService(BaseService):
             errors = parsed_response.get("errors")
             if errors:
                 self.save_errors(
-                    "ERRORED", f"POST {self.key_log} SEND POST IMAGES: {errors}"
+                    "ERRORED",
+                    f"POST {self.key_log} SEND POST IMAGES: {errors}",
+                    f"{errors}",
                 )
                 return False
             else:
                 data = parsed_response.get("data")
-                log_twitter_message(data)
-                x_post_id = data.get("id")
+                if data:
+                    x_post_id = data.get("id")
 
-                username = self.user_link.username
-                if username == "" or not username:
-                    user_url = self.user_link.url
-                    permalink = f"{user_url}/status/{x_post_id}"
+                    username = self.user_link.username
+                    if username == "" or not username:
+                        user_url = self.user_link.url
+                        permalink = f"{user_url}/status/{x_post_id}"
+                    else:
+                        permalink = f"https://x.com/{username}/status/{x_post_id}"
+
+                    self.save_publish("PUBLISHED", permalink)
+                    return True
                 else:
-                    permalink = f"https://x.com/{username}/status/{x_post_id}"
-
-                self.save_publish("PUBLISHED", permalink)
-                return True
+                    detail = parsed_response.get("detail")
+                    if detail:
+                        self.save_errors(
+                            "ERRORED",
+                            f"POST {self.key_log} SEND POST IMAGES: {detail}",
+                            detail,
+                        )
+                    else:
+                        self.save_errors(
+                            "ERRORED",
+                            f"POST {self.key_log} SEND POST IMAGES: {parsed_response}",
+                            f"{parsed_response}",
+                        )
+                    return False
         except Exception as e:
             traceback.print_exc()
             self.save_errors(
@@ -408,22 +425,38 @@ class TwitterService(BaseService):
             errors = parsed_response.get("errors")
             if errors:
                 self.save_errors(
-                    "ERRORED", f"POST {self.key_log} SEND POST VIDEO: {errors}"
+                    "ERRORED",
+                    f"POST {self.key_log} SEND POST VIDEO: {errors}",
+                    f"{errors}",
                 )
                 return False
             else:
                 data = parsed_response.get("data")
-                x_post_id = data.get("id")
+                if data:
+                    x_post_id = data.get("id")
 
-                username = self.user_link.username
-                if username == "" or not username:
-                    user_url = self.user_link.url
-                    permalink = f"{user_url}/status/{x_post_id}"
+                    username = self.user_link.username
+                    if username == "" or not username:
+                        user_url = self.user_link.url
+                        permalink = f"{user_url}/status/{x_post_id}"
+                    else:
+                        permalink = f"https://x.com/{username}/status/{x_post_id}"
+
+                    self.save_publish("PUBLISHED", permalink)
+                    return True
                 else:
-                    permalink = f"https://x.com/{username}/status/{x_post_id}"
-
-                self.save_publish("PUBLISHED", permalink)
-                return True
+                    details = parsed_response.get("details")
+                    if details:
+                        self.save_errors(
+                            "ERRORED",
+                            f"POST {self.key_log} SEND POST VIDEO: {details}",
+                        )
+                    else:
+                        self.save_errors(
+                            "ERRORED",
+                            f"POST {self.key_log} SEND POST VIDEO: {parsed_response}",
+                        )
+                    return False
         except Exception as e:
             traceback.print_exc()
             self.save_errors(
