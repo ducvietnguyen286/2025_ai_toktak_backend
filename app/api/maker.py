@@ -1044,12 +1044,12 @@ class APIGetStatusUploadBySyncId(Resource):
                 post_id = post["id"]
                 social_post_detail = post["social_posts"]
                 notification_type = post["type"]
-                error_message = social_post_detail.get("error_message", f"Error On get-status-upload-by-sync-id {id}")
                 update_data = {"social_sns_description": json.dumps(social_post_detail)}
 
                 status_check_sns = 0
                 for social_post_each in social_post_detail:
                     sns_status = social_post_each["status"]
+                    error_message = social_post_each["error_message"]
                     if sns_status == "PUBLISHED":
                         status_check_sns = const.UPLOADED
 
