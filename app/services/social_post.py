@@ -180,10 +180,9 @@ class SocialPostService:
 
         # Xử lý các filter khác ngoài ngày
         for key, value in filters.items():
-            continue
             if key in ("from_date", "to_date"):
                 continue
-            match_stage[key] = value
+            # match_stage[key] = value
 
         # Build pipeline
         pipeline = []
@@ -195,4 +194,19 @@ class SocialPostService:
         pipeline.append({"$sort": {"_id": 1}})
 
         result = SocialPost._get_collection().aggregate(pipeline)
-        return [{"status": item["_id"], "count": item["count"]} for item in result]
+        fixed_statuses = ["ERRORED", "PROCESSING", "PUBLISHED", "UPLOADING"]
+
+        # Tạo dict tạm để tra cứu
+        result_dict = {item["_id"]: item["count"] for item in result}
+
+        # Đảm bảo kết quả luôn có đủ 4 loại
+        formatted_result = [
+            {"status": status, "count": result_dict.get(status, 0)}
+            for status in fixed_statuses
+        ]
+        
+        
+        
+
+        return formatted_result
+
