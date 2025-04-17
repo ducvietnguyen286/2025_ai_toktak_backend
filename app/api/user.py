@@ -1185,6 +1185,13 @@ class APIGetCallbackYoutube(Resource):
                 client.user_ids.append(user_id)
                 client.member_count += 1
                 client.save()
+            else:
+                user_link.status = 0
+                user_link.save()
+                return redirect(
+                    PAGE_PROFILE
+                    + "?error=ERROR_FETCHING_CHANNEL&error_message=Can't fetch channel info"
+                )
 
             return redirect(PAGE_PROFILE + "?success=1")
         except Exception as e:
