@@ -17,6 +17,7 @@ class SocialPost(BaseDocument):
     social_link = StringField(max_length=700, default="")
     status = StringField(required=True, max_length=50)
     error_message = StringField(default="")
+    show_message = StringField(default="")
     disable_comment = BooleanField(default=False)
     privacy_level = StringField(default="SELF_ONLY")
     auto_add_music = BooleanField(default=False)
