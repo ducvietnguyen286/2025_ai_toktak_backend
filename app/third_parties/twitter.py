@@ -283,8 +283,6 @@ class TwitterService(BaseService):
             status = parsed_response.get("status")
             if status == 401:
                 if retry > 0:
-                    self.user_link.status = 0
-                    self.user_link.save()
 
                     self.save_errors(
                         "ERRORED",
@@ -384,12 +382,9 @@ class TwitterService(BaseService):
 
             self.save_request_log("send_video", data, parsed_response)
 
-            log_twitter_message(parsed_response)
             status = parsed_response.get("status")
             if status == 401:
                 if retry > 0:
-                    self.user_link.status = 0
-                    self.user_link.save()
 
                     self.save_errors(
                         "ERRORED",
@@ -418,7 +413,6 @@ class TwitterService(BaseService):
                 return False
             else:
                 data = parsed_response.get("data")
-                log_twitter_message(data)
                 x_post_id = data.get("id")
 
                 username = self.user_link.username
@@ -438,7 +432,6 @@ class TwitterService(BaseService):
             return False
 
     def upload_media(self, media, is_video=False):
-        log_twitter_message(f"{self.key_log} Upload media {media}")
         if is_video:
             response = self.get_media_content_by_path(
                 media_path=media, get_content=False
@@ -467,11 +460,9 @@ class TwitterService(BaseService):
         final = self.upload_finalize(media_id)
         if not final:
             return False
-        log_twitter_message(f"POST {self.key_log} Upload media {media} done")
         return media_id
 
     def upload_media_init(self, media_type, total_bytes, is_video=False, retry=0):
-        log_twitter_message(f"POST {self.key_log} Upload Media INIT")
         access_token = self.meta.get("access_token")
 
         headers = {
@@ -506,8 +497,6 @@ class TwitterService(BaseService):
         status_code = req.status_code
         if status_code == 401:
             if retry > 0:
-                self.user_link.status = 0
-                self.user_link.save()
 
                 self.save_errors(
                     "ERRORED",
@@ -526,10 +515,6 @@ class TwitterService(BaseService):
                 is_video=is_video,
                 retry=retry + 1,
             )
-
-        log_twitter_message(
-            f"------------------ POST {self.key_log} X INIT RESPONSE: {req.json()}-----------------"
-        )
 
         res_json = req.json()
         if "data" not in res_json:
@@ -557,8 +542,6 @@ class TwitterService(BaseService):
 
         while bytes_sent < total_bytes:
             chunk = content[bytes_sent : bytes_sent + chunk_size]
-
-            log_twitter_message(f"POST {self.key_log} APPEND")
 
             files = {"media": ("chunk", chunk, "application/octet-stream")}
 
@@ -591,9 +574,6 @@ class TwitterService(BaseService):
             status_code = req.status_code
             if status_code == 401:
                 if retry > 0:
-                    self.user_link.status = 0
-                    self.user_link.save()
-
                     self.save_errors(
                         "ERRORED",
                         f"POST {self.key_log} UPLOAD MEDIA APPEND: Access token invalid",
@@ -622,9 +602,6 @@ class TwitterService(BaseService):
             segment_id += 1
             bytes_sent += len(chunk)
 
-            log_twitter_message(f"{bytes_sent} of {total_bytes} bytes uploaded")
-
-        log_twitter_message(f"POST {self.key_log} Upload chunks complete.")
         return True
 
     def upload_finalize(self, media_id, retry=0):
@@ -656,9 +633,6 @@ class TwitterService(BaseService):
         status_code = req.status_code
         if status_code == 401:
             if retry > 0:
-                self.user_link.status = 0
-                self.user_link.save()
-
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD MEDIA FINALIZE: Access token invalid",
@@ -674,9 +648,6 @@ class TwitterService(BaseService):
         else:
             try:
                 response_json = req.json()
-                log_twitter_message(
-                    f"POST {self.key_log} FINALIZE Res: {response_json}"
-                )
                 if "data" in response_json:
                     data = response_json.get("data", None)
                     if "processing_info" in data:
@@ -709,8 +680,6 @@ class TwitterService(BaseService):
 
         state = self.processing_info["state"]
 
-        log_twitter_message(f"POST {self.key_log} Media processing status is {state}")
-
         if state == "succeeded":
             return True
 
@@ -739,9 +708,6 @@ class TwitterService(BaseService):
         status_code = req.status_code
         if status_code == 401:
             if retry > 0:
-                self.user_link.status = 0
-                self.user_link.save()
-
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD MEDIA STATUS: Access token invalid",

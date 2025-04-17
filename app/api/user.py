@@ -264,8 +264,6 @@ class APISendPosts(Resource):
             links = LinkService.get_not_json_links()
             link_pluck_by_id = {link.id: link for link in links}
 
-            print("1")
-
             post_ids = []
             count_images = 0
             count_videos = 0

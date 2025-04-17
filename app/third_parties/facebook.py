@@ -19,9 +19,6 @@ class FacebookTokenService:
     @staticmethod
     def fetch_page_token(user_link):
         try:
-            log_facebook_message(
-                "------------------  FETCH FACEBOOK PAGE TOKEN  ------------------"
-            )
 
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
@@ -66,10 +63,6 @@ class FacebookTokenService:
     @staticmethod
     def fetch_page_token_backend(user_link, page_id, is_all=None):
         try:
-            log_facebook_message(
-                "------------------  FETCH FACEBOOK PAGE TOKEN  ------------------"
-            )
-
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
             if not access_token:
@@ -95,19 +88,15 @@ class FacebookTokenService:
                 user_link.save()
                 return None
 
-            log_facebook_message(
-                f"------------------  FACEBOOK PAGES ------------------ : {data}"
-            )
-
-            log_facebook_message(
-                f"------------------  FACEBOOK PAGE ID INPUT ------------------ : {page_id}"
-            )
             if is_all:
-                first_page = data.get("data")[0]
-                log_facebook_message(
-                    f"------------------  FACEBOOK PAGE ------------------ : {first_page}"
-                )
+                first_page = None
+                for page in data.get("data"):
+                    tasks = page.get("tasks")
+                    if "CREATE_CONTENT" in tasks:
+                        first_page = page
+                        break
                 return first_page
+
             for page in data.get("data"):
                 if page.get("id") == page_id:
                     return page.get("access_token")
@@ -118,9 +107,6 @@ class FacebookTokenService:
 
     def fetch_user_info(self, user_link):
         try:
-            log_facebook_message(
-                "------------------  GET FACEBOOK USER INFO BY TOKEN  ------------------"
-            )
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
             if not access_token:
@@ -140,7 +126,6 @@ class FacebookTokenService:
                 response=json.dumps(data),
             )
 
-            log_facebook_message(f"User info: {data}")
             return {
                 "id": data.get("id") or "",
                 "username": "",
@@ -156,9 +141,6 @@ class FacebookTokenService:
     @staticmethod
     def exchange_token(access_token, user_link):
         try:
-            log_facebook_message(
-                "------------------  EXCHANGE FACEBOOK TOKEN  ------------------"
-            )
 
             EXCHANGE_URL = "https://graph.facebook.com/v22.0/oauth/access_token"
 
@@ -183,8 +165,6 @@ class FacebookTokenService:
                 request=json.dumps(params),
                 response=json.dumps(data),
             )
-
-            log_facebook_message(f"Exchange token response: {data}")
 
             if "access_token" in data:
                 meta = user_link.meta
@@ -330,9 +310,6 @@ class FacebookService(BaseService):
             self.save_publish("PUBLISHED", permalink)
             return True
         else:
-            log_facebook_message(
-                f"POST: {self.key_log} Upload video error: {result_status}"
-            )
             video_status = result_status.get("video_status")
             uploading_phase = result_status.get("uploading_phase")
 
@@ -386,7 +363,6 @@ class FacebookService(BaseService):
         self.save_request_log("upload_video", headers, result)
 
         self.save_uploading(20)
-        log_facebook_message(f"POST {self.key_log} Upload video: {result}")
 
     def get_upload_status(self, video_id, access_token, count=1):
         status = None
@@ -410,8 +386,6 @@ class FacebookService(BaseService):
 
             result = get_response.json()
             self.save_request_log("get_upload_status", {"video_id": video_id}, result)
-
-            log_facebook_message(f"POST {self.key_log}: get upload status: {result}")
 
             if "error" in result:
                 error = result.get("error", {})
@@ -448,6 +422,8 @@ class FacebookService(BaseService):
         uploading_phase = status.get("uploading_phase")
         video_status = status.get("video_status", "uploading")
         status_uploading_phase = uploading_phase.get("status")
+
+        time.sleep(2)
 
         if video_status == "upload_complete" and status_uploading_phase == "complete":
             return {
@@ -502,15 +478,11 @@ class FacebookService(BaseService):
         result = get_response.json()
         self.save_request_log("get_reel_uploaded", {"page_id": page_id}, result)
 
-        log_facebook_message(f"Get reel: {result}")
         return result
 
     def send_post_image(self, post, link):
         page_id = self.page_id
         page_access_token = self.page_token
-
-        log_facebook_message(f"page_id: {page_id}")
-        log_facebook_message(f"page_access_token: {page_access_token}")
 
         FEED_URL = f"https://graph.facebook.com/v22.0/{page_id}/feed"
 
@@ -525,15 +497,12 @@ class FacebookService(BaseService):
 
         attached_media = [{"media_fbid": pid} for pid in photo_ids]
 
-        log_facebook_message(f"POST {self.key_log}: Attached media: {attached_media}")
-
         post_data = {
             "message": post.description + "\n\n" + post.hashtag,
             "attached_media": json.dumps(attached_media),
             "access_token": page_access_token,
         }
 
-        log_facebook_message(f"POST {self.key_log}: post_data: {post_data}")
         try:
             post_response = requests.post(FEED_URL, data=post_data, timeout=20)
         except Exception as e:
@@ -545,8 +514,6 @@ class FacebookService(BaseService):
         result = post_response.json()
 
         self.save_request_log("send_post_image", post_data, result)
-
-        log_facebook_message(f"POST {self.key_log} result: {result}")
 
         if "id" not in result:
             error = result.get("error", {})

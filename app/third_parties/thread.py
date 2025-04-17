@@ -559,9 +559,6 @@ class ThreadService(BaseService):
 
     def get_upload_status(self, media_id):
         try:
-            log_thread_message(
-                f"------------ GET UPLOAD STATUS: {self.key_log} ----------------"
-            )
             GET_STATUS_URL = f"https://graph.threads.net/v1.0/{media_id}"
             params = {
                 "access_token": self.access_token,

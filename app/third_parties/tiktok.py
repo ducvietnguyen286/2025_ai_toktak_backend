@@ -98,6 +98,11 @@ class TiktokTokenService:
 
             data_token = token_data.get("data")
 
+            if not token_data or not data_token or not data_token.get("access_token"):
+                user_link.status = 0
+                user_link.save()
+                return token_data
+
             meta = user_link.meta
             meta = json.loads(meta)
             meta.update(data_token)
@@ -229,9 +234,6 @@ class TiktokService(BaseService):
                         f"POST {self.key_log} UPLOAD IMAGE - Access token invalid",
                     )
 
-                    self.user_link.status = 0
-                    self.user_link.save()
-
                     return False
                 TiktokTokenService.refresh_token(link=self.link, user=self.user)
                 self.user_link = UserService.find_user_link(
@@ -352,8 +354,6 @@ class TiktokService(BaseService):
             error_code = error.get("code")
             if error_code == "access_token_invalid":
                 if retry > 0:
-                    self.user_link.status = 0
-                    self.user_link.save()
                     self.save_errors(
                         "ERRORED",
                         f"POST {self.key_log} UPLOAD VIDEO INIT: Access token invalid",
@@ -420,14 +420,10 @@ class TiktokService(BaseService):
 
         self.save_request_log("check_status", payload, res_json)
 
-        log_tiktok_message(f"TIKTOK: Check status: {res_json}")
-
         error = res_json.get("error")
         error_code = error.get("code")
         if error_code == "access_token_invalid":
             if retry > 0:
-                self.user_link.status = 0
-                self.user_link.save()
 
                 self.save_errors(
                     "ERRORED", f"POST {self.key_log} CHECK STATUS: Access token invalid"
@@ -574,8 +570,6 @@ class TiktokService(BaseService):
         error_code = error.get("code")
         if error_code == "access_token_invalid":
             if retry > 0:
-                self.user_link.status = 0
-                self.user_link.save()
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD VIDEO INIT: Access token invalid",
