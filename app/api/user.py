@@ -1093,13 +1093,12 @@ class APIYoutubeLogin(Resource):
 
     def generate_state_token(self, client, user_id, link_id):
         nonce = secrets.token_urlsafe(16)
+        client_id = client.id if isinstance(client, YoutubeClient) else client.get("id")
         payload = {
             "nonce": nonce,
             "user_id": user_id,
             "link_id": link_id,
-            "client_id": (
-                client.id if isinstance(client, YoutubeClient) else client.get("id")
-            ),
+            "client_id": str(client_id),
             "exp": (datetime.datetime.now() + datetime.timedelta(days=30)).timestamp(),
         }
         token = jwt.encode(payload, STATE_SECRET_KEY, algorithm="HS256")
