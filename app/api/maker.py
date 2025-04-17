@@ -1090,6 +1090,7 @@ class APIGetStatusUploadBySyncId(Resource):
                 message="Lấy sync thành công",
             ).to_dict()
         except Exception as e:
+            traceback.print_exc()
             logger.error(f"Exception: get status upload by sync id fail  :  {str(e)}")
             return Response(
                 message="Lấy trạng thái upload theo sync id thất bại",

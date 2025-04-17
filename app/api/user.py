@@ -183,6 +183,8 @@ class APISendPosts(Resource):
         type="object",
         properties={
             "post_ids": {"type": "array", "items": {"type": "integer"}},
+            "link_ids": {"type": "array", "items": {"type": "integer"}},
+            "is_all": {"type": "integer"},
             "disable_comment": {"type": "boolean"},
             "disable_duet": {"type": "boolean"},
             "disable_stitch": {"type": "boolean"},

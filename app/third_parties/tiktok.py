@@ -509,11 +509,31 @@ class TiktokService(BaseService):
         if total_chunk <= 0:
             total_chunk = 1
 
-        disable_comment = self.social_post.disable_comment or False
-        privacy_level = self.social_post.privacy_level or "SELF_ONLY"
-        auto_add_music = self.social_post.auto_add_music or False
-        disable_duet = self.social_post.disable_duet or False
-        disable_stitch = self.social_post.disable_stitch or False
+        disable_comment = (
+            self.social_post.disable_comment
+            if "disable_comment" in self.social_post
+            else False
+        )
+        privacy_level = (
+            self.social_post.privacy_level
+            if "privacy_level" in self.social_post
+            else "SELF_ONLY"
+        )
+        auto_add_music = (
+            self.social_post.auto_add_music
+            if "auto_add_music" in self.social_post
+            else False
+        )
+        disable_duet = (
+            self.social_post.disable_duet
+            if "disable_duet" in self.social_post
+            else False
+        )
+        disable_stitch = (
+            self.social_post.disable_stitch
+            if "disable_stitch" in self.social_post
+            else False
+        )
 
         payload = {
             "post_info": {
