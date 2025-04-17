@@ -20,6 +20,7 @@ from app.lib.string import (
     split_text_by_sentences,
     should_replace_shortlink,
     update_ads_content,
+    merge_by_key,
 )
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
@@ -1038,15 +1039,22 @@ class APIGetStatusUploadBySyncId(Resource):
             sync_status = SocialPostService.get_status_social_sycns__by_id(
                 social_sync.id
             )
-            post_status_sns =0
-            post_status =0
 
             posts = sync_status["posts"]
             for post in posts:
-                post_id = post["id"]
+
                 social_post_detail = post["social_posts"]
+                social_sns_description = json.loads(post["social_posts"])
+
+                new_social_sns_description = merge_by_key(
+                    social_sns_description, social_post_detail
+                )
+
+                post_id = post["id"]
                 notification_type = post["type"]
-                update_data = {"social_sns_description": json.dumps(social_post_detail)}
+                update_data = {
+                    "social_sns_description": json.dumps(new_social_sns_description)
+                }
 
                 status_check_sns = 0
                 for social_post_each in social_post_detail:
@@ -1137,7 +1145,6 @@ class APIGetStatusUploadWithBatch(Resource):
                     if status_check_sns == 1:
                         update_data["status_sns"] = const.UPLOADED
                         update_data["status"] = const.UPLOADED
-                    
 
                     for sns_post_detail in social_post_detail:
                         try:
