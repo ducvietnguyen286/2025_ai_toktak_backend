@@ -19,6 +19,7 @@ from app.lib.response import Response
 from app.extensions import redis_client
 import secrets
 
+from app.models.youtube_client import YoutubeClient
 from app.services.auth import AuthService
 from app.services.batch import BatchService
 from app.services.post import PostService
@@ -1066,7 +1067,11 @@ class APIYoutubeLogin(Resource):
             scope = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"
 
             params = {
-                "client_id": client.get("client_id"),
+                "client_id": (
+                    client.client_id
+                    if isinstance(client, YoutubeClient)
+                    else client.get("client_id")
+                ),
                 "redirect_uri": YOUTUBE_REDIRECT_URL,
                 "response_type": "code",
                 "scope": scope,
