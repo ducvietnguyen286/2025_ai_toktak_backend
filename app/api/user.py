@@ -194,8 +194,7 @@ class APISendPosts(Resource):
                         "is_all": {"type": "integer"},
                         "link_ids": {
                             "type": "array",
-                            "items": {"type": "integer"},
-                            "uniqueItems": True,
+                            "items": {"type": ["string", "null", "integer"]},
                         },
                     },
                 },
@@ -253,6 +252,8 @@ class APISendPosts(Resource):
                 ids.append(post_id)
                 push_links = []
                 for link_id in id_links:
+                    if not link_id:
+                        continue
                     if link_id in active_links:
                         push_links.append(link_id)
                 link_ids[post_id] = push_links
