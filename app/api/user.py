@@ -1199,7 +1199,7 @@ class APIGetCallbackYoutube(Resource):
                     + "?tabindex=2&error=ERROR_FETCHING_CHANNEL&error_message=Can't fetch channel info"
                 )
 
-            return redirect(PAGE_PROFILE + "?success=1")
+            return redirect(PAGE_PROFILE + "?tabindex=2&success=1")
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
