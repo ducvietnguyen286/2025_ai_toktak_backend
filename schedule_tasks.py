@@ -106,7 +106,7 @@ def split_message(text, max_length=4000):
 
 def format_notification_message(notification_detail, fe_current_domain):
     return (
-        f"[Toktak Notification]\n"
+        f"[Toktak Notification {fe_current_domain}]\n"
         f"- User Email: {notification_detail.get('email')}\n"
         f"- Notification ID: {notification_detail.get('id')}\n"
         f"- Batch ID: {notification_detail.get('batch_id')}\n"
@@ -136,7 +136,7 @@ def send_telegram_notifications(app):
                     Notification.status == const.NOTIFICATION_FALSE,
                 )
                 .order_by(Notification.created_at.asc())
-                .limit(5)
+                .limit(10)
                 .all()
             )
 
@@ -166,7 +166,7 @@ def send_telegram_notifications(app):
                             app.logger.warning(
                                 f"Failed to send part {idx+1} of notification ID {notification.id}. Response: {response.text}"
                             )
-                            
+
                     notification.send_telegram = 1
 
                 except Exception as single_error:
