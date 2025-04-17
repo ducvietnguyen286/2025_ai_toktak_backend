@@ -1,7 +1,7 @@
 # coding: utf8
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
-from app.decorators import parameters ,admin_required
+from app.decorators import parameters, admin_required
 from app.lib.response import Response
 from app.services.user import UserService
 from datetime import datetime
@@ -13,6 +13,8 @@ from app.services.auth import AuthService
 from app.services.notification import NotificationServices
 from app.lib.string import get_level_images
 import const
+
+from app.services.social_post import SocialPostService
 
 ns = Namespace(name="admin", description="Admin API")
 
@@ -130,11 +132,7 @@ class APIDeleteUser(Resource):
                     code=201,
                 ).to_dict()
 
-            return Response(
-                message=message,
-                code=200,
-                data=id_list
-            ).to_dict()
+            return Response(message=message, code=200, data=id_list).to_dict()
 
         except Exception as e:
             logger.error(f"Exception: Delete user Fail  :  {str(e)}")
@@ -142,3 +140,16 @@ class APIDeleteUser(Resource):
                 message="사용자 삭제 중 오류",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/socialposts")
+class APISocialPost(Resource):
+
+    @jwt_required()
+    @admin_required()
+    def get(self):
+
+        filters = request.args.to_dict()  # Convert query string to dict
+        data = SocialPostService.getTotalRunning(filters)
+
+        return Response(message="", code=200, data=data).to_dict()
