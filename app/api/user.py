@@ -184,7 +184,6 @@ class APISendPosts(Resource):
         properties={
             "post_ids": {"type": "array", "items": {"type": "integer"}},
             "link_ids": {"type": "array", "items": {"type": "integer"}},
-            "is_all": {"type": "integer"},
             "disable_comment": {"type": "boolean"},
             "disable_duet": {"type": "boolean"},
             "disable_stitch": {"type": "boolean"},
@@ -213,20 +212,35 @@ class APISendPosts(Resource):
 
         try:
             id_posts = args.get("post_ids", [])
+            link_ids = args.get("link_ids", [])
             disable_comment = args.get("disable_comment", False)
             privacy_level = args.get("privacy_level", "SELF_ONLY")
             auto_add_music = args.get("auto_add_music", False)
             disable_duet = args.get("disable_duet", False)
             disable_stitch = args.get("disable_stitch", False)
 
+            if not link_ids:
+                return Response(
+                    message="Thiếu thông tin link",
+                    status=400,
+                ).to_dict()
+
             active_links = []
-            user_links = UserService.get_original_user_links(current_user_id)
-            active_links = [link.link_id for link in user_links if link.status == 1]
+            if len(link_ids) > 0:
+                for link_id in link_ids:
+                    user_link = UserService.find_user_link(link_id, current_user.id)
+                    if not user_link:
+                        continue
+                    if user_link.status == 0:
+                        continue
+                    active_links.append(link_id)
+
             if not active_links:
                 return Response(
                     message="Không có link nào được kích hoạt",
                     status=400,
                 ).to_dict()
+
             posts = PostService.get_posts__by_ids(id_posts)
             if not posts:
                 return Response(
@@ -538,7 +552,7 @@ class APIPostToLinks(Resource):
                 redis_client.set(redis_user_batch_key, current_remain - 1, ex=180)
 
             # Update to Uploads
-            PostService.update_post(post_id, status=const.DRAFT_STATUS )
+            PostService.update_post(post_id, status=const.DRAFT_STATUS)
 
             batch_id = post.batch_id
 
