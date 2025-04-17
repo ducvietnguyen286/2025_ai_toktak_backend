@@ -130,3 +130,14 @@ def update_ads_content(url, content):
     elif "https://s.click.aliexpress.com" in url:
         content = f"<h2>이 포스팅은 알리 어필리에이트 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.</h2>\n\n\n\n{content}"
     return content
+
+
+def merge_by_key(array1, array2, key_merge="title"):
+    """
+    Gộp 2 mảng dict theo title.
+    Nếu title trùng nhau thì phần tử ở array2 sẽ ghi đè vào array1.
+    """
+    merged = {item[key_merge]: item for item in array1}
+    for item in array2:
+        merged[item[key_merge]] = item  # Ghi đè nếu title trùng
+    return list(merged.values())
