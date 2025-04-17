@@ -1186,6 +1186,7 @@ class APIGetCallbackYoutube(Resource):
                 user_link.avatar = avatar
                 user_link.url = url
                 user_link.youtube_client = json.dumps(client.to_json())
+                user_link.status = 1
                 user_link.save()
 
                 client.user_ids.append(user_id)
