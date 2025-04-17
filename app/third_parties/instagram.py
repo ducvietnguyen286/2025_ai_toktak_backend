@@ -472,9 +472,6 @@ class InstagramService(BaseService):
 
     def get_upload_status(self, media_id):
         try:
-            log_instagram_message(
-                f"------------ GET UPLOAD STATUS: {self.key_log} ----------------"
-            )
             GET_STATUS_URL = f"https://graph.instagram.com/v22.0/{media_id}"
             params = {
                 "access_token": self.access_token,
@@ -499,8 +496,10 @@ class InstagramService(BaseService):
                 if status == "FINISHED":
                     return True
                 elif status == "ERROR":
-                    error = result["error"]
-                    error_message = error["message"]
+                    error = result["error"] if "error" in result else {}
+                    error_message = error["message"] if "message" in error else ""
+                    if error_message == "":
+                        error_message = "Error occurred while uploading media"
                     self.save_errors(
                         "ERRORED",
                         f"ERROR GET UPLOAD STATUS {self.key_log}: {error_message}",

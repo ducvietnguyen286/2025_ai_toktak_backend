@@ -13,6 +13,7 @@ from app.lib.logger import (
     log_twitter_message,
     log_tiktok_message,
 )
+from app.services.post import PostService
 from app.services.request_social_log import RequestSocialLogService
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
@@ -54,11 +55,6 @@ class BaseService:
 
     def get_media_content(self, media_url, get_content=True, is_photo=False):
         session = requests.Session()
-        # retries = Retry(
-        #     total=5, backoff_factor=5, status_forcelist=[500, 502, 503, 504]
-        # )
-        # session.mount("http://", HTTPAdapter(max_retries=retries))
-        # session.mount("https://", HTTPAdapter(max_retries=retries))
 
         self.log_social_message(
             f"------------POST {self.key_log} GET MEDIA : {media_url}----------------"
@@ -104,28 +100,6 @@ class BaseService:
                 f"POST {self.key_log} SEND POST MEDIA - GET MEDIA URL: {str(e)}",
             )
             return False
-            try:
-                media_content = session.get(media_url, timeout=(10, 60))
-                self.log_social_message(
-                    f"------------POST {self.key_log} GET MEDIA SUCCESSFULLY----------------"
-                )
-                if get_content:
-                    return media_content.content
-
-                media_size = int(media_content.headers.get("content-length"))
-                media_type = media_content.headers.get("content-type")
-
-                return {
-                    "content": media_content.content,
-                    "media_size": media_size,
-                    "media_type": media_type,
-                }
-            except Exception as e:
-                self.save_errors(
-                    "ERRORED",
-                    f"POST {self.key_log} SEND POST MEDIA - GET MEDIA URL: {str(e)}",
-                )
-                return False
 
     def save_request_log(self, type, request, response):
         RequestSocialLogService.create_request_social_log(
@@ -158,12 +132,15 @@ class BaseService:
         self.social_post.social_link = social_link
         self.social_post.process_number = 100
         self.social_post.save()
+        PostService.update_post(self.post_id, status=1)
 
-    def save_social_post_error(self, status, message):
+    def save_social_post_error(self, status, message, base_message):
         self.social_post.status = status
         self.social_post.error_message = message
+        self.social_post.show_message = base_message
         self.social_post.process_number = 100
         self.social_post.save()
+        PostService.update_post(self.post_id, status=1)
 
     def log_social_message(self, message):
         if self.service == "FACEBOOK":
@@ -177,7 +154,7 @@ class BaseService:
         elif self.service == "THREAD":
             log_thread_message(message)
 
-    def save_errors(self, status, message):
+    def save_errors(self, status, message, base_message=""):
         # redis_key = f"toktak:has_error:boundio:{self.post_id}:{self.link_id}"
         # is_has_error = redis_client.get(redis_key)
         save_message = f"{self.service}: {message}"
@@ -185,7 +162,7 @@ class BaseService:
         self.log_social_message(save_message)
         # if is_has_error:
         #     return
-        self.save_social_post_error(status, save_message)
+        self.save_social_post_error(status, save_message, base_message)
         # redis_client.set(redis_key, 1, ex=10)
 
     def save_publish(self, status, social_link):

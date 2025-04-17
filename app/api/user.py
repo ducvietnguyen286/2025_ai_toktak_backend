@@ -2,6 +2,7 @@
 import datetime
 import json
 import os
+import random
 import time
 import traceback
 from urllib.parse import urlencode
@@ -18,6 +19,7 @@ from app.lib.response import Response
 from app.extensions import redis_client
 import secrets
 
+from app.models.youtube_client import YoutubeClient
 from app.services.auth import AuthService
 from app.services.batch import BatchService
 from app.services.post import PostService
@@ -28,6 +30,7 @@ from app.services.notification import NotificationServices
 from app.services.user import UserService
 from app.services.link import LinkService
 from app.services.user_link import UserLinkService
+from app.services.youtube_client import YoutubeClientService
 from app.third_parties.aliexpress import TokenAliExpress
 from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.tiktok import TiktokTokenService
@@ -263,8 +266,6 @@ class APISendPosts(Resource):
                 ).to_dict()
             links = LinkService.get_not_json_links()
             link_pluck_by_id = {link.id: link for link in links}
-
-            print("1")
 
             post_ids = []
             count_images = 0
@@ -965,7 +966,7 @@ class APIGetCallbackTiktok(Resource):
                 user_link.url = url
                 user_link.save()
 
-            return redirect(PAGE_PROFILE + "?success=1")
+            return redirect(PAGE_PROFILE + "?tabIndex=2&success=1")
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
@@ -1019,6 +1020,200 @@ class APIRefreshTiktokToken(Resource):
                 message="Lỗi kết nối",
                 status=400,
             ).to_dict()
+
+
+YOUTUBE_REDIRECT_URL = (
+    os.environ.get("CURRENT_DOMAIN") + "/api/v1/user/oauth/youtube-callback"
+)
+YOUTUBE_AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/auth"
+STATE_SECRET_KEY = "zSmXIs9UmLkfyADvWKazaiVzAk2gFwFe"
+
+
+@ns.route("/oauth/youtube-login")
+class APIYoutubeLogin(Resource):
+
+    @parameters(
+        type="object",
+        properties={
+            "user_id": {"type": "string"},
+            "link_id": {"type": "string"},
+        },
+        required=["user_id", "link_id"],
+    )
+    def get(self, args):
+        try:
+            user_id = args.get("user_id")
+            link_id = args.get("link_id")
+
+            client = YoutubeClientService.get_client_by_user_id(user_id)
+            if not client:
+                all_clients = redis_client.get("toktak:all_clients")
+                if all_clients:
+                    all_clients = json.loads(all_clients)
+                    client = random.choice(all_clients) if all_clients else None
+                else:
+                    client = YoutubeClientService.get_random_client()
+                    client = client.to_json() if client else None
+
+            if not client:
+                PAGE_PROFILE = (
+                    os.environ.get("TIKTOK_REDIRECT_TO_PROFILE")
+                    or "https://toktak.ai/profile"
+                )
+
+                return redirect(PAGE_PROFILE + "?error=Not found client")
+
+            state_token = self.generate_state_token(client, user_id, link_id)
+            scope = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"
+
+            params = {
+                "client_id": (
+                    client.client_id
+                    if isinstance(client, YoutubeClient)
+                    else client.get("client_id")
+                ),
+                "redirect_uri": YOUTUBE_REDIRECT_URL,
+                "response_type": "code",
+                "scope": scope,
+                "state": state_token,
+                "include_granted_scopes": "true",
+                "access_type": "offline",
+                "prompt": "consent",
+            }
+            url = f"{YOUTUBE_AUTHORIZATION_URL}?{urlencode(params)}"
+
+            logger.info(f"Redirect to Youtube: {url}")
+
+            return redirect(url)
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            print(f"Error redirect oauth youtube: {str(e)}")
+            return False
+
+    def generate_state_token(self, client, user_id, link_id):
+        nonce = secrets.token_urlsafe(16)
+        client_id = client.id if isinstance(client, YoutubeClient) else client.get("id")
+        payload = {
+            "nonce": nonce,
+            "user_id": user_id,
+            "link_id": link_id,
+            "client_id": str(client_id),
+            "exp": (datetime.datetime.now() + datetime.timedelta(days=30)).timestamp(),
+        }
+        token = jwt.encode(payload, STATE_SECRET_KEY, algorithm="HS256")
+        return token
+
+
+@ns.route("/oauth/youtube-callback")
+class APIGetCallbackYoutube(Resource):
+
+    @parameters(
+        type="object",
+        properties={
+            "code": {"type": "string"},
+            "state": {"type": "string"},
+        },
+        required=["code", "state"],
+    )
+    def get(self, args):
+        try:
+            code = args.get("code")
+            state = args.get("state")
+            PAGE_PROFILE = (
+                os.environ.get("TIKTOK_REDIRECT_TO_PROFILE")
+                or "https://toktak.ai/profile"
+            )
+
+            if not state:
+                return Response(
+                    message="Invalid or expired state token 1",
+                    status=400,
+                ).to_dict()
+
+            payload = self.verify_state_token(state)
+
+            if not payload:
+                return Response(
+                    message="Invalid or expired state token 2",
+                    status=400,
+                ).to_dict()
+
+            client_id = payload.get("client_id")
+            client = YoutubeClientService.find_client_by_id(client_id)
+            user_id = payload.get("user_id")
+            link_id = payload.get("link_id")
+            int_user_id = int(user_id)
+            int_link_id = int(link_id)
+
+            if not client:
+                return Response(
+                    message="Invalid client",
+                    status=400,
+                ).to_dict()
+
+            user_link = UserService.find_user_link_exist(int_link_id, int_user_id)
+            if not user_link:
+                user_link = UserService.create_user_link(
+                    user_id=int_user_id,
+                    link_id=int_link_id,
+                    status=1,
+                    meta=json.dumps({}),
+                )
+
+            response = YoutubeTokenService().exchange_code_for_token(
+                code=code,
+                user_link=user_link,
+                client=client,
+            )
+            if not response:
+                return Response(
+                    message="Lỗi kết nối",
+                    status=400,
+                ).to_dict()
+
+            user_info = YoutubeTokenService().fetch_channel_info(user_link)
+            if user_info:
+                social_id = user_info.get("id") or ""
+                username = user_info.get("username") or ""
+                name = user_info.get("name") or ""
+                avatar = user_info.get("avatar") or ""
+                url = user_info.get("url") or ""
+
+                user_link.social_id = social_id
+                user_link.username = username
+                user_link.name = name
+                user_link.avatar = avatar
+                user_link.url = url
+                user_link.youtube_client = json.dumps(client.to_json())
+                user_link.status = 1
+                user_link.save()
+
+                client.user_ids.append(user_id)
+                client.member_count += 1
+                client.save()
+            else:
+                user_link.status = 0
+                user_link.save()
+                return redirect(
+                    PAGE_PROFILE
+                    + "?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=Can't fetch channel info"
+                )
+
+            return redirect(PAGE_PROFILE + "?tabIndex=2&success=1")
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            print(f"Error send post to link: {str(e)}")
+            return "Can't connect to Youtube", 500
+
+    def verify_state_token(self, token):
+        try:
+            payload = jwt.decode(token, STATE_SECRET_KEY, algorithms=["HS256"])
+            return payload
+        except Exception as e:
+            print(f"Error verify state token: {str(e)}")
+            return None
 
 
 @ns.route("/oauth/ali-login")

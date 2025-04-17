@@ -15,8 +15,10 @@ class UserLink(db.Model, BaseModel):
     url = db.Column(db.String(1024))
     meta = db.Column(db.Text, nullable=False)
     meta_url = db.Column(db.String(1024), nullable=False)
+    youtube_client = db.Column(db.Text)
+    warning = db.Column(db.Integer, default=0)
     expired_at = db.Column(db.DateTime, nullable=True)
     expired_date = db.Column(db.Date, nullable=True, index=True)
     status = db.Column(db.Integer, default=1)
 
-    to_json_filter = ("meta", "expired_at", "expired_date")
+    to_json_filter = ("meta", "expired_at", "expired_date", "youtube_client")
