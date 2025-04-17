@@ -1190,7 +1190,7 @@ class APIGetCallbackYoutube(Resource):
                 user_link.save()
                 return redirect(
                     PAGE_PROFILE
-                    + "?error=ERROR_FETCHING_CHANNEL&error_message=Can't fetch channel info"
+                    + "?tabindex=2&error=ERROR_FETCHING_CHANNEL&error_message=Can't fetch channel info"
                 )
 
             return redirect(PAGE_PROFILE + "?success=1")
