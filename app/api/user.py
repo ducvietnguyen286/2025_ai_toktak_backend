@@ -1097,7 +1097,9 @@ class APIYoutubeLogin(Resource):
             "nonce": nonce,
             "user_id": user_id,
             "link_id": link_id,
-            "client_id": client.get("id"),
+            "client_id": (
+                client.id if isinstance(client, YoutubeClient) else client.get("id")
+            ),
             "exp": (datetime.datetime.now() + datetime.timedelta(days=30)).timestamp(),
         }
         token = jwt.encode(payload, STATE_SECRET_KEY, algorithm="HS256")
