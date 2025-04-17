@@ -402,7 +402,6 @@ class TwitterService(BaseService):
             status = parsed_response.get("status")
             if status == 401:
                 if retry > 0:
-
                     self.save_errors(
                         "ERRORED",
                         f"POST {self.key_log} SEND POST VIDEO: Access token invalid",
