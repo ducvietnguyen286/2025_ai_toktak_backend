@@ -64,3 +64,6 @@ sudo systemctl status toktak.service
 
 
 /etc/systemd/system
+
+
+journalctl -u toktak_watchdog.service -f
