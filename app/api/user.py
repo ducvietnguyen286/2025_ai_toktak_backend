@@ -966,7 +966,7 @@ class APIGetCallbackTiktok(Resource):
                 user_link.url = url
                 user_link.save()
 
-            return redirect(PAGE_PROFILE + "?success=1")
+            return redirect(PAGE_PROFILE + "?tabIndex=2&success=1")
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
