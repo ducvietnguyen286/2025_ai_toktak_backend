@@ -47,7 +47,7 @@ class TwitterTokenService:
             user_data = response.json()
 
             RequestSocialLogService.create_request_social_log(
-                social="X",
+                social="X-TWITTER",
                 social_post_id="",
                 user_id=user_link.user_id,
                 type="fetch_user_info",
@@ -97,7 +97,7 @@ class TwitterTokenService:
             data = response.json()
 
             RequestSocialLogService.create_request_social_log(
-                social="X",
+                social="X-TWITTER",
                 social_post_id="",
                 user_id=user_link.user_id,
                 type="authorization_code",
@@ -152,7 +152,7 @@ class TwitterTokenService:
             log_twitter_message(data)
 
             RequestSocialLogService.create_request_social_log(
-                social="X",
+                social="X-TWITTER",
                 social_post_id="",
                 user_id=user_link.user_id,
                 type="refresh_token",
