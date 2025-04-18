@@ -17,17 +17,7 @@ UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 VOICE_FOLDER = os.path.join(os.getcwd(), "static/voice")
 
 
-@app.route("/files/<path:filename>")
-def get_file(filename):
-    try:
-        return send_from_directory(UPLOAD_FOLDER, filename)
-    except FileNotFoundError:
-        abort(404)
-
-
-@app.route("/voice/<path:filename>")
-def serve_static(filename):
-    return send_from_directory(VOICE_FOLDER, filename)
+ 
 
 
 if __name__ == "__main__":
