@@ -120,6 +120,7 @@ def format_notification_message(notification_detail, fe_current_domain):
         f"- Batch ID: {notification_detail.get('batch_id')}\n"
         f"- Title: {notification_detail.get('title')}\n"
         f"- Description: {notification_detail.get('description')}\n"
+        f"{notification_detail.get('description_korea')}\n"
     )
 
 
@@ -209,7 +210,7 @@ def translate_notification(app):
             )
 
             if not notifications:
-                return  
+                return
 
             notification_data = [
                 {"id": notification_detail.id, "text": notification_detail.description}
@@ -295,13 +296,13 @@ def start_scheduler(app):
 
     scheduler.add_job(
         func=lambda: translate_notification(app),
-        trigger=every_1_minutes_trigger,
+        trigger=every_2_minutes_trigger,
         id="translate_notification",
     )
 
     scheduler.add_job(
         func=lambda: send_telegram_notifications(app),
-        trigger=every_5_minutes_trigger,
+        trigger=every_2_minutes_trigger,
         id="send_telegram_notifications",
     )
 
