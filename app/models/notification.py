@@ -17,6 +17,7 @@ class Notification(db.Model, BaseModel):
     title = db.Column(db.String(500), nullable=False, default="")
     content = db.Column(db.Text, nullable=False, default="")
     description = db.Column(db.Text, default="")
+    description_korea = db.Column(db.Text, default="")
     hashtag = db.Column(db.Text, nullable=True)
     video_url = db.Column(db.String(255), nullable=False, default="")
     status = db.Column(db.Integer, default=1)

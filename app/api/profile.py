@@ -15,6 +15,13 @@ from app.services.notification import NotificationServices
 from app.lib.string import generate_random_nick_name
 import const
 
+from app.models.notification import Notification
+from app.ais.chatgpt import (
+    translate_notifications_batch,
+)
+from sqlalchemy import or_
+
+
 from app.services.profileservices import ProfileServices
 
 ns = Namespace(name="profile", description="Member profile operations")
@@ -27,6 +34,9 @@ class MemberProfileAPI(Resource):
     @jwt_required()
     def get(self):
         try:
+
+            
+
             current_user = AuthService.get_current_identity()
             profile = ProfileServices.profile_by_user_id(current_user.id)
             if not profile:
@@ -66,16 +76,17 @@ class MemberProfileUpdateAPI(Resource):
 
             # Nếu có file ảnh => lưu ảnh
             if file:
+                print(file)
                 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
                 filename = f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{file.filename}"
                 path = os.path.join(UPLOAD_FOLDER, filename)
                 file.save(path)
                 data_update["member_avatar"] = f"/{path}"
-            
+
             logger.info(current_user)
             logger.info(data_update)
 
-            profile = ProfileServices.update_profile(
+            profile = ProfileServices.update_profile_by_user_id(
                 current_user.id, data_update
             )
             if not profile:
@@ -133,7 +144,9 @@ class GetProfileByNickNameAPI(Resource):
 
             profile = ProfileServices.find_by_nick_name(nick_name)
             if not profile:
-                return Response(message="프로필을 찾을 수 없습니다.", code=201).to_dict()
+                return Response(
+                    message="프로필을 찾을 수 없습니다.", code=201
+                ).to_dict()
 
             return Response(data=profile.to_dict()).to_dict()
         except Exception as e:

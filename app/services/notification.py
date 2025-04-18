@@ -135,7 +135,7 @@ class NotificationServices:
             query = query.filter(Notification.status == const.NOTIFICATION_FALSE)
         elif type_notification == 1:
             query = query.filter(Notification.status == const.NOTIFICATION_SUCCESS)
-            
+
         search_key = data_search.get("search_key", "")
 
         if search_key != "":
@@ -147,7 +147,6 @@ class NotificationServices:
                     Notification.user.has(User.email.ilike(search_pattern)),
                 )
             )
-            
 
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":
@@ -189,3 +188,26 @@ class NotificationServices:
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
         return pagination
+
+    @staticmethod
+    def update_translated_notifications(translations: dict):
+        if not translations:
+            return
+
+        notification_ids = list(translations.keys())
+        notifications_to_update = Notification.query.filter(
+            Notification.id.in_(notification_ids)
+        ).all()
+
+        if not notifications_to_update:
+            return
+        updated_count = 0
+
+        for notification_detail in notifications_to_update:
+            translated_text = translations.get(notification_detail.id)
+            if translated_text:
+                notification_detail.description_korea = translated_text
+                updated_count += 1
+
+        db.session.commit()
+        return updated_count
