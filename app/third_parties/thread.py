@@ -583,8 +583,10 @@ class ThreadService(BaseService):
                 if status == "FINISHED":
                     return True
                 elif status == "ERROR":
-                    error = result["error"]
-                    error_message = error["message"]
+                    error = result["error"] if "error" in result else {}
+                    error_message = error["message"] if "message" in error else ""
+                    if error_message == "":
+                        error_message = "Error occurred while uploading media"
                     self.save_errors(
                         "ERRORED",
                         f"ERROR GET UPLOAD STATUS {self.key_log}: {error_message}",
