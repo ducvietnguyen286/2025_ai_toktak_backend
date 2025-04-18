@@ -141,3 +141,10 @@ def merge_by_key(array1, array2, key_merge="title"):
     for item in array2:
         merged[item[key_merge]] = item  # Ghi đè nếu title trùng
     return list(merged.values())
+
+
+
+def generate_random_nick_name(email):
+        prefix = email.split("@")[0] if email else ""
+        random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+        return f"{prefix}_{random_suffix}"
