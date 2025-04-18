@@ -45,6 +45,11 @@ class MessageError(Enum):
         "error_message": "설정에서 SNS 계정을 먼저 연결해 주세요. 😊",
     }
 
+    CANT_CONNECT_SNS = {
+        "message": "⚠️ 계정 연결에 실패했습니다!",
+        "error_message": "SNS 계정 정보를 확인해주세요😢",
+    }
+
     CREATE_POST_VIDEO = "비디오 생성이 성공적으로 완료되었습니다."
     CREATE_POST_IMAGE = "⚠️ 이미지 생성에 실패했습니다. 다시 시도해주세요."
     CREATE_POST_BLOG = "⚠️ 블로그 생성에 실패했습니다. 다시 시도해주세요."
