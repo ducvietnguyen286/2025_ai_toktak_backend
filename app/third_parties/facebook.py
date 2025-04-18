@@ -236,14 +236,14 @@ class FacebookService(BaseService):
 
         if not is_all and not token_page:
             self.save_errors("ERRORED", "SEND POST ERROR NOT ALL: Can't get page token")
-            self.user_link.warning = 1
-            self.user_link.save()
+            # self.user_link.warning = 1
+            # self.user_link.save()
             return True
         else:
             if not token_page:
                 self.save_errors("ERRORED", "SEND POST ERROR ALL: Can't get page token")
-                self.user_link.warning = 1
-                self.user_link.save()
+                # self.user_link.warning = 1
+                # self.user_link.save()
                 return True
             response_token = token_page
             page_id = response_token.get("id")
