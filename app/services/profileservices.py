@@ -48,3 +48,11 @@ class ProfileServices:
             MemberProfile.nick_name == nick_name,
             MemberProfile.user_id != exclude_user_id,
         ).first()
+        
+    @staticmethod    
+    def update_profile_by_user_id(user_id, *args, **kwargs):
+        profile = MemberProfile.query.filter(MemberProfile.user_id == user_id).first()
+        if not profile:
+            return None
+        profile.update(**kwargs)
+        return profile

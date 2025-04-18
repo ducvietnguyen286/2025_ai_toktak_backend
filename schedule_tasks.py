@@ -27,6 +27,14 @@ import requests
 from pathlib import Path
 import const
 
+from app.services.notification import NotificationServices
+from app.models.notification import Notification
+from app.ais.chatgpt import (
+    translate_notifications_batch,
+)
+from sqlalchemy import or_
+
+
 # Load biến môi trường
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path, override=True)
@@ -112,6 +120,7 @@ def format_notification_message(notification_detail, fe_current_domain):
         f"- Batch ID: {notification_detail.get('batch_id')}\n"
         f"- Title: {notification_detail.get('title')}\n"
         f"- Description: {notification_detail.get('description')}\n"
+        f"{notification_detail.get('description_korea')}\n"
     )
 
 
@@ -180,6 +189,41 @@ def send_telegram_notifications(app):
             app.logger.error(f"Error in send_telegram_notifications: {str(e)}")
 
 
+def translate_notification(app):
+    """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
+    app.logger.info("Start translate_notification...")
+
+    with app.app_context():
+        try:
+            notifications = (
+                Notification.query.filter(
+                    Notification.status == const.NOTIFICATION_FALSE,
+                    Notification.description != "",
+                    or_(
+                        Notification.description_korea == None,
+                        Notification.description_korea == "",
+                    ),
+                )
+                .order_by(Notification.created_at.asc())
+                .limit(10)
+                .all()
+            )
+
+            if not notifications:
+                return
+
+            notification_data = [
+                {"id": notification_detail.id, "text": notification_detail.description}
+                for notification_detail in notifications
+            ]
+            translated_results = translate_notifications_batch(notification_data)
+            if translated_results:
+                NotificationServices.update_translated_notifications(translated_results)
+
+        except Exception as e:
+            app.logger.error(f"Error in translate_notification: {str(e)}")
+
+
 def cleanup_pending_batches(app):
     """Xóa Batch có process_status = 'PENDING', các Post liên quan và thư mục"""
     app.logger.info("Begin cleanup_pending_batches.")
@@ -241,7 +285,9 @@ def start_scheduler(app):
     scheduler = BackgroundScheduler()
     kst = timezone("Asia/Seoul")
 
-    every_5_minutes_trigger = CronTrigger(minute="*/2", timezone=kst)
+    every_1_minutes_trigger = CronTrigger(minute="*/1", timezone=kst)
+    every_2_minutes_trigger = CronTrigger(minute="*/2", timezone=kst)
+    every_5_minutes_trigger = CronTrigger(minute="*/5", timezone=kst)
     one_am_kst_trigger = CronTrigger(hour=1, minute=0, timezone=kst)
     two_am_kst_trigger = CronTrigger(hour=2, minute=0, timezone=kst)
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
@@ -249,8 +295,14 @@ def start_scheduler(app):
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
 
     scheduler.add_job(
+        func=lambda: translate_notification(app),
+        trigger=every_2_minutes_trigger,
+        id="translate_notification",
+    )
+
+    scheduler.add_job(
         func=lambda: send_telegram_notifications(app),
-        trigger=every_5_minutes_trigger,
+        trigger=every_2_minutes_trigger,
         id="send_telegram_notifications",
     )
 

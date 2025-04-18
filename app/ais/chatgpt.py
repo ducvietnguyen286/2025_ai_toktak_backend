@@ -1,8 +1,9 @@
 import json
 import time
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 from app.services.request_log import RequestLogService
 import os
+import re
 
 chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
 
@@ -617,3 +618,80 @@ def call_chatgpt(
             status=0,
         )
         return None
+
+
+def translate_notifications_batch(notifications_batch):
+    try:
+        client = OpenAI(api_key=chatgpt_api_key)
+        assistant_id = "asst_rBXxdDDCdHuv3UxNDTiHrxVv"
+
+        # Format input cho GPT: ID + nội dung
+        prompt = "Bạn hãy dịch các thông báo sau sang tiếng Hàn Quốc . Giữ nguyên ID và đúng thứ tự:\n"
+        for n in notifications_batch:
+            prompt += f"ID {n['id']}: {n['text']}\n"
+
+        # Tạo thread
+        thread = client.beta.threads.create()
+
+        # Gửi tin nhắn vào thread
+        client.beta.threads.messages.create(
+            thread.id,
+            role="user",
+            content=[{"type": "text", "text": prompt}],
+        )
+
+        # Tạo run
+        run = client.beta.threads.runs.create(
+            thread_id=thread.id, assistant_id=assistant_id
+        )
+
+        # Chờ phản hồi (timeout: 30s)
+        timeout_seconds = 30
+        start_time = time.time()
+        while True:
+            run = client.beta.threads.runs.retrieve(run.id, thread_id=thread.id)
+            if run.status == "completed":
+                break
+            elif run.status in ["failed", "cancelled", "expired"]:
+                raise Exception(f"Run status error: {run.status}")
+            if time.time() - start_time > timeout_seconds:
+                raise TimeoutError("GPT processing timeout.")
+            time.sleep(1)
+
+        # Lấy phản hồi
+        messages = client.beta.threads.messages.list(thread.id)
+        for message in messages:
+            if message.role == "assistant" and message.content:
+                # Trích xuất nội dung văn bản phản hồi
+                translated_text = message.content[0].text.value
+                return parse_translations(translated_text)
+
+        return {}
+
+    except OpenAIError as e:
+        print(f"[OpenAI API Error] {e}")
+    except TimeoutError as e:
+        print(f"[Timeout Error] {e}")
+    except Exception as e:
+        print(f"[Unhandled Error] {e}")
+
+    # Nếu lỗi, trả về dict rỗng
+    return {}
+
+
+def parse_translations(response_text):
+    """
+    Phân tích phản hồi từ GPT để lấy lại ID và bản dịch.
+    Ví dụ đầu vào:
+    ID 101: Có bản cập nhật mới cho thiết bị của bạn.
+    ID 102: Pin yếu.
+    """
+    translations = {}
+    lines = response_text.strip().split("\n")
+    for line in lines:
+        match = re.match(r"ID\s*(\d+):\s*(.+)", line)
+        if match:
+            notif_id = int(match.group(1))
+            translated_text = match.group(2).strip()
+            translations[notif_id] = translated_text
+    return translations
