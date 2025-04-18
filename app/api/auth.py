@@ -268,29 +268,40 @@ class APILoginByInput(Resource):
         required=["email", "password"],
     )
     def post(self, args):
-        email = args.get("email", "")
-        password = args.get("password", "")
+        try:
+            email = args.get("email", "")
+            password = args.get("password", "")
 
-        user = AuthService.login(email, password)
-        if not user:
+            user = AuthService.login(email, password)
+            if not user:
+                return Response(
+                    code=201,
+                    message="비밀번호가 정확하지 않습니다.",   
+                ).to_dict()
+
+            tokens = AuthService.generate_token(user)
+            tokens.update(
+                {
+                    "type": "Bearer",
+                    "expires_in": 7200,
+                    "user": user._to_json(),
+                }
+            )
+
             return Response(
-                code=201,
-                message="비밀번호가 정확하지 않습니다.",
+                data=tokens,
+                message="로그인에 성공했습니다",
             ).to_dict()
 
-        tokens = AuthService.generate_token(user)
-        tokens.update(
-            {
-                "type": "Bearer",
-                "expires_in": 7200,
-                "user": user._to_json(),
-            }
-        )
+        except Exception as e:
+            # Log lỗi ra console hoặc file nếu cần
+            print(f"[Login Error] {str(e)}")
 
-        return Response(
-            data=tokens,
-            message="Đăng nhập thành công",
-        ).to_dict()
+            return Response(
+                code=201,
+                message="로그인 중 오류가 발생했습니다. 나중에 다시 시도해 주세요.",
+            ).to_dict()
+
 
 
 @ns.route("/update_user")
