@@ -152,7 +152,7 @@ class APINewLink(Resource):
                 NotificationServices.create_notification(
                     user_id=current_user.id,
                     status=const.NOTIFICATION_FALSE,
-                    title=f"{link.type}이름 연결에 실패했습니다. 계정 정보를 확인해주세요.",
+                    title=f"{link.type} 연결에 실패했습니다. 계정 정보를 확인해주세요.",
                 )
 
                 return Response(
@@ -167,7 +167,7 @@ class APINewLink(Resource):
 
             NotificationServices.create_notification(
                 user_id=current_user.id,
-                title=f"{link.type}이름 연결이 완료되었습니다.",
+                title=f"{link.type} 연결이 완료되었습니다.",
             )
 
             return Response(
