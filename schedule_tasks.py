@@ -208,6 +208,7 @@ def translate_notification(app):
                 .limit(10)
                 .all()
             )
+            chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
 
             if not notifications:
                 return
@@ -216,8 +217,7 @@ def translate_notification(app):
                 {"id": notification_detail.id, "text": notification_detail.description}
                 for notification_detail in notifications
             ]
-            app.logger.info(notification_data)
-            translated_results = translate_notifications_batch(notification_data)
+            translated_results = translate_notifications_batch(notification_data , chatgpt_api_key)
             if translated_results:
                 NotificationServices.update_translated_notifications(translated_results)
 
