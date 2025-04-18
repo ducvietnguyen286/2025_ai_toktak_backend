@@ -60,6 +60,12 @@ class APIUsedCoupon(Resource):
                     code=201,
                 ).to_dict()
 
+        if coupon.expired_from and coupon.expired_from > datetime.datetime.now():
+            return Response(
+                message="쿠폰 코드가 사용 불가능합니다",
+                code=201,
+            ).to_dict()
+
         if coupon.expired and coupon.expired < datetime.datetime.now():
             return Response(
                 message="쿠폰 코드가 만료되었습니다",
