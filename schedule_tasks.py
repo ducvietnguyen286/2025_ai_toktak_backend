@@ -207,7 +207,7 @@ def translate_notification(app):
                         Notification.description_korea == "",
                     ),
                 )
-                .order_by(Notification.created_at.asc())
+                .order_by(Notification.id.desc())
                 .limit(10)
                 .all()
             )
