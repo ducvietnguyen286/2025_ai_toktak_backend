@@ -4,6 +4,7 @@ from openai import OpenAI, OpenAIError
 from app.services.request_log import RequestLogService
 import os
 import re
+from app.lib.logger import logger
 
 chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
 
@@ -620,9 +621,11 @@ def call_chatgpt(
         return None
 
 
-def translate_notifications_batch(notifications_batch):
+def translate_notifications_batch(notifications_batch , chatgpt_api_key):
     try:
+        print(f"chatgpt_api_key{chatgpt_api_key}"   )
         client = OpenAI(api_key=chatgpt_api_key)
+        
         assistant_id = "asst_rBXxdDDCdHuv3UxNDTiHrxVv"
 
         # Format input cho GPT: ID + nội dung
@@ -669,10 +672,13 @@ def translate_notifications_batch(notifications_batch):
         return {}
 
     except OpenAIError as e:
+        logger.error(f"[OpenAI API Error xxxxxxxxxx] {e}")
         print(f"[OpenAI API Error] {e}")
     except TimeoutError as e:
+        logger.error(f"[Timeout Error] {e}")
         print(f"[Timeout Error] {e}")
     except Exception as e:
+        logger.error(f"[Unhandled  Error] {e}")
         print(f"[Unhandled Error] {e}")
 
     # Nếu lỗi, trả về dict rỗng

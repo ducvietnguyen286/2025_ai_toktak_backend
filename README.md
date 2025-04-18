@@ -77,3 +77,7 @@ sudo systemctl restart nginx
 
 
 chmod +x /var/www/toktak/entry-point.sh
+
+
+git update-index --no-assume-unchanged run_with_watchdog.sh
+git update-index --no-assume-unchanged entry-point.sh
