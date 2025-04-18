@@ -84,6 +84,8 @@ class UserLinkService:
                     fb_data = FacebookTokenService().get_info_page(data)
                 else:
                     is_active = False
+            else:
+                is_active = False
 
         if is_active:
             UserLinkService.update_info_user_link(
@@ -103,6 +105,8 @@ class UserLinkService:
                     user_link,
                     data,
                 )
+            else:
+                is_active = False
         return is_active
 
     @staticmethod
@@ -117,6 +121,8 @@ class UserLinkService:
                     user_link,
                     data,
                 )
+            else:
+                is_active = False
         return is_active
 
     @staticmethod
@@ -131,6 +137,8 @@ class UserLinkService:
                         user_link,
                         data,
                     )
+                else:
+                    is_active = False
         return is_active
 
     @staticmethod
@@ -147,4 +155,6 @@ class UserLinkService:
                         user_link,
                         data,
                     )
+                else:
+                    is_active = False
         return is_active

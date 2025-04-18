@@ -156,7 +156,12 @@ class APINewLink(Resource):
                 )
 
                 return Response(
-                    message=f"{link.type}이름 연결에 실패했습니다. 계정 정보를 확인해주세요.",
+                    message=MessageError.CANT_CONNECT_SNS.value["message"],
+                    data={
+                        "error_message": MessageError.CANT_CONNECT_SNS.value[
+                            "error_message"
+                        ]
+                    },
                     code=201,
                 ).to_dict()
 

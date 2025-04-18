@@ -40,7 +40,10 @@ from app.services.notification import NotificationServices
 from app.services.user import UserService
 
 from app.extensions import redis_client
-from flask import request
+from flask import request, send_file, after_this_request
+
+import tempfile, glob, shutil
+from zipfile import ZipFile
 
 from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
@@ -1042,7 +1045,7 @@ class APIGetStatusUploadBySyncId(Resource):
 
             posts = sync_status["posts"]
             for post in posts:
-                
+
                 logger.info("+++++++++++++++++++++++++")
                 logger.info(post)
 
@@ -1517,3 +1520,82 @@ class APICreateScraper(Resource):
                 message="상품 정보를 불러올 수 없어요.(Error code : )",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/download-zip")
+class APIDownloadZip(Resource):
+    def post(self):
+        try:
+            data = request.get_json()
+            post_id = data.get("post_id")
+
+            if not post_id:
+                return Response(
+                    message="Khong co data post_id",
+                    code=201,
+                ).to_dict()
+
+            post = PostService.find_post(post_id)
+            if not post:
+                return Response(
+                    message="Khong co data post_id",
+                    code=201,
+                ).to_dict()
+
+            UPLOAD_BASE_PATH = "uploads"
+            post_date = post.created_at.strftime("%Y_%m_%d")
+            IMAGE_EXTENSIONS = ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp", "*.svg"]
+            folder_path = os.path.join(UPLOAD_BASE_PATH, post_date, str(post.batch_id))
+            if not os.path.exists(folder_path):
+                return Response(
+                    message="Folder not found",
+                    code=201,
+                ).to_dict()
+
+            # Lấy tất cả ảnh theo định dạng cho phép
+            file_list = []
+            for pattern in IMAGE_EXTENSIONS:
+                file_list.extend(glob.glob(os.path.join(folder_path, pattern)))
+            if not file_list:
+                return Response(
+                    message="No image files found",
+                    code=201,
+                ).to_dict()
+
+            tmp_dir = tempfile.mkdtemp()
+            zip_path = os.path.join(tmp_dir, "images.zip")
+
+            with ZipFile(zip_path, "w") as zipf:
+                for file_path in file_list:
+                    filename = os.path.basename(file_path)
+                    zipf.write(file_path, arcname=filename)
+
+            if request:
+                after_this_request(
+                    lambda response: _cleanup_zip(zip_path, tmp_dir, response)
+                )
+            return send_file(
+                zip_path,
+                mimetype="application/zip",
+                as_attachment=True,
+                download_name=f"post_{post_id}_images.zip",
+            )
+
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="상품 정보를 불러올 수 없어요.(Error code : )",
+                code=201,
+            ).to_dict()
+
+
+def _cleanup_zip(zip_path, tmp_dir, response):
+    try:
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+        if os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir)
+    except Exception as e:
+        logger.warning(f"Không thể xóa tệp tạm: {e}")
+    return response

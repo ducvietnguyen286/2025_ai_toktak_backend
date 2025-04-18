@@ -1,0 +1,47 @@
+from app.extensions import db
+from app.models.base import BaseModel
+from datetime import datetime
+
+
+class Product(db.Model, BaseModel):
+    __tablename__ = "products"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    product_name = db.Column(db.String(500), nullable=False, default="")
+    price = db.Column(db.Float, nullable=False)
+    content = db.Column(db.Text, nullable=False, default="")
+    description = db.Column(db.Text, default="")
+
+    status = db.Column(db.Integer, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )  #
+
+    user = db.relationship("User", lazy="joined")
+
+    # to_json_parse = "images"
+    # to_json_filter = "captions"
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "product_name": self.product_name,
+            "price": self.price,
+            "content": self.content,
+            "description": self.description,
+            "status": self.status,
+            "user_email": self.user.email if self.user else None,
+            "created_at": (
+                self.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.created_at
+                else None
+            ),
+            "updated_at": (
+                self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.updated_at
+                else None
+            ),
+        }
