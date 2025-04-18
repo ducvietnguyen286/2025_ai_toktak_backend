@@ -1048,13 +1048,13 @@ class APIYoutubeLogin(Resource):
 
             client = YoutubeClientService.get_client_by_user_id(user_id)
             if not client:
-                all_clients = redis_client.get("toktak:all_clients")
-                if all_clients:
-                    all_clients = json.loads(all_clients)
-                    client = random.choice(all_clients) if all_clients else None
-                else:
-                    client = YoutubeClientService.get_random_client()
-                    client = client.to_json() if client else None
+                # all_clients = redis_client.get("toktak:all_clients")
+                # if all_clients:
+                #     all_clients = json.loads(all_clients)
+                #     client = random.choice(all_clients) if all_clients else None
+                # else:
+                client = YoutubeClientService.get_random_client()
+                client = client.to_json() if client else None
 
             if not client:
                 PAGE_PROFILE = (
@@ -1062,7 +1062,7 @@ class APIYoutubeLogin(Resource):
                     or "https://toktak.ai/profile"
                 )
 
-                return redirect(PAGE_PROFILE + "?error=Not found client")
+                return redirect(PAGE_PROFILE + "?tabIndex=2&error=Not found client")
 
             state_token = self.generate_state_token(client, user_id, link_id)
             scope = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"
