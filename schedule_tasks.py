@@ -7,7 +7,16 @@ from datetime import datetime
 from logging import DEBUG
 from logging.handlers import RotatingFileHandler
 
+from pathlib import Path
 from dotenv import load_dotenv
+
+# Load biến môi trường
+env_path = Path(__file__).parent / ".env"
+load_dotenv(dotenv_path=env_path, override=True)
+
+from app.config import configs as config
+
+
 from flask import Flask
 from werkzeug.exceptions import default_exceptions
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -24,7 +33,6 @@ from app.models.notification import Notification
 from pytz import timezone
 import requests
 
-from pathlib import Path
 import const
 
 from app.services.notification import NotificationServices
@@ -35,11 +43,6 @@ from app.ais.chatgpt import (
 from sqlalchemy import or_
 
 
-# Load biến môi trường
-env_path = Path(__file__).parent / ".env"
-load_dotenv(dotenv_path=env_path, override=True)
-
-from app.config import configs as config
 
 
 UPLOAD_BASE_PATH = "uploads"
@@ -204,11 +207,10 @@ def translate_notification(app):
                         Notification.description_korea == "",
                     ),
                 )
-                .order_by(Notification.created_at.asc())
+                .order_by(Notification.id.desc())
                 .limit(10)
                 .all()
             )
-            chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
 
             if not notifications:
                 return
@@ -217,7 +219,7 @@ def translate_notification(app):
                 {"id": notification_detail.id, "text": notification_detail.description}
                 for notification_detail in notifications
             ]
-            translated_results = translate_notifications_batch(notification_data , chatgpt_api_key)
+            translated_results = translate_notifications_batch(notification_data )
             if translated_results:
                 NotificationServices.update_translated_notifications(translated_results)
 
