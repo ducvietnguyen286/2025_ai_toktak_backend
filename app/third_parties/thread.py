@@ -534,14 +534,16 @@ class ThreadService(BaseService):
             if "id" in result:
                 return result["id"]
             elif "error" in result:
-                error = result["error"]
-                error_type = error["type"]
-                error_subcode = error["error_subcode"]
+                error = result["error"] if "error" in result else {}
+                error_type = error["type"] if "type" in error else ""
+                error_subcode = (
+                    error["error_subcode"] if "error_subcode" in error else 0
+                )
                 if error_type == "OAuthException" and error_subcode == 2207032:
                     time.sleep(10)
                     if retry < 3:
                         return self.publish_post(media_id, retry + 1)
-                error_message = error["message"]
+                error_message = error["message"] if "message" in error else ""
                 self.save_errors(
                     "ERRORED",
                     f"ERROR PUBLISH POST {self.key_log}: {error_message}",
