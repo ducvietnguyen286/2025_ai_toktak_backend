@@ -134,7 +134,9 @@ class BaseService:
         self.social_post.save()
         PostService.update_post(self.post_id, status=1)
 
-    def save_social_post_error(self, status, message, base_message):
+    def save_social_post_error(
+        self, status, message, base_message="", instagram_quote=""
+    ):
         self.social_post.status = status
         self.social_post.error_message = message
         self.social_post.show_message = base_message
@@ -154,7 +156,13 @@ class BaseService:
         elif self.service == "THREAD":
             log_thread_message(message)
 
-    def save_errors(self, status, message, base_message=""):
+    def save_errors(
+        self,
+        status,
+        message,
+        base_message="",
+        instagram_quote="",
+    ):
         # redis_key = f"toktak:has_error:boundio:{self.post_id}:{self.link_id}"
         # is_has_error = redis_client.get(redis_key)
         save_message = f"{self.service}: {message}"
@@ -162,7 +170,12 @@ class BaseService:
         self.log_social_message(save_message)
         # if is_has_error:
         #     return
-        self.save_social_post_error(status, save_message, base_message)
+        self.save_social_post_error(
+            status,
+            save_message,
+            base_message=base_message,
+            instagram_quote=instagram_quote,
+        )
         # redis_client.set(redis_key, 1, ex=10)
 
     def save_publish(self, status, social_link):

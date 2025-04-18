@@ -381,13 +381,21 @@ class ThreadService(BaseService):
             if "permalink" in result:
                 return result["permalink"]
             elif "error" in result:
-                error = result["error"]
-                error_message = error["message"]
+                error = result["error"] if "error" in result else {}
+                error_message = error["message"] if "message" in error else ""
+                if error_message == "":
+                    error_message = "Error occurred while getting permalink"
                 self.save_errors(
                     "ERRORED",
                     f"GET PERMALINK {self.key_log}: {error_message}",
                 )
-                return False
+            else:
+                self.save_errors(
+                    "ERRORED",
+                    f"GET PERMALINK {self.key_log}: {str(result)}",
+                    base_message=str(result),
+                )
+            return False
         except Exception as e:
             self.save_errors("ERRORED", f"GET PERMALINK {self.key_log}: {str(e)}")
             return False
@@ -420,6 +428,7 @@ class ThreadService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} : UPLOAD MEDIA: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -431,17 +440,21 @@ class ThreadService(BaseService):
             if "id" in result:
                 return result["id"]
             elif "error" in result:
-                error = result["error"]
-                error_message = error["message"]
+                error = result["error"] if "error" in result else {}
+                error_message = error["message"] if "message" in error else ""
+                if error_message == "":
+                    error_message = "Error occurred while uploading media"
                 self.save_errors(
                     "ERRORED",
                     f"UPLOAD MEDIA {self.key_log}: {error_message}",
+                    base_message=error_message,
                 )
                 return False
             else:
                 self.save_errors(
                     "ERRORED",
                     f"UPLOAD MEDIA {self.key_log}: {str(result)}",
+                    base_message=str(result),
                 )
                 return False
 
@@ -473,6 +486,7 @@ class ThreadService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} : UPLOAD CAROUSEL: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -484,17 +498,21 @@ class ThreadService(BaseService):
             if "id" in result:
                 return result["id"]
             elif "error" in result:
-                error = result["error"]
-                error_message = error["message"]
+                error = result["error"] if "error" in result else {}
+                error_message = error["message"] if "message" in error else ""
+                if error_message == "":
+                    error_message = "Error occurred while uploading carousel"
                 self.save_errors(
                     "ERRORED",
                     f"UPLOAD CAROUSEL {self.key_log}: {error_message}",
+                    base_message=error_message,
                 )
                 return False
             else:
                 self.save_errors(
                     "ERRORED",
                     f"UPLOAD CAROUSEL {self.key_log}: {str(result)}",
+                    base_message=str(result),
                 )
                 return False
         except Exception as e:
@@ -524,6 +542,7 @@ class ThreadService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} : PUBLISH POST: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -544,15 +563,19 @@ class ThreadService(BaseService):
                     if retry < 3:
                         return self.publish_post(media_id, retry + 1)
                 error_message = error["message"] if "message" in error else ""
+                if error_message == "":
+                    error_message = "Error occurred while publishing post"
                 self.save_errors(
                     "ERRORED",
                     f"ERROR PUBLISH POST {self.key_log}: {error_message}",
+                    base_message=error_message,
                 )
                 return False
             else:
                 self.save_errors(
                     "ERRORED",
                     f"ERROR PUBLISH POST {self.key_log}: {str(result)}",
+                    base_message=str(result),
                 )
                 return False
         except Exception as e:
@@ -573,6 +596,7 @@ class ThreadService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} : PUBLISH POST: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -592,6 +616,7 @@ class ThreadService(BaseService):
                     self.save_errors(
                         "ERRORED",
                         f"ERROR GET UPLOAD STATUS {self.key_log}: {error_message}",
+                        base_message=error_message,
                     )
                     return False
                 else:
@@ -601,6 +626,7 @@ class ThreadService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"ERROR GET UPLOAD STATUS {self.key_log}: {str(result)}",
+                    base_message=str(result),
                 )
                 return False
         except Exception as e:

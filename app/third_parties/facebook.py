@@ -235,13 +235,21 @@ class FacebookService(BaseService):
         )
 
         if not is_all and not token_page:
-            self.save_errors("ERRORED", "SEND POST ERROR NOT ALL: Can't get page token")
+            self.save_errors(
+                "ERRORED",
+                "SEND POST ERROR NOT ALL: Can't get page token",
+                base_message="Can't get page token",
+            )
             # self.user_link.warning = 1
             # self.user_link.save()
             return True
         else:
             if not token_page:
-                self.save_errors("ERRORED", "SEND POST ERROR ALL: Can't get page token")
+                self.save_errors(
+                    "ERRORED",
+                    "SEND POST ERROR ALL: Can't get page token",
+                    base_message="Can't get page token",
+                )
                 # self.user_link.warning = 1
                 # self.user_link.save()
                 return True
@@ -282,7 +290,9 @@ class FacebookService(BaseService):
                 f"POST {self.key_log} : Can't Start Start Session Upload Reel",
             )
             self.save_errors(
-                "ERRORED", f"SEND POST {self.key_log} VIDEO: {error_message}"
+                "ERRORED",
+                f"SEND POST {self.key_log} VIDEO: {error_message}",
+                base_message=error_message,
             )
             return False
 
@@ -321,11 +331,14 @@ class FacebookService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"SEND POST {self.key_log} VIDEO: Video is error. Can't upload video",
+                    base_message="Video is error. Can't upload video",
                 )
             if uploading_phase == "error":
                 error_message = uploading_phase.get("error").get("message")
                 self.save_errors(
-                    "ERRORED", f"SEND POST {self.key_log} VIDEO: {error_message}"
+                    "ERRORED",
+                    f"SEND POST {self.key_log} VIDEO: {error_message}",
+                    base_message=error_message,
                 )
             return False
 
@@ -340,7 +353,9 @@ class FacebookService(BaseService):
             )
         except Exception as e:
             self.save_errors(
-                "ERRORED", f"POST {self.key_log} : START SESSION UPLOAD REEL: {str(e)}"
+                "ERRORED",
+                f"POST {self.key_log} : START SESSION UPLOAD REEL: {str(e)}",
+                base_message=str(e),
             )
             return False
 
@@ -360,7 +375,11 @@ class FacebookService(BaseService):
         try:
             post_response = requests.post(UPLOAD_VIDEO_URL, headers=headers, timeout=20)
         except Exception as e:
-            self.save_errors("ERRORED", f"POST {self.key_log}: UPLOAD VIDEO: {str(e)}")
+            self.save_errors(
+                "ERRORED",
+                f"POST {self.key_log}: UPLOAD VIDEO: {str(e)}",
+                base_message=str(e),
+            )
             return False
 
         result = post_response.json()
@@ -380,9 +399,6 @@ class FacebookService(BaseService):
             try:
                 get_response = requests.get(URL_CHECK_STATUS, timeout=20)
             except Exception as e:
-                self.save_errors(
-                    "ERRORED", f"POST {self.key_log}: GET UPLOAD STATUS: {str(e)}"
-                )
                 return {
                     "status": "error",
                     "error": str(e),
@@ -395,10 +411,6 @@ class FacebookService(BaseService):
                 error = result.get("error", {})
                 error_message = error.get(
                     "message", f"POST {self.key_log}: Error CHECK STATUS"
-                )
-                self.save_errors(
-                    "ERRORED",
-                    error_message,
                 )
                 return {"status": "error", "error": error_message}
 
@@ -416,7 +428,9 @@ class FacebookService(BaseService):
 
         except Exception as e:
             self.save_errors(
-                "ERRORED", f"POST {self.key_log}: GET UPLOAD STATUS - EROROR: {str(e)}"
+                "ERRORED",
+                f"POST {self.key_log}: GET UPLOAD STATUS - EROROR: {str(e)}",
+                base_message=str(e),
             )
             return {
                 "status": "error",
@@ -458,7 +472,9 @@ class FacebookService(BaseService):
             post_response = requests.post(URL_PUBLISH, data=post_data, timeout=20)
         except Exception as e:
             self.save_errors(
-                "ERRORED", f"POST {self.key_log}: PUBLISH THE REEL: {str(e)}"
+                "ERRORED",
+                f"POST {self.key_log}: PUBLISH THE REEL: {str(e)}",
+                base_message=str(e),
             )
             return False
 
@@ -475,7 +491,9 @@ class FacebookService(BaseService):
             get_response = requests.get(URL_REEL, timeout=20)
         except Exception as e:
             self.save_errors(
-                "ERRORED", f"POST {self.key_log}: GET REEL UPLOADED: {str(e)}"
+                "ERRORED",
+                f"POST {self.key_log}: GET REEL UPLOADED: {str(e)}",
+                base_message=str(e),
             )
             return False
 
@@ -513,6 +531,7 @@ class FacebookService(BaseService):
             self.save_errors(
                 "ERRORED",
                 f"SEND POST {self.key_log} IMAGE - REQUEST FEED URL: {str(e)}",
+                base_message=str(e),
             )
             return False
         result = post_response.json()
@@ -523,7 +542,9 @@ class FacebookService(BaseService):
             error = result.get("error", {})
             error_message = error.get("message", "Error")
             self.save_errors(
-                "ERRORED", f"SEND POST {self.key_log} IMAGE: {error_message}"
+                "ERRORED",
+                f"SEND POST {self.key_log} IMAGE: {error_message}",
+                base_message=error_message,
             )
 
             return False
@@ -551,7 +572,9 @@ class FacebookService(BaseService):
                 response = requests.post(UNPUBLISH_URL, data=data, timeout=20)
             except Exception as e:
                 self.save_errors(
-                    "ERRORED", f"POST {self.key_log} UNPUBLISH IMAGES: {str(e)}"
+                    "ERRORED",
+                    f"POST {self.key_log} UNPUBLISH IMAGES: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -571,5 +594,6 @@ class FacebookService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UNPUBLISH IMAGES - GET ERROR: {error_message}",
+                    base_message=error_message,
                 )
         return photo_ids
