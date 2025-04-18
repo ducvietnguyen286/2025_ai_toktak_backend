@@ -216,6 +216,7 @@ def translate_notification(app):
                 {"id": notification_detail.id, "text": notification_detail.description}
                 for notification_detail in notifications
             ]
+            app.logger.info(notification_data)
             translated_results = translate_notifications_batch(notification_data)
             if translated_results:
                 NotificationServices.update_translated_notifications(translated_results)
