@@ -349,16 +349,31 @@ class InstagramService(BaseService):
             response = requests.get(PERMALINK_URL, params=params)
             result = response.json()
             self.save_request_log("get_permalink_instagram", params, result)
+
+            quote = response.headers.get("x-app-usage") if "headers" in response else ""
+
             if "permalink" in result:
                 return result["permalink"]
             elif "error" in result:
-                error = result["error"]
-                error_message = error["message"]
+                error = result["error"] if "error" in result else {}
+                error_message = error["message"] if "message" in error else ""
+                if error_message == "":
+                    error_message = "Error occurred while getting permalink"
                 self.save_errors(
                     "ERRORED",
                     f"GET PERMALINK {self.key_log}: {error_message}",
+                    base_message=error_message,
+                    instagram_quote=quote,
+                )
+            else:
+                self.save_errors(
+                    "ERRORED",
+                    f"GET PERMALINK {self.key_log}: {str(result)}",
+                    base_message=str(result),
+                    instagram_quote=quote,
                 )
                 return False
+            return False
         except Exception as e:
             self.save_errors("ERRORED", f"GET PERMALINK {self.key_log}: {str(e)}")
             return False
@@ -387,6 +402,7 @@ class InstagramService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} : UPLOAD MEDIA: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -395,20 +411,32 @@ class InstagramService(BaseService):
             self.save_request_log("upload_media", params, result)
             self.save_uploading(index * 10)
 
+            quote = (
+                post_response.headers.get("x-app-usage")
+                if "headers" in post_response
+                else ""
+            )
+
             if "id" in result:
                 return result["id"]
             elif "error" in result:
-                error = result["error"]
-                error_message = error["message"]
+                error = result["error"] if "error" in result else {}
+                error_message = error["message"] if "message" in error else ""
+                if error_message == "":
+                    error_message = "Error occurred while uploading media"
                 self.save_errors(
                     "ERRORED",
                     f"UPLOAD MEDIA {self.key_log}: {error_message}",
+                    base_message=error_message,
+                    instagram_quote=quote,
                 )
                 return False
             else:
                 self.save_errors(
                     "ERRORED",
                     f"UPLOAD MEDIA {self.key_log}: {str(result)}",
+                    base_message=str(result),
+                    instagram_quote=quote,
                 )
                 return False
 
@@ -442,6 +470,7 @@ class InstagramService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} : UPLOAD CAROUSEL: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -450,20 +479,32 @@ class InstagramService(BaseService):
             self.save_request_log("upload_carousel", upload_data, result)
             self.save_uploading(70)
 
+            quote = (
+                post_response.headers.get("x-app-usage")
+                if "headers" in post_response
+                else ""
+            )
+
             if "id" in result:
                 return result["id"]
             elif "error" in result:
-                error = result["error"]
-                error_message = error["message"]
+                error = result["error"] if "error" in result else {}
+                error_message = error["message"] if "message" in error else ""
+                if error_message == "":
+                    error_message = "Error occurred while uploading media"
                 self.save_errors(
                     "ERRORED",
                     f"UPLOAD CAROUSEL {self.key_log}: {error_message}",
+                    base_message=error_message,
+                    instagram_quote=quote,
                 )
                 return False
             else:
                 self.save_errors(
                     "ERRORED",
                     f"UPLOAD CAROUSEL {self.key_log}: {str(result)}",
+                    base_message=str(result),
+                    instagram_quote=quote,
                 )
                 return False
         except Exception as e:
@@ -484,12 +525,19 @@ class InstagramService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} : PUBLISH POST: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
             result = status_response.json()
 
             self.save_request_log("get_upload_status", params, result)
+
+            quote = (
+                status_response.headers.get("x-app-usage")
+                if "headers" in status_response
+                else ""
+            )
 
             if "status_code" in result:
                 status = result["status_code"]
@@ -503,6 +551,8 @@ class InstagramService(BaseService):
                     self.save_errors(
                         "ERRORED",
                         f"ERROR GET UPLOAD STATUS {self.key_log}: {error_message}",
+                        base_message=error_message,
+                        instagram_quote=quote,
                     )
                     return False
                 else:
@@ -512,6 +562,8 @@ class InstagramService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"ERROR GET UPLOAD STATUS {self.key_log}: {str(result)}",
+                    base_message=str(result),
+                    instagram_quote=quote,
                 )
                 return False
         except Exception as e:
@@ -539,6 +591,7 @@ class InstagramService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} : PUBLISH POST: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -546,20 +599,32 @@ class InstagramService(BaseService):
 
             self.save_request_log("publish_post", upload_data, result)
 
+            quote = (
+                post_response.headers.get("x-app-usage")
+                if "headers" in post_response
+                else ""
+            )
+
             if "id" in result:
                 return result["id"]
             elif "error" in result:
-                error = result["error"]
-                error_message = error["message"]
+                error = result["error"] if "error" in result else {}
+                error_message = error["message"] if "message" in error else ""
+                if error_message == "":
+                    error_message = "Error occurred while publishing post"
                 self.save_errors(
                     "ERRORED",
                     f"ERROR PUBLISH POST {self.key_log}: {error_message}",
+                    base_message=error_message,
+                    instagram_quote=quote,
                 )
                 return False
             else:
                 self.save_errors(
                     "ERRORED",
                     f"ERROR PUBLISH POST {self.key_log}: {str(result)}",
+                    base_message=str(result),
+                    instagram_quote=quote,
                 )
                 return False
         except Exception as e:
@@ -603,27 +668,40 @@ class InstagramService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} : UPLOAD REEL: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
             result = post_response.json()
+
+            quote = (
+                post_response.headers.get("x-app-usage")
+                if "headers" in post_response
+                else ""
+            )
 
             self.save_request_log("upload_reels", upload_data, result)
 
             if "id" in result:
                 return result["id"]
             elif "error" in result:
-                error = result["error"]
-                error_message = error["message"]
+                error = result["error"] if "error" in result else {}
+                error_message = error["message"] if "message" in error else ""
+                if error_message == "":
+                    error_message = "Error occurred while uploading media"
                 self.save_errors(
                     "ERRORED",
                     f"ERROR UPLOAD REEL {self.key_log}: {error_message}",
+                    base_message=error_message,
+                    instagram_quote=quote,
                 )
                 return False
             else:
                 self.save_errors(
                     "ERRORED",
                     f"ERROR UPLOAD REEL {self.key_log}: {str(result)}",
+                    base_message=str(result),
+                    instagram_quote=quote,
                 )
                 return False
         except Exception as e:

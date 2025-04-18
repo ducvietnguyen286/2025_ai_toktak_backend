@@ -24,3 +24,4 @@ class SocialPost(BaseDocument):
     disable_duet = BooleanField(default=False)
     disable_stitch = BooleanField(default=False)
     process_number = IntField(default=0)
+    instagram_quote = StringField(default="")

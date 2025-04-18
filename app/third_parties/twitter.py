@@ -223,9 +223,6 @@ class TwitterService(BaseService):
             return True
 
     def send_post_social(self, post, link):
-        log_twitter_message(
-            f"POST {self.key_log} Send post IMAGES to Twitter {post.id}"
-        )
         images = post.images
         if images:
             images = json.loads(images)
@@ -245,7 +242,6 @@ class TwitterService(BaseService):
 
     def send_post_images(self, media_ids, post, link, retry=0):
         try:
-            log_twitter_message(f"POST {self.key_log} Send IMAGES {post.id}")
             access_token = self.meta.get("access_token")
 
             hashtags = post.hashtag.split()
@@ -260,7 +256,6 @@ class TwitterService(BaseService):
                 "text": text,
                 "media": {"media_ids": media_ids},
             }
-            log_twitter_message(data)
             headers = {
                 "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json",
@@ -273,20 +268,20 @@ class TwitterService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} SEND POST IMAGES - REQUEST URL: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
             parsed_response = response.json()
 
             self.save_request_log("send_images", data, parsed_response)
 
-            log_twitter_message(parsed_response)
             status = parsed_response.get("status")
             if status == 401:
                 if retry > 0:
-
                     self.save_errors(
                         "ERRORED",
                         f"POST {self.key_log} SEND POST IMAGES: Access token invalid",
+                        base_message="Access token invalid",
                     )
 
                     return False
@@ -301,6 +296,7 @@ class TwitterService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} SEND POST IMAGES: {parsed_response}",
+                    base_message=f"{parsed_response}",
                 )
                 return False
             errors = parsed_response.get("errors")
@@ -308,7 +304,7 @@ class TwitterService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} SEND POST IMAGES: {errors}",
-                    f"{errors}",
+                    base_message=f"{errors}",
                 )
                 return False
             else:
@@ -331,13 +327,13 @@ class TwitterService(BaseService):
                         self.save_errors(
                             "ERRORED",
                             f"POST {self.key_log} SEND POST IMAGES: {detail}",
-                            detail,
+                            base_message=f"{detail}",
                         )
                     else:
                         self.save_errors(
                             "ERRORED",
                             f"POST {self.key_log} SEND POST IMAGES: {parsed_response}",
-                            f"{parsed_response}",
+                            base_message=f"{parsed_response}",
                         )
                     return False
         except Exception as e:
@@ -348,7 +344,6 @@ class TwitterService(BaseService):
             return False
 
     def send_post_video(self, post, link):
-        log_twitter_message(f"POST {self.key_log} Send post Video to Twitter {post.id}")
         video_path = post.video_path
         time_waited = 0
         while not video_path and time_waited < 30:
@@ -361,11 +356,9 @@ class TwitterService(BaseService):
 
     def send_post_video_to_x(self, media, post, link, media_id=None, retry=0):
         try:
-            log_twitter_message(f"POST {self.key_log} Send VIDEO {post.id}")
             access_token = self.meta.get("access_token")
             if not media_id:
                 media_id = self.upload_media(media, True)
-            log_twitter_message(f"media_id: {media_id}")
             if not media_id:
                 return False
 
@@ -380,7 +373,6 @@ class TwitterService(BaseService):
                 "text": text,
                 "media": {"media_ids": [media_id]},
             }
-            log_twitter_message(data)
             headers = {
                 "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json",
@@ -393,6 +385,7 @@ class TwitterService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} SEND POST VIDEO - REQUEST URL: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
             parsed_response = response.json()
@@ -405,6 +398,7 @@ class TwitterService(BaseService):
                     self.save_errors(
                         "ERRORED",
                         f"POST {self.key_log} SEND POST VIDEO: Access token invalid",
+                        base_message="Access token invalid",
                     )
 
                     return False
@@ -419,6 +413,7 @@ class TwitterService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} SEND POST VIDEO: {parsed_response}",
+                    base_message=f"{parsed_response}",
                 )
                 return False
             errors = parsed_response.get("errors")
@@ -426,7 +421,7 @@ class TwitterService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} SEND POST VIDEO: {errors}",
-                    f"{errors}",
+                    base_message=f"{errors}",
                 )
                 return False
             else:
@@ -449,11 +444,13 @@ class TwitterService(BaseService):
                         self.save_errors(
                             "ERRORED",
                             f"POST {self.key_log} SEND POST VIDEO: {details}",
+                            base_message=f"{details}",
                         )
                     else:
                         self.save_errors(
                             "ERRORED",
                             f"POST {self.key_log} SEND POST VIDEO: {parsed_response}",
+                            base_message=f"{parsed_response}",
                         )
                     return False
         except Exception as e:
@@ -519,6 +516,7 @@ class TwitterService(BaseService):
             self.save_errors(
                 "ERRORED",
                 f"POST {self.key_log} UPLOAD MEDIA INIT - REQUEST URL: {str(e)}",
+                base_message=str(e),
             )
             return False
 
@@ -533,6 +531,7 @@ class TwitterService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD MEDIA INIT: Access token invalid",
+                    base_message="Access token invalid",
                 )
                 return False
 
@@ -551,12 +550,16 @@ class TwitterService(BaseService):
         res_json = req.json()
         if "data" not in res_json:
             self.save_errors(
-                "ERRORED", f"POST {self.key_log} UPLOAD MEDIA INIT: Error Get Data"
+                "ERRORED",
+                f"POST {self.key_log} UPLOAD MEDIA INIT: Error Get Data",
+                base_message=f"{res_json}",
             )
             return False
         if "id" not in res_json["data"]:
             self.save_errors(
-                "ERRORED", f"POST {self.key_log} UPLOAD MEDIA INIT: Error Get Media ID"
+                "ERRORED",
+                f"POST {self.key_log} UPLOAD MEDIA INIT: Error Get Media ID",
+                base_message=f"{res_json}",
             )
             return False
         media_id = res_json["data"]["id"]
@@ -596,6 +599,7 @@ class TwitterService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD MEDIA APPEND - REQUEST URL: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -609,6 +613,7 @@ class TwitterService(BaseService):
                     self.save_errors(
                         "ERRORED",
                         f"POST {self.key_log} UPLOAD MEDIA APPEND: Access token invalid",
+                        base_message="Access token invalid",
                     )
                     return False
 
@@ -628,6 +633,7 @@ class TwitterService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD MEDIA APPEND: {req.status_code} {req.text}",
+                    base_message=f"{req.status_code} {req.text}",
                 )
                 return False
 
@@ -638,9 +644,6 @@ class TwitterService(BaseService):
 
     def upload_finalize(self, media_id, retry=0):
         access_token = self.meta.get("access_token")
-
-        # Finalizes uploads and starts video processing
-        log_twitter_message(f"POST {self.key_log} FINALIZE")
 
         headers = {
             "Authorization": "Bearer {}".format(access_token),
@@ -657,6 +660,7 @@ class TwitterService(BaseService):
             self.save_errors(
                 "ERRORED",
                 f"POST {self.key_log} UPLOAD MEDIA FINALIZE - REQUEST URL: {str(e)}",
+                base_message=str(e),
             )
             return False
 
@@ -668,6 +672,7 @@ class TwitterService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD MEDIA FINALIZE: Access token invalid",
+                    base_message="Access token invalid",
                 )
 
                 return False
@@ -692,6 +697,13 @@ class TwitterService(BaseService):
                     else:
                         self.save_uploading(90)
                         return True
+                else:
+                    self.save_errors(
+                        "ERRORED",
+                        f"POST {self.key_log} UPLOAD MEDIA FINALIZE: {response_json}",
+                        base_message=f"{response_json}",
+                    )
+                    return False
             except requests.exceptions.JSONDecodeError as e:
                 self.save_errors(
                     "ERRORED", f"POST {self.key_log} UPLOAD MEDIA FINALIZE: {str(e)}"
@@ -732,6 +744,7 @@ class TwitterService(BaseService):
             self.save_errors(
                 "ERRORED",
                 f"POST {self.key_log} UPLOAD MEDIA STATUS - REQUEST URL: {str(e)}",
+                base_message=str(e),
             )
             return False
 
@@ -743,6 +756,7 @@ class TwitterService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD MEDIA STATUS: Access token invalid",
+                    base_message="Access token invalid",
                 )
                 return False
             TwitterTokenService().refresh_token(link=self.link, user=self.user)

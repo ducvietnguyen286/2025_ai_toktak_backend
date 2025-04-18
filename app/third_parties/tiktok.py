@@ -178,8 +178,6 @@ class TiktokService(BaseService):
                 "Content-Type": "application/json; charset=UTF-8",
             }
 
-            log_tiktok_message(headers)
-
             payload = {
                 "post_info": {
                     "title": self.post.title,
@@ -201,8 +199,6 @@ class TiktokService(BaseService):
                 "media_type": "PHOTO",
             }
 
-            log_tiktok_message(f"Payload: {payload}")
-
             try:
                 upload_response = requests.post(
                     URL_IMAGE_UPLOAD, headers=headers, data=json.dumps(payload)
@@ -212,6 +208,7 @@ class TiktokService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD IMAGE - REQUEST URL IMAGE: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -221,10 +218,6 @@ class TiktokService(BaseService):
 
             self.save_request_log("upload_image", payload, parsed_response)
 
-            log_tiktok_message(
-                f"POST {self.key_log} Upload image to Tiktok response: {parsed_response}"
-            )
-
             error = parsed_response.get("error")
             error_code = error.get("code")
             if error_code == "access_token_invalid":
@@ -232,6 +225,7 @@ class TiktokService(BaseService):
                     self.save_errors(
                         "ERRORED",
                         f"POST {self.key_log} UPLOAD IMAGE - Access token invalid",
+                        base_message="Access token invalid",
                     )
 
                     return False
@@ -244,7 +238,9 @@ class TiktokService(BaseService):
             elif error and error_code != "ok":
                 error_message = error.get("message") or "Upload image error"
                 self.save_errors(
-                    "ERRORED", f"POST {self.key_log} UPLOAD IMAGE: {error_message}"
+                    "ERRORED",
+                    f"POST {self.key_log} UPLOAD IMAGE: {error_message}",
+                    base_message=error_message,
                 )
                 return False
 
@@ -252,21 +248,24 @@ class TiktokService(BaseService):
             status_result = self.check_status(publish_id)
             status = status_result.get("status")
             if status:
-                log_tiktok_message(f"POST {self.key_log} Upload image success")
                 permalink = self.user_link.url
                 self.save_publish("PUBLISHED", permalink)
                 return True
             else:
                 error_message = status.get("message")
                 self.save_errors(
-                    "ERRORED", f"POST {self.key_log} UPLOAD IMAGE: {error_message}"
+                    "ERRORED",
+                    f"POST {self.key_log} UPLOAD IMAGE: {error_message}",
+                    base_message=error_message,
                 )
 
                 return False
 
         except Exception as e:
             self.save_errors(
-                "ERRORED", f"POST {self.key_log} UPLOAD IMAGE - ERROR: {str(e)}"
+                "ERRORED",
+                f"POST {self.key_log} UPLOAD IMAGE - ERROR: {str(e)}",
+                base_message=str(e),
             )
             return False
 
@@ -299,7 +298,6 @@ class TiktokService(BaseService):
             status_result = self.check_status(publish_id)
             status = status_result.get("status")
             if status:
-                log_tiktok_message(f"POST {self.key_log} Upload video success")
                 permalink = self.user_link.url
                 self.save_publish("PUBLISHED", permalink)
                 return True
@@ -341,6 +339,7 @@ class TiktokService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD VIDEO INIT - REQUEST URL VIDEO: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -357,6 +356,7 @@ class TiktokService(BaseService):
                     self.save_errors(
                         "ERRORED",
                         f"POST {self.key_log} UPLOAD VIDEO INIT: Access token invalid",
+                        base_message="Access token invalid",
                     )
 
                     return False
@@ -372,6 +372,7 @@ class TiktokService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD VIDEO INIT - GET ERROR: {error_message}",
+                    base_message=error_message,
                 )
                 return False
 
@@ -388,11 +389,17 @@ class TiktokService(BaseService):
             else:
                 error_message = status.get("message")
                 self.save_errors(
-                    "ERRORED", f"POST {self.key_log} UPLOAD VIDEO: {error_message}"
+                    "ERRORED",
+                    f"POST {self.key_log} UPLOAD VIDEO: {error_message}",
+                    base_message=error_message,
                 )
                 return False
         except Exception as e:
-            self.save_errors("ERRORED", f"POST {self.key_log} UPLOAD VIDEO: {str(e)}")
+            self.save_errors(
+                "ERRORED",
+                f"POST {self.key_log} UPLOAD VIDEO: {str(e)}",
+                base_message=str(e),
+            )
             return False
 
     def check_status(self, publish_id, count=1, retry=0):
@@ -411,6 +418,7 @@ class TiktokService(BaseService):
             self.save_errors(
                 "ERRORED",
                 f"POST {self.key_log} CHECK STATUS - REQUEST URL VIDEO: {str(e)}",
+                base_message=str(e),
             )
             return {
                 "status": False,
@@ -426,7 +434,9 @@ class TiktokService(BaseService):
             if retry > 0:
 
                 self.save_errors(
-                    "ERRORED", f"POST {self.key_log} CHECK STATUS: Access token invalid"
+                    "ERRORED",
+                    f"POST {self.key_log} CHECK STATUS: Access token invalid",
+                    base_message="Access token invalid",
                 )
                 return {
                     "status": False,
@@ -450,6 +460,7 @@ class TiktokService(BaseService):
             self.save_errors(
                 "ERRORED",
                 f"POST {self.key_log} CHECK STATUS - GET ERROR: {error_message}",
+                base_message=error_message,
             )
             return {
                 "status": False,
@@ -473,8 +484,6 @@ class TiktokService(BaseService):
         return self.check_status(publish_id, count=count + 1, retry=retry)
 
     def upload_video_init(self, media, retry=0):
-        log_tiktok_message("Upload video to Tiktok INIT")
-
         access_token = self.meta.get("access_token")
         media_size = media.get("media_size", 0)
         media_type = media.get("media_type", "")
@@ -486,13 +495,6 @@ class TiktokService(BaseService):
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json; charset=UTF-8",
         }
-
-        log_tiktok_message(
-            f"------------------ {self.key_log} MEDIA SIZE: {media_size}  ------------------"
-        )
-        log_tiktok_message(
-            f"------------------ {self.key_log} MEDIA TYPE: {media_type}  ------------------"
-        )
 
         chunk_size = 0
 
@@ -557,6 +559,7 @@ class TiktokService(BaseService):
             self.save_errors(
                 "ERRORED",
                 f"POST {self.key_log} UPLOAD VIDEO INIT - REQUEST URL VIDEO: {str(e)}",
+                base_message=str(e),
             )
             return False
 
@@ -573,6 +576,7 @@ class TiktokService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD VIDEO INIT: Access token invalid",
+                    base_message="Access token invalid",
                 )
 
                 return False
@@ -588,14 +592,12 @@ class TiktokService(BaseService):
             self.save_errors(
                 "ERRORED",
                 f"POST {self.key_log} UPLOAD VIDEO INIT - GET ERROR: {error_message}",
+                base_message=error_message,
             )
             return False
 
         info_data = parsed_response.get("data")
         upload_url = info_data.get("upload_url")
-
-        log_tiktok_message(f"Chunk size: {chunk_size}")
-        log_tiktok_message(f"Total chunk: {total_chunk}")
 
         progress_per_chunk = 20 // total_chunk
         left_over = 20 % total_chunk
@@ -648,8 +650,6 @@ class TiktokService(BaseService):
         media_type,
     ):
         try:
-            log_tiktok_message(f"POST {self.key_log} Upload video to Tiktok APPEND")
-
             headers = {
                 "Content-Range": f"bytes {start_bytes}-{end_bytes}/{total_bytes}",
                 "Content-Length": str(current_chunk_size),
@@ -661,6 +661,7 @@ class TiktokService(BaseService):
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD VIDEO APPEND - REQUEST APPEND: {str(e)}",
+                    base_message=str(e),
                 )
                 return False
 
@@ -672,19 +673,19 @@ class TiktokService(BaseService):
             self.save_request_log("upload_video_chunk", headers, response_put)
 
             if response.status_code in (201, 206):
-                log_tiktok_message(
-                    f"Chunk {start_bytes}-{end_bytes}/{total_bytes} tải lên thành công. Status code: {response.status_code}"
-                )
                 return True
             else:
                 error_message = f"Lỗi tải chunk {start_bytes}-{end_bytes}/{total_bytes}: {response.status_code}, {response.text}"
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD VIDEO APPEND - GET ERROR: {error_message}",
+                    base_message=error_message,
                 )
                 return False
         except Exception as e:
             self.save_errors(
-                "ERRORED", f"POST {self.key_log} UPLOAD VIDEO APPEND - ERROR: {str(e)}"
+                "ERRORED",
+                f"POST {self.key_log} UPLOAD VIDEO APPEND - ERROR: {str(e)}",
+                base_message=str(e),
             )
             return False
