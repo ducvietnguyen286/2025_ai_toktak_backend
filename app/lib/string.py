@@ -126,9 +126,13 @@ def should_replace_shortlink(url):
 
 def update_ads_content(url, content):
     if "https://link.coupang.com/" in url:
-        content = f"<h2>이 포스팅은 쿠팡 파트너스 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.</h2>\n\n\n\n{content}"
+        content = content.replace("<h2>ADS_CONTENT_TOKTAK</h2>", "<h2>이 포스팅은 쿠팡 파트너스 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.</h2>")
+        # content = f"<h2>이 포스팅은 쿠팡 파트너스 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.</h2>\n\n\n\n{content}"
     elif "https://s.click.aliexpress.com" in url:
-        content = f"<h2>이 포스팅은 알리 어필리에이트 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.</h2>\n\n\n\n{content}"
+        content = content.replace("<h2>ADS_CONTENT_TOKTAK</h2>", "<h2>이 포스팅은 알리 어필리에이트 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.</h2>")
+        # content = f"<h2>이 포스팅은 알리 어필리에이트 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.</h2>\n\n\n\n{content}"
+    else :
+        content = content.replace("<h2>ADS_CONTENT_TOKTAK</h2>", "")
     return content
 
 
