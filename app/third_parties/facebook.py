@@ -240,8 +240,7 @@ class FacebookService(BaseService):
                 "SEND POST ERROR NOT ALL: Can't get page token",
                 base_message="Can't get page token",
             )
-            # self.user_link.warning = 1
-            # self.user_link.save()
+            UserService.delete_user_link(self.user_link.id)
             return True
         else:
             if not token_page:
@@ -250,8 +249,7 @@ class FacebookService(BaseService):
                     "SEND POST ERROR ALL: Can't get page token",
                     base_message="Can't get page token",
                 )
-                # self.user_link.warning = 1
-                # self.user_link.save()
+                UserService.delete_user_link(self.user_link.id)
                 return True
             response_token = token_page
             page_id = response_token.get("id")
