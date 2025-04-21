@@ -1,0 +1,111 @@
+from app.models.user import User
+from app.models.post import Post
+from app.models.user_video_templates import UserVideoTemplates
+from app.models.link import Link
+from app.models.social_post import SocialPost
+from app.models.product import Product
+from app.extensions import db
+from sqlalchemy import and_, func, or_
+from flask import jsonify
+from datetime import datetime, timedelta
+from sqlalchemy.orm import aliased
+from app.services.image_template import ImageTemplateService
+import os
+import json
+import const
+
+
+class ProductService:
+
+    @staticmethod
+    def create_product(*args, **kwargs):
+        product = Product(*args, **kwargs)
+        product.save()
+        return product
+
+    @staticmethod
+    def find_post(id):
+        return Product.query.get(id)
+
+    @staticmethod
+    def update_product(id, *args, **kwargs):
+        product_detail = Product.query.get(id)
+        if not product_detail:
+            return None
+        product_detail.update(**kwargs)
+        return product_detail
+
+    @staticmethod
+    def delete_product(id):
+        return Product.query.get(id).delete()
+
+    @staticmethod
+    def get_products_by_user_id(user_id):
+        products = Product.query.where(Post.user_id == user_id).all()
+        return products
+
+    @staticmethod
+    def get_products(data_search):
+        # Query cơ bản với các điều kiện
+        query = Product.query
+        
+        
+        search_key = data_search.get("search_key", "")
+
+        if search_key != "":
+            search_pattern = f"%{search_key}%"
+            query = query.filter(
+                or_(
+                    Product.product_name.ilike(search_pattern),
+                    Product.description.ilike(search_pattern),
+                    Product.user.has(User.email.ilike(search_pattern)),
+                )
+            )
+            
+
+        if "user_id" in data_search and data_search["user_id"]:
+            query = query.filter(Product.user_id == data_search["user_id"])
+
+        # Xử lý type_order
+        if data_search["type_order"] == "id_asc":
+            query = query.order_by(Product.id.asc())
+        elif data_search["type_order"] == "id_desc":
+            query = query.order_by(Product.id.desc())
+        else:
+            query = query.order_by(Product.id.desc())
+
+        time_range = data_search.get("time_range") 
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            query = query.filter(Product.created_at >= start_date)
+
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            query = query.filter(Product.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            query = query.filter(Product.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            query = query.filter(Product.created_at >= start_date)
+
+        pagination = query.paginate(
+            page=data_search["page"], per_page=data_search["per_page"], error_out=False
+        )
+        return pagination
+
+    @staticmethod
+    def delete_posts_by_ids(post_ids):
+        try:
+            Product.query.filter(Product.id.in_(post_ids)).delete(
+                synchronize_session=False
+            )
+            db.session.commit()
+        except Exception as ex:
+            db.session.rollback()
+            return 0
+        return 1
