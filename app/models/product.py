@@ -9,7 +9,10 @@ class Product(db.Model, BaseModel):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     product_name = db.Column(db.String(500), nullable=False, default="")
-    price = db.Column(db.Float, nullable=False)
+    product_url = db.Column(db.String(500), nullable=False, default="")
+    product_image = db.Column(db.String(500), nullable=False, default="")
+    price = db.Column(db.String(500), nullable=False, default="")
+    shorten_link = db.Column(db.String(500), nullable=False, default="")
     content = db.Column(db.Text, nullable=False, default="")
     description = db.Column(db.Text, default="")
 
@@ -29,6 +32,9 @@ class Product(db.Model, BaseModel):
             "id": self.id,
             "user_id": self.user_id,
             "product_name": self.product_name,
+            "product_url": self.product_url,
+            "product_image": self.product_image,
+            "shorten_link": self.shorten_link,
             "price": self.price,
             "content": self.content,
             "description": self.description,
