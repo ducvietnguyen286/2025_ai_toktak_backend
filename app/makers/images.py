@@ -226,16 +226,16 @@ class ImageMaker:
 
             try:
                 is_gpu = torch.cuda.is_available()
-                logger.debug(f"Is GPU available: {is_gpu}")
+                logger.info(f"Is GPU available: {is_gpu}")
                 if is_gpu:
                     model = FastSAM(fast_sam_path).cuda()
-                    logger.debug(f"Using GPU for FastSAM model")
+                    logger.info(f"Using GPU for FastSAM model")
                     # model = YOLO(yolo_path).cuda()
                 else:
                     model = FastSAM(fast_sam_path)
                     # model = YOLO(yolo_path)
                 results = model.predict(source=image_path, conf=0.5)
-                logger.debug(f"Results: {results}")
+                logger.info(f"Results: {results}")
                 # results = model(image_path, conf=0.5)
                 image_cv = cv2.imread(image_path)
                 if image_cv is None:
@@ -246,7 +246,7 @@ class ImageMaker:
                 excluded_labels = ["barcode", "qr code", "text", "logo"]
 
                 for result in results:
-                    logger.debug(f"Result: {result.boxes}")
+                    logger.info(f"Result: {result.boxes}")
                     for box in result.boxes:
                         x1, y1, x2, y2 = map(
                             int, box.xyxy[0]
@@ -262,14 +262,14 @@ class ImageMaker:
                         w = x2 - x1
                         h = y2 - y1
 
-                        logger.debug(f"Bounding box: {x1}, {y1}, {x2}, {y2}")
+                        logger.info(f"Bounding box: {x1}, {y1}, {x2}, {y2}")
 
                         if w < 100 or h < 100:
                             continue
 
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
 
-                        logger.debug(f"Label: {label}, Conf: {conf}")
+                        logger.info(f"Label: {label}, Conf: {conf}")
 
                         if os.environ.get("USE_OCR") == "true":
                             response = requests.post(
@@ -310,13 +310,13 @@ class ImageMaker:
                             cropped_path, cropped_resized
                         )  # Save the resized image
 
-                        logger.debug(f"Cropped image saved: {cropped_path}")
+                        logger.info(f"Cropped image saved: {cropped_path}")
 
                         cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
 
                         cropped_images.append((cropped_url, conf))
 
-                logger.debug(f"Cropped images: {cropped_images}")
+                logger.info(f"Cropped images: {cropped_images}")
 
                 if cropped_images:
                     needed_length = 5
