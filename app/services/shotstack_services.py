@@ -1497,7 +1497,8 @@ def add_centered_text_to_png(
 
     # Tính vị trí căn giữa + offset
     img_width, img_height = base_image.size
-    x = (img_width - text_width) // 2 + offset_x
+    # x = (img_width - text_width) // 2 + offset_x
+    x = 55
     y = (img_height - text_height) // 2
 
     # Vẽ text lên lớp trong suốt
