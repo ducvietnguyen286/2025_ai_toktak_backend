@@ -1277,6 +1277,8 @@ class APIHistories(Resource):
             "user_id": current_user.id,
         }
         posts = PostService.get_posts_upload(data_search)
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+
         return {
             "current_user": current_user.id,
             "status": True,
@@ -1285,7 +1287,16 @@ class APIHistories(Resource):
             "page": posts.page,
             "per_page": posts.per_page,
             "total_pages": posts.pages,
-            "data": [post._to_json() for post in posts.items],
+            "data": [
+                {
+                    **post_json,
+                    "video_path": post_json.get("video_path", "")
+                    .replace("static/", current_domain)
+                    .replace("/mnt/", f"{current_domain}/voice/"),
+                }
+                for post in posts.items
+                if (post_json := post._to_json())
+            ],
         }, 200
 
 
