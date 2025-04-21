@@ -234,8 +234,8 @@ class ImageMaker:
                 else:
                     model = FastSAM(fast_sam_path)
                     # model = YOLO(yolo_path)
-                results = model.predict(source=image_path, conf=0.5)
-                logger.info(f"Results: {results}")
+                results = model.predict(source=image_path, conf=0.6)
+                # logger.info(f"Results: {results}")
                 # results = model(image_path, conf=0.5)
                 image_cv = cv2.imread(image_path)
                 if image_cv is None:
