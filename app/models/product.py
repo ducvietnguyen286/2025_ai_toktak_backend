@@ -24,7 +24,7 @@ class Product(db.Model, BaseModel):
 
     user = db.relationship("User", lazy="joined")
 
-    # to_json_parse = "images"
+    to_json_parse = "content"
     # to_json_filter = "captions"
 
     def to_dict(self):

@@ -220,7 +220,7 @@ class ShortstackWebhook(Resource):
                                 price=data_content.get("price", ""),
                                 product_url=batch_detail.url,
                                 product_image=batch_detail.thumbnail,
-                                
+                                content=batch_detail.content,
                             )
 
                     # trừ số lần được tạo của người dùng

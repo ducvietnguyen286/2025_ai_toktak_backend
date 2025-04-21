@@ -1,7 +1,7 @@
 from app.extensions import db
 from app.models.base import BaseModel
 from datetime import datetime
-
+import json
 
 class MemberProfile(db.Model, BaseModel):
     __tablename__ = "member_profiles"
@@ -27,6 +27,8 @@ class MemberProfile(db.Model, BaseModel):
     # to_json_filter = "captions"
 
     def to_dict(self):
+        design_settings = json.loads(self.design_settings)
+        
         return {
             "id": self.id,
             "user_id": self.user_id,
@@ -34,7 +36,7 @@ class MemberProfile(db.Model, BaseModel):
             "member_name": self.member_name,
             "member_avatar": self.member_avatar,
             "content": self.content,
-            "design_settings": self.design_settings,
+            "design_settings": design_settings,
             "description": self.description,
             "status": self.status,
             "user_email": self.user.email if self.user else None,  # Lấy email từ user

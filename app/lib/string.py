@@ -219,3 +219,9 @@ def replace_phrases_in_text(text):
 
     pattern = re.compile("|".join(map(re.escape, phrase_mapping.keys())))
     return pattern.sub(lambda m: phrase_mapping[m.group(0)], text)
+
+
+
+def allowed_image(filename):
+    allowed_extens =  {'png', 'jpg', 'jpeg', 'gif'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extens

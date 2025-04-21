@@ -26,7 +26,7 @@ from app.services.profileservices import ProfileServices
 
 ns = Namespace(name="profile", description="Member profile operations")
 
-UPLOAD_FOLDER = "static/uploads/avatars"
+UPLOAD_FOLDER = "static/voice/avatars"
 
 
 @ns.route("/profile_detail")
@@ -34,8 +34,6 @@ class MemberProfileAPI(Resource):
     @jwt_required()
     def get(self):
         try:
-
-            
 
             current_user = AuthService.get_current_identity()
             profile = ProfileServices.profile_by_user_id(current_user.id)
@@ -74,20 +72,19 @@ class MemberProfileUpdateAPI(Resource):
                 "member_address": form.get("member_address"),
             }
 
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             # Nếu có file ảnh => lưu ảnh
             if file:
-                print(file)
                 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
                 filename = f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{file.filename}"
                 path = os.path.join(UPLOAD_FOLDER, filename)
                 file.save(path)
-                data_update["member_avatar"] = f"/{path}"
+                output_caption_file = path.replace("static/", "").replace("\\", "/")
+                product_image_path = f"{current_domain}/{output_caption_file}"
 
-            logger.info(current_user)
-            logger.info(data_update)
-
+                data_update["member_avatar"] = product_image_path
             profile = ProfileServices.update_profile_by_user_id(
-                current_user.id, data_update
+                current_user.id, **data_update
             )
             if not profile:
                 return Response(
@@ -152,3 +149,36 @@ class GetProfileByNickNameAPI(Resource):
         except Exception as e:
             logger.error(f"[by_nick_name] Error: {str(e)}")
             return Response(message="Lỗi khi lấy thông tin profile", code=201).to_dict()
+
+
+@ns.route("/profile_design_settings")
+class MemberProfileDesignSettingsUpdateAPI(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            current_user = AuthService.get_current_identity()
+            data_form = request.get_json() 
+            data_update = {}
+            
+            
+            print(data_form)
+
+            data_update["design_settings"] = json.dumps(data_form, ensure_ascii=False) 
+
+            profile = ProfileServices.update_profile_by_user_id(
+                current_user.id, **data_update
+            )
+            if not profile:
+                return Response(
+                    message="디자인 설정 정보 업데이트에 실패했습니다.", code=201
+                ).to_dict()
+
+            return Response(
+                data=profile.to_dict(), message="프로필이 존재하지 않습니다."
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Update profile error: {str(e)}")
+            return Response(
+                message="디자인 설정 정보 업데이트에 실패했습니다.", code=201
+            ).to_dict()
