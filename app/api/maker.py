@@ -21,6 +21,7 @@ from app.lib.string import (
     should_replace_shortlink,
     update_ads_content,
     merge_by_key,
+    replace_phrases_in_text,
 )
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
@@ -1085,13 +1086,16 @@ class APIGetStatusUploadBySyncId(Resource):
                             title=f"✅{notification_type} 업로드에 성공했습니다.",
                             status=const.NOTIFICATION_SUCCESS,
                             description=error_message,
+                            description_korea="",
                         )
                     elif sns_status == "ERRORED":
+                        description_korea = replace_phrases_in_text(error_message)
                         NotificationServices.update_notification(
                             notification.id,
                             status=const.NOTIFICATION_FALSE,
                             title=f"❌{notification_type} 업로드에 실패했습니다.",
                             description=error_message,
+                            description_korea=description_korea,
                         )
 
                 if status_check_sns == const.UPLOADED:
@@ -1175,13 +1179,18 @@ class APIGetStatusUploadWithBatch(Resource):
                                     title=f"✅{notification_type} 업로드에 성공했습니다.",
                                     status=const.NOTIFICATION_SUCCESS,
                                     description=error_message,
+                                    description_korea="",
                                 )
                             elif sns_status == "ERRORED":
+                                description_korea = replace_phrases_in_text(
+                                    error_message
+                                )
                                 NotificationServices.update_notification(
                                     notification.id,
                                     status=const.NOTIFICATION_FALSE,
                                     title=f"❌{notification_type} 업로드에 실패했습니다.",
                                     description=error_message,
+                                    description_korea=description_korea,
                                 )
                         except Exception as e:
                             logger.error(
