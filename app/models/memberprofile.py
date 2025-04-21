@@ -25,6 +25,7 @@ class MemberProfile(db.Model, BaseModel):
 
     to_json_parse = "design_settings"
     # to_json_filter = "captions"
+    
 
     def to_dict(self):
         design_settings = json.loads(self.design_settings)
