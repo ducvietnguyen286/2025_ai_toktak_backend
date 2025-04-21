@@ -246,7 +246,7 @@ class ImageMaker:
                 excluded_labels = ["barcode", "qr code", "text", "logo"]
 
                 for result in results:
-                    logger.info(f"Result: {result.boxes}")
+                    # logger.info(f"Result: {result.boxes}")
                     for box in result.boxes:
                         x1, y1, x2, y2 = map(
                             int, box.xyxy[0]
@@ -262,7 +262,7 @@ class ImageMaker:
                         w = x2 - x1
                         h = y2 - y1
 
-                        logger.info(f"Bounding box: {x1}, {y1}, {x2}, {y2}")
+                        logger.info(f"Bounding box: {w}, {h}")
 
                         if w < 100 or h < 100:
                             continue
