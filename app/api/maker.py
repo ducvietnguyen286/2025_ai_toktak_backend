@@ -22,6 +22,7 @@ from app.lib.string import (
     update_ads_content,
     merge_by_key,
     replace_phrases_in_text,
+    get_ads_content,
 )
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
@@ -631,6 +632,7 @@ class APIMakePost(Resource):
             data = json.loads(batch.content)
             images = data.get("images", [])
             thumbnails = batch.thumbnails
+            url = batch.url
 
             type = post.type
 
@@ -809,8 +811,10 @@ class APIMakePost(Resource):
                     parse_response = parse_caption.get("response", {})
                     docx_title = parse_response.get("title", "")
                     docx_content = parse_response.get("docx_content", "")
+                    
+                    ads_text = get_ads_content(url)
                     res_docx = DocxMaker().make(
-                        docx_title, docx_content, process_images, batch_id=batch_id
+                        docx_title , ads_text , docx_content, process_images, batch_id=batch_id
                     )
 
                     docx_url = res_docx.get("docx_url", "")
