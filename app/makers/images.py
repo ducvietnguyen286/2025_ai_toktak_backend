@@ -226,6 +226,7 @@ class ImageMaker:
 
             try:
                 is_gpu = torch.cuda.is_available()
+                logger.info(f"Is GPU available: {is_gpu}")
                 if is_gpu:
                     model = FastSAM(fast_sam_path).cuda()
                     # model = YOLO(yolo_path).cuda()
@@ -233,6 +234,7 @@ class ImageMaker:
                     model = FastSAM(fast_sam_path)
                     # model = YOLO(yolo_path)
                 results = model.predict(source=image_path, conf=0.5)
+                logger.info(f"Results: {results}")
                 # results = model(image_path, conf=0.5)
                 image_cv = cv2.imread(image_path)
                 if image_cv is None:
@@ -258,10 +260,14 @@ class ImageMaker:
                         w = x2 - x1
                         h = y2 - y1
 
+                        logger.info(f"Bounding box: {x1}, {y1}, {x2}, {y2}")
+
                         if w < 100 or h < 100:
                             continue
 
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
+
+                        logger.info(f"Label: {label}, Conf: {conf}")
 
                         if os.environ.get("USE_OCR") == "true":
                             response = requests.post(
@@ -302,9 +308,13 @@ class ImageMaker:
                             cropped_path, cropped_resized
                         )  # Save the resized image
 
+                        logger.info(f"Cropped image saved: {cropped_path}")
+
                         cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
 
                         cropped_images.append((cropped_url, conf))
+
+                logger.info(f"Cropped images: {cropped_images}")
 
                 if cropped_images:
                     needed_length = 5
