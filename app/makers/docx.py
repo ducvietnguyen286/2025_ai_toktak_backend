@@ -5,7 +5,7 @@ import re
 import time
 import uuid
 from docx import Document
-from docx.shared import Inches
+from docx.shared import Inches ,Pt
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls  # Fix namespace lỗi
 import requests
@@ -18,7 +18,7 @@ CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
 
 class DocxMaker:
-    def make(self, title, description, images=[], batch_id=0):
+    def make(self, title , ads_text , description, images=[], batch_id=0):
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
         file_name = f"{timestamp}_{unique_id}.docx"
@@ -29,6 +29,13 @@ class DocxMaker:
         url_pattern = re.compile(r"https?://\S+")
 
         doc.add_heading(title, level=1)
+        
+        if ads_text != "":
+            notice_para = doc.add_paragraph()
+            notice_run = notice_para.add_run(ads_text)
+            notice_run.font.size = Pt(8)  
+
+
 
         user_agent = generate_desktop_user_agent()
         headers = {
