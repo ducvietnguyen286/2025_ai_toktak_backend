@@ -233,7 +233,10 @@ class ImageMaker:
                 else:
                     model = FastSAM(fast_sam_path)
                     # model = YOLO(yolo_path)
-                results = model.predict(source=image_path, conf=0.6)
+
+                results = model(
+                    image_path, retina_masks=True, imgsz=1024, conf=0.6, iou=0.9
+                )
                 # logger.info(f"Results: {results}")
                 # results = model(image_path, conf=0.5)
                 image_cv = cv2.imread(image_path)
@@ -268,7 +271,7 @@ class ImageMaker:
 
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
 
-                        if os.environ.get("USE_OCR") == "true":
+                        if os.environ.get("USE_OCR") == "true" and 1 == 0:
                             response = requests.post(
                                 PADDLE_URL, json={"image_path": image_path}
                             )
