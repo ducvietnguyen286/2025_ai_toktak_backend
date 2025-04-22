@@ -102,6 +102,7 @@ def process_beauty_image(image_path):
     response = requests.post(PADDLE_URL, json={"image_path": image_path})
     if response.status_code == 200:
         result = response.json()
+        logger.info(f"Beauty Result OCR: {result}")
         text = result["text"] or ""
     if len(text) > 50:
         os.remove(image_path)
@@ -277,8 +278,9 @@ class ImageMaker:
                             )
                             text = ""
                             if response.status_code == 200:
-                                result = response.json()
-                                text = result["text"] or ""
+                                ocr_result = response.json()
+                                logger.info(f"Result OCR: {ocr_result}")
+                                text = ocr_result["text"] or ""
                             if len(text) > 25:
                                 continue
 
