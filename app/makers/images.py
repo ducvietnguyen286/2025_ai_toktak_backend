@@ -271,7 +271,7 @@ class ImageMaker:
 
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
 
-                        if os.environ.get("USE_OCR") == "true" and 1 == 0:
+                        if os.environ.get("USE_OCR") == "true":
                             response = requests.post(
                                 PADDLE_URL, json={"image_path": image_path}
                             )

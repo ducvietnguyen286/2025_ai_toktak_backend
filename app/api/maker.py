@@ -410,7 +410,7 @@ class APIBatchMakeImage(Resource):
 
                 base_images = content["images"] or []
                 images = []
-                if os.environ.get("USE_OCR") == "true" and 1 == 0:
+                if os.environ.get("USE_OCR") == "true":
                     images = ImageMaker.get_only_beauty_images(
                         base_images, batch_id=batch_id
                     )
