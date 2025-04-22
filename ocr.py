@@ -5,13 +5,13 @@ import logging
 from fastapi import FastAPI, Request
 from paddleocr import PaddleOCR
 
-os.makedirs("logs", exist_ok=True)
-
 
 def create_logger():
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"
     )
+
+    os.makedirs("logs", exist_ok=True)
 
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def create_logger():
     handler.setFormatter(formatter)
 
     errorLogHandler = handlers.RotatingFileHandler(
-        "logs/paddleocr-error-{0}.log".format(filename),
+        "logs/error-paddleocr-{0}.log".format(filename),
         backupCount=14,
         encoding="utf-8",
     )
@@ -72,16 +72,21 @@ async def check_text(request: Request):
     ocr = initialize_ocr_model()
     try:
         logger.info("Step 1: Received request")
+        print("Step 1: Received request")
         data = await request.json()
         image_path = data["image_path"]
         logger.info(f"Step 2: Image path: {image_path}")
+        print(f"Step 2: Image path: {image_path}")
 
         logger.info("Step 3: Running OCR")
+        print("Step 3: Running OCR")
         result = ocr.ocr(image_path)
         logger.info(f"Step 4: OCR result: {result}")
+        print(f"Step 4: OCR result: {result}")
 
         text = "".join([item[1] for item in result]).strip()
         logger.info(f"Step 5: Extracted text: {text}")
+        print(f"Step 5: Extracted text: {text}")
 
         return {"text": text}
     except Exception as e:
