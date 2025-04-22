@@ -92,7 +92,7 @@ async def check_text(request: Request):
         sum_text_area = 0
         texts = []
         for line_group in result:
-            box = line[0]
+            box = line_group[0]
             pts = np.array(box, dtype=np.int32)
             text_area = cv2.contourArea(pts)
             sum_text_area += text_area
