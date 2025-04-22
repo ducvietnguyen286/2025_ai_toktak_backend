@@ -92,18 +92,15 @@ async def check_text(request: Request):
         sum_text_area = 0
         texts = []
         for line_group in result:
-            detection_list = line_group[0] or []
-            if len(detection_list) > 0:
-                for detection in detection_list:
-                    box_wrapped = detection[0]
-                    logger.debug(f"Box wrapped: {box_wrapped}")
-                    while (
-                        isinstance(box_wrapped, list)
-                        and len(box_wrapped) > 0
-                        and isinstance(box_wrapped[0], list)
-                        and isinstance(box_wrapped[0][0], (list, tuple))
-                    ):
-                        box_wrapped = box_wrapped[0]
+            for line in line_group:
+                box_wrapped = line[0]
+                logger.debug(f"Box wrapped: {box_wrapped}")
+                if (
+                    isinstance(box_wrapped, list)
+                    and len(box_wrapped) > 0
+                    and isinstance(box_wrapped[0], list)
+                ):
+                    box_wrapped = box_wrapped[0]
                     pts = np.array(box_wrapped, dtype=np.int32)
                     logger.debug(f"Points: {pts}")
                     if pts.size == 0 or pts.ndim != 2 or pts.shape[1] != 2:
@@ -111,12 +108,12 @@ async def check_text(request: Request):
                     text_area = cv2.contourArea(pts)
                     sum_text_area += text_area
 
-            for line in line_group:
                 texts.append(line[1][0])
 
         if not texts:
             return {"text": ""}
         logger.info(f"Extracted texts: {texts}")
+        logger.info(f"sum_text_area: {sum_text_area}")
         full_text = " ".join(texts)
         ratio = sum_text_area / total_area
         return {"text": full_text, "ratio": ratio}
