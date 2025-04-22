@@ -104,7 +104,8 @@ def process_beauty_image(image_path):
         result = response.json()
         logger.info(f"Beauty Result OCR: {result}")
         text = result["text"] or ""
-    if len(text) > 50:
+        ratio = result["ratio"] or 0.0
+    if len(text) > 50 and ratio > 50:
         os.remove(image_path)
         return ""
     return image_path
@@ -281,7 +282,8 @@ class ImageMaker:
                                 ocr_result = response.json()
                                 logger.info(f"Result OCR: {ocr_result}")
                                 text = ocr_result["text"] or ""
-                            if len(text) > 25:
+                                ratio = ocr_result["ratio"] or 0.0
+                            if len(text) > 20 and ratio > 50:
                                 continue
 
                         timestamp = int(time.time())
