@@ -51,6 +51,7 @@ class Notification(db.Model, BaseModel):
             "title": self.title,
             "content": self.content,
             "description": self.description,
+            "description_korea": self.description_korea,
             "hashtag": self.hashtag,
             "video_url": self.video_url,
             "status": self.status,
