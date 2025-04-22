@@ -69,29 +69,31 @@ class UserProductApi(Resource):
 @ns.route("/product_create")
 class ProductCreateApi(Resource):
     @jwt_required()
-    def post(self):
+    @parameters(
+        type="object",
+        properties={
+            "product_url": {"type": "string"},
+            "product_name": {"type": "string"},
+            "product_image": {"type": "string"},
+            "price": {"type": "string"},
+        },
+        required=["product_url", "product_name", "product_image", "price"],
+    )
+    def post(self, args):
         try:
             current_user = AuthService.get_current_identity()
-            form = request.form
-            file = request.files.get("product_image")
-
-            product_image_path = ""
-
-            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
-            if file:
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                filename = f"{current_user.id}_product_{int(datetime.utcnow().timestamp())}_{file.filename}"
-                path = os.path.join(UPLOAD_FOLDER, filename)
-                file.save(path)
-                output_caption_file = path.replace("static/", "").replace("\\", "/")
-                product_image_path = f"{current_domain}/{output_caption_file}"
+            product_name = args.get("product_name", "")
+            product_url = args.get("product_url", "")
+            product_image = args.get("product_image", "")
+            price = args.get("price", "")
 
             product_detail = ProductService.create_product(
                 user_id=current_user.id,
-                product_name=form.get("product_name"),
-                description=form.get("description"),
-                price=form.get("price"),
-                product_image=product_image_path,
+                product_name=product_name,
+                product_url=product_url,
+                product_image=product_image,
+                price=price,
+                description="",
                 content=json.dumps([]),
             )
             if not product_detail:
@@ -112,39 +114,45 @@ class ProductCreateApi(Resource):
 @ns.route("/product_update")
 class ProductUpdateAPI(Resource):
     @jwt_required()
-    def post(self):
+    @parameters(
+        type="object",
+        properties={
+            "product_id": {"type": "integer"},
+            "product_url": {"type": "string"},
+            "product_name": {"type": "string"},
+            "product_image": {"type": "string"},
+            "price": {"type": "string"},
+        },
+        required=["product_url", "product_name", "product_image", "price"],
+    )
+    def post(self, args):
         try:
             current_user = AuthService.get_current_identity()
-            form = request.form
-            file = request.files.get("product_image")
-            product_id = form.get("product_id")
-
-            # Lấy dữ liệu text fields
-            data_update = {
-                "product_name": form.get("product_name"),
-                "description": form.get("description"),
-                "price": form.get("price"),
-            }
-
-            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
-            # Nếu có file ảnh => lưu ảnh
-            if file:
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                filename = f"{current_user.id}_product_{int(datetime.utcnow().timestamp())}_{file.filename}"
-                path = os.path.join(UPLOAD_FOLDER, filename)
-                file.save(path)
-                output_caption_file = path.replace("static/", "").replace("\\", "/")
-                product_image_path = f"{current_domain}/{output_caption_file}"
-
-                data_update["product_image"] = product_image_path
-            product_update = ProductService.update_product(product_id, **data_update)
-            if not product_update:
+            product_id = args.get("product_id", "")
+            product_detail = ProductService.find_post_by_user_id(
+                product_id, current_user.id
+            )
+            if product_detail:
+                product_url = args.get("product_url", "")
+                product_name = args.get("product_name", "")
+                product_image = args.get("product_image", "")
+                price = args.get("price", "")
+                data_update = {
+                    "product_url": product_url,
+                    "product_name": product_name,
+                    "product_image": product_image,
+                    "price": price,
+                }
+                product_detail = ProductService.update_product(
+                    product_id, **data_update
+                )
+            if not product_detail:
                 return Response(
                     message="제품 정보 업데이트에 실패했습니다.", code=201
                 ).to_dict()
 
             return Response(
-                data=product_update.to_dict(),
+                data=product_detail.to_dict(),
                 message="제품 정보가 성공적으로 업데이트되었습니다.",
             ).to_dict()
 
@@ -153,3 +161,35 @@ class ProductUpdateAPI(Resource):
             return Response(
                 message="제품 정보 업데이트에 실패했습니다.", code=201
             ).to_dict()
+
+
+@ns.route("/product_delete")
+class ProductDeleteAPI(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "product_id": {"type": "integer"},
+        },
+        required=["product_id"],
+    )
+    def post(self, args):
+        try:
+            current_user = AuthService.get_current_identity()
+            product_id = args.get("product_id", 0)
+            product_update = ProductService.delete_product_by_user_id(
+                product_id, current_user.id
+            )
+            if not product_update:
+                return Response(
+                    message="상품을 삭제하지 못했습니다.", code=201
+                ).to_dict()
+
+            return Response(
+                data={},
+                message="상품을 성공적으로 삭제했습니다.",
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Update product  error: {str(e)}")
+            return Response(message="상품을 삭제하지 못했습니다.", code=201).to_dict()

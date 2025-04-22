@@ -241,3 +241,50 @@ def replace_phrases_in_text(text):
 def allowed_image(filename):
     allowed_extens = {"png", "jpg", "jpeg", "gif"}
     return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed_extens
+
+
+def split_line_with_url(line):
+    # Tìm URL
+    url_pattern = re.compile(r'(https?://\S+)')
+    match = url_pattern.search(line)
+
+    if not match:
+        return [line]  # Không có URL → trả về nguyên dòng
+
+    start, end = match.span()
+    url = match.group()
+
+    before = line[:start].strip()
+    after = line[end:].strip()
+
+    result = []
+    if before:
+        result.append(before)
+    result.append(url)
+    if after:
+        result.append(after)
+
+    return result
+
+
+def split_toktak_url(line):
+    pattern = re.compile(r'(https://s\.toktak\.ai/\S+)')
+    match = pattern.search(line)
+
+    if not match:
+        return [line]  # Không có URL cần xử lý → trả về nguyên dòng
+
+    start, end = match.span()
+    url = match.group()
+
+    before = line[:start].strip()
+    after = line[end:].strip()
+
+    result = []
+    if before:
+        result.append(before)
+    result.append(url)
+    if after:
+        result.append(after)
+
+    return result

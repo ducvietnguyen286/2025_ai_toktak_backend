@@ -5,10 +5,16 @@ import re
 import time
 import uuid
 from docx import Document
-from docx.shared import Inches ,Pt
+from docx.shared import Inches, Pt
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls  # Fix namespace lỗi
 import requests
+from app.lib.string import (
+    split_toktak_url,
+)
+from app.lib.logger import logger
+from app.makers.images import ImageMaker
+import zipfile
 
 from app.lib.header import generate_desktop_user_agent
 
@@ -18,7 +24,7 @@ CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
 
 class DocxMaker:
-    def make(self, title , ads_text , description, images=[], batch_id=0):
+    def make(self, title, ads_text, description, images=[], batch_id=0):
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
         file_name = f"{timestamp}_{unique_id}.docx"
@@ -26,16 +32,13 @@ class DocxMaker:
         docx_path = f"{UPLOAD_FOLDER}/{batch_id}/{file_name}"
 
         doc = Document()
-        url_pattern = re.compile(r"https?://\S+")
 
         doc.add_heading(title, level=1)
-        
+
         if ads_text != "":
             notice_para = doc.add_paragraph()
             notice_run = notice_para.add_run(ads_text)
-            notice_run.font.size = Pt(8)  
-
-
+            notice_run.font.size = Pt(8)
 
         user_agent = generate_desktop_user_agent()
         headers = {
@@ -60,13 +63,6 @@ class DocxMaker:
                     except Exception as e:
                         print(f"⚠️ Lỗi tải ảnh: {e}")
             else:
-                # paragraph = doc.add_paragraph()
-                # last_pos = 0
-                # for match in url_pattern.finditer(item):
-                #     paragraph.add_run(item[last_pos : match.start()])
-                #     # self.add_hyperlink(paragraph, match.group())  # Thêm hyperlink
-                #     last_pos = match.end()
-                # paragraph.add_run(item[last_pos:])
                 doc.add_paragraph(item)
 
         doc.save(docx_path)
@@ -81,6 +77,63 @@ class DocxMaker:
             "file_size": file_size,
             "mime_type": mime_type,
             "docx_url": docx_url,
+        }
+
+    def make_txt(self, title, ads_text, description, images=[], batch_id=0):
+        timestamp = int(time.time())
+        unique_id = uuid.uuid4().hex
+        file_name = f"{timestamp}_{unique_id}"
+        txt_path = f"{UPLOAD_FOLDER}/{batch_id}/{file_name}.txt"
+        zip_path = f"{UPLOAD_FOLDER}/{batch_id}/{file_name}.zip"
+        os.makedirs(os.path.dirname(txt_path), exist_ok=True)
+        txt_lines = []
+
+        txt_lines.append(title + "\n\n")
+
+        if ads_text:
+            txt_lines.append(ads_text + "\n\n")
+
+        for item in description:
+            if item.startswith("IMAGE_URL_"):
+                txt_lines.append("\n\n\n\n")
+            else:
+                split_lines = split_toktak_url(item)
+                for line in split_lines:
+                    line = re.sub(r"<br\s*/?>", "", line)
+                    txt_lines.append(line + "\n")
+                txt_lines.append("\n")
+
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.writelines(txt_lines)
+
+        image_downloads = ImageMaker.save_normal_images(images, batch_id=batch_id)
+
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            # 🔍 Thêm file TXT nếu tồn tại
+            if os.path.isfile(txt_path):
+                zipf.write(txt_path, arcname=os.path.basename(txt_path))
+
+            for img_path in image_downloads:
+                if os.path.isfile(img_path):
+                    zipf.write(img_path, arcname=os.path.basename(img_path))
+
+        try:
+            if os.path.isfile(txt_path):
+                os.remove(txt_path)
+            for img_path in image_downloads:
+                if os.path.isfile(img_path):
+                    os.remove(img_path)
+
+        except Exception as e:
+            logger.error(f"⚠️ Lỗi khi xoá file sau khi zip: {e}")
+
+        docx_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}.zip"
+        file_size = os.path.getsize(zip_path)
+        return {
+            "zip_path": zip_path,
+            "file_size": file_size,
+            "docx_url": docx_url,
+            "mime_type": "application/zip",
         }
 
     def add_hyperlink(self, paragraph, url, text=None):

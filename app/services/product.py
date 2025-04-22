@@ -48,8 +48,7 @@ class ProductService:
     def get_products(data_search):
         # Query cơ bản với các điều kiện
         query = Product.query
-        
-        
+
         search_key = data_search.get("search_key", "")
 
         if search_key != "":
@@ -61,7 +60,6 @@ class ProductService:
                     Product.user.has(User.email.ilike(search_pattern)),
                 )
             )
-            
 
         if "user_id" in data_search and data_search["user_id"]:
             query = query.filter(Product.user_id == data_search["user_id"])
@@ -74,7 +72,7 @@ class ProductService:
         else:
             query = query.order_by(Product.id.desc())
 
-        time_range = data_search.get("time_range") 
+        time_range = data_search.get("time_range")
         if time_range == "today":
             start_date = datetime.now().replace(
                 hour=0, minute=0, second=0, microsecond=0
@@ -109,3 +107,15 @@ class ProductService:
             db.session.rollback()
             return 0
         return 1
+
+    @staticmethod
+    def delete_product_by_user_id(product_id, user_id):
+        product = Product.query.filter_by(id=product_id, user_id=user_id).first()
+        if product:
+            db.session.delete(product)
+            db.session.commit()
+            return True
+        return False
+    @staticmethod
+    def find_post_by_user_id(id, user_id):
+        return Product.query.filter_by(id=id, user_id=user_id).first()
