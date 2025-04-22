@@ -1,7 +1,9 @@
 import os
+import cv2
 import datetime
 from logging import handlers
 import logging
+import numpy as np
 from fastapi import FastAPI, Request
 from paddleocr import PaddleOCR
 
@@ -57,6 +59,7 @@ def initialize_ocr_model():
     try:
         logger.info("Initializing PaddleOCR...")
         ocr = PaddleOCR(
+            use_angle_cls=True,
             use_gpu=True,
             lang="korean",
             det_model_dir=det_model_dir,
@@ -76,16 +79,33 @@ async def check_text(request: Request):
     try:
         data = await request.json()
         image_path = data["image_path"]
-        result = ocr.ocr(image_path)
+
+        img = cv2.imread(image_path)
+        if img is None:
+            raise ValueError("Không thể đọc ảnh từ đường dẫn được cung cấp!")
+
+        result = ocr.ocr(image_path, cls=True)
+
+        height, width = img.shape[:2]
+        total_area = width * height
+
+        sum_text_area = 0
         texts = []
         for line_group in result:
+            box = line[0]
+            pts = np.array(box, dtype=np.int32)
+            text_area = cv2.contourArea(pts)
+            sum_text_area += text_area
+
             for line in line_group:
                 texts.append(line[1][0])
+
         if not texts:
             return {"text": ""}
         logger.info(f"Extracted texts: {texts}")
         full_text = " ".join(texts)
-        return {"text": full_text}
+        ratio = sum_text_area / total_area
+        return {"text": full_text, "ratio": ratio}
     except Exception as e:
         logger.error(f"Error during OCR processing: {e}")
         return {"error": str(e)}
