@@ -29,7 +29,24 @@ def create_logger():
     handler.setLevel(logging.INFO)
     handler.setFormatter(formatter)
 
+    logger.addHandler(handler)
+
+    return logger
+
+
+def create_error_logger():
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"
+    )
+
+    os.makedirs("logs", exist_ok=True)
+
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.ERROR)  # Đặt mức độ log là ERROR
+
     # File handler cho log lỗi
+    now_date = datetime.datetime.now()
+    filename = now_date.strftime("%d-%m-%Y")
     errorLogHandler = handlers.RotatingFileHandler(
         f"logs/error-paddleocr-{filename}.log",
         backupCount=14,
@@ -39,7 +56,6 @@ def create_logger():
     errorLogHandler.setFormatter(formatter)
 
     # Thêm các handler vào logger
-    logger.addHandler(handler)
     logger.addHandler(errorLogHandler)
 
     return logger
@@ -54,6 +70,7 @@ app = FastAPI()
 
 def initialize_ocr_model():
     logger = create_logger()
+    error_logger = create_error_logger()
     try:
         logger.info("Initializing PaddleOCR...")
         ocr = PaddleOCR(
@@ -65,21 +82,24 @@ def initialize_ocr_model():
         logger.info("PaddleOCR initialized successfully.")
         return ocr
     except Exception as e:
-        logger.error(f"Error initializing PaddleOCR: {e}")
+        error_logger.error(f"Error initializing PaddleOCR: {e}")
         raise
 
 
 @app.post("/check_text")
 async def check_text(request: Request):
     logger = create_logger()
+    error_logger = create_error_logger()
     ocr = initialize_ocr_model()
     try:
         data = await request.json()
         image_path = data["image_path"]
         result = ocr.ocr(image_path)
+        logger.info(f"Result: {result}")
         texts = [line[1][0] for line in result]
+        logger.info(f"Extracted texts: {texts}")
         full_text = " ".join(texts)
         return {"text": full_text}
     except Exception as e:
-        logger.error(f"Error during OCR processing: {e}")
+        error_logger.error(f"Error during OCR processing: {e}")
         return {"error": str(e)}
