@@ -66,6 +66,7 @@ def initialize_ocr_model():
             lang="korean",
             det_model_dir=det_model_dir,
             rec_model_dir=rec_model_dir,
+            det_db_unclip_ratio=2.0,
         )
         logger.info("PaddleOCR initialized successfully.")
         return ocr
@@ -111,16 +112,25 @@ async def check_text(request: Request):
         sum_text_area = 0
         texts = []
         polygons = []
+        padding = 10
+
         for line_group in result:
             for line in line_group:
                 detection = line[0]
                 pts = np.array(detection, dtype=np.int32)
-                poly = Polygon([tuple(pt) for pt in pts])
-                logger.info(f"Polygon: {poly}")
-                if not poly.is_valid:
-                    poly = poly.buffer(0)
-                if poly.area > 0:
-                    polygons.append(poly)
+
+                x_min = max(np.min(pts[:, 0]) - padding, 0)
+                y_min = max(np.min(pts[:, 1]) - padding, 0)
+                x_max = min(np.max(pts[:, 0]) + padding, width)
+                y_max = min(np.max(pts[:, 1]) + padding, height)
+
+                expanded_poly = Polygon(
+                    [(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max)]
+                )
+                if not expanded_poly.is_valid:
+                    expanded_poly = expanded_poly.buffer(0)
+                if expanded_poly.area > 0:
+                    polygons.append(expanded_poly)
 
                 texts.append(line[1][0])
 
@@ -131,6 +141,7 @@ async def check_text(request: Request):
         if not texts:
             return {"text": ""}
         logger.info(f"Extracted texts: {texts}")
+        logger.info(f"total_area: {total_area}")
         logger.info(f"sum_text_area: {sum_text_area}")
         full_text = " ".join(texts)
         ratio = sum_text_area / total_area
