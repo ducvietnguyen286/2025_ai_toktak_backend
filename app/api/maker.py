@@ -813,13 +813,26 @@ class APIMakePost(Resource):
                     docx_content = parse_response.get("docx_content", "")
                     
                     ads_text = get_ads_content(url)
-                    res_docx = DocxMaker().make(
+                    # res_docx = DocxMaker().make(
+                    #     docx_title , ads_text , docx_content, process_images, batch_id=batch_id
+                    # )
+                    # docx_url = res_docx.get("docx_url", "")
+                    # file_size = res_docx.get("file_size", 0)
+                    # mime_type = res_docx.get("mime_type", "")
+                    
+                    
+                    res_txt = DocxMaker().make_txt(
                         docx_title , ads_text , docx_content, process_images, batch_id=batch_id
                     )
-
-                    docx_url = res_docx.get("docx_url", "")
-                    file_size = res_docx.get("file_size", 0)
-                    mime_type = res_docx.get("mime_type", "")
+                    images = ImageMaker.save_normal_images(
+                        process_images, batch_id=batch_id
+                    )
+                    
+                    txt_path = res_txt.get("txt_path", "")
+                    docx_url = res_txt.get("docx_url", "")
+                    file_size = res_txt.get("file_size", 0)
+                    mime_type = res_txt.get("mime_type", "")
+                    
 
                 logger.info(
                     "-------------------- PROCESSED CREATE LOGS -------------------"
