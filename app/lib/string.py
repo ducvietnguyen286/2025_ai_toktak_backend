@@ -134,6 +134,7 @@ def update_ads_content(url, content):
         )
         # content = f"<h2>이 포스팅은 쿠팡 파트너스 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.</h2>\n\n\n\n{content}"
     elif "https://s.click.aliexpress.com" in url:
+        replace_str = get_ads_content(url)
         content = content.replace(
             "<h2>ADS_CONTENT_TOKTAK</h2>",
             f"<h2>{replace_str}</h2>",
