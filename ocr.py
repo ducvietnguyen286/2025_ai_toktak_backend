@@ -94,8 +94,8 @@ async def check_text(request: Request):
         for line_group in result:
             for line in line_group:
                 detection = line[0]
-                x_coords = detection[0]
-                y_coords = detection[1]
+                x_coords = [pt[0] for pt in detection]
+                y_coords = [pt[1] for pt in detection]
 
                 box_width = max(x_coords) - min(x_coords)
                 box_height = max(y_coords) - min(y_coords)
