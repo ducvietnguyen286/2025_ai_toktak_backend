@@ -77,8 +77,10 @@ async def check_text(request: Request):
         data = await request.json()
         image_path = data["image_path"]
         result = ocr.ocr(image_path)
-        logger.info(f"OCR result: {result}")
-        texts = [line[1][0] for line in result]
+        texts = []
+        for line_group in result:
+            for line in line_group:
+                texts.append(line[1][0])
         logger.info(f"Extracted texts: {texts}")
         full_text = " ".join(texts)
         return {"text": full_text}
