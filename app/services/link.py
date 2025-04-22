@@ -1,5 +1,8 @@
 from app.models.link import Link
 
+from app.extensions import redis_client
+import json
+
 
 class LinkService:
 
@@ -36,3 +39,18 @@ class LinkService:
     @staticmethod
     def delete_link(id):
         return Link.query.get(id).delete()
+
+    @staticmethod
+    def get_all_links():
+        redis_key = "links_all_sns"
+        ttl = 86400
+        cached = redis_client.get(redis_key)
+        if cached:
+            try:
+                return json.loads(cached)
+            except:
+                pass
+        links = Link.query.where(Link.status == 1).all()
+        data = [link._to_json() for link in links]
+        redis_client.set(redis_key, json.dumps(data), ex=ttl)
+        return data

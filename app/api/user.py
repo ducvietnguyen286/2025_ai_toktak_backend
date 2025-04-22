@@ -1522,3 +1522,79 @@ class APIDeleteLink(Resource):
                 message="링크 삭제에 실패했습니다.",
                 code=202,
             ).to_dict()
+
+
+@ns.route("/get-user-link-template")
+class APIUserLinkTemplate(Resource):
+    @jwt_required()
+    def get(self):
+        urrent_user = AuthService.get_current_identity()
+        user_id = urrent_user.id
+        all_links = LinkService.get_all_links()
+        logger.info(all_links)
+
+        # Lấy template lưu trữ các lựa chọn
+        user_template = PostService.get_template_video_by_user_id(user_id)
+
+        link_sns_data = {"video": [], "image": []}
+
+        if user_template and user_template.link_sns:
+            try:
+                link_sns_data = json.loads(user_template.link_sns)
+            except Exception:
+                pass
+
+        logger.info(link_sns_data)
+
+        # Hàm dựng danh sách link cho mỗi loại
+        def build_link_array(selected_ids):
+            logger.info(all_links)
+            return [
+                {
+                    "id": link["id"],
+                    "avatar": link["avatar"],
+                    "title": link["title"],
+                    "type": link["type"],
+                    "selected": 1 if link["id"] in selected_ids else 0,
+                }
+                for link in all_links
+            ]
+
+        result = {
+            "video": build_link_array(link_sns_data.get("video", [])),
+            "image": build_link_array(link_sns_data.get("image", [])),
+        }
+
+        return Response(
+            data=result, message="SNS 정보를 성공적으로 가져왔습니다."
+        ).to_dict()
+
+
+@ns.route("/update-user-link-template")
+class APIUpdateUserLinkTemplate(Resource):
+    @jwt_required()
+    def post(self):
+        urrent_user = AuthService.get_current_identity()
+        user_id = urrent_user.id
+
+        payload = ns.payload or {}
+
+        video_links = payload.get("video", [])
+        image_links = payload.get("image", [])
+
+        link_sns_json = json.dumps({"video": video_links, "image": image_links})
+
+        data_update_template = {
+            "link_sns": link_sns_json,
+        }
+
+        user_template = PostService.get_template_video_by_user_id(user_id)
+
+        if user_template:
+            user_template = PostService.update_template(
+                user_template.id, **data_update_template
+            )
+
+        return Response(
+            data={}, message="링크 선택이 성공적으로 업데이트되었습니다."
+        ).to_dict()
