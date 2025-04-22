@@ -14,13 +14,17 @@ from ultralytics import YOLO, FastSAM
 from google.cloud import vision
 import torch
 import easyocr
+import multiprocessing
 from multiprocessing import Pool
 import numpy as np
 from app.lib.logger import logger
+import faulthandler
 
 from app.lib.header import generate_desktop_user_agent
 
 torch.autograd.set_detect_anomaly(True)
+multiprocessing.set_start_method("spawn", force=True)
+faulthandler.enable()
 
 
 date_create = datetime.datetime.now().strftime("%Y_%m_%d")
