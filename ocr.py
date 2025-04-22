@@ -81,6 +81,8 @@ async def check_text(request: Request):
         for line_group in result:
             for line in line_group:
                 texts.append(line[1][0])
+        if not texts:
+            return {"text": ""}
         logger.info(f"Extracted texts: {texts}")
         full_text = " ".join(texts)
         return {"text": full_text}
