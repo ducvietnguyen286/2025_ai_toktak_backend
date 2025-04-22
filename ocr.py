@@ -96,6 +96,7 @@ async def check_text(request: Request):
             if len(detection_list) > 0:
                 for detection in detection_list:
                     box_wrapped = detection[0]
+                    logger.debug(f"Box wrapped: {box_wrapped}")
                     while (
                         isinstance(box_wrapped, list)
                         and len(box_wrapped) > 0
