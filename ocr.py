@@ -104,6 +104,9 @@ async def check_text(request: Request):
                     ):
                         box_wrapped = box_wrapped[0]
                     pts = np.array(box_wrapped, dtype=np.int32)
+                    logger.debug(f"Points: {pts}")
+                    if pts.size == 0 or pts.ndim != 2 or pts.shape[1] != 2:
+                        continue
                     text_area = cv2.contourArea(pts)
                     sum_text_area += text_area
 
