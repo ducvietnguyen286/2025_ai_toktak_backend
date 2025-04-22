@@ -13,13 +13,14 @@ def create_logger():
 
     os.makedirs("logs", exist_ok=True)
 
-    logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)  # Đặt mức độ log là INFO
+
+    # File handler cho log thông thường
     now_date = datetime.datetime.now()
     filename = now_date.strftime("%d-%m-%Y")
-
     handler = handlers.TimedRotatingFileHandler(
-        "logs/paddleocr-{0}.log".format(filename),
+        f"logs/paddleocr-{filename}.log",
         when="midnight",
         interval=1,
         backupCount=14,
@@ -28,14 +29,16 @@ def create_logger():
     handler.setLevel(logging.INFO)
     handler.setFormatter(formatter)
 
+    # File handler cho log lỗi
     errorLogHandler = handlers.RotatingFileHandler(
-        "logs/error-paddleocr-{0}.log".format(filename),
+        f"logs/error-paddleocr-{filename}.log",
         backupCount=14,
         encoding="utf-8",
     )
     errorLogHandler.setLevel(logging.ERROR)
     errorLogHandler.setFormatter(formatter)
 
+    # Thêm các handler vào logger
     logger.addHandler(handler)
     logger.addHandler(errorLogHandler)
 
@@ -71,24 +74,12 @@ async def check_text(request: Request):
     logger = create_logger()
     ocr = initialize_ocr_model()
     try:
-        logger.info("Step 1: Received request")
-        print("Step 1: Received request")
         data = await request.json()
         image_path = data["image_path"]
-        logger.info(f"Step 2: Image path: {image_path}")
-        print(f"Step 2: Image path: {image_path}")
-
-        logger.info("Step 3: Running OCR")
-        print("Step 3: Running OCR")
         result = ocr.ocr(image_path)
-        logger.info(f"Step 4: OCR result: {result}")
-        print(f"Step 4: OCR result: {result}")
-
-        text = "".join([item[1] for item in result]).strip()
-        logger.info(f"Step 5: Extracted text: {text}")
-        print(f"Step 5: Extracted text: {text}")
-
-        return {"text": text}
+        texts = [line[1][0] for line in result]
+        full_text = " ".join(texts)
+        return {"text": full_text}
     except Exception as e:
         logger.error(f"Error during OCR processing: {e}")
         return {"error": str(e)}
