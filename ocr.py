@@ -74,6 +74,23 @@ def initialize_ocr_model():
         raise
 
 
+def merge_close_polygons(polygons, distance_threshold):
+    merged = []
+    used = [False] * len(polygons)
+
+    for i, poly1 in enumerate(polygons):
+        if used[i]:
+            continue
+        group = [poly1]
+        used[i] = True
+        for j, poly2 in enumerate(polygons):
+            if not used[j] and poly1.distance(poly2) < distance_threshold:
+                group.append(poly2)
+                used[j] = True
+        merged.append(unary_union(group))
+    return merged
+
+
 @app.post("/check_text")
 async def check_text(request: Request):
     logger = create_logger()
@@ -99,6 +116,7 @@ async def check_text(request: Request):
                 detection = line[0]
                 pts = np.array(detection, dtype=np.int32)
                 poly = Polygon([tuple(pt) for pt in pts])
+                logger.info(f"Polygon: {poly}")
                 if not poly.is_valid:
                     poly = poly.buffer(0)
                 if poly.area > 0:
@@ -107,8 +125,8 @@ async def check_text(request: Request):
                 texts.append(line[1][0])
 
         if len(polygons) > 0:
-            merged_polygon = unary_union(polygons)
-            sum_text_area = merged_polygon.area
+            merged_polygons = merge_close_polygons(polygons, distance_threshold=10)
+            sum_text_area = sum(poly.area for poly in merged_polygons)
 
         if not texts:
             return {"text": ""}
