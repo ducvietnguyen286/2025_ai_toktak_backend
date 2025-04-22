@@ -93,20 +93,14 @@ async def check_text(request: Request):
         texts = []
         for line_group in result:
             for line in line_group:
-                box_wrapped = line[0]
-                logger.debug(f"Box wrapped: {box_wrapped}")
-                if (
-                    isinstance(box_wrapped, list)
-                    and len(box_wrapped) > 0
-                    and isinstance(box_wrapped[0], list)
-                ):
-                    box_wrapped = box_wrapped[0]
-                    pts = np.array(box_wrapped, dtype=np.int32)
-                    logger.debug(f"Points: {pts}")
-                    if pts.size == 0 or pts.ndim != 2 or pts.shape[1] != 2:
-                        continue
-                    text_area = cv2.contourArea(pts)
-                    sum_text_area += text_area
+                detection = line[0]
+                x_coords = detection[0]
+                y_coords = detection[1]
+
+                box_width = max(x_coords) - min(x_coords)
+                box_height = max(y_coords) - min(y_coords)
+                box_area = box_width * box_height
+                sum_text_area += box_area
 
                 texts.append(line[1][0])
 
