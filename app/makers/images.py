@@ -296,7 +296,7 @@ class ImageMaker:
                                 if blocked_text in text:
                                     os.remove(image_path)
                                     return ""
-                            if len(text) > 20 and ratio > 0.35:
+                            if ratio > 0.35:
                                 continue
 
                         timestamp = int(time.time())

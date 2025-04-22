@@ -140,12 +140,8 @@ async def check_text(request: Request):
 
         if not texts:
             return {"text": ""}
-        logger.info(f"Extracted texts: {texts}")
-        logger.info(f"total_area: {total_area}")
-        logger.info(f"sum_text_area: {sum_text_area}")
         full_text = " ".join(texts)
         ratio = sum_text_area / total_area
-        logger.info(f"ratio: {ratio}")
         return {"text": full_text, "ratio": ratio}
     except Exception as e:
         logger.error(f"Error during OCR processing: {e}")
