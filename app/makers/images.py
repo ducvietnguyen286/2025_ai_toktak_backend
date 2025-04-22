@@ -197,7 +197,6 @@ class ImageMaker:
 
     @staticmethod
     def cut_out_long_height_images_by_sam(image_path, batch_id=0):
-        logger.info(f"Cut out long height images: {image_path}")
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
             return [image_path]
@@ -220,8 +219,6 @@ class ImageMaker:
 
         image_width, image_height = image.size
 
-        print(f"Image size: {image_width}x{image_height}")
-
         if image_height > (image_width * 4):
 
             model_path = os.path.join(os.getcwd(), "app/ais/models")
@@ -230,10 +227,8 @@ class ImageMaker:
 
             try:
                 is_gpu = torch.cuda.is_available()
-                logger.info(f"Is GPU available: {is_gpu}")
                 if is_gpu:
                     model = FastSAM(fast_sam_path).cuda()
-                    logger.info(f"Using GPU for FastSAM model")
                     # model = YOLO(yolo_path).cuda()
                 else:
                     model = FastSAM(fast_sam_path)
@@ -249,8 +244,10 @@ class ImageMaker:
 
                 excluded_labels = ["barcode", "qr code", "text", "logo"]
 
+                min_width = 200
+                min_height = 200
+
                 for result in results:
-                    # logger.info(f"Result: {result.boxes}")
                     for box in result.boxes:
                         x1, y1, x2, y2 = map(
                             int, box.xyxy[0]
@@ -266,14 +263,10 @@ class ImageMaker:
                         w = x2 - x1
                         h = y2 - y1
 
-                        logger.info(f"Bounding box: {w}, {h}")
-
-                        if w < 100 or h < 100:
+                        if w < min_width or h < min_height:
                             continue
 
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
-
-                        logger.info(f"Label: {label}, Conf: {conf}")
 
                         if os.environ.get("USE_OCR") == "true":
                             response = requests.post(
@@ -314,13 +307,9 @@ class ImageMaker:
                             cropped_path, cropped_resized
                         )  # Save the resized image
 
-                        logger.info(f"Cropped image saved: {cropped_path}")
-
                         cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
 
                         cropped_images.append((cropped_url, conf))
-
-                logger.info(f"Cropped images: {cropped_images}")
 
                 if cropped_images:
                     needed_length = 5
@@ -337,6 +326,7 @@ class ImageMaker:
                     image.close()
                     os.remove(image_path)
                     return top
+                    # return cropped_images
 
             except Exception as e:
                 print(f"Error: {e}")
