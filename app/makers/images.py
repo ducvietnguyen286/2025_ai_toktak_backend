@@ -17,6 +17,7 @@ import easyocr
 import multiprocessing
 from multiprocessing import Pool
 import numpy as np
+from app.enums.blocked_text import BlockedText
 from app.lib.logger import logger
 import faulthandler
 
@@ -105,6 +106,12 @@ def process_beauty_image(image_path):
         logger.info(f"Beauty Result OCR: {result}")
         text = result["text"] or ""
         ratio = result["ratio"] or 0.0
+
+    blocked_texts = BlockedText.BLOCKED_TEXT.value
+    for blocked_text in blocked_texts:
+        if blocked_text in text:
+            os.remove(image_path)
+            return ""
     if len(text) > 50 and ratio > 0.35:
         os.remove(image_path)
         return ""
@@ -283,6 +290,12 @@ class ImageMaker:
                                 logger.info(f"Result OCR: {ocr_result}")
                                 text = ocr_result["text"] or ""
                                 ratio = ocr_result["ratio"] or 0.0
+
+                            blocked_texts = BlockedText.BLOCKED_TEXT.value
+                            for blocked_text in blocked_texts:
+                                if blocked_text in text:
+                                    os.remove(image_path)
+                                    return ""
                             if len(text) > 20 and ratio > 0.35:
                                 continue
 
