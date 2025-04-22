@@ -6,6 +6,8 @@ import logging
 import numpy as np
 from fastapi import FastAPI, Request
 from paddleocr import PaddleOCR
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
 
 
 def create_logger():
@@ -91,14 +93,22 @@ async def check_text(request: Request):
 
         sum_text_area = 0
         texts = []
+        polygons = []
         for line_group in result:
             for line in line_group:
                 detection = line[0]
                 pts = np.array(detection, dtype=np.int32)
-                area = cv2.contourArea(pts)
-                sum_text_area += area
+                poly = Polygon([tuple(pt) for pt in pts])
+                if not poly.is_valid:
+                    poly = poly.buffer(0)
+                if poly.area > 0:
+                    polygons.append(poly)
 
                 texts.append(line[1][0])
+
+        if len(polygons) > 0:
+            merged_polygon = unary_union(polygons)
+            sum_text_area = merged_polygon.area
 
         if not texts:
             return {"text": ""}
@@ -106,6 +116,7 @@ async def check_text(request: Request):
         logger.info(f"sum_text_area: {sum_text_area}")
         full_text = " ".join(texts)
         ratio = sum_text_area / total_area
+        logger.info(f"ratio: {ratio}")
         return {"text": full_text, "ratio": ratio}
     except Exception as e:
         logger.error(f"Error during OCR processing: {e}")
