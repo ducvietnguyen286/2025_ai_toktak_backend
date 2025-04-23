@@ -113,11 +113,17 @@ class ProductService:
     @staticmethod
     def delete_product_by_user_id(product_ids, user_id):
 
-        Product.query.filter(Product.id.in_(product_ids), user_id=user_id).delete(
-            synchronize_session=False
+        products_to_delete = Product.query.filter(
+            and_(Product.id.in_(product_ids), Product.user_id == user_id)
         )
-        db.session.commit()
 
+        # Đếm số lượng để biết có xóa gì không
+        if products_to_delete.count() == 0:
+            return False  # Không có sản phẩm để xóa
+
+        # Thực hiện xóa
+        products_to_delete.delete(synchronize_session=False)
+        db.session.commit()
         return True
 
     @staticmethod
