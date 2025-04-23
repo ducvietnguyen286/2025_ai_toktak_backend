@@ -420,15 +420,19 @@ class APIBatchMakeImage(Resource):
                     )
 
                 cleared_images = []
+                cutout_images = []
 
                 for image in images:
-                    if len(cleared_images) >= 10:
+                    if len(cutout_images) >= 10:
                         break
-                    cutout_images = ImageMaker.cut_out_long_height_images_by_sam(
+                    cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
                     )
-                    if cutout_images:
-                        cleared_images.extend(cutout_images)
+                    is_cut_out = cuted_image.get("is_cut_out", False)
+                    image_urls = cuted_image.get("image_urls", [])
+                    if is_cut_out:
+                        cutout_images.extend(cutout_images)
+                    cleared_images.extend(image_urls)
                 content["cleared_images"] = cleared_images
                 data_update_batch = {
                     "content": json.dumps(content),

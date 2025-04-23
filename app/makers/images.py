@@ -99,6 +99,22 @@ def process_beauty_image(image_path):
     if extension == "gif":
         return image_path
 
+    try:
+        image = Image.open(image_path)
+    except IOError:
+        logger.error(f"Cannot identify image file {image_path}")
+        print(f"Cannot identify image file {image_path}")
+        return ""
+
+    width, height = image.size
+    min_width = 400
+    min_height = 400
+    min_area = 200000
+
+    if width < min_width or height < min_height or (width * height) < min_area:
+        os.remove(image_path)
+        return ""
+
     text = ""
     response = requests.post(PADDLE_URL, json={"image_path": image_path})
     if response.status_code == 200:
@@ -228,7 +244,10 @@ class ImageMaker:
             print(f"Cannot identify image file {image_path}")
             image_name = image_path.split("/")[-1]
             image_url = f"{CURRENT_DOMAIN}/{date_create}/{batch_id}/{image_name}"
-            return [image_url]
+            return {
+                "image_urls": [image_url],
+                "is_cut_out": False,
+            }
 
         image_width, image_height = image.size
 
@@ -363,7 +382,10 @@ class ImageMaker:
                             os.remove(cropped_image_path)
                     image.close()
                     os.remove(image_path)
-                    return top
+                    return {
+                        "image_urls": top,
+                        "is_cut_out": True,
+                    }
                     # return cropped_images
 
             except Exception as e:
@@ -375,11 +397,17 @@ class ImageMaker:
                 image_url = (
                     f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
                 )
-                return [image_url]
+                return {
+                    "image_urls": [image_url],
+                    "is_cut_out": False,
+                }
 
         image_name = image_path.split("/")[-1]
         image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
-        return [image_url]
+        return {
+            "image_urls": [image_url],
+            "is_cut_out": False,
+        }
 
     @staticmethod
     def cut_out_long_height_images_by_google(image_url, batch_id=0):
