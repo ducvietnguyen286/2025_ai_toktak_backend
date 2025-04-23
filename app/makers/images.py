@@ -107,9 +107,9 @@ def process_beauty_image(image_path):
         return ""
 
     width, height = image.size
-    min_width = 400
-    min_height = 400
-    min_area = 200000
+    min_width = 300
+    min_height = 300
+    min_area = 100000
 
     if width < min_width or height < min_height or (width * height) < min_area:
         os.remove(image_path)
@@ -279,9 +279,9 @@ class ImageMaker:
 
                 excluded_labels = ["barcode", "qr code", "text", "logo"]
 
-                min_width = 400
-                min_height = 400
-                min_area = 200000
+                min_width = 200
+                min_height = 200
+                min_area = 50000
 
                 needed_length = 5
                 current_image_count = 0
