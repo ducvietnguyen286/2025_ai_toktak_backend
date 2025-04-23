@@ -433,7 +433,7 @@ class APIBatchMakeImage(Resource):
                     image_urls = cuted_image.get("image_urls", [])
                     if is_cut_out:
                         logger.info("Cut out image: {0}".format(image_urls))
-                        cutout_images.extend(cutout_images)
+                        cutout_images.extend(image_urls)
                     cleared_images.extend(image_urls)
                 content["cleared_images"] = cleared_images
                 data_update_batch = {

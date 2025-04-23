@@ -228,7 +228,10 @@ class ImageMaker:
     def cut_out_long_height_images_by_sam(image_path, batch_id=0):
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
-            return [image_path]
+            return {
+                "image_urls": [image_url],
+                "is_cut_out": False,
+            }
         output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
 
         while not os.path.exists(image_path):
