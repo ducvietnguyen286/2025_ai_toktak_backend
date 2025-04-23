@@ -630,20 +630,39 @@ class APIMakePost(Resource):
             type = post.type
 
             need_count = 10 if type == "video" else 5
+            cleared_images = data.get("cleared_images", [])
 
             process_images = json.loads(thumbnails)
             if process_images and len(process_images) < need_count:
                 current_length = len(process_images)
                 need_length = need_count - current_length
-                if len(images) > need_length:
-                    process_images = process_images + images[:need_length]
+                if len(cleared_images) > need_length:
+                    process_images = process_images + cleared_images[:need_length]
                 else:
-                    process_images = process_images + images
+                    process_images = process_images + cleared_images
+
+                if len(process_images) < need_count:
+                    current_length = len(process_images)
+                    need_length = need_count - current_length
+                    if len(images) > need_length:
+                        process_images = process_images + images[:need_length]
+                    else:
+                        process_images = process_images + images
             elif process_images and len(process_images) >= need_count:
                 process_images = process_images[:need_count]
             else:
-                process_images = images
-                process_images = process_images[:need_count]
+                if len(cleared_images) > need_count:
+                    process_images = cleared_images[:need_count]
+                else:
+                    process_images = cleared_images
+
+                if len(process_images) < need_count:
+                    current_length = len(process_images)
+                    need_length = need_count - current_length
+                    if len(images) > need_length:
+                        process_images = process_images + images[:need_length]
+                    else:
+                        process_images = process_images + images
 
             response = None
             render_id = ""
