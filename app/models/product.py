@@ -15,6 +15,8 @@ class Product(db.Model, BaseModel):
     shorten_link = db.Column(db.String(500), nullable=False, default="")
     content = db.Column(db.Text, nullable=False, default="")
     description = db.Column(db.Text, default="")
+    
+    product_url_hash = db.Column(db.String(255), index=True, nullable=False)
 
     status = db.Column(db.Integer, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
@@ -39,6 +41,7 @@ class Product(db.Model, BaseModel):
             "content": self.content,
             "description": self.description,
             "status": self.status,
+            "product_url_hash": self.product_url_hash,
             "user_email": self.user.email if self.user else None,
             "created_at": (
                 self.created_at.strftime("%Y-%m-%d %H:%M:%S")

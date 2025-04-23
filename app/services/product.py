@@ -109,13 +109,26 @@ class ProductService:
         return 1
 
     @staticmethod
-    def delete_product_by_user_id(product_id, user_id):
-        product = Product.query.filter_by(id=product_id, user_id=user_id).first()
-        if product:
-            db.session.delete(product)
-            db.session.commit()
-            return True
-        return False
+    def delete_product_by_user_id(product_ids, user_id):
+
+        Product.query.filter(Product.id.in_(product_ids), user_id=user_id).delete(
+            synchronize_session=False
+        )
+        db.session.commit()
+
+        return True
+
     @staticmethod
     def find_post_by_user_id(id, user_id):
         return Product.query.filter_by(id=id, user_id=user_id).first()
+
+    @staticmethod
+    def is_product_exist(user_id, product_url_hash):
+        try:
+            existing_product = Product.query.filter_by(
+                user_id=user_id, product_url_hash=product_url_hash
+            ).first()
+            return existing_product is not None
+        except Exception as ex:
+            return None
+        return None
