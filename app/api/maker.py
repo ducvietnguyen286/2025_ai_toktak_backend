@@ -46,6 +46,7 @@ from flask import request, send_file, after_this_request
 
 import tempfile, glob, shutil
 from zipfile import ZipFile
+from app.services.product import ProductService
 
 from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
@@ -1102,6 +1103,8 @@ class APIGetStatusUploadBySyncId(Resource):
                             description=error_message,
                             description_korea="",
                         )
+                        
+                        ProductService.create_sns_product(post["user_id"] , post["batch_id"] )
                     elif sns_status == "ERRORED":
                         description_korea = replace_phrases_in_text(error_message)
                         NotificationServices.update_notification(
@@ -1195,6 +1198,10 @@ class APIGetStatusUploadWithBatch(Resource):
                                     description=error_message,
                                     description_korea="",
                                 )
+                                
+                                ProductService.create_sns_product(post_detail["user_id"] , post_detail["batch_id"] )
+                        
+                        
                             elif sns_status == "ERRORED":
                                 description_korea = replace_phrases_in_text(
                                     error_message

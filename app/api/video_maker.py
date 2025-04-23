@@ -208,20 +208,6 @@ class ShortstackWebhook(Resource):
                     if current_user:
                         new_batch_remain = max(current_user.batch_remain - 1, 0)
                         UserService.update_user(user_id, batch_remain=new_batch_remain)
-                        batch_detail = BatchService.find_batch(batch_id)
-                        if batch_detail:
-                            data_content = json.loads(batch_detail.content)
-                            
-                            ProductService.create_product(
-                                user_id=user_id,
-                                product_name=data_content.get("name", ""),
-                                description=data_content.get("description", ""),
-                                shorten_link=data_content.get("shorten_link", ""),
-                                price=data_content.get("price", ""),
-                                product_url=batch_detail.url,
-                                product_image=batch_detail.thumbnail,
-                                content=batch_detail.content,
-                            )
 
                     # trừ số lần được tạo của người dùng
 

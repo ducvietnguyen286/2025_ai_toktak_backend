@@ -13,6 +13,8 @@ from app.services.image_template import ImageTemplateService
 import os
 import json
 import const
+import hashlib
+from app.models.batch import Batch
 
 
 class ProductService:
@@ -132,3 +134,31 @@ class ProductService:
         except Exception as ex:
             return None
         return None
+
+    @staticmethod
+    def create_sns_product(user_id, batch_id):
+        try:
+            batch_detail = Batch.query.get(batch_id)
+            if not batch_detail:
+                return
+            product_url = batch_detail.url
+            product_url_hash = hashlib.sha1(product_url.encode()).hexdigest()
+
+            is_product_exist = ProductService.is_product_exist(
+                user_id, product_url_hash
+            )
+            if not is_product_exist:
+                data_content = json.loads(batch_detail.content)
+                ProductService.create_product(
+                    user_id=user_id,
+                    product_name=data_content.get("name", ""),
+                    description=data_content.get("description", ""),
+                    shorten_link=data_content.get("shorten_link", ""),
+                    price=data_content.get("price", ""),
+                    product_url=batch_detail.url,
+                    product_image=batch_detail.thumbnail,
+                    content=batch_detail.content,
+                )
+        except Exception as ex:
+            return None
+        return True
