@@ -118,6 +118,9 @@ async def check_text(request: Request):
             return {"text": "", "ratio": 0}
 
         for line_group in result:
+            if not line_group or len(line_group) < 1:
+                continue
+
             for line in line_group:
                 if len(line) < 2 or len(line) >= 2 and len(line[0]) < 4:
                     continue

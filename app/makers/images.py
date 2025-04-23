@@ -260,6 +260,10 @@ class ImageMaker:
                 min_height = 200
 
                 for result in results:
+
+                    need_check_images = []
+                    conf_images = {}
+
                     for box in result.boxes:
                         x1, y1, x2, y2 = map(
                             int, box.xyxy[0]
@@ -308,29 +312,25 @@ class ImageMaker:
                             cropped_path, cropped_resized
                         )  # Save the resized image
 
-                        if os.environ.get("USE_OCR") == "true":
-                            response = requests.post(
-                                PADDLE_URL, json={"image_path": cropped_path}
-                            )
-                            text = ""
-                            if response.status_code == 200:
-                                ocr_result = response.json()
-                                logger.info(f"Result OCR: {ocr_result}")
-                                text = result["text"] if "text" in result else ""
-                                ratio = result["ratio"] if "ratio" in result else 0.0
+                        need_check_images.append(cropped_path)
+                        conf_images[cropped_path] = conf
 
-                            blocked_texts = BlockedText.BLOCKED_TEXT.value
-                            for blocked_text in blocked_texts:
-                                if blocked_text in text:
-                                    os.remove(cropped_path)
-                                    continue
-                            if (ratio * 10) > 3.5:
-                                os.remove(cropped_path)
-                                continue
+                    if os.environ.get("USE_OCR") == "true":
+                        with Pool(processes=5) as pool:
+                            results = pool.map(process_beauty_image, need_check_images)
 
-                        cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
-
-                        cropped_images.append((cropped_url, conf))
+                        for result in results:
+                            if result != "":
+                                file_name = result.split("/")[-1]
+                                cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
+                                conf = conf_images[result]
+                                cropped_images.append((cropped_url, conf))
+                    else:
+                        for cropped_path in need_check_images:
+                            file_name = cropped_path.split("/")[-1]
+                            cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
+                            conf = conf_images[cropped_path]
+                            cropped_images.append((cropped_url, conf))
 
                 if cropped_images:
                     needed_length = 5
