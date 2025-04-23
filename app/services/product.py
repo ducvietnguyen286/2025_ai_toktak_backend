@@ -163,6 +163,7 @@ class ProductService:
                     price=data_content.get("price", ""),
                     product_url=batch_detail.url,
                     product_image=batch_detail.thumbnail,
+                    product_url_hash=product_url_hash,
                     content=batch_detail.content,
                 )
         except Exception as ex:
