@@ -556,7 +556,7 @@ class InstagramService(BaseService):
                     )
                     return False
                 else:
-                    time.sleep(3)
+                    time.sleep(5)
                     return self.get_upload_status(media_id)
             else:
                 self.save_errors(
