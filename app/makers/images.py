@@ -104,8 +104,8 @@ def process_beauty_image(image_path):
     if response.status_code == 200:
         result = response.json()
         logger.info(f"Beauty Result OCR: {result}")
-        text = result["text"] or ""
-        ratio = result["ratio"] or 0.0
+        text = result["text"] if "text" in result else ""
+        ratio = result["ratio"] if "ratio" in result else 0.0
 
     blocked_texts = BlockedText.BLOCKED_TEXT.value
     for blocked_text in blocked_texts:
@@ -288,8 +288,8 @@ class ImageMaker:
                             if response.status_code == 200:
                                 ocr_result = response.json()
                                 logger.info(f"Result OCR: {ocr_result}")
-                                text = ocr_result["text"] or ""
-                                ratio = ocr_result["ratio"] or 0.0
+                                text = result["text"] if "text" in result else ""
+                                ratio = result["ratio"] if "ratio" in result else 0.0
 
                             blocked_texts = BlockedText.BLOCKED_TEXT.value
                             for blocked_text in blocked_texts:

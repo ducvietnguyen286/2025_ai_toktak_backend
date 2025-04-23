@@ -139,7 +139,7 @@ async def check_text(request: Request):
             sum_text_area = sum(poly.area for poly in merged_polygons)
 
         if not texts:
-            return {"text": ""}
+            return {"text": "", "ratio": 0}
         full_text = " ".join(texts)
         ratio = sum_text_area / total_area
         return {"text": full_text, "ratio": ratio}
