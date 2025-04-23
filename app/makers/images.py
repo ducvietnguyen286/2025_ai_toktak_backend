@@ -107,6 +107,10 @@ def process_beauty_image(image_path):
         text = result["text"] if "text" in result else ""
         ratio = result["ratio"] if "ratio" in result else 0.0
 
+    if text == "":
+        os.remove(image_path)
+        return ""
+
     blocked_texts = BlockedText.BLOCKED_TEXT.value
     for blocked_text in blocked_texts:
         if blocked_text in text:
