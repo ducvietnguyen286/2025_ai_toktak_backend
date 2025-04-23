@@ -44,3 +44,5 @@ static/voice/
 env/
 app/ais/models/*
 google-cloud-vision.json
+paddleocr_venv
+paddleocr-venv

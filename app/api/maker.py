@@ -1101,6 +1101,7 @@ class APIGetStatusUploadBySyncId(Resource):
 
                 post_id = post["id"]
                 notification_type = post["type"]
+                
                 update_data = {
                     "social_sns_description": json.dumps(new_social_sns_description)
                 }
