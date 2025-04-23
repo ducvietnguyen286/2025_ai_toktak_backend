@@ -260,9 +260,9 @@ class ImageMaker:
 
                 excluded_labels = ["barcode", "qr code", "text", "logo"]
 
-                min_width = 200
-                min_height = 200
-                min_area = 100000
+                min_width = 400
+                min_height = 400
+                min_area = 200000
 
                 needed_length = 5
                 current_image_count = 0
