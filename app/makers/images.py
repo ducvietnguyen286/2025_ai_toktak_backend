@@ -258,6 +258,7 @@ class ImageMaker:
 
                 min_width = 200
                 min_height = 200
+                min_area = 20000
 
                 needed_length = 5
                 current_image_count = 0
@@ -284,8 +285,9 @@ class ImageMaker:
                         # Kiểm tra kích thước của bounding box
                         w = x2 - x1
                         h = y2 - y1
+                        area = w * h
 
-                        if w < min_width or h < min_height:
+                        if w < min_width or h < min_height or area < min_area:
                             continue
 
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
@@ -294,6 +296,10 @@ class ImageMaker:
                         unique_id = uuid.uuid4().hex
                         new_name = f"{timestamp}_{unique_id}.jpg"
                         cropped_path = os.path.join(output_folder, new_name)
+
+                        logger.info(
+                            f"Bounding box coordinates: url={cropped_path}, x1={x1}, y1={y1}, x2={x2}, y2={y2}"
+                        )
 
                         # Resize the cropped image to the target size (1350x1080)
                         target_size = (1350, 1080)
