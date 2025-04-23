@@ -259,7 +259,13 @@ class ImageMaker:
                 min_width = 200
                 min_height = 200
 
+                needed_length = 5
+                current_image_count = 0
+
                 for result in results:
+
+                    if current_image_count >= needed_length:
+                        break
 
                     need_check_images = []
                     conf_images = {}
@@ -316,7 +322,7 @@ class ImageMaker:
                         conf_images[cropped_path] = conf
 
                     if os.environ.get("USE_OCR") == "true":
-                        with Pool(processes=5) as pool:
+                        with Pool(processes=10) as pool:
                             results = pool.map(process_beauty_image, need_check_images)
 
                         for result in results:
@@ -325,15 +331,16 @@ class ImageMaker:
                                 cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
                                 conf = conf_images[result]
                                 cropped_images.append((cropped_url, conf))
+                                current_image_count += 1
                     else:
                         for cropped_path in need_check_images:
                             file_name = cropped_path.split("/")[-1]
                             cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
                             conf = conf_images[cropped_path]
                             cropped_images.append((cropped_url, conf))
+                            current_image_count += 1
 
                 if cropped_images:
-                    needed_length = 5
                     cropped_data_sorted = sorted(
                         cropped_images, key=lambda x: x[1], reverse=True
                     )
