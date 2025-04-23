@@ -59,7 +59,6 @@ app = FastAPI()
 def initialize_ocr_model():
     logger = create_logger()
     try:
-        logger.info("Initializing PaddleOCR...")
         ocr = PaddleOCR(
             use_angle_cls=True,
             use_gpu=True,
@@ -68,7 +67,6 @@ def initialize_ocr_model():
             rec_model_dir=rec_model_dir,
             det_db_unclip_ratio=2.0,
         )
-        logger.info("PaddleOCR initialized successfully.")
         return ocr
     except Exception as e:
         logger.error(f"Error initializing PaddleOCR: {e}")
