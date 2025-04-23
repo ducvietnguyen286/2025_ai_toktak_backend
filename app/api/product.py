@@ -203,7 +203,7 @@ class ProductDeleteAPI(Resource):
             ).to_dict()
 
         except Exception as e:
-            logger.error(f"Update product  error: {str(e)}")
+            logger.error(f"delete product  error: {str(e)}")
             return Response(message="상품을 삭제하지 못했습니다.", code=201).to_dict()
 
 
