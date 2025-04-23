@@ -3,10 +3,11 @@ from app.lib.logger import logger
 
 class Response:
 
-    def __init__(self, code=200, message="", data={}, status=200):
+    def __init__(self, code=200, message="", message_en="", data={}, status=200):
         try:
             self.status = status
             self.message = message
+            self.message_en = message_en
             self.data = data
             self.code = code
         except Exception as e:
@@ -21,6 +22,7 @@ class Response:
             return {
                 "code": self.code,
                 "message": self.message,
+                "message_en": self.message_en,
                 "data": self.data,
             }, self.status
         except Exception as e:

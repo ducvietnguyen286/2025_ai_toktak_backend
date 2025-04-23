@@ -1,8 +1,10 @@
 import json
 import time
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 from app.services.request_log import RequestLogService
 import os
+import re
+from app.lib.logger import logger
 
 chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
 
@@ -205,6 +207,7 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
   1. `docx_content`: 텍스트와 "IMAGE_URL_0" 같은 이미지 인덱스를 포함한 배열
   2. `content`: HTML 형식의 본문 (`<img src="IMAGE_URL_0">` 형식 사용)  
 - 글의 시작에는 독자의 시선을 끌 수 있는 매력적인 제목(title)을 포함해 주세요.  
+- 제목 바로 아래에는 광고 영역 또는 안내 문구를 삽입하기 위해 <h2>ADS_CONTENT_TOKTAK</h2> 태그를 반드시 포함해 주세요.
   3. 타이틀 작성 지침:  
   - 제목에는 링크주소의 상품명을 직접적으로 포함해서 작성하지 마세요. 반드시 예시와 같이 준수하도록 합니다.
   - 상품의 카테고리, 특징, 사용자 상황 등을 기반으로 자연스러운 블로그 타이틀로 예시를 참고하여 작성해주세요.  
@@ -247,6 +250,7 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
         "IMAGE_URL_2"
     ],
     "content": "<h1>블로그 게시글 제목</h1>
+                <h2>ADS_CONTENT_TOKTAK</h2>
                 <p>제품의 특징 및 장점에 대해 설명하는 첫 번째 단락 </p>
                 <p><img src="IMAGE_URL_0" alt="{name}"></p>
                 <p>제품 사용 방법에 대한 설명이 포함된 두 번째 단락</p>
@@ -617,3 +621,85 @@ def call_chatgpt(
             status=0,
         )
         return None
+
+
+def translate_notifications_batch(notifications_batch ):
+    try:
+        print(f"chatgpt_api_key{chatgpt_api_key}"   )
+        client = OpenAI(api_key=chatgpt_api_key)
+        
+        assistant_id = "asst_rBXxdDDCdHuv3UxNDTiHrxVv"
+
+        # Format input cho GPT: ID + nội dung
+        prompt = "Bạn hãy dịch các thông báo sau sang tiếng Hàn Quốc . Giữ nguyên ID và đúng thứ tự:\n"
+        for n in notifications_batch:
+            prompt += f"ID {n['id']}: {n['text']}\n"
+
+        # Tạo thread
+        thread = client.beta.threads.create()
+
+        # Gửi tin nhắn vào thread
+        client.beta.threads.messages.create(
+            thread.id,
+            role="user",
+            content=[{"type": "text", "text": prompt}],
+        )
+
+        # Tạo run
+        run = client.beta.threads.runs.create(
+            thread_id=thread.id, assistant_id=assistant_id
+        )
+
+        # Chờ phản hồi (timeout: 30s)
+        timeout_seconds = 30
+        start_time = time.time()
+        while True:
+            run = client.beta.threads.runs.retrieve(run.id, thread_id=thread.id)
+            if run.status == "completed":
+                break
+            elif run.status in ["failed", "cancelled", "expired"]:
+                raise Exception(f"Run status error: {run.status}")
+            if time.time() - start_time > timeout_seconds:
+                raise TimeoutError("GPT processing timeout.")
+            time.sleep(1)
+
+        # Lấy phản hồi
+        messages = client.beta.threads.messages.list(thread.id)
+        for message in messages:
+            if message.role == "assistant" and message.content:
+                # Trích xuất nội dung văn bản phản hồi
+                translated_text = message.content[0].text.value
+                return parse_translations(translated_text)
+
+        return {}
+
+    except OpenAIError as e:
+        logger.error(f"[OpenAI API Error xxxxxxxxxx] {e}")
+        print(f"[OpenAI API Error] {e}")
+    except TimeoutError as e:
+        logger.error(f"[Timeout Error] {e}")
+        print(f"[Timeout Error] {e}")
+    except Exception as e:
+        logger.error(f"[Unhandled  Error] {e}")
+        print(f"[Unhandled Error] {e}")
+
+    # Nếu lỗi, trả về dict rỗng
+    return {}
+
+
+def parse_translations(response_text):
+    """
+    Phân tích phản hồi từ GPT để lấy lại ID và bản dịch.
+    Ví dụ đầu vào:
+    ID 101: Có bản cập nhật mới cho thiết bị của bạn.
+    ID 102: Pin yếu.
+    """
+    translations = {}
+    lines = response_text.strip().split("\n")
+    for line in lines:
+        match = re.match(r"ID\s*(\d+):\s*(.+)", line)
+        if match:
+            notif_id = int(match.group(1))
+            translated_text = match.group(2).strip()
+            translations[notif_id] = translated_text
+    return translations

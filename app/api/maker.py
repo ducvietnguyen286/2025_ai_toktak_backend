@@ -20,6 +20,9 @@ from app.lib.string import (
     split_text_by_sentences,
     should_replace_shortlink,
     update_ads_content,
+    merge_by_key,
+    replace_phrases_in_text,
+    get_ads_content,
 )
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
@@ -39,7 +42,10 @@ from app.services.notification import NotificationServices
 from app.services.user import UserService
 
 from app.extensions import redis_client
-from flask import request
+from flask import request, send_file, after_this_request
+
+import tempfile, glob, shutil
+from zipfile import ZipFile
 
 from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
@@ -634,6 +640,7 @@ class APIMakePost(Resource):
             data = json.loads(batch.content)
             images = data.get("images", [])
             thumbnails = batch.thumbnails
+            url = batch.url
 
             type = post.type
 
@@ -831,13 +838,30 @@ class APIMakePost(Resource):
                     parse_response = parse_caption.get("response", {})
                     docx_title = parse_response.get("title", "")
                     docx_content = parse_response.get("docx_content", "")
-                    res_docx = DocxMaker().make(
-                        docx_title, docx_content, process_images, batch_id=batch_id
+
+                    ads_text = get_ads_content(url)
+                    # res_docx = DocxMaker().make(
+                    #     docx_title , ads_text , docx_content, process_images, batch_id=batch_id
+                    # )
+                    # docx_url = res_docx.get("docx_url", "")
+                    # file_size = res_docx.get("file_size", 0)
+                    # mime_type = res_docx.get("mime_type", "")
+
+                    res_txt = DocxMaker().make_txt(
+                        docx_title,
+                        ads_text,
+                        docx_content,
+                        process_images,
+                        batch_id=batch_id,
+                    )
+                    images = ImageMaker.save_normal_images(
+                        process_images, batch_id=batch_id
                     )
 
-                    docx_url = res_docx.get("docx_url", "")
-                    file_size = res_docx.get("file_size", 0)
-                    mime_type = res_docx.get("mime_type", "")
+                    txt_path = res_txt.get("txt_path", "")
+                    docx_url = res_txt.get("docx_url", "")
+                    file_size = res_txt.get("file_size", 0)
+                    mime_type = res_txt.get("mime_type", "")
 
                 logger.info(
                     "-------------------- PROCESSED CREATE LOGS -------------------"
@@ -1068,17 +1092,23 @@ class APIGetStatusUploadBySyncId(Resource):
 
             posts = sync_status["posts"]
             for post in posts:
-                post_id = post["id"]
+
                 social_post_detail = post["social_posts"]
-                notification_type = post["type"]
-                error_message = social_post_detail.get(
-                    "error_message", f"Error On get-status-upload-by-sync-id {id}"
+                social_sns_description = json.loads(post["social_sns_description"])
+                new_social_sns_description = merge_by_key(
+                    social_sns_description, social_post_detail
                 )
-                update_data = {"social_sns_description": json.dumps(social_post_detail)}
+
+                post_id = post["id"]
+                notification_type = post["type"]
+                update_data = {
+                    "social_sns_description": json.dumps(new_social_sns_description)
+                }
 
                 status_check_sns = 0
                 for social_post_each in social_post_detail:
                     sns_status = social_post_each["status"]
+                    error_message = social_post_each["error_message"]
                     if sns_status == "PUBLISHED":
                         status_check_sns = const.UPLOADED
 
@@ -1099,18 +1129,24 @@ class APIGetStatusUploadBySyncId(Resource):
                             title=f"✅{notification_type} 업로드에 성공했습니다.",
                             status=const.NOTIFICATION_SUCCESS,
                             description=error_message,
+                            description_korea="",
                         )
                     elif sns_status == "ERRORED":
+                        description_korea = replace_phrases_in_text(error_message)
                         NotificationServices.update_notification(
                             notification.id,
                             status=const.NOTIFICATION_FALSE,
                             title=f"❌{notification_type} 업로드에 실패했습니다.",
                             description=error_message,
+                            description_korea=description_korea,
                         )
 
                 if status_check_sns == const.UPLOADED:
                     update_data["status_sns"] = const.UPLOADED
                     update_data["status"] = const.UPLOADED
+                else:
+                    update_data["status_sns"] = 0
+                    update_data["status"] = const.DRAFT_STATUS
 
                 PostService.update_post(post_id, **update_data)
 
@@ -1186,13 +1222,18 @@ class APIGetStatusUploadWithBatch(Resource):
                                     title=f"✅{notification_type} 업로드에 성공했습니다.",
                                     status=const.NOTIFICATION_SUCCESS,
                                     description=error_message,
+                                    description_korea="",
                                 )
                             elif sns_status == "ERRORED":
+                                description_korea = replace_phrases_in_text(
+                                    error_message
+                                )
                                 NotificationServices.update_notification(
                                     notification.id,
                                     status=const.NOTIFICATION_FALSE,
                                     title=f"❌{notification_type} 업로드에 실패했습니다.",
                                     description=error_message,
+                                    description_korea=description_korea,
                                 )
                         except Exception as e:
                             logger.error(
@@ -1288,6 +1329,8 @@ class APIHistories(Resource):
             "user_id": current_user.id,
         }
         posts = PostService.get_posts_upload(data_search)
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+
         return {
             "current_user": current_user.id,
             "status": True,
@@ -1296,7 +1339,16 @@ class APIHistories(Resource):
             "page": posts.page,
             "per_page": posts.per_page,
             "total_pages": posts.pages,
-            "data": [post._to_json() for post in posts.items],
+            "data": [
+                {
+                    **post_json,
+                    "video_path": post_json.get("video_path", "")
+                    .replace("static/", current_domain)
+                    .replace("/mnt/", f"{current_domain}/voice/"),
+                }
+                for post in posts.items
+                if (post_json := post._to_json())
+            ],
         }, 200
 
 
@@ -1531,3 +1583,82 @@ class APICreateScraper(Resource):
                 message="상품 정보를 불러올 수 없어요.(Error code : )",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/download-zip")
+class APIDownloadZip(Resource):
+    def post(self):
+        try:
+            data = request.get_json()
+            post_id = data.get("post_id")
+
+            if not post_id:
+                return Response(
+                    message="Khong co data post_id",
+                    code=201,
+                ).to_dict()
+
+            post = PostService.find_post(post_id)
+            if not post:
+                return Response(
+                    message="Khong co data post_id",
+                    code=201,
+                ).to_dict()
+
+            UPLOAD_BASE_PATH = "uploads"
+            post_date = post.created_at.strftime("%Y_%m_%d")
+            IMAGE_EXTENSIONS = ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp", "*.svg"]
+            folder_path = os.path.join(UPLOAD_BASE_PATH, post_date, str(post.batch_id))
+            if not os.path.exists(folder_path):
+                return Response(
+                    message="Folder not found",
+                    code=201,
+                ).to_dict()
+
+            # Lấy tất cả ảnh theo định dạng cho phép
+            file_list = []
+            for pattern in IMAGE_EXTENSIONS:
+                file_list.extend(glob.glob(os.path.join(folder_path, pattern)))
+            if not file_list:
+                return Response(
+                    message="No image files found",
+                    code=201,
+                ).to_dict()
+
+            tmp_dir = tempfile.mkdtemp()
+            zip_path = os.path.join(tmp_dir, "images.zip")
+
+            with ZipFile(zip_path, "w") as zipf:
+                for file_path in file_list:
+                    filename = os.path.basename(file_path)
+                    zipf.write(file_path, arcname=filename)
+
+            if request:
+                after_this_request(
+                    lambda response: _cleanup_zip(zip_path, tmp_dir, response)
+                )
+            return send_file(
+                zip_path,
+                mimetype="application/zip",
+                as_attachment=True,
+                download_name=f"post_{post_id}_images.zip",
+            )
+
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="상품 정보를 불러올 수 없어요.(Error code : )",
+                code=201,
+            ).to_dict()
+
+
+def _cleanup_zip(zip_path, tmp_dir, response):
+    try:
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+        if os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir)
+    except Exception as e:
+        logger.warning(f"Không thể xóa tệp tạm: {e}")
+    return response

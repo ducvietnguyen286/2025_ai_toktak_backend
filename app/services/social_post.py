@@ -4,6 +4,7 @@ from app.models.post import Post
 from app.models.social_post import SocialPost
 from app.models.social_sync import SocialSync
 from app.models.user_link import UserLink
+from datetime import datetime, timedelta
 
 
 class SocialPostService:
@@ -148,3 +149,64 @@ class SocialPostService:
             traceback.print_exc()
             print(e)
             return {}
+
+    @staticmethod
+    def getTotalRunning(filters=None):
+        filters = filters or {}
+        match_stage = {}
+
+        # Xử lý khoảng thời gian
+        from_date_str = filters.get("from_date")
+        to_date_str = filters.get("to_date")
+
+        if from_date_str or to_date_str:
+            created_at_filter = {}
+            try:
+                if from_date_str:
+                    from_date = datetime.strptime(from_date_str, "%Y-%m-%d")
+                    created_at_filter["$gte"] = from_date
+                if to_date_str:
+                    # Thêm 1 ngày để lấy hết to_date trong ngày đó
+                    to_date = datetime.strptime(to_date_str, "%Y-%m-%d") + timedelta(
+                        days=1
+                    )
+                    created_at_filter["$lt"] = to_date
+            except ValueError:
+                raise ValueError(
+                    "from_date hoặc to_date không đúng định dạng YYYY-MM-DD"
+                )
+
+            match_stage["created_at"] = created_at_filter
+
+        # Xử lý các filter khác ngoài ngày
+        for key, value in filters.items():
+            if key in ("from_date", "to_date"):
+                continue
+            # match_stage[key] = value
+
+        # Build pipeline
+        pipeline = []
+        if match_stage:
+            pipeline.append({"$match": match_stage})
+
+        pipeline.append({"$group": {"_id": "$status", "count": {"$sum": 1}}})
+
+        pipeline.append({"$sort": {"_id": 1}})
+
+        result = SocialPost._get_collection().aggregate(pipeline)
+        fixed_statuses = ["ERRORED", "PROCESSING", "PUBLISHED", "UPLOADING"]
+
+        # Tạo dict tạm để tra cứu
+        result_dict = {item["_id"]: item["count"] for item in result}
+
+        # Đảm bảo kết quả luôn có đủ 4 loại
+        formatted_result = [
+            {"status": status, "count": result_dict.get(status, 0)}
+            for status in fixed_statuses
+        ]
+        
+        
+        
+
+        return formatted_result
+

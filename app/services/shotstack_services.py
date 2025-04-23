@@ -1475,7 +1475,17 @@ def add_centered_text_to_png(
     text_font_path="app/makers/fonts/GmarketSansTTFBold.ttf",
     fallback_font_path="app/makers/fonts/Arial.ttf",
 ):
-    base_image_path = "app/makers/fonts/emoji_tag_base.png"
+    text_length = len(text)
+    if text_length <= 3:
+        base_image_path = "app/makers/fonts/emoji_tag_base_3.png"
+    elif text_length <= 5:
+        base_image_path = "app/makers/fonts/emoji_tag_base_5.png"
+    elif text_length <= 7:
+        base_image_path = "app/makers/fonts/emoji_tag_base_7.png"
+    else:
+        base_image_path = "app/makers/fonts/emoji_tag_base.png"
+        
+    # base_image_path = "app/makers/fonts/emoji_tag_base.png"
 
     # Mở ảnh gốc (RGBA để giữ alpha)
     base_image = Image.open(base_image_path).convert("RGBA")
@@ -1498,6 +1508,7 @@ def add_centered_text_to_png(
     # Tính vị trí căn giữa + offset
     img_width, img_height = base_image.size
     x = (img_width - text_width) // 2 + offset_x
+    #x = 55
     y = (img_height - text_height) // 2
 
     # Vẽ text lên lớp trong suốt
