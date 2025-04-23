@@ -423,7 +423,7 @@ class APIBatchMakeImage(Resource):
                 cutout_images = []
 
                 for image in images:
-                    if len(cutout_images) >= 10:
+                    if len(cutout_images) >= 5:
                         break
                     cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
