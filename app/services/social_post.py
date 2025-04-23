@@ -46,7 +46,7 @@ class SocialPostService:
                 "status": social_post.status,
                 "social_link": social_post.social_link,
                 "link_id": social_post.link_id,
-                "link_type": link.link_type,
+                "link_type": link.type,
                 "post_id": social_post.post_id,
                 "session_key": social_post.session_key,
                 "process_number": social_post.process_number,
