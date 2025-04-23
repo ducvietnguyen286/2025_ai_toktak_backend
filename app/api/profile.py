@@ -157,13 +157,12 @@ class MemberProfileDesignSettingsUpdateAPI(Resource):
     def post(self):
         try:
             current_user = AuthService.get_current_identity()
-            data_form = request.get_json() 
+            data_form = request.get_json()
             data_update = {}
-            
-            
+
             print(data_form)
 
-            data_update["design_settings"] = json.dumps(data_form, ensure_ascii=False) 
+            data_update["design_settings"] = json.dumps(data_form, ensure_ascii=False)
 
             profile = ProfileServices.update_profile_by_user_id(
                 current_user.id, **data_update
@@ -181,4 +180,25 @@ class MemberProfileDesignSettingsUpdateAPI(Resource):
             logger.error(f"Update profile error: {str(e)}")
             return Response(
                 message="디자인 설정 정보 업데이트에 실패했습니다.", code=201
+            ).to_dict()
+
+
+@ns.route("/view/<string:user_name>")
+class ViewMemberProfileAPI(Resource):
+    def get(self, user_name):
+        try:
+            profile = ProfileServices.find_by_nick_name(user_name)
+            if not profile:
+                return Response(
+                    message="디자인 설정 정보 업데이트에 실패했습니다.", code=201
+                ).to_dict()
+
+            return Response(data=profile.to_dict()).to_dict()
+
+            return profile.to_dict()
+        except Exception as e:
+            logger.error(f"Exception: 프로필이 존재하지 않습니다.  :  {str(e)}")
+            return Response(
+                message="프로필이 존재하지 않습니다.",
+                code=201,
             ).to_dict()
