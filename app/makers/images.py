@@ -112,7 +112,7 @@ def process_beauty_image(image_path):
         if blocked_text in text:
             os.remove(image_path)
             return ""
-    if len(text) > 50 and ratio > 0.35:
+    if (ratio * 10) > 3.5:
         os.remove(image_path)
         return ""
     return image_path
@@ -295,8 +295,8 @@ class ImageMaker:
                             for blocked_text in blocked_texts:
                                 if blocked_text in text:
                                     os.remove(image_path)
-                                    return ""
-                            if ratio > 0.35:
+                                    continue
+                            if (ratio * 10) > 3.5:
                                 continue
 
                         timestamp = int(time.time())
