@@ -824,9 +824,6 @@ class APIMakePost(Resource):
                     res_txt = DocxMaker().make_txt(
                         docx_title , ads_text , docx_content, process_images, batch_id=batch_id
                     )
-                    images = ImageMaker.save_normal_images(
-                        process_images, batch_id=batch_id
-                    )
                     
                     txt_path = res_txt.get("txt_path", "")
                     docx_url = res_txt.get("docx_url", "")

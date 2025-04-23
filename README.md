@@ -2,8 +2,7 @@
 py -m venv env
 python -m venv venv  # Tạo môi trường ảo
 
-venv\Scripts\activate
-flask run --port=5001
+venv\Scripts\activate 
 flask run --port=6001 --host=0.0.0.0
 
 
@@ -81,3 +80,6 @@ chmod +x /var/www/toktak/entry-point.sh
 
 git update-index --no-assume-unchanged run_with_watchdog.sh
 git update-index --no-assume-unchanged entry-point.sh
+
+sudo systemctl status toktak.service
+sudo systemctl status toktak_watchdog.service
