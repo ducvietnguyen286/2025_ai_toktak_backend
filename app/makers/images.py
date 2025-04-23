@@ -301,7 +301,7 @@ class ImageMaker:
                         new_name = f"{timestamp}_{unique_id}.jpg"
                         cropped_path = os.path.join(output_folder, new_name)
 
-                        logger.info(
+                        logger.error(
                             f"Bounding box coordinates: url={cropped_path}, x1={x1}, y1={y1}, x2={x2}, y2={y2}"
                         )
 

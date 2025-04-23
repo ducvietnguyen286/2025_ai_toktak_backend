@@ -1,4 +1,5 @@
 import os
+import traceback
 import cv2
 import datetime
 from logging import handlers
@@ -122,7 +123,7 @@ async def check_text(request: Request):
                 continue
 
             for line in line_group:
-                if len(line) < 2 or len(line) >= 2 and len(line[0]) < 4:
+                if len(line) < 2 or (len(line) >= 2 and len(line[0]) < 4):
                     continue
 
                 detection = line[0]
@@ -153,5 +154,6 @@ async def check_text(request: Request):
         ratio = sum_text_area / total_area
         return {"text": full_text, "ratio": ratio}
     except Exception as e:
+        traceback.print_exc()
         logger.error(f"Error during OCR processing: {e}")
         return {"text": "", "ratio": 0}
