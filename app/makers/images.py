@@ -280,25 +280,6 @@ class ImageMaker:
 
                         cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
 
-                        if os.environ.get("USE_OCR") == "true":
-                            response = requests.post(
-                                PADDLE_URL, json={"image_path": image_path}
-                            )
-                            text = ""
-                            if response.status_code == 200:
-                                ocr_result = response.json()
-                                logger.info(f"Result OCR: {ocr_result}")
-                                text = result["text"] if "text" in result else ""
-                                ratio = result["ratio"] if "ratio" in result else 0.0
-
-                            blocked_texts = BlockedText.BLOCKED_TEXT.value
-                            for blocked_text in blocked_texts:
-                                if blocked_text in text:
-                                    os.remove(image_path)
-                                    continue
-                            if (ratio * 10) > 3.5:
-                                continue
-
                         timestamp = int(time.time())
                         unique_id = uuid.uuid4().hex
                         new_name = f"{timestamp}_{unique_id}.jpg"
@@ -326,6 +307,26 @@ class ImageMaker:
                         cv2.imwrite(
                             cropped_path, cropped_resized
                         )  # Save the resized image
+
+                        if os.environ.get("USE_OCR") == "true":
+                            response = requests.post(
+                                PADDLE_URL, json={"image_path": cropped_path}
+                            )
+                            text = ""
+                            if response.status_code == 200:
+                                ocr_result = response.json()
+                                logger.info(f"Result OCR: {ocr_result}")
+                                text = result["text"] if "text" in result else ""
+                                ratio = result["ratio"] if "ratio" in result else 0.0
+
+                            blocked_texts = BlockedText.BLOCKED_TEXT.value
+                            for blocked_text in blocked_texts:
+                                if blocked_text in text:
+                                    os.remove(cropped_path)
+                                    continue
+                            if (ratio * 10) > 3.5:
+                                os.remove(cropped_path)
+                                continue
 
                         cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
 
