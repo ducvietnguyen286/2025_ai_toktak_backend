@@ -420,7 +420,10 @@ class APIBatchMakeImage(Resource):
                     )
 
                 cleared_images = []
+
                 for image in images:
+                    if len(cleared_images) >= 10:
+                        break
                     cutout_images = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
                     )
