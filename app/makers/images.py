@@ -262,7 +262,7 @@ class ImageMaker:
 
                 min_width = 200
                 min_height = 200
-                min_area = 20000
+                min_area = 100000
 
                 needed_length = 5
                 current_image_count = 0
