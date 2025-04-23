@@ -102,7 +102,8 @@ async def check_text(request: Request):
 
         img = cv2.imread(image_path)
         if img is None:
-            raise ValueError("Không thể đọc ảnh từ đường dẫn được cung cấp!")
+            logger.error(f"Cannot read image from path: {image_path}")
+            return {"text": "", "ratio": 0}
 
         result = ocr.ocr(image_path, cls=True)
 
@@ -114,8 +115,15 @@ async def check_text(request: Request):
         polygons = []
         padding = 10
 
+        if result is None:
+            logger.error("No text detected in the image.")
+            return {"text": "", "ratio": 0}
+
         for line_group in result:
             for line in line_group:
+                if len(line) < 2 or len(line) >= 2 and len(line[0]) < 4:
+                    continue
+
                 detection = line[0]
                 pts = np.array(detection, dtype=np.int32)
 
@@ -145,4 +153,4 @@ async def check_text(request: Request):
         return {"text": full_text, "ratio": ratio}
     except Exception as e:
         logger.error(f"Error during OCR processing: {e}")
-        return {"error": str(e)}
+        return {"text": "", "ratio": 0}
