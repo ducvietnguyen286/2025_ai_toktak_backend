@@ -5,6 +5,7 @@ import time
 import traceback
 import requests
 
+from app.enums.limit import LimitSNS
 from app.services.post import PostService
 from app.services.video_service import VideoService
 
@@ -730,9 +731,7 @@ class TwitterService(BaseService):
         if state == "failed":
             return False
 
-        check_after_secs = self.processing_info["check_after_secs"]
-
-        time.sleep(check_after_secs)
+        time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
 
         request_params = {"command": "STATUS", "media_id": media_id}
 

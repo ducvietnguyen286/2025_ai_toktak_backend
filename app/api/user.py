@@ -805,6 +805,9 @@ class APITiktokLogin(Resource):
         try:
             user_id = args.get("user_id")
             link_id = args.get("link_id")
+
+            logger.info(f"User ID: {user_id}, Link ID: {link_id}")
+
             state_token = self.generate_state_token(user_id, link_id)
             scope = "user.info.basic,user.info.profile,video.publish,video.upload"
 
@@ -828,6 +831,8 @@ class APITiktokLogin(Resource):
             return False
 
     def generate_state_token(self, user_id, link_id):
+
+        logger.info(f"Generate state token for user_id: {user_id}, link_id: {link_id}")
 
         nonce = secrets.token_urlsafe(16)
         payload = {
@@ -891,6 +896,8 @@ class APIGetCallbackTiktok(Resource):
                 error=error,
                 error_description=error_description,
             )
+
+            logger.info(f"State token payload: {payload}")
 
             TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 

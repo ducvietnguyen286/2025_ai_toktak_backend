@@ -263,12 +263,12 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
         "IMAGE_URL_1",
         "제품을 구매하는 방법과 판매처 정보",
         "IMAGE_URL_2",
-        제품을 구매하는 방법과 판매처 정보,
-        IMAGE_URL_3,
-        제품을 구매하는 방법과 판매처 정보
-        IMAGE_URL_4,
-        {base_url},
-        #hashtag1 #hashtag2 #hashtag3,
+        "제품을 구매하는 방법과 판매처 정보",
+        "IMAGE_URL_3",
+        "제품을 구매하는 방법과 판매처 정보",
+        "IMAGE_URL_4",
+        "{base_url}",
+        "#hashtag1 #hashtag2 #hashtag3"
     ],
     "content": "<h1>블로그 게시글 제목</h1>
                 <h2>ADS_CONTENT_TOKTAK</h2>
@@ -282,8 +282,8 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
                 <p><img src="IMAGE_URL_3" alt="{name}"></p>...etc
                 <p>제품을 구매하는 방법과 판매처 정보</p>
                 <p><img src="IMAGE_URL_4" alt="{name}"></p>...etc
-                {base_url}
-                <p>#hashtag1 #hashtag2 #hashtag3</p>"
+                <p>{base_url}</p>
+                <p>#hashtag1 #hashtag2 #hashtag3</p>
 }
 """
     prompt = prompt.replace("COUNT_IMAGE", str(len(images)))
@@ -569,8 +569,7 @@ def call_chatgpt(
             "temperature": temperature,
         }
     )
-    
- 
+
     try:
         response = client.chat.completions.create(
             model=model,
@@ -646,11 +645,11 @@ def call_chatgpt(
         return None
 
 
-def translate_notifications_batch(notifications_batch ):
+def translate_notifications_batch(notifications_batch):
     try:
-        print(f"chatgpt_api_key{chatgpt_api_key}"   )
+        print(f"chatgpt_api_key{chatgpt_api_key}")
         client = OpenAI(api_key=chatgpt_api_key)
-        
+
         assistant_id = "asst_rBXxdDDCdHuv3UxNDTiHrxVv"
 
         # Format input cho GPT: ID + nội dung

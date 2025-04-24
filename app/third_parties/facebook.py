@@ -5,6 +5,7 @@ import time
 import traceback
 import requests
 
+from app.enums.limit import LimitSNS
 from app.lib.logger import log_facebook_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
@@ -240,8 +241,7 @@ class FacebookService(BaseService):
                 "SEND POST ERROR NOT ALL: Can't get page token",
                 base_message="Can't get page token",
             )
-            # self.user_link.warning = 1
-            # self.user_link.save()
+            UserService.delete_user_link(self.user_link.id)
             return True
         else:
             if not token_page:
@@ -250,8 +250,7 @@ class FacebookService(BaseService):
                     "SEND POST ERROR ALL: Can't get page token",
                     base_message="Can't get page token",
                 )
-                # self.user_link.warning = 1
-                # self.user_link.save()
+                UserService.delete_user_link(self.user_link.id)
                 return True
             response_token = token_page
             page_id = response_token.get("id")
@@ -421,8 +420,6 @@ class FacebookService(BaseService):
                     "error": "Status is not found",
                 }
 
-            time.sleep(1)
-
             if count <= 6:
                 self.save_uploading(20 + (count * 10))
 
@@ -441,8 +438,6 @@ class FacebookService(BaseService):
         video_status = status.get("video_status", "uploading")
         status_uploading_phase = uploading_phase.get("status")
 
-        time.sleep(2)
-
         if video_status == "upload_complete" and status_uploading_phase == "complete":
             return {
                 "status": "ready",
@@ -454,6 +449,7 @@ class FacebookService(BaseService):
                 "uploading_phase": uploading_phase,
             }
         else:
+            time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
             return self.get_upload_status(video_id, access_token, count + 1)
 
     def publish_the_reel(self, post, video_id, page_id, access_token):
@@ -534,6 +530,7 @@ class FacebookService(BaseService):
                 base_message=str(e),
             )
             return False
+
         result = post_response.json()
 
         self.save_request_log("send_post_image", post_data, result)

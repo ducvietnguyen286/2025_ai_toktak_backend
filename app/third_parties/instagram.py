@@ -5,6 +5,7 @@ import time
 import traceback
 
 import requests
+from app.enums.limit import LimitSNS
 from app.lib.logger import log_instagram_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
@@ -347,6 +348,7 @@ class InstagramService(BaseService):
                 "access_token": self.access_token,
             }
             response = requests.get(PERMALINK_URL, params=params)
+
             result = response.json()
             self.save_request_log("get_permalink_instagram", params, result)
 
@@ -556,7 +558,7 @@ class InstagramService(BaseService):
                     )
                     return False
                 else:
-                    time.sleep(3)
+                    time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
                     return self.get_upload_status(media_id)
             else:
                 self.save_errors(

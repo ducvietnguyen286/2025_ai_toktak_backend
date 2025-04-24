@@ -177,6 +177,14 @@ class UserService:
         return user_links
 
     @staticmethod
+    def delete_user_link(user_link_id=0):
+        user_link = UserLink.query.get(user_link_id)
+        if not user_link:
+            return None
+        user_link.delete()
+        return user_link
+
+    @staticmethod
     def admin_search_users(data_search):
         # Query cơ bản với các điều kiện
         query = User.query.filter(User.user_type == const.USER)
