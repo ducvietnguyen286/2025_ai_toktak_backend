@@ -281,6 +281,7 @@ class FacebookService(BaseService):
         result = self.start_session_upload_reel(
             page_id=page_id, page_access_token=page_access_token
         )
+        time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
         video_id = result["video_id"] if "video_id" in result else None
         if not video_id:
             error = result.get("error", {})
@@ -300,7 +301,9 @@ class FacebookService(BaseService):
             video_url=post.video_url,
             access_token=page_access_token,
         )
+        time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
         result_status = self.get_upload_status(video_id, page_access_token)
+        time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
         status = result_status.get("status")
         if status == "ready":
             self.publish_the_reel(
@@ -309,9 +312,11 @@ class FacebookService(BaseService):
                 page_id=page_id,
                 access_token=page_access_token,
             )
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             reels = self.get_reel_uploaded(
                 page_id=page_id, access_token=page_access_token
             )
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not reels:
                 self.save_publish("PUBLISHED", "profile")
                 return True
@@ -510,6 +515,7 @@ class FacebookService(BaseService):
         photo_ids = self.unpublish_images(
             images=images, page_id=page_id, page_access_token=page_access_token
         )
+        time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
         if not photo_ids:
             return False
 
@@ -532,6 +538,7 @@ class FacebookService(BaseService):
             return False
 
         result = post_response.json()
+        time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
 
         self.save_request_log("send_post_image", post_data, result)
 
@@ -593,4 +600,7 @@ class FacebookService(BaseService):
                     f"POST {self.key_log} UNPUBLISH IMAGES - GET ERROR: {error_message}",
                     base_message=error_message,
                 )
+
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
+
         return photo_ids

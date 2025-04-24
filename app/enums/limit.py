@@ -5,6 +5,7 @@ class LimitSNS(Enum):
     """Enum for SNS limits."""
 
     WAIT_SECOND_CHECK_STATUS = 30
+    WAIT_PER_API_CALL = 2
 
     FACEBOOK_PER_HOUR = 200
     INSTAGRAM_PER_HOUR = 200
