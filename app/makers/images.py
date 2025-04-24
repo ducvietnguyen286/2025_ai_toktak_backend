@@ -232,11 +232,9 @@ class ImageMaker:
 
         time.sleep(1)
 
-        with Pool(processes=2) as pool:
-            results = pool.map(process_beauty_image, process_images)
-
         cleared_images = []
-        for result in results:
+        for image_path in process_images:
+            result = process_beauty_image(image_path)
             if "is_remove" in result and result["is_remove"]:
                 image_path = result["image_path"]
                 if os.path.exists(image_path):
@@ -380,10 +378,8 @@ class ImageMaker:
                         conf_images[cropped_path] = conf
 
                     if os.environ.get("USE_OCR") == "true":
-                        with Pool(processes=2) as pool:
-                            results = pool.map(process_beauty_image, need_check_images)
-
-                        for result in results:
+                        for cropped_path in need_check_images:
+                            result = process_beauty_image(cropped_path)
                             if "is_remove" in result and result["is_remove"]:
                                 cropped_image_path = result["image_path"]
                                 if os.path.exists(cropped_image_path):
