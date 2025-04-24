@@ -357,6 +357,9 @@ class FacebookService(BaseService):
             )
             return False
 
+        headers = post_response.headers
+        log_facebook_message("start_session_upload_reel HEADERS: " + str(headers))
+
         result = post_response.json()
         self.save_request_log("start_session_upload_reel", post_data, result)
 
@@ -379,6 +382,9 @@ class FacebookService(BaseService):
                 base_message=str(e),
             )
             return False
+
+        headers = post_response.headers
+        log_facebook_message("upload_video HEADERS: " + str(headers))
 
         result = post_response.json()
         self.save_request_log("upload_video", headers, result)
@@ -405,6 +411,9 @@ class FacebookService(BaseService):
             result = get_response.json()
             self.save_request_log("get_upload_status", {"video_id": video_id}, result)
 
+            headers = get_response.headers
+            log_facebook_message("get_upload_status HEADERS: " + str(headers))
+
             if "error" in result:
                 error = result.get("error", {})
                 error_message = error.get(
@@ -419,7 +428,7 @@ class FacebookService(BaseService):
                     "error": "Status is not found",
                 }
 
-            time.sleep(1)
+            time.sleep(10)
 
             if count <= 6:
                 self.save_uploading(20 + (count * 10))
@@ -439,7 +448,7 @@ class FacebookService(BaseService):
         video_status = status.get("video_status", "uploading")
         status_uploading_phase = uploading_phase.get("status")
 
-        time.sleep(2)
+        time.sleep(10)
 
         if video_status == "upload_complete" and status_uploading_phase == "complete":
             return {
@@ -476,6 +485,9 @@ class FacebookService(BaseService):
             )
             return False
 
+        headers = post_response.headers
+        log_facebook_message("publish_the_reel HEADERS: " + str(headers))
+
         result = post_response.json()
         self.save_request_log("publish_the_reel", post_data, result)
 
@@ -494,6 +506,9 @@ class FacebookService(BaseService):
                 base_message=str(e),
             )
             return False
+
+        headers = get_response.headers
+        log_facebook_message("get_reel_uploaded HEADERS: " + str(headers))
 
         result = get_response.json()
         self.save_request_log("get_reel_uploaded", {"page_id": page_id}, result)
@@ -532,6 +547,10 @@ class FacebookService(BaseService):
                 base_message=str(e),
             )
             return False
+
+        headers = post_response.headers
+        log_facebook_message("send_post_image HEADERS: " + str(headers))
+
         result = post_response.json()
 
         self.save_request_log("send_post_image", post_data, result)
@@ -576,6 +595,8 @@ class FacebookService(BaseService):
                 )
                 return False
 
+            headers = response.headers
+            log_facebook_message("send_post_image HEADERS: " + str(headers))
             result = response.json()
 
             self.save_request_log("unpublish_images", data, result)
