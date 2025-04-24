@@ -832,6 +832,8 @@ class APITiktokLogin(Resource):
 
     def generate_state_token(self, user_id, link_id):
 
+        logger.info(f"Generate state token for user_id: {user_id}, link_id: {link_id}")
+
         nonce = secrets.token_urlsafe(16)
         payload = {
             "nonce": nonce,
