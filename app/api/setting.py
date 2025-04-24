@@ -11,6 +11,7 @@ from app.models.setting import Setting
 from app.lib.logger import logger
 from app.lib.response import Response
 from app.models.request_log import RequestLog
+import const
 
 ns = Namespace(name="setting", description="Setting API")
 
@@ -104,7 +105,6 @@ class GetPublicConfig(Resource):
         print(remote_ip)
 
         # Danh sách IP được phép truy cập
-        ALLOWED_IPS = {"118.70.171.129", "218.154.54.97"}
 
         settings = Setting.query.filter_by(status=0).all()
         settings_dict = {
@@ -114,7 +114,7 @@ class GetPublicConfig(Resource):
         logger.info(settings_dict)
 
         if settings_dict["IS_MAINTANCE"] == "1":
-            if remote_ip in ALLOWED_IPS:
+            if remote_ip in conts.ALLOWED_IPS:
                 settings_dict["IS_MAINTANCE"] = "0"
 
         logger.info(settings_dict)
