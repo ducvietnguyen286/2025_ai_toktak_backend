@@ -95,3 +95,17 @@ class GetConfig(Resource):
             data={"TWITTER_CLIENT_ID": setting.setting_value},
             message="Get  setting",
         ).to_dict()
+
+
+@ns.route("/get_public_config")
+class GetPublicConfig(Resource):
+    def get(self):
+        settings = Setting.query.filter_by(status=0).all()
+        settings_dict = {
+            setting.setting_name: setting.setting_value for setting in settings
+        }
+
+        return Response(
+            data=settings_dict,
+            message="Get Public setting",
+        ).to_dict()
