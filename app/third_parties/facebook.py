@@ -357,9 +357,6 @@ class FacebookService(BaseService):
             )
             return False
 
-        headers = post_response.headers
-        log_facebook_message("start_session_upload_reel HEADERS: " + str(headers))
-
         result = post_response.json()
         self.save_request_log("start_session_upload_reel", post_data, result)
 
@@ -382,9 +379,6 @@ class FacebookService(BaseService):
                 base_message=str(e),
             )
             return False
-
-        headers = post_response.headers
-        log_facebook_message("upload_video HEADERS: " + str(headers))
 
         result = post_response.json()
         self.save_request_log("upload_video", headers, result)
@@ -410,9 +404,6 @@ class FacebookService(BaseService):
 
             result = get_response.json()
             self.save_request_log("get_upload_status", {"video_id": video_id}, result)
-
-            headers = get_response.headers
-            log_facebook_message("get_upload_status HEADERS: " + str(headers))
 
             if "error" in result:
                 error = result.get("error", {})
@@ -485,9 +476,6 @@ class FacebookService(BaseService):
             )
             return False
 
-        headers = post_response.headers
-        log_facebook_message("publish_the_reel HEADERS: " + str(headers))
-
         result = post_response.json()
         self.save_request_log("publish_the_reel", post_data, result)
 
@@ -506,9 +494,6 @@ class FacebookService(BaseService):
                 base_message=str(e),
             )
             return False
-
-        headers = get_response.headers
-        log_facebook_message("get_reel_uploaded HEADERS: " + str(headers))
 
         result = get_response.json()
         self.save_request_log("get_reel_uploaded", {"page_id": page_id}, result)
@@ -547,9 +532,6 @@ class FacebookService(BaseService):
                 base_message=str(e),
             )
             return False
-
-        headers = post_response.headers
-        log_facebook_message("send_post_image HEADERS: " + str(headers))
 
         result = post_response.json()
 
@@ -595,8 +577,6 @@ class FacebookService(BaseService):
                 )
                 return False
 
-            headers = response.headers
-            log_facebook_message("send_post_image HEADERS: " + str(headers))
             result = response.json()
 
             self.save_request_log("unpublish_images", data, result)

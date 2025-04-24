@@ -1,4 +1,6 @@
+from datetime import datetime
 from app.models.request_social_log import RequestSocialLog
+from app.models.request_social_count import RequestSocialCount
 
 
 class RequestSocialLogService:
@@ -40,3 +42,39 @@ class RequestSocialLogService:
         return [
             request_social_log._to_json() for request_social_log in request_social_logs
         ]
+
+    @staticmethod
+    def increment_request_social_count(id, social=""):
+        current_day = datetime.now().strftime("%Y-%m-%d")
+        current_hour = datetime.now().strftime("%H")
+        request_social_count = RequestSocialCount.query.where(
+            RequestSocialCount.social == social,
+            RequestSocialCount.user_id == id,
+            RequestSocialCount.day == current_day,
+            RequestSocialCount.hour == current_hour,
+        ).first()
+        if request_social_count:
+            request_social_count.count += 1
+            request_social_count.save()
+        else:
+            request_social_count = RequestSocialCount(
+                user_id=id,
+                social=social,
+                count=1,
+                day=current_day,
+                hour=current_hour,
+            )
+            request_social_count.save()
+        return request_social_count
+
+    @staticmethod
+    def get_request_social_count_by_user_id(user_id, social):
+        current_day = datetime.now().strftime("%Y-%m-%d")
+        current_hour = datetime.now().strftime("%H")
+        request_social_count = RequestSocialCount.query.where(
+            RequestSocialCount.social == social,
+            RequestSocialCount.user_id == user_id,
+            RequestSocialCount.day == current_day,
+            RequestSocialCount.hour == current_hour,
+        ).first()
+        return request_social_count.count if request_social_count else 0
