@@ -805,6 +805,9 @@ class APITiktokLogin(Resource):
         try:
             user_id = args.get("user_id")
             link_id = args.get("link_id")
+
+            logger.info(f"User ID: {user_id}, Link ID: {link_id}")
+
             state_token = self.generate_state_token(user_id, link_id)
             scope = "user.info.basic,user.info.profile,video.publish,video.upload"
 
