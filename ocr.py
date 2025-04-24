@@ -50,6 +50,9 @@ def create_logger():
     return logger
 
 
+logger = create_logger()
+
+
 MODEL_DIR = os.path.join(os.getcwd(), "app/ais/models/paddleocr_models")
 det_model_dir = os.path.join(MODEL_DIR, "det/Multilingual_PP-OCRv3_det_infer")
 rec_model_dir = os.path.join(MODEL_DIR, "rec/korean_PP-OCRv3_rec_infer")
@@ -57,21 +60,24 @@ rec_model_dir = os.path.join(MODEL_DIR, "rec/korean_PP-OCRv3_rec_infer")
 app = FastAPI()
 
 
-def initialize_ocr_model():
-    logger = create_logger()
-    try:
-        ocr = PaddleOCR(
-            use_angle_cls=True,
-            use_gpu=True,
-            lang="korean",
-            det_model_dir=det_model_dir,
-            rec_model_dir=rec_model_dir,
-            det_db_unclip_ratio=2.0,
-        )
-        return ocr
-    except Exception as e:
-        logger.error(f"Error initializing PaddleOCR: {e}")
-        raise
+try:
+    ocr = PaddleOCR(
+        use_angle_cls=True,
+        use_gpu=True,
+        lang="korean",
+        det_model_dir=det_model_dir,
+        rec_model_dir=rec_model_dir,
+        det_db_unclip_ratio=2.0,
+        use_tensorrt=True,
+        trt_precision_mode="fp16",
+        # Bạn có thể điều chỉnh thêm các tham số sau tùy thuộc vào yêu cầu và phiên bản:
+        # trt_max_batch_size=1,
+        # trt_workspace_size=1 << 20,
+    )
+    logger.info("PaddleOCR model initialized successfully.")
+except Exception as e:
+    logger.error(f"Error initializing PaddleOCR: {e}")
+    raise
 
 
 def merge_close_polygons(polygons, distance_threshold):
@@ -93,8 +99,6 @@ def merge_close_polygons(polygons, distance_threshold):
 
 @app.post("/check_text")
 async def check_text(request: Request):
-    logger = create_logger()
-    ocr = initialize_ocr_model()
     try:
         data = await request.json()
         image_path = data["image_path"]

@@ -29,6 +29,8 @@ def parse_mobile_response(html, url, base_url):
             return {}
         data = json.loads(ld_json.text)
 
+        print("data", data)
+
         name = data.get("name")
         description = data.get("description")
         images = data.get("image")
