@@ -380,7 +380,7 @@ class ImageMaker:
                         conf_images[cropped_path] = conf
 
                     if os.environ.get("USE_OCR") == "true":
-                        with Pool(processes=5) as pool:
+                        with Pool(processes=2) as pool:
                             results = pool.map(process_beauty_image, need_check_images)
 
                         for result in results:
