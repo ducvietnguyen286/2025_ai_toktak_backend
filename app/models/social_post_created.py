@@ -17,4 +17,4 @@ class SocialPostCreated(BaseDocument):
     social = StringField(required=True, max_length=50)
     user_id = IntField(required=True, default=0)
     count = IntField(required=True, default=0)
-    hour = StringField(required=True, max_length=50)
+    day = StringField(required=True, max_length=50)
