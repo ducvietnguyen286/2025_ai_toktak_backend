@@ -347,6 +347,10 @@ class InstagramService(BaseService):
                 "access_token": self.access_token,
             }
             response = requests.get(PERMALINK_URL, params=params)
+
+            headers = response.headers
+            log_instagram_message(f"get_permalink_instagram Headers: {headers}")
+
             result = response.json()
             self.save_request_log("get_permalink_instagram", params, result)
 
@@ -405,6 +409,9 @@ class InstagramService(BaseService):
                     base_message=str(e),
                 )
                 return False
+
+            headers = post_response.headers
+            log_instagram_message(f"upload_image Headers: {headers}")
 
             result = post_response.json()
 
@@ -474,6 +481,9 @@ class InstagramService(BaseService):
                 )
                 return False
 
+            headers = post_response.headers
+            log_instagram_message(f"upload_carousel Headers: {headers}")
+
             result = post_response.json()
 
             self.save_request_log("upload_carousel", upload_data, result)
@@ -529,6 +539,9 @@ class InstagramService(BaseService):
                 )
                 return False
 
+            headers = status_response.headers
+            log_instagram_message(f"get_upload_status Headers: {headers}")
+
             result = status_response.json()
 
             self.save_request_log("get_upload_status", params, result)
@@ -556,7 +569,7 @@ class InstagramService(BaseService):
                     )
                     return False
                 else:
-                    time.sleep(5)
+                    time.sleep(30)
                     return self.get_upload_status(media_id)
             else:
                 self.save_errors(
@@ -596,6 +609,9 @@ class InstagramService(BaseService):
                 return False
 
             result = post_response.json()
+
+            headers = post_response.headers
+            log_instagram_message(f"publish_post Headers: {headers}")
 
             self.save_request_log("publish_post", upload_data, result)
 
@@ -673,6 +689,9 @@ class InstagramService(BaseService):
                 return False
 
             result = post_response.json()
+
+            headers = post_response.headers
+            log_instagram_message(f"upload_reels Headers: {headers}")
 
             quote = (
                 post_response.headers.get("x-app-usage")
