@@ -39,10 +39,11 @@ class MemberProfileAPI(Resource):
             profile = ProfileServices.profile_by_user_id(current_user.id)
             if not profile:
                 nick_name = generate_random_nick_name(current_user.email)
-                design_settings = []
+                design_settings = {}
                 profile = ProfileServices.create_profile(
                     user_id=current_user.id,
                     nick_name=nick_name,
+                    status=0,
                     design_settings=json.dumps(design_settings),
                 )
             return profile.to_dict()
@@ -70,6 +71,7 @@ class MemberProfileUpdateAPI(Resource):
                 "description": form.get("description"),
                 "content": form.get("content"),
                 "member_address": form.get("member_address"),
+                "status": 2,
             }
 
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -99,6 +101,44 @@ class MemberProfileUpdateAPI(Resource):
             logger.error(f"Update profile error: {str(e)}")
             return Response(
                 message="프로필 업데이트 중 오류가 발생했습니다.", code=201
+            ).to_dict()
+
+
+@ns.route("/status_update")
+class MemberProfileStatusUpdateAPI(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            current_user = AuthService.get_current_identity()
+
+            profile_member = ProfileServices.profile_by_user_id(current_user.id)
+            print(current_user.id)
+            if not profile_member:
+                return Response(
+                    message="상태를 업데이트하는 중에 문제가 발생했습니다.", code=201
+                ).to_dict()
+
+            status = profile_member.status
+            print(status)
+            if status != 0:
+                return Response(
+                    message="상태를 업데이트하는 중에 문제가 발생했습니다.", code=201
+                ).to_dict()
+            else:
+                data_update = {
+                    "status": 1,
+                }
+                profile = ProfileServices.update_profile_by_user_id(
+                    current_user.id, **data_update
+                )
+            return Response(
+                data=profile.to_dict(), message="상태가 성공적으로 업데이트되었습니다."
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Update profile error: {str(e)}")
+            return Response(
+                message="상태를 업데이트하는 중에 문제가 발생했습니다.", code=201
             ).to_dict()
 
 
