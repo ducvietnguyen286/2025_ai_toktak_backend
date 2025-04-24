@@ -174,6 +174,9 @@ class APINewLink(Resource):
 
             if user_template:
                 link_sns = json.loads(user_template.link_sns)
+                logger.info("-------------------------------------------------------")
+                logger.info(link_id)
+                logger.info(link_sns)
 
                 if (
                     not link_sns
@@ -183,14 +186,14 @@ class APINewLink(Resource):
                 ):
                     link_sns = {"video": [], "image": []}
 
-                if link.id not in link_sns["video"]:
-                    link_sns["video"].append(link.id)
-                if link.id not in link_sns["image"]:
-                    link_sns["image"].append(link.id)
+                link_sns["video"].append(link_id)
+                link_sns["image"].append(link_id)
 
                 data_update_template = {
                     "link_sns": json.dumps(link_sns),
                 }
+                
+                logger.info(data_update_template)
 
                 user_template = PostService.update_template(
                     user_template.id, **data_update_template
