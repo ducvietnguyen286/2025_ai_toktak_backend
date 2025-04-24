@@ -22,6 +22,7 @@ from app.lib.logger import logger
 import faulthandler
 
 from app.lib.header import generate_desktop_user_agent
+from app.third_parties.google import GoogleVision
 
 torch.autograd.set_detect_anomaly(True)
 multiprocessing.set_start_method("spawn", force=True)
@@ -96,46 +97,67 @@ def wrap_text(draw, text, font, max_width):
 
 def process_beauty_image(image_path):
     extension = image_path.split(".")[-1].lower()
+
     if extension == "gif":
-        return image_path
+        return {
+            "image_path": image_path,
+            "is_remove": False,
+        }
 
     try:
-        image = Image.open(image_path)
+        with Image.open(image_path) as image:
+            width, height = image.size
+            min_width = 300
+            min_height = 300
+            min_area = 100000
+
+            if width < min_width or height < min_height or (width * height) < min_area:
+                return {
+                    "image_path": image_path,
+                    "is_remove": True,
+                }
+
+            # response = requests.post(PADDLE_URL, json={"image_path": image_path})
+
+            full_text, ratio = GoogleVision().analyze_image(image_path, width, height)
+
+            if not full_text:
+                return {
+                    "image_path": image_path,
+                    "is_remove": True,
+                }
+
+            # logger.info(f"Beauty Result OCR Text: {full_text}, Ratio: {ratio}")
+
+            if full_text == "":
+                return {
+                    "image_path": image_path,
+                    "is_remove": True,
+                }
+
+            blocked_texts = BlockedText.BLOCKED_TEXT.value
+            for blocked_text in blocked_texts:
+                if blocked_text in full_text:
+                    return {
+                        "image_path": image_path,
+                        "is_remove": True,
+                    }
+            if (ratio * 10) > 3.5:
+                return {
+                    "image_path": image_path,
+                    "is_remove": True,
+                }
+            return {
+                "image_path": image_path,
+                "is_remove": False,
+            }
     except IOError:
         logger.error(f"Cannot identify image file {image_path}")
         print(f"Cannot identify image file {image_path}")
-        return ""
-
-    width, height = image.size
-    min_width = 300
-    min_height = 300
-    min_area = 100000
-
-    if width < min_width or height < min_height or (width * height) < min_area:
-        os.remove(image_path)
-        return ""
-
-    text = ""
-    response = requests.post(PADDLE_URL, json={"image_path": image_path})
-    if response.status_code == 200:
-        result = response.json()
-        logger.info(f"Beauty Result OCR: {result}")
-        text = result["text"] if "text" in result else ""
-        ratio = result["ratio"] if "ratio" in result else 0.0
-
-    if text == "":
-        os.remove(image_path)
-        return ""
-
-    blocked_texts = BlockedText.BLOCKED_TEXT.value
-    for blocked_text in blocked_texts:
-        if blocked_text in text:
-            os.remove(image_path)
-            return ""
-    if (ratio * 10) > 3.5:
-        os.remove(image_path)
-        return ""
-    return image_path
+        return {
+            "image_path": image_path,
+            "is_remove": True,
+        }
 
 
 class ImageMaker:
@@ -164,60 +186,68 @@ class ImageMaker:
         base_images = []
 
         downloaded_images = []
-        with ThreadPoolExecutor(max_workers=15) as executor:
-            future_to_image = {
-                executor.submit(
-                    ImageMaker.save_image_url_get_path, image_url, batch_id
-                ): image_url
-                for image_url in images
-            }
-            downloaded_images = [future.result() for future in future_to_image]
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            downloaded_images = list(
+                executor.map(
+                    lambda url: ImageMaker.save_image_url_get_path(url, batch_id),
+                    images,
+                )
+            )
+
+        time.sleep(1)
 
         for image_path in downloaded_images:
             if not image_path:
                 continue
             try:
-                image = Image.open(image_path)
+                with Image.open(image_path) as image:
+                    image_width, image_height = image.size
+                    if image_height <= (image_width * 4):
+                        extension = image_path.split(".")[-1].lower()
+                        if extension == "gif":
+                            base_images.append(image_path)
+                            continue
+
+                        image_cv = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+
+                        if image_cv is None:
+                            continue
+
+                        if not image_path.lower().endswith(".jpg"):
+                            new_image_path = image_path.rsplit(".", 1)[0] + ".jpg"
+                            cv2.imwrite(
+                                new_image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90]
+                            )
+                            os.remove(image_path)
+                            image_path = new_image_path
+                        else:
+                            cv2.imwrite(
+                                image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90]
+                            )
+
+                        process_images.append(image_path)
+                    else:
+                        base_images.append(image_path)
             except IOError:
                 print(f"Cannot identify image file {image_path}")
-                base_images.append(image_path)
+                time.sleep(0.5)
+                os.remove(image_path)
                 continue
 
-            image_width, image_height = image.size
-
-            if image_height <= (image_width * 4):
-                extension = image_path.split(".")[-1].lower()
-                if extension == "gif":
-                    process_images.append(image_path)
-                    continue
-
-                image_cv = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
-
-                if not image_path.lower().endswith(".jpg"):
-                    new_image_path = image_path.rsplit(".", 1)[0] + ".jpg"
-                    cv2.imwrite(
-                        new_image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90]
-                    )
-                    image.close()
-                    os.remove(image_path)
-                    image_path = new_image_path
-                else:
-                    cv2.imwrite(image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90])
-
-                process_images.append(image_path)
-            else:
-                base_images.append(image_path)
-
-            image.close()
+        time.sleep(1)
 
         with Pool(processes=5) as pool:
             results = pool.map(process_beauty_image, process_images)
 
-        processed_images = [result for result in results if result]
-
         cleared_images = []
-        for image_path in processed_images:
-            if image_path != "":
+        for result in results:
+            if "is_remove" in result and result["is_remove"]:
+                image_path = result["image_path"]
+                if os.path.exists(image_path):
+                    os.remove(image_path)
+                continue
+            if "is_remove" in result and result["is_remove"] == False:
+                image_path = result["image_path"]
                 cleared_images.append(image_path)
 
         cleared_images.extend(base_images)
@@ -358,12 +388,19 @@ class ImageMaker:
                             results = pool.map(process_beauty_image, need_check_images)
 
                         for result in results:
-                            if result != "":
-                                file_name = result.split("/")[-1]
+                            if "is_remove" in result and result["is_remove"]:
+                                image_path = result["image_path"]
+                                if os.path.exists(image_path):
+                                    os.remove(image_path)
+                                continue
+                            if "is_remove" in result and result["is_remove"] == False:
+                                image_path = result["image_path"]
+                                file_name = image_path.split("/")[-1]
                                 cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
-                                conf = conf_images[result]
+                                conf = conf_images[image_path]
                                 cropped_images.append((cropped_url, conf))
                                 current_image_count += 1
+
                     else:
                         for cropped_path in need_check_images:
                             file_name = cropped_path.split("/")[-1]
