@@ -95,6 +95,7 @@ def process_message_sync(body, app):
             with app.app_context():
                 result = action_send_post_to_link(message)
                 return result
+        return False
     except Exception as e:
         log_instagram_message(f"ERROR: Error processing message: {str(e)}")
         return False
