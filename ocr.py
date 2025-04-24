@@ -70,9 +70,6 @@ try:
         det_db_unclip_ratio=2.0,
         use_tensorrt=True,
         trt_precision_mode="fp16",
-        # Bạn có thể điều chỉnh thêm các tham số sau tùy thuộc vào yêu cầu và phiên bản:
-        # trt_max_batch_size=1,
-        # trt_workspace_size=1 << 20,
     )
     logger.info("PaddleOCR model initialized successfully.")
 except Exception as e:
