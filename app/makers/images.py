@@ -165,14 +165,13 @@ class ImageMaker:
     @staticmethod
     def save_normal_images(images, batch_id=0):
         downloaded_images = []
-        with ThreadPoolExecutor(max_workers=15) as executor:
-            future_to_image = {
-                executor.submit(
-                    ImageMaker.save_image_url_get_path, image_url, batch_id
-                ): image_url
-                for image_url in images
-            }
-            downloaded_images = [future.result() for future in future_to_image]
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            downloaded_images = list(
+                executor.map(
+                    lambda url: ImageMaker.save_image_url_get_path(url, batch_id),
+                    images,
+                )
+            )
 
         return downloaded_images
 
@@ -186,7 +185,7 @@ class ImageMaker:
         base_images = []
 
         downloaded_images = []
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=5) as executor:
             downloaded_images = list(
                 executor.map(
                     lambda url: ImageMaker.save_image_url_get_path(url, batch_id),
@@ -236,7 +235,7 @@ class ImageMaker:
 
         time.sleep(1)
 
-        with Pool(processes=5) as pool:
+        with Pool(processes=2) as pool:
             results = pool.map(process_beauty_image, process_images)
 
         cleared_images = []
