@@ -24,24 +24,24 @@ ALLOWED_IPS = {"118.70.171.129", "218.154.54.97"}
 EXCLUDED_ENDPOINTS = {"/api/v1/setting/get_public_config"}
 
 
-@app.before_request
-def limit_remote_addr():
-    # Kiểm tra nếu route không cần kiểm tra IP
-    print(request.path)
-    print("XXXXXXXXXXXXX")
-    if request.path in EXCLUDED_ENDPOINTS:
-        return
-    # Lấy IP của người dùng
-    remote_ip = request.remote_addr
+# @app.before_request
+# def limit_remote_addr():
+#     # Kiểm tra nếu route không cần kiểm tra IP
+#     print(request.path)
+#     print("XXXXXXXXXXXXX")
+#     if request.path in EXCLUDED_ENDPOINTS:
+#         return
+#     # Lấy IP của người dùng
+#     remote_ip = request.remote_addr
 
-    # Nếu IP không hợp lệ thì trả lỗi JSON
-    if remote_ip not in const.ALLOWED_IPS:
-        return (
-            jsonify(
-                {"error": "Forbidden", "message": f"Access denied for IP: {remote_ip}"}
-            ),
-            403,
-        )
+#     # Nếu IP không hợp lệ thì trả lỗi JSON
+#     if remote_ip not in const.ALLOWED_IPS:
+#         return (
+#             jsonify(
+#                 {"error": "Forbidden", "message": f"Access denied for IP: {remote_ip}"}
+#             ),
+#             403,
+#         )
 
 
 # @app.route("/files/<path:filename>")
