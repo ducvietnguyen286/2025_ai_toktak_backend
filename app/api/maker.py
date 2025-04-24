@@ -234,7 +234,7 @@ class APICreateBatch(Resource):
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
             data = Scraper().scraper({"url": url})
-            # return data
+            return data
             if not data:
                 NotificationServices.create_notification(
                     user_id=user_id_login,
