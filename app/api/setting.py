@@ -100,11 +100,24 @@ class GetConfig(Resource):
 @ns.route("/get_public_config")
 class GetPublicConfig(Resource):
     def get(self):
+        remote_ip = request.remote_addr
+        print(remote_ip)
+
+        # Danh sách IP được phép truy cập
+        ALLOWED_IPS = {"118.70.171.129", "218.154.54.97"}
+
         settings = Setting.query.filter_by(status=0).all()
         settings_dict = {
             setting.setting_name: setting.setting_value for setting in settings
         }
 
+        logger.info(settings_dict)
+
+        if settings_dict["IS_MAINTANCE"] == "1":
+            if remote_ip in ALLOWED_IPS:
+                settings_dict["IS_MAINTANCE"] = "0"
+
+        logger.info(settings_dict)
         return Response(
             data=settings_dict,
             message="Get Public setting",
