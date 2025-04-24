@@ -170,6 +170,32 @@ class APINewLink(Resource):
                 title=f"{link.type} 연결이 완료되었습니다.",
             )
 
+            user_template = PostService.get_template_video_by_user_id(current_user.id)
+
+            if user_template:
+                link_sns = json.loads(user_template.link_sns)
+
+                if (
+                    not link_sns
+                    or not isinstance(link_sns, dict)
+                    or "video" not in link_sns
+                    or "image" not in link_sns
+                ):
+                    link_sns = {"video": [], "image": []}
+
+                if link.id not in link_sns["video"]:
+                    link_sns["video"].append(link.id)
+                if link.id not in link_sns["image"]:
+                    link_sns["image"].append(link.id)
+
+                data_update_template = {
+                    "link_sns": json.dumps(link_sns),
+                }
+
+                user_template = PostService.update_template(
+                    user_template.id, **data_update_template
+                )
+
             return Response(
                 data=user_link._to_json(),
                 message="Thêm link thành công",
@@ -1517,6 +1543,24 @@ class APIDeleteLink(Resource):
                 ).to_dict()
             else:
                 user_link.delete()
+                user_template = PostService.get_template_video_by_user_id(
+                    current_user.id
+                )
+
+                if user_template:
+                    link_sns = json.loads(user_template.link_sns)
+                    if link_id in link_sns["video"]:
+                        link_sns["video"].remove(link_id)
+                    if link_id in link_sns["image"]:
+                        link_sns["image"].remove(link_id)
+
+                    data_update_template = {
+                        "link_sns": json.dumps(link_sns),
+                    }
+
+                    user_template = PostService.update_template(
+                        user_template.id, **data_update_template
+                    )
 
             return Response(
                 data={},
