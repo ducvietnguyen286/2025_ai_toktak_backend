@@ -234,7 +234,7 @@ class APICreateBatch(Resource):
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
             data = Scraper().scraper({"url": url})
-            # return data
+
             if not data:
                 NotificationServices.create_notification(
                     user_id=user_id_login,
@@ -426,12 +426,20 @@ class APIBatchMakeImage(Resource):
                     )
 
                 cleared_images = []
+                cutout_images = []
+
                 for image in images:
-                    cutout_images = ImageMaker.cut_out_long_height_images_by_sam(
+                    if len(cutout_images) >= 5:
+                        break
+
+                    cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
                     )
-                    if cutout_images:
-                        cleared_images.extend(cutout_images)
+                    is_cut_out = cuted_image.get("is_cut_out", False)
+                    image_urls = cuted_image.get("image_urls", [])
+                    if is_cut_out:
+                        cutout_images.extend(image_urls)
+                    cleared_images.extend(image_urls)
                 content["cleared_images"] = cleared_images
                 data_update_batch = {
                     "content": json.dumps(content),
@@ -637,20 +645,39 @@ class APIMakePost(Resource):
             type = post.type
 
             need_count = 10 if type == "video" else 5
+            cleared_images = data.get("cleared_images", [])
 
             process_images = json.loads(thumbnails)
             if process_images and len(process_images) < need_count:
                 current_length = len(process_images)
                 need_length = need_count - current_length
-                if len(images) > need_length:
-                    process_images = process_images + images[:need_length]
+                if len(cleared_images) > need_length:
+                    process_images = process_images + cleared_images[:need_length]
                 else:
-                    process_images = process_images + images
+                    process_images = process_images + cleared_images
+
+                if len(process_images) < need_count:
+                    current_length = len(process_images)
+                    need_length = need_count - current_length
+                    if len(images) > need_length:
+                        process_images = process_images + images[:need_length]
+                    else:
+                        process_images = process_images + images
             elif process_images and len(process_images) >= need_count:
                 process_images = process_images[:need_count]
             else:
-                process_images = images
-                process_images = process_images[:need_count]
+                if len(cleared_images) > need_count:
+                    process_images = cleared_images[:need_count]
+                else:
+                    process_images = cleared_images
+
+                if len(process_images) < need_count:
+                    current_length = len(process_images)
+                    need_length = need_count - current_length
+                    if len(images) > need_length:
+                        process_images = process_images + images[:need_length]
+                    else:
+                        process_images = process_images + images
 
             response = None
             render_id = ""
@@ -811,7 +838,7 @@ class APIMakePost(Resource):
                     parse_response = parse_caption.get("response", {})
                     docx_title = parse_response.get("title", "")
                     docx_content = parse_response.get("docx_content", "")
-                    
+
                     ads_text = get_ads_content(url)
                     # res_docx = DocxMaker().make(
                     #     docx_title , ads_text , docx_content, process_images, batch_id=batch_id
@@ -819,20 +846,22 @@ class APIMakePost(Resource):
                     # docx_url = res_docx.get("docx_url", "")
                     # file_size = res_docx.get("file_size", 0)
                     # mime_type = res_docx.get("mime_type", "")
-                    
-                    
+
                     res_txt = DocxMaker().make_txt(
-                        docx_title , ads_text , docx_content, process_images, batch_id=batch_id
+                        docx_title,
+                        ads_text,
+                        docx_content,
+                        process_images,
+                        batch_id=batch_id,
                     )
                     images = ImageMaker.save_normal_images(
                         process_images, batch_id=batch_id
                     )
-                    
+
                     txt_path = res_txt.get("txt_path", "")
                     docx_url = res_txt.get("docx_url", "")
                     file_size = res_txt.get("file_size", 0)
                     mime_type = res_txt.get("mime_type", "")
-                    
 
                 logger.info(
                     "-------------------- PROCESSED CREATE LOGS -------------------"
@@ -867,14 +896,14 @@ class APIMakePost(Resource):
                     description = json.dumps(docx)
                 if parse_response and "content" in parse_response:
                     content = parse_response.get("content", "")
-                    cleared_images = data.get("cleared_images", [])
-                    if cleared_images:
-                        pre_content = ""
-                        for index, cleared_image in enumerate(cleared_images):
-                            current_stt = index + 1
-                            pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
+                    # cleared_images = data.get("cleared_images", [])
+                    # if cleared_images:
+                    #     pre_content = ""
+                    #     for index, cleared_image in enumerate(cleared_images):
+                    #         current_stt = index + 1
+                    #         pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
 
-                        content = pre_content + content
+                    #     content = pre_content + content
 
                     for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
@@ -1063,10 +1092,6 @@ class APIGetStatusUploadBySyncId(Resource):
 
             posts = sync_status["posts"]
             for post in posts:
-
-                logger.info("+++++++++++++++++++++++++")
-                logger.info(post)
-
                 social_post_detail = post["social_posts"]
                 social_sns_description = json.loads(post["social_sns_description"])
                 new_social_sns_description = merge_by_key(
@@ -1078,13 +1103,19 @@ class APIGetStatusUploadBySyncId(Resource):
                 update_data = {
                     "social_sns_description": json.dumps(new_social_sns_description)
                 }
-
                 status_check_sns = 0
                 for social_post_each in social_post_detail:
                     sns_status = social_post_each["status"]
                     error_message = social_post_each["error_message"]
+                    link_type = social_post_each["link_type"]
+                    process_number = social_post_each["process_number"]
+                    instagram_status = ""
                     if sns_status == "PUBLISHED":
                         status_check_sns = const.UPLOADED
+
+                    if link_type == "INSTAGRAM" and process_number == 100:
+                        status_check_sns = const.UPLOADED
+                        instagram_status = sns_status
 
                     notification = NotificationServices.find_notification_sns(
                         post_id, notification_type
@@ -1097,7 +1128,9 @@ class APIGetStatusUploadBySyncId(Resource):
                             notification_type=notification_type,
                             title=f"🔄{notification_type}에 업로드 중입니다.",
                         )
-                    if sns_status == "PUBLISHED":
+                    if sns_status == "PUBLISHED" and (
+                        instagram_status == "" or instagram_status == "PUBLISHED"
+                    ):
                         NotificationServices.update_notification(
                             notification.id,
                             title=f"✅{notification_type} 업로드에 성공했습니다.",
@@ -1105,7 +1138,11 @@ class APIGetStatusUploadBySyncId(Resource):
                             description=error_message,
                             description_korea="",
                         )
-                    elif sns_status == "ERRORED":
+                    elif (instagram_status == "" and sns_status == "ERRORED") and (
+                        sns_status == "PUBLISHED"
+                        and instagram_status != ""
+                        and instagram_status == "ERRORED"
+                    ):
                         description_korea = replace_phrases_in_text(error_message)
                         NotificationServices.update_notification(
                             notification.id,
@@ -1160,10 +1197,17 @@ class APIGetStatusUploadWithBatch(Resource):
                     post_detail["social_post_detail"] = social_post_detail
 
                     status_check_sns = 0
+                    instagram_check = {}
                     for social_post_each in social_post_detail:
                         status = social_post_each["status"]
+                        post_id = social_post_each["post_id"]
+                        link_type = social_post_each["link_type"]
+                        process_number = social_post_each["process_number"]
                         if status == "PUBLISHED":
                             status_check_sns = 1
+                        if link_type == "INSTAGRAM" and process_number == 100:
+                            status_check_sns = const.UPLOADED
+                            instagram_check[post_id] = status
 
                     update_data = {
                         "social_sns_description": json.dumps(social_post_detail)
@@ -1182,6 +1226,7 @@ class APIGetStatusUploadWithBatch(Resource):
                             notification = NotificationServices.find_notification_sns(
                                 sns_post_id, notification_type
                             )
+                            status_instagram = instagram_check.get(sns_post_id, None)
                             if not notification:
                                 notification = NotificationServices.create_notification(
                                     user_id=post_detail["user_id"],
@@ -1190,7 +1235,9 @@ class APIGetStatusUploadWithBatch(Resource):
                                     notification_type=notification_type,
                                     title=f"🔄{notification_type}에 업로드 중입니다.",
                                 )
-                            if sns_status == "PUBLISHED":
+                            if sns_status == "PUBLISHED" and (
+                                not status_instagram or status_instagram == "PUBLISHED"
+                            ):
                                 NotificationServices.update_notification(
                                     notification.id,
                                     title=f"✅{notification_type} 업로드에 성공했습니다.",
@@ -1198,7 +1245,13 @@ class APIGetStatusUploadWithBatch(Resource):
                                     description=error_message,
                                     description_korea="",
                                 )
-                            elif sns_status == "ERRORED":
+                            elif (
+                                not status_instagram and sns_status == "ERRORED"
+                            ) and (
+                                sns_status == "PUBLISHED"
+                                and status_instagram
+                                and status_instagram == "ERRORED"
+                            ):
                                 description_korea = replace_phrases_in_text(
                                     error_message
                                 )

@@ -347,6 +347,7 @@ class InstagramService(BaseService):
                 "access_token": self.access_token,
             }
             response = requests.get(PERMALINK_URL, params=params)
+
             result = response.json()
             self.save_request_log("get_permalink_instagram", params, result)
 
@@ -556,7 +557,7 @@ class InstagramService(BaseService):
                     )
                     return False
                 else:
-                    time.sleep(3)
+                    time.sleep(30)
                     return self.get_upload_status(media_id)
             else:
                 self.save_errors(
