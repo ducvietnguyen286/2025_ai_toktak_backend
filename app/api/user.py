@@ -170,34 +170,7 @@ class APINewLink(Resource):
                 title=f"{link.type} 연결이 완료되었습니다.",
             )
 
-            user_template = PostService.get_template_video_by_user_id(current_user.id)
-
-            if user_template:
-                link_sns = json.loads(user_template.link_sns)
-                logger.info("-------------------------------------------------------")
-                logger.info(link_id)
-                logger.info(link_sns)
-
-                if (
-                    not link_sns
-                    or not isinstance(link_sns, dict)
-                    or "video" not in link_sns
-                    or "image" not in link_sns
-                ):
-                    link_sns = {"video": [], "image": []}
-
-                link_sns["video"].append(link_id)
-                link_sns["image"].append(link_id)
-
-                data_update_template = {
-                    "link_sns": json.dumps(link_sns),
-                }
-                
-                logger.info(data_update_template)
-
-                user_template = PostService.update_template(
-                    user_template.id, **data_update_template
-                )
+            PostService.update_default_template(current_user.id, link_id)
 
             return Response(
                 data=user_link._to_json(),
@@ -973,8 +946,7 @@ class APIGetCallbackTiktok(Resource):
                     + "&error_description="
                     + error_description
                 )
-
-            print("Token data:", token_data)
+ 
 
             token = token_data.get("data")
             if not token:
@@ -991,6 +963,13 @@ class APIGetCallbackTiktok(Resource):
                 user_link.meta = json.dumps(token)
                 user_link.status = 1
                 user_link.save()
+
+                NotificationServices.create_notification(
+                    user_id=int_user_id,
+                    title="TIKTOK 연결이 완료되었습니다.",
+                )
+
+                PostService.update_default_template(int_user_id, link_id)
 
             user_info = TiktokTokenService().fetch_user_info(user_link)
             logger.info(f"-----------TIKTOK DATA: {user_info}-------------")
@@ -1189,6 +1168,11 @@ class APIGetCallbackYoutube(Resource):
             int_link_id = int(link_id)
 
             if not client:
+                NotificationServices.create_notification(
+                    user_id=user_id ,
+                    status=const.NOTIFICATION_FALSE,
+                    title="Youtube 연결에 실패했습니다. 계정 정보를 확인해주세요.",
+                )
                 return Response(
                     message="Invalid client",
                     status=400,
@@ -1202,6 +1186,11 @@ class APIGetCallbackYoutube(Resource):
                     status=1,
                     meta=json.dumps({}),
                 )
+                NotificationServices.create_notification(
+                    user_id=int_user_id,
+                    title="Youtube 연결이 완료되었습니다.",
+                )
+                PostService.update_default_template(int_user_id, link_id)
 
             response = YoutubeTokenService().exchange_code_for_token(
                 code=code,
@@ -1209,6 +1198,11 @@ class APIGetCallbackYoutube(Resource):
                 client=client,
             )
             if not response:
+                NotificationServices.create_notification(
+                    user_id=user_id ,
+                    status=const.NOTIFICATION_FALSE,
+                    title="Youtube 연결에 실패했습니다. 계정 정보를 확인해주세요.",
+                )
                 return Response(
                     message="Lỗi kết nối",
                     status=400,
