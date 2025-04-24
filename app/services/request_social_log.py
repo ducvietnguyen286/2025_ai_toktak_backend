@@ -1,6 +1,7 @@
 from datetime import datetime
 from app.models.request_social_log import RequestSocialLog
 from app.models.request_social_count import RequestSocialCount
+from app.models.social_post_created import SocialPostCreated
 
 
 class RequestSocialLogService:
@@ -74,3 +75,34 @@ class RequestSocialLogService:
             RequestSocialCount.hour == current_hour,
         ).first()
         return request_social_count.count if request_social_count else 0
+
+    @staticmethod
+    def increment_social_post_created(user_id, social):
+        current_day = datetime.now().strftime("%Y-%m-%d")
+        post_created = SocialPostCreated.objects(
+            user_id=user_id,
+            social=social,
+            day=current_day,
+        ).first()
+        if post_created:
+            post_created.count += 1
+            post_created.save()
+        else:
+            post_created = SocialPostCreated(
+                user_id=user_id,
+                social=social,
+                count=1,
+                day=current_day,
+            )
+            post_created.save()
+        return post_created
+
+    @staticmethod
+    def get_social_post_created_by_user_id(user_id, social):
+        current_day = datetime.now().strftime("%Y-%m-%d")
+        post_created = SocialPostCreated.objects(
+            user_id=user_id,
+            social=social,
+            day=current_day,
+        ).first()
+        return post_created.count if post_created else 0
