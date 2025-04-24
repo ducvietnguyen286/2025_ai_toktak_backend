@@ -19,14 +19,11 @@ from multiprocessing import Pool
 import numpy as np
 from app.enums.blocked_text import BlockedText
 from app.lib.logger import logger
-import faulthandler
 
 from app.lib.header import generate_desktop_user_agent
 from app.third_parties.google import GoogleVision
 
-torch.autograd.set_detect_anomaly(True)
 multiprocessing.set_start_method("spawn", force=True)
-faulthandler.enable()
 
 
 date_create = datetime.datetime.now().strftime("%Y_%m_%d")
@@ -388,15 +385,15 @@ class ImageMaker:
 
                         for result in results:
                             if "is_remove" in result and result["is_remove"]:
-                                image_path = result["image_path"]
-                                if os.path.exists(image_path):
-                                    os.remove(image_path)
+                                cropped_image_path = result["image_path"]
+                                if os.path.exists(cropped_image_path):
+                                    os.remove(cropped_image_path)
                                 continue
                             if "is_remove" in result and result["is_remove"] == False:
-                                image_path = result["image_path"]
-                                file_name = image_path.split("/")[-1]
+                                cropped_image_path = result["image_path"]
+                                file_name = cropped_image_path.split("/")[-1]
                                 cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
-                                conf = conf_images[image_path]
+                                conf = conf_images[cropped_image_path]
                                 cropped_images.append((cropped_url, conf))
                                 current_image_count += 1
 
@@ -420,7 +417,8 @@ class ImageMaker:
                         if os.path.exists(cropped_image_path):
                             os.remove(cropped_image_path)
                     image.close()
-                    os.remove(image_path)
+                    if os.path.exists(image_path):
+                        os.remove(image_path)
                     return {
                         "image_urls": top,
                         "is_cut_out": True,
