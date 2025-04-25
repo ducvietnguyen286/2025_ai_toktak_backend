@@ -8,7 +8,6 @@ class RequestSocialCount(BaseDocument):
         "indexes": [
             {
                 "fields": ["user_id", "social", "day", "hour"],
-                "unique": True,
                 "sparse": True,
             }
         ],
