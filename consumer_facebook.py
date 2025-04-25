@@ -164,9 +164,7 @@ async def main():
     )
 
     app = create_app()
-    connection = await connect_rabbitmq_with_retry(
-        RABBITMQ_URL, heartbeat=60, timeout=10, reconnect_interval=5
-    )
+    connection = await connect_rabbitmq_with_retry(RABBITMQ_URL)
     channel = await connection.channel()
     queue = await channel.declare_queue(RABBITMQ_QUEUE_FACEBOOK, durable=True)
 
