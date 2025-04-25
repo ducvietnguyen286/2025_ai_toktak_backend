@@ -5,6 +5,7 @@ from app.models.social_post import SocialPost
 from app.models.social_sync import SocialSync
 from app.models.user_link import UserLink
 from datetime import datetime, timedelta
+from bson import ObjectId
 
 
 class SocialPostService:
@@ -64,7 +65,8 @@ class SocialPostService:
 
     @staticmethod
     def update_multple_social_post_by__ids(ids, **args):
-        social_post = SocialPost.objects(id__in=ids)
+        converted_ids = [ObjectId(id) for id in ids]
+        social_post = SocialPost.objects(id__in=converted_ids)
         social_post.update(**args)
         return social_post
 

@@ -1181,9 +1181,10 @@ class APIGetStatusUploadBySyncId(Resource):
                     update_data["status_sns"] = 0
                     update_data["status"] = const.DRAFT_STATUS
 
-                SocialPostService.update_multple_social_post_by__ids(
-                    update_instagram, status=SocialMedia.PUBLISHED.value
-                )
+                if len(update_instagram) > 0:
+                    SocialPostService.update_multple_social_post_by__ids(
+                        update_instagram, status=SocialMedia.PUBLISHED.value
+                    )
 
                 PostService.update_post(post_id, **update_data)
 
@@ -1302,9 +1303,10 @@ class APIGetStatusUploadWithBatch(Resource):
 
                     PostService.update_post(post_id, **update_data)
 
-                    SocialPostService.update_multple_social_post_by__ids(
-                        update_instagram, status=SocialMedia.PUBLISHED.value
-                    )
+                    if len(update_instagram) > 0:
+                        SocialPostService.update_multple_social_post_by__ids(
+                            update_instagram, status=SocialMedia.PUBLISHED.value
+                        )
 
                     post_detail["social_sns_description"] = json.dumps(
                         social_post_detail
