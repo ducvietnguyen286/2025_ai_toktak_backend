@@ -34,17 +34,17 @@ class GoogleVision:
         if texts:
             full_text = texts[0].description
 
-            for text in texts[1:]:
-                vertices = text.bounding_poly.vertices
-                if len(vertices) < 4:
-                    continue
+            raw_polygons = [
+                Polygon([(v.x, v.y) for v in text.bounding_poly.vertices])
+                for text in texts[1:]
+                if len(text.bounding_poly.vertices) >= 4
+            ]
 
-                polygon = Polygon([(v.x, v.y) for v in vertices])
-                if not polygon.is_valid:
-                    polygon = polygon.buffer(0)
-
-                if polygon.area > 0:
-                    polygons.append(polygon)
+            for poly in raw_polygons:
+                if not poly.is_valid:
+                    poly = poly.buffer(0)
+                if poly.area > 0:
+                    polygons.append(poly)
 
             if not polygons:
                 ratio = 0.0
@@ -53,12 +53,9 @@ class GoogleVision:
                 merged_polygons = self.merge_close_polygons(
                     polygons, distance_threshold=15
                 )
-                sum_text_area = 0
-                for poly in merged_polygons:
-                    if poly.is_empty:
-                        continue
-                    sum_text_area += poly.area
-
+                sum_text_area = sum(
+                    poly.area for poly in merged_polygons if not poly.is_empty
+                )
                 ratio = sum_text_area / image_area if image_area > 0 else 0.0
 
         return full_text, ratio
