@@ -39,7 +39,16 @@ class MemberProfileAPI(Resource):
             profile = ProfileServices.profile_by_user_id(current_user.id)
             if not profile:
                 nick_name = generate_random_nick_name(current_user.email)
-                design_settings = {}
+                design_settings = {
+                    "background_color": "#E8F0FE",
+                    "main_text_color": "#0A1929",
+                    "sub_text_color": "#6B7F99",
+                    "notice_color": "#6B7F99",
+                    "notice_background_color": "#FFFFFF",
+                    "product_background_color": "#FFFFFF",
+                    "product_name_color": "#6B7F99",
+                    "product_price_color": "#1E4C94",
+                }
                 profile = ProfileServices.create_profile(
                     user_id=current_user.id,
                     nick_name=nick_name,
