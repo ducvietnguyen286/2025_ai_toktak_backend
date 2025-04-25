@@ -1181,7 +1181,7 @@ class APIGetStatusUploadBySyncId(Resource):
                     update_data["status_sns"] = 0
                     update_data["status"] = const.DRAFT_STATUS
 
-                SocialPostService.update_social_post(
+                SocialPostService.update_multple_social_post_by__ids(
                     update_instagram, status=SocialMedia.PUBLISHED.value
                 )
 
@@ -1302,7 +1302,7 @@ class APIGetStatusUploadWithBatch(Resource):
 
                     PostService.update_post(post_id, **update_data)
 
-                    SocialPostService.update_social_post(
+                    SocialPostService.update_multple_social_post_by__ids(
                         update_instagram, status=SocialMedia.PUBLISHED.value
                     )
 
