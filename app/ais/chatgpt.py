@@ -177,6 +177,7 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
 
 
 def call_chatgpt_create_blog(images=[], data={}, post_id=0):
+
     prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 블로그 게시글을 작성해 주세요.
 
 [역할]  
@@ -262,11 +263,9 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
         "제품 사용 방법에 대한 설명이 포함된 두 번째 단락",
         "IMAGE_URL_1",
         "제품을 구매하는 방법과 판매처 정보",
-        "IMAGE_URL_2",
+        ...,
+        "IMAGE_URL_{image_index}",
         "제품을 구매하는 방법과 판매처 정보",
-        "IMAGE_URL_3",
-        "제품을 구매하는 방법과 판매처 정보",
-        "IMAGE_URL_4",
         "{base_url}",
         "#hashtag1 #hashtag2 #hashtag3"
     ],
@@ -277,16 +276,16 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
                 <p>제품 사용 방법에 대한 설명이 포함된 두 번째 단락</p>
                 <p><img src="IMAGE_URL_1" alt="{name}"></p>
                 <p>제품을 구매하는 방법과 판매처 정보</p>
-                <p><img src="IMAGE_URL_2" alt="{name}"></p>...etc
+                ...etc
+                <p><img src="IMAGE_URL_{image_index}" alt="{name}"></p>
                 <p>제품을 구매하는 방법과 판매처 정보</p>
-                <p><img src="IMAGE_URL_3" alt="{name}"></p>...etc
-                <p>제품을 구매하는 방법과 판매처 정보</p>
-                <p><img src="IMAGE_URL_4" alt="{name}"></p>...etc
                 <p>{base_url}</p>
                 <p>#hashtag1 #hashtag2 #hashtag3</p>
 }
 """
-    prompt = prompt.replace("COUNT_IMAGE", str(len(images)))
+    count_image = len(images)
+    image_index = count_image - 1
+    data["image_index"] = image_index
 
     prompt = replace_prompt_with_data(prompt, data)
 
