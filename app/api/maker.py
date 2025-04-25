@@ -1094,7 +1094,6 @@ class APIGetStatusUploadBySyncId(Resource):
 
             show_posts = []
             posts = sync_status["posts"]
-            update_instagram = []
             for post in posts:
                 social_post_detail = post["social_posts"]
                 social_sns_description = json.loads(post["social_sns_description"])
@@ -1111,7 +1110,6 @@ class APIGetStatusUploadBySyncId(Resource):
                 show_post_detail = []
                 status_check_sns = 0
                 for social_post_each in social_post_detail:
-                    social_post_id = social_post_each["id"]
                     sns_status = social_post_each["status"]
                     error_message = social_post_each["error_message"]
                     link_type = social_post_each["link_type"]
@@ -1144,7 +1142,6 @@ class APIGetStatusUploadBySyncId(Resource):
                             description="업로드가 잘 됐는지 한 번만 확인해 주세요 😊",
                             description_korea="업로드가 잘 됐는지 한 번만 확인해 주세요 😊",
                         )
-                        update_instagram.append(social_post_id)
                     if (
                         sns_status == SocialMedia.PUBLISHED.value
                         and link_type != SocialMedia.INSTAGRAM.value
@@ -1181,11 +1178,6 @@ class APIGetStatusUploadBySyncId(Resource):
                     update_data["status_sns"] = 0
                     update_data["status"] = const.DRAFT_STATUS
 
-                if len(update_instagram) > 0:
-                    SocialPostService.update_multple_social_post_by__ids(
-                        update_instagram, status=SocialMedia.PUBLISHED.value
-                    )
-
                 PostService.update_post(post_id, **update_data)
 
                 show_posts.append(post)
@@ -1219,7 +1211,6 @@ class APIGetStatusUploadWithBatch(Resource):
 
             posts = PostService.get_posts_by_batch_id(batch.id)
             show_posts = []
-            update_instagram = []
             for post_detail in posts:
                 try:
                     post_id = post_detail["id"]
@@ -1231,7 +1222,6 @@ class APIGetStatusUploadWithBatch(Resource):
                     status_check_sns = 0
                     show_detail_posts = []
                     for sns_post_detail in social_post_detail:
-                        social_post_id = sns_post_detail["id"]
                         sns_post_id = sns_post_detail["post_id"]
                         sns_status = sns_post_detail["status"]
                         notification_type = sns_post_detail["title"]
@@ -1266,7 +1256,6 @@ class APIGetStatusUploadWithBatch(Resource):
                                 description_korea="업로드가 잘 됐는지 한 번만 확인해 주세요 😊",
                             )
                             sns_post_detail["status"] = SocialMedia.PUBLISHED.value
-                            update_instagram.append(social_post_id)
 
                         if (
                             sns_status == SocialMedia.PUBLISHED.value
@@ -1302,11 +1291,6 @@ class APIGetStatusUploadWithBatch(Resource):
                         update_data["status"] = const.UPLOADED
 
                     PostService.update_post(post_id, **update_data)
-
-                    if len(update_instagram) > 0:
-                        SocialPostService.update_multple_social_post_by__ids(
-                            update_instagram, status=SocialMedia.PUBLISHED.value
-                        )
 
                     post_detail["social_sns_description"] = json.dumps(
                         social_post_detail
