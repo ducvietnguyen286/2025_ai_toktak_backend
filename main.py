@@ -57,6 +57,22 @@ EXCLUDED_ENDPOINTS = {"/api/v1/setting/get_public_config"}
 #     return send_from_directory(VOICE_FOLDER, filename)
 
 
+@app.route("/", methods=["GET"])
+def index():
+    headers = dict(request.headers)
+    params = dict(request.args)
+    is_show_headers = params.get("show_header", "false").lower() == "true"
+    if is_show_headers:
+        return {
+            "message": "Welcome to the Flask API",
+            "headers": headers,
+        }
+    else:
+        return {
+            "message": "Welcome to the Flask API",
+        }
+
+
 if __name__ == "__main__":
     is_debug = config_name == "develop"
     application.run(debug=True)

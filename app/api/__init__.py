@@ -25,12 +25,6 @@ bp = Blueprint("api", __name__, url_prefix="/api/v1")
 api = Api(bp, version="1.0", title="Flask API", description="Flask API", doc="/docs/")
 
 
-@bp.route("/", methods=["GET"])
-def index(request):
-    headers = dict(request.headers)
-    return {"message": "Welcome to the Flask API", "headers": headers}
-
-
 api.add_namespace(ns=ns_post)
 api.add_namespace(ns=maker_ns)
 api.add_namespace(ns=auth_ns)
