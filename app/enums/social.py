@@ -3,6 +3,9 @@ class SocialMedia:
     Enum for social media platforms.
     """
 
+    PUBLISHED = "PUBLISHED"
+    ERRORED = "ERRORED"
+
     FACEBOOK = "FACEBOOK"
     TWITTER = "X-TWITTER"
     THREAD = "THREAD"
