@@ -101,7 +101,7 @@ class GetConfig(Resource):
 @ns.route("/get_public_config")
 class GetPublicConfig(Resource):
     def get(self):
-        remote_ip = request.remote_addr
+        remote_ip = get_real_ip()
         settings = Setting.query.filter_by(status=0).all()
         settings_dict = {
             setting.setting_name: setting.setting_value for setting in settings
@@ -112,11 +112,25 @@ class GetPublicConfig(Resource):
             if remote_ip in ALLOWED_IPS:
                 settings_dict["IS_MAINTANCE"] = "0"
         
-        settings_dict["remote_ip"] = remote_ip
+        # settings_dict["remote_ip"] = remote_ip
         # settings_dict.pop("ALLOWED_IPS", None)
-        logger.info(settings_dict)
-        logger.info(remote_ip)
+        # logger.info(settings_dict)
+        # logger.info(remote_ip)
         return Response(
             data=settings_dict,
             message="Get Public setting",
         ).to_dict()
+
+
+
+
+def get_real_ip():
+    # Ưu tiên Cloudflare header
+    ip = request.headers.get('CF-Connecting-IP')
+    if not ip:
+        # Nếu không có, lấy từ chuỗi X-Forwarded-For
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        # Trường hợp X-Forwarded-For có dạng "client, proxy1, proxy2"
+        if ',' in ip:
+            ip = ip.split(',')[0].strip()
+    return ip
