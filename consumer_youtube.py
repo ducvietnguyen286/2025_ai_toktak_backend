@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import random
 from aio_pika import connect_robust, IncomingMessage
 from dotenv import load_dotenv
 import logging
@@ -114,18 +115,46 @@ async def process_message_async(body, app):
     return result
 
 
-async def on_message(message: IncomingMessage, app, semaphore):
+async def process_message_with_retry(message: IncomingMessage, app, semaphore):
     """
-    Hàm callback bất đồng bộ để xử lý từng message.
-    Sử dụng create_task để xử lý message nền, giúp event loop không bị block.
+    Xử lý message với retry logic (đã được bao bọc trong hàm process_message_sync).
+    Dùng semaphore để giới hạn số lượng tác vụ song song.
     """
-
-    async with message.process():
+    async with message.process():  # Đảm bảo ACK message khi xử lý xong
         body = message.body.decode()
         log_youtube_message(f"Received message: {body}")
-        # Tạo task nền để xử lý message, không chặn việc nhận message mới
-        async with semaphore:
-            await process_message_async(body, app)
+        try:
+            async with semaphore:
+                result = await process_message_async(body, app)
+            return result
+        except Exception as e:
+            log_youtube_message(f"Message processing failed after retries: {e}")
+            return False
+
+
+async def connect_rabbitmq_with_retry(rabbitmq_url, max_attempts=5):
+    """
+    Kết nối đến RabbitMQ với retry logic.
+    Nếu kết nối thất bại, sẽ cố gắng kết nối lại theo exponential backoff.
+    """
+    attempt = 0
+    while attempt < max_attempts:
+        try:
+            connection = await connect_robust(
+                rabbitmq_url, heartbeat=60, timeout=10, reconnect_interval=5
+            )
+            log_youtube_message("Connected to RabbitMQ successfully.")
+            return connection
+        except Exception as e:
+            attempt += 1
+            log_youtube_message(f"Connection attempt {attempt} failed: {e}")
+            sleep_time = 2**attempt + random.uniform(0, 1)
+            await asyncio.sleep(sleep_time)
+    raise Exception("Max retry attempts reached. Failed to connect to RabbitMQ.")
+
+
+async def on_message(message: IncomingMessage, app, semaphore):
+    await process_message_with_retry(message, app, semaphore)
 
 
 async def main():
@@ -134,7 +163,7 @@ async def main():
     )
 
     app = create_app()
-    connection = await connect_robust(RABBITMQ_URL)
+    connection = await connect_rabbitmq_with_retry(RABBITMQ_URL)
     channel = await connection.channel()
     queue = await channel.declare_queue(RABBITMQ_QUEUE_YOUTUBE, durable=True)
 
