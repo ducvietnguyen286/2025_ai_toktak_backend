@@ -811,7 +811,6 @@ class APITiktokLogin(Resource):
             user_id = args.get("user_id")
             link_id = args.get("link_id")
 
-            logger.info(f"User ID: {user_id}, Link ID: {link_id}")
 
             state_token = self.generate_state_token(user_id, link_id)
             scope = "user.info.basic,user.info.profile,video.publish,video.upload"
@@ -826,7 +825,6 @@ class APITiktokLogin(Resource):
             }
             url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
 
-            logger.info(f"Redirect to Tiktok: {url}")
 
             return redirect(url)
         except Exception as e:
@@ -837,7 +835,6 @@ class APITiktokLogin(Resource):
 
     def generate_state_token(self, user_id, link_id):
 
-        logger.info(f"Generate state token for user_id: {user_id}, link_id: {link_id}")
 
         nonce = secrets.token_urlsafe(16)
         payload = {
@@ -1579,7 +1576,6 @@ class APIUserLinkTemplate(Resource):
         urrent_user = AuthService.get_current_identity()
         user_id = urrent_user.id
         all_links = LinkService.get_all_links()
-        logger.info(all_links)
 
         # Lấy template lưu trữ các lựa chọn
         user_template = PostService.get_template_video_by_user_id(user_id)
@@ -1592,11 +1588,9 @@ class APIUserLinkTemplate(Resource):
             except Exception:
                 pass
 
-        logger.info(link_sns_data)
 
         # Hàm dựng danh sách link cho mỗi loại
         def build_link_array(selected_ids):
-            logger.info(all_links)
             return [
                 {
                     "id": link["id"],
