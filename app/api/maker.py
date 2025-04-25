@@ -1230,6 +1230,18 @@ class APIGetStatusUploadWithBatch(Resource):
                         if sns_status == SocialMedia.PUBLISHED.value:
                             status_check_sns = const.UPLOADED
 
+                        notification = NotificationServices.find_notification_sns(
+                            sns_post_id, notification_type
+                        )
+                        if not notification:
+                            notification = NotificationServices.create_notification(
+                                user_id=post_detail["user_id"],
+                                batch_id=post_detail["batch_id"],
+                                post_id=sns_post_id,
+                                notification_type=notification_type,
+                                title=f"🔄{notification_type}에 업로드 중입니다.",
+                            )
+
                         if (
                             link_type == SocialMedia.INSTAGRAM.value
                             and process_number == 100
@@ -1244,17 +1256,6 @@ class APIGetStatusUploadWithBatch(Resource):
                             )
                             sns_post_detail["status"] = SocialMedia.PUBLISHED.value
 
-                        notification = NotificationServices.find_notification_sns(
-                            sns_post_id, notification_type
-                        )
-                        if not notification:
-                            notification = NotificationServices.create_notification(
-                                user_id=post_detail["user_id"],
-                                batch_id=post_detail["batch_id"],
-                                post_id=sns_post_id,
-                                notification_type=notification_type,
-                                title=f"🔄{notification_type}에 업로드 중입니다.",
-                            )
                         if (
                             sns_status == SocialMedia.PUBLISHED.value
                             and link_type != SocialMedia.INSTAGRAM.value
