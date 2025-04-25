@@ -426,7 +426,9 @@ class APISendPosts(Resource):
 
             social_sync.social_post_ids = social_post_ids
             social_sync.save()
-            redis_client.set(f"toktak:progress-sync:{sync_id}", json.dumps(progress))
+            redis_client.set(
+                f"toktak:progress-sync:{sync_id}", json.dumps(progress), ex=1800
+            )
 
             if current_user.batch_no_limit_sns == 0:
                 current_user.batch_sns_remain -= total_sns_content
@@ -718,6 +720,7 @@ class APIPostToLinks(Resource):
             redis_client.set(
                 f"toktak:progress:{key_progress}:{post_id}",
                 json.dumps(progress),
+                ex=1800,
             )
 
             return Response(
@@ -944,7 +947,6 @@ class APIGetCallbackTiktok(Resource):
                     + "&error_description="
                     + error_description
                 )
- 
 
             token = token_data.get("data")
             if not token:
@@ -1167,7 +1169,7 @@ class APIGetCallbackYoutube(Resource):
 
             if not client:
                 NotificationServices.create_notification(
-                    user_id=user_id ,
+                    user_id=user_id,
                     status=const.NOTIFICATION_FALSE,
                     title="Youtube 연결에 실패했습니다. 계정 정보를 확인해주세요.",
                 )
@@ -1197,7 +1199,7 @@ class APIGetCallbackYoutube(Resource):
             )
             if not response:
                 NotificationServices.create_notification(
-                    user_id=user_id ,
+                    user_id=user_id,
                     status=const.NOTIFICATION_FALSE,
                     title="Youtube 연결에 실패했습니다. 계정 정보를 확인해주세요.",
                 )
