@@ -1255,7 +1255,10 @@ class APIGetStatusUploadWithBatch(Resource):
                                 notification_type=notification_type,
                                 title=f"🔄{notification_type}에 업로드 중입니다.",
                             )
-                        if sns_status == SocialMedia.PUBLISHED.value:
+                        if (
+                            sns_status == SocialMedia.PUBLISHED.value
+                            and link_type != SocialMedia.INSTAGRAM.value
+                        ):
                             NotificationServices.update_notification(
                                 notification.id,
                                 title=f"✅{notification_type} 업로드에 성공했습니다.",
@@ -1263,7 +1266,10 @@ class APIGetStatusUploadWithBatch(Resource):
                                 description=error_message,
                                 description_korea="",
                             )
-                        elif sns_status == SocialMedia.ERRORED.value:
+                        elif (
+                            sns_status == SocialMedia.ERRORED.value
+                            and link_type != SocialMedia.INSTAGRAM.value
+                        ):
                             description_korea = replace_phrases_in_text(error_message)
                             NotificationServices.update_notification(
                                 notification.id,
