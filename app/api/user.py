@@ -1546,8 +1546,6 @@ class APIDeleteLink(Resource):
 
                 if user_template:
                     link_sns = json.loads(user_template.link_sns)
-                    logger.info("delete sns")
-                    logger.info(link_sns)
                     if link_id in link_sns["video"]:
                         link_sns["video"].remove(link_id)
                     if link_id in link_sns["image"]:
