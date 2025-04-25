@@ -629,6 +629,9 @@ class APIMakePost(Resource):
                     status=201,
                 ).to_dict()
 
+            logger(f"BATCH: {batch}")
+            logger(f"POST: {post}")
+
             if batch.status == 1 or post.status == 1:
                 return Response(
                     message="Post đã được tạo",
