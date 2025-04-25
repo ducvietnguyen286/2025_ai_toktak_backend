@@ -1116,6 +1116,19 @@ class APIGetStatusUploadBySyncId(Resource):
                     process_number = social_post_each["process_number"]
                     if sns_status == SocialMedia.PUBLISHED.value:
                         status_check_sns = const.UPLOADED
+
+                    notification = NotificationServices.find_notification_sns(
+                        post_id, notification_type
+                    )
+                    if not notification:
+                        notification = NotificationServices.create_notification(
+                            user_id=post["user_id"],
+                            batch_id=post["batch_id"],
+                            post_id=post_id,
+                            notification_type=notification_type,
+                            title=f"🔄{notification_type}에 업로드 중입니다.",
+                        )
+
                     if (
                         link_type == SocialMedia.INSTAGRAM.value
                         and process_number == 100
@@ -1128,18 +1141,6 @@ class APIGetStatusUploadBySyncId(Resource):
                             title=f"✅Instagram 업로드에 성공했습니다.",
                             description="업로드가 잘 됐는지 한 번만 확인해 주세요 😊",
                             description_korea="업로드가 잘 됐는지 한 번만 확인해 주세요 😊",
-                        )
-
-                    notification = NotificationServices.find_notification_sns(
-                        post_id, notification_type
-                    )
-                    if not notification:
-                        notification = NotificationServices.create_notification(
-                            user_id=post["user_id"],
-                            batch_id=post["batch_id"],
-                            post_id=post_id,
-                            notification_type=notification_type,
-                            title=f"🔄{notification_type}에 업로드 중입니다.",
                         )
                     if (
                         sns_status == SocialMedia.PUBLISHED.value
