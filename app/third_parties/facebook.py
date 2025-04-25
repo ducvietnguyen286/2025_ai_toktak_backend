@@ -43,7 +43,7 @@ class FacebookTokenService:
 
             if "data" not in data:
                 # user_link.status = 0
-                user_link.save()
+                # user_link.save()
                 return None
 
             return data.get("data")
@@ -86,7 +86,7 @@ class FacebookTokenService:
 
             if "data" not in data:
                 # user_link.status = 0
-                user_link.save()
+                # user_link.save()
                 return None
 
             if is_all:
