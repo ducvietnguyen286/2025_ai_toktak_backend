@@ -111,7 +111,8 @@ class GetPublicConfig(Resource):
         if settings_dict["IS_MAINTANCE"] == "1":
             if remote_ip in ALLOWED_IPS:
                 settings_dict["IS_MAINTANCE"] = "0"
-
+        
+        settings_dict["remote_ip"] = remote_ip
         # settings_dict.pop("ALLOWED_IPS", None)
         logger.info(settings_dict)
         logger.info(remote_ip)
