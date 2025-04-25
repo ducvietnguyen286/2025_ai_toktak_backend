@@ -76,7 +76,7 @@ def action_send_post_to_link(message):
         if link.social_type == "SOCIAL":
             if link.type == "FACEBOOK":
                 FacebookService(sync_id=sync_id).send_post(
-                    post, link, user_id, social_post_id, page_id, is_all
+                    post, link, user_id, social_post_id, page_id, is_all=True
                 )
         return True
     except Exception as e:

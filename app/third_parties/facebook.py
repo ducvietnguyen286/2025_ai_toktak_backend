@@ -43,7 +43,7 @@ class FacebookTokenService:
 
             if "data" not in data:
                 # user_link.status = 0
-                user_link.save()
+                # user_link.save()
                 return None
 
             return data.get("data")
@@ -86,7 +86,7 @@ class FacebookTokenService:
 
             if "data" not in data:
                 # user_link.status = 0
-                user_link.save()
+                # user_link.save()
                 return None
 
             if is_all:
@@ -241,7 +241,7 @@ class FacebookService(BaseService):
                 "SEND POST ERROR NOT ALL: Can't get page token",
                 base_message="Can't get page token",
             )
-            UserService.delete_user_link(self.user_link.id)
+            # UserService.delete_user_link(self.user_link.id)
             return True
         else:
             if not token_page:
@@ -250,7 +250,7 @@ class FacebookService(BaseService):
                     "SEND POST ERROR ALL: Can't get page token",
                     base_message="Can't get page token",
                 )
-                UserService.delete_user_link(self.user_link.id)
+                # UserService.delete_user_link(self.user_link.id)
                 return True
             response_token = token_page
             page_id = response_token.get("id")
