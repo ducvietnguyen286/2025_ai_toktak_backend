@@ -120,8 +120,8 @@ class TiktokTokenService:
             data_token = token_data.get("data")
 
             if not token_data or not data_token or not data_token.get("access_token"):
-                user_link.status = 0
-                user_link.save()
+                # user_link.status = 0
+                # user_link.save()
 
                 redis_client.set(redis_key_done, "failled", ex=300)
 

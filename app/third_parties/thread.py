@@ -59,8 +59,8 @@ class ThreadTokenService:
                 user_link.save()
                 return True
             else:
-                user_link.status = 0
-                user_link.save()
+                # user_link.status = 0
+                # user_link.save()
 
                 log_thread_message(f"Error exchanging code: {data}")
                 return False
@@ -123,8 +123,8 @@ class ThreadTokenService:
                 user_link.save()
                 return True
             else:
-                user_link.status = 0
-                user_link.save()
+                # user_link.status = 0
+                # user_link.save()
 
                 log_thread_message(f"Error exchanging token: {data}")
                 return False
@@ -178,8 +178,8 @@ class ThreadTokenService:
                 user_link.save()
                 return True
             else:
-                user_link.status = 0
-                user_link.save()
+                # user_link.status = 0
+                # user_link.save()
 
                 log_thread_message(f"Error exchanging token: {data}")
                 return False

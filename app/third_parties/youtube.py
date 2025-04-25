@@ -184,8 +184,8 @@ class YoutubeService(BaseService):
                     user_link.meta = json.dumps(meta)
                     user_link.save()
                 except Exception as e:
-                    user_link.status = 0
-                    user_link.save()
+                    # user_link.status = 0
+                    # user_link.save()
 
                     self.save_errors(
                         "ERRORED",
