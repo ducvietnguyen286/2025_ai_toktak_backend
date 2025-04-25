@@ -15,6 +15,7 @@ import json
 import const
 import hashlib
 from app.models.batch import Batch
+from app.lib.logger import logger
 
 
 class ProductService:
@@ -146,6 +147,7 @@ class ProductService:
         try:
             batch_detail = Batch.query.get(batch_id)
             if not batch_detail:
+                logger.error(f"Can't create Product   user_id :  {str(user_id)} , batch_id : {batch_id}")
                 return
             product_url = batch_detail.url
             product_url_hash = hashlib.sha1(product_url.encode()).hexdigest()
@@ -167,5 +169,6 @@ class ProductService:
                     content=batch_detail.content,
                 )
         except Exception as ex:
+            logger.error(f"Exception: create_sns_product   :  {str(ex)}")
             return None
         return True
