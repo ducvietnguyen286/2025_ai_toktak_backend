@@ -113,6 +113,8 @@ class GetPublicConfig(Resource):
                 settings_dict["IS_MAINTANCE"] = "0"
 
         settings_dict.pop("ALLOWED_IPS", None)
+        logger.info(settings_dict)
+        logger.info(remote_ip)
         return Response(
             data=settings_dict,
             message="Get Public setting",
