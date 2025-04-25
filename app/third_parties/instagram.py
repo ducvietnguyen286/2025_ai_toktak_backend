@@ -5,6 +5,7 @@ import time
 import traceback
 
 import requests
+from app.enums.limit import LimitSNS
 from app.lib.logger import log_instagram_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
@@ -290,22 +291,27 @@ class InstagramService(BaseService):
             media_ids = []
             for index, image in enumerate(images):
                 media_id = self.upload_image(image, index=index + 1)
+                time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
                 if not media_id:
                     return False
                 is_uploaded = self.get_upload_status(media_id)
+                time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
                 if not is_uploaded:
                     return False
                 media_ids.append(media_id)
 
             carousel_id = self.upload_carousel(media_ids, text)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not carousel_id:
                 return False
 
             publish_id = self.publish_post(carousel_id)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not publish_id:
                 return False
 
             permalink = self.get_permalink_instagram(publish_id)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not permalink:
                 return False
 
@@ -318,18 +324,22 @@ class InstagramService(BaseService):
     def send_post_video(self, post):
         try:
             media_id = self.upload_reels(post)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not media_id:
                 return False
 
             is_uploaded = self.get_upload_status(media_id)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not is_uploaded:
                 return False
 
             publish_id = self.publish_post(media_id)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not publish_id:
                 return False
 
             permalink = self.get_permalink_instagram(publish_id)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not permalink:
                 return False
 
@@ -347,6 +357,7 @@ class InstagramService(BaseService):
                 "access_token": self.access_token,
             }
             response = requests.get(PERMALINK_URL, params=params)
+
             result = response.json()
             self.save_request_log("get_permalink_instagram", params, result)
 
@@ -556,7 +567,7 @@ class InstagramService(BaseService):
                     )
                     return False
                 else:
-                    time.sleep(5)
+                    time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
                     return self.get_upload_status(media_id)
             else:
                 self.save_errors(

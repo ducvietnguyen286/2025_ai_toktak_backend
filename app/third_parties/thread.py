@@ -5,6 +5,7 @@ import time
 import traceback
 
 import requests
+from app.enums.limit import LimitSNS
 from app.lib.logger import log_thread_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
@@ -300,22 +301,27 @@ class ThreadService(BaseService):
                 media_id = self.upload_media(
                     image, text, is_video=False, index=index + 1
                 )
+                time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
                 if not media_id:
                     return False
                 is_uploaded = self.get_upload_status(media_id)
+                time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
                 if not is_uploaded:
                     return False
                 media_ids.append(media_id)
 
             carousel_id = self.upload_carousel(media_ids, text)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not carousel_id:
                 return False
 
             publish_id = self.publish_post(carousel_id)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not publish_id:
                 return False
 
             permalink = self.get_permalink_thread(publish_id)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not permalink:
                 return False
 
@@ -346,18 +352,22 @@ class ThreadService(BaseService):
             )
             video = post.video_url
             media_id = self.upload_media(video, text, is_video=True)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not media_id:
                 return False
 
             is_uploaded = self.get_upload_status(media_id)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not is_uploaded:
                 return False
 
             publish_id = self.publish_post(media_id)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not publish_id:
                 return False
 
             permalink = self.get_permalink_thread(publish_id)
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not permalink:
                 return False
 
@@ -620,7 +630,7 @@ class ThreadService(BaseService):
                     )
                     return False
                 else:
-                    time.sleep(5)
+                    time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
                     return self.get_upload_status(media_id)
             else:
                 self.save_errors(

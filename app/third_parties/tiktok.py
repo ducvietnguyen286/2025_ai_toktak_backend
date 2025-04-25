@@ -4,6 +4,7 @@ import time
 import traceback
 
 import requests
+from app.enums.limit import LimitSNS
 from app.services.post import PostService
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
@@ -452,7 +453,7 @@ class TiktokService(BaseService):
             if count <= 6:
                 self.save_uploading(self.progress + (count * 10))
 
-            time.sleep(3)
+            time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
             return self.check_status(publish_id, count=count, retry=retry + 1)
 
         elif error and error_code != "ok":
@@ -480,7 +481,7 @@ class TiktokService(BaseService):
                 "status": False,
                 "message": res_json.get("data").get("fail_reason"),
             }
-        time.sleep(3)
+        time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
         return self.check_status(publish_id, count=count + 1, retry=retry)
 
     def upload_video_init(self, media, retry=0):

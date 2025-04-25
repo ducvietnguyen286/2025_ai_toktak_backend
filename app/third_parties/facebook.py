@@ -5,6 +5,7 @@ import time
 import traceback
 import requests
 
+from app.enums.limit import LimitSNS
 from app.lib.logger import log_facebook_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
@@ -280,6 +281,7 @@ class FacebookService(BaseService):
         result = self.start_session_upload_reel(
             page_id=page_id, page_access_token=page_access_token
         )
+        time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
         video_id = result["video_id"] if "video_id" in result else None
         if not video_id:
             error = result.get("error", {})
@@ -299,7 +301,9 @@ class FacebookService(BaseService):
             video_url=post.video_url,
             access_token=page_access_token,
         )
+        time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
         result_status = self.get_upload_status(video_id, page_access_token)
+        time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
         status = result_status.get("status")
         if status == "ready":
             self.publish_the_reel(
@@ -308,9 +312,11 @@ class FacebookService(BaseService):
                 page_id=page_id,
                 access_token=page_access_token,
             )
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             reels = self.get_reel_uploaded(
                 page_id=page_id, access_token=page_access_token
             )
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
             if not reels:
                 self.save_publish("PUBLISHED", "profile")
                 return True
@@ -357,9 +363,6 @@ class FacebookService(BaseService):
             )
             return False
 
-        headers = post_response.headers
-        log_facebook_message("start_session_upload_reel HEADERS: " + str(headers))
-
         result = post_response.json()
         self.save_request_log("start_session_upload_reel", post_data, result)
 
@@ -382,9 +385,6 @@ class FacebookService(BaseService):
                 base_message=str(e),
             )
             return False
-
-        headers = post_response.headers
-        log_facebook_message("upload_video HEADERS: " + str(headers))
 
         result = post_response.json()
         self.save_request_log("upload_video", headers, result)
@@ -411,9 +411,6 @@ class FacebookService(BaseService):
             result = get_response.json()
             self.save_request_log("get_upload_status", {"video_id": video_id}, result)
 
-            headers = get_response.headers
-            log_facebook_message("get_upload_status HEADERS: " + str(headers))
-
             if "error" in result:
                 error = result.get("error", {})
                 error_message = error.get(
@@ -427,8 +424,6 @@ class FacebookService(BaseService):
                     "status": "error",
                     "error": "Status is not found",
                 }
-
-            time.sleep(10)
 
             if count <= 6:
                 self.save_uploading(20 + (count * 10))
@@ -448,8 +443,6 @@ class FacebookService(BaseService):
         video_status = status.get("video_status", "uploading")
         status_uploading_phase = uploading_phase.get("status")
 
-        time.sleep(10)
-
         if video_status == "upload_complete" and status_uploading_phase == "complete":
             return {
                 "status": "ready",
@@ -461,6 +454,7 @@ class FacebookService(BaseService):
                 "uploading_phase": uploading_phase,
             }
         else:
+            time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
             return self.get_upload_status(video_id, access_token, count + 1)
 
     def publish_the_reel(self, post, video_id, page_id, access_token):
@@ -485,9 +479,6 @@ class FacebookService(BaseService):
             )
             return False
 
-        headers = post_response.headers
-        log_facebook_message("publish_the_reel HEADERS: " + str(headers))
-
         result = post_response.json()
         self.save_request_log("publish_the_reel", post_data, result)
 
@@ -507,9 +498,6 @@ class FacebookService(BaseService):
             )
             return False
 
-        headers = get_response.headers
-        log_facebook_message("get_reel_uploaded HEADERS: " + str(headers))
-
         result = get_response.json()
         self.save_request_log("get_reel_uploaded", {"page_id": page_id}, result)
 
@@ -527,6 +515,7 @@ class FacebookService(BaseService):
         photo_ids = self.unpublish_images(
             images=images, page_id=page_id, page_access_token=page_access_token
         )
+        time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
         if not photo_ids:
             return False
 
@@ -548,10 +537,8 @@ class FacebookService(BaseService):
             )
             return False
 
-        headers = post_response.headers
-        log_facebook_message("send_post_image HEADERS: " + str(headers))
-
         result = post_response.json()
+        time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
 
         self.save_request_log("send_post_image", post_data, result)
 
@@ -595,8 +582,6 @@ class FacebookService(BaseService):
                 )
                 return False
 
-            headers = response.headers
-            log_facebook_message("send_post_image HEADERS: " + str(headers))
             result = response.json()
 
             self.save_request_log("unpublish_images", data, result)
@@ -615,4 +600,7 @@ class FacebookService(BaseService):
                     f"POST {self.key_log} UNPUBLISH IMAGES - GET ERROR: {error_message}",
                     base_message=error_message,
                 )
+
+            time.sleep(LimitSNS.WAIT_PER_API_CALL.value)
+
         return photo_ids
