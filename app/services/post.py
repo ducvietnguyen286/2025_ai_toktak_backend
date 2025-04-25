@@ -366,6 +366,7 @@ class PostService:
     @staticmethod
     def update_default_template(user_id, link_id):
         try:
+            link_id=  int(link_id)
             user_template = PostService.get_template_video_by_user_id(user_id)
 
             if user_template:
@@ -378,9 +379,13 @@ class PostService:
                     or "image" not in link_sns
                 ):
                     link_sns = {"video": [], "image": []}
+                    
+                if link_id not in link_sns["video"]:
+                    link_sns["video"].append(link_id)
 
-                link_sns["video"].append(link_id)
-                link_sns["image"].append(link_id)
+                if link_id not in link_sns["image"]:
+                    link_sns["image"].append(link_id)
+
 
                 data_update_template = {
                     "link_sns": json.dumps(link_sns),
