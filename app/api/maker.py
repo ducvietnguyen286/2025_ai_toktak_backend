@@ -1180,6 +1180,10 @@ class APIGetStatusUploadBySyncId(Resource):
                 if status_check_sns == const.UPLOADED:
                     update_data["status_sns"] = const.UPLOADED
                     update_data["status"] = const.UPLOADED
+                    
+                    ProductService.create_sns_product(
+                        post["user_id"], post["batch_id"]
+                    )
                 else:
                     update_data["status_sns"] = 0
                     update_data["status"] = const.DRAFT_STATUS
@@ -1295,6 +1299,11 @@ class APIGetStatusUploadWithBatch(Resource):
                     if status_check_sns == 1:
                         update_data["status_sns"] = const.UPLOADED
                         update_data["status"] = const.UPLOADED
+                        
+                        ProductService.create_sns_product(
+                            post_detail["user_id"], post_detail["batch_id"]
+                        )
+                            
 
                     PostService.update_post(post_id, **update_data)
 
