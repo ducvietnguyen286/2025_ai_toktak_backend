@@ -5,13 +5,7 @@ from mongoengine import StringField, IntField
 class RequestSocialCount(BaseDocument):
     meta = {
         "collection": "request_social_counts",
-        "indexes": [
-            {
-                "fields": ["user_id", "social", "day", "hour"],
-                "unique": True,
-                "sparse": True,
-            }
-        ],
+        "indexes": [{"fields": ["user_id", "social", "day", "hour"]}],
     }
 
     social = StringField(required=True, max_length=50)
