@@ -258,6 +258,7 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
     "title": "블로그 게시글 제목",
     "summarize": "요약된 내용",
     "docx_content": [
+        "ADS_CONTENT_TOKTAK",
         "제품의 특징 및 장점에 대해 설명하는 첫 번째 단락",
         "IMAGE_URL_0",
         "제품 사용 방법에 대한 설명이 포함된 두 번째 단락",
@@ -278,10 +279,15 @@ caption: 이 블로그 글이 전달해야 할 분위기, 핵심 메시지, 중�
                 <p>{base_url}</p>
                 <p>#hashtag1 #hashtag2 #hashtag3</p>
 }
+
+Note: 
+
+- 이 글에는 {count_image}장의 사진만 등장합니다.
 """
     count_image = len(images)
     image_index = count_image - 1
     data["image_index"] = image_index
+    data["count_image"] = image_index
 
     prompt = replace_prompt_with_data(prompt, data)
 
