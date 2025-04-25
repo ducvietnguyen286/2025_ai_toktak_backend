@@ -74,13 +74,13 @@ class TiktokTokenService:
 
             is_refresing = redis_client.get(redis_key_check)
             if is_refresing:
-                is_refresh_done = redis_client.get(redis_key_done)
-                while is_refresh_done:
+                while True:
+                    refresh_done = redis_client.get(redis_key_done)
+                    if refresh_done:
+                        if refresh_done == b"failled":
+                            return False
+                        return True
                     time.sleep(1)
-
-                if is_refresh_done and is_refresh_done == "failled":
-                    return False
-                return True
 
             redis_client.set(redis_key_check, 1, ex=300)
 
@@ -125,7 +125,7 @@ class TiktokTokenService:
 
                 redis_client.set(redis_key_done, "failled", ex=300)
 
-                return token_data
+                return False
 
             meta = user_link.meta
             meta = json.loads(meta)
@@ -135,7 +135,7 @@ class TiktokTokenService:
 
             redis_client.set(redis_key_done, "success", ex=300)
 
-            return token_data
+            return True
         except Exception as e:
             traceback.print_exc()
             log_tiktok_message(e)
@@ -255,12 +255,21 @@ class TiktokService(BaseService):
                     )
 
                     return False
-                TiktokTokenService.refresh_token(link=self.link, user=self.user)
-                self.user_link = UserService.find_user_link(
-                    link_id=self.link.id, user_id=self.user.id
+                refreshed = TiktokTokenService.refresh_token(
+                    link=self.link, user=self.user
                 )
-                self.meta = json.loads(self.user_link.meta)
-                return self.upload_image(medias=json.dumps(medias), retry=retry + 1)
+                if refreshed:
+                    self.user_link = UserService.find_user_link(
+                        link_id=self.link.id, user_id=self.user.id
+                    )
+                    self.meta = json.loads(self.user_link.meta)
+                    return self.upload_image(medias=json.dumps(medias), retry=retry + 1)
+                else:
+                    self.save_errors(
+                        "ERRORED",
+                        f"POST {self.key_log} UPLOAD IMAGE - Access token invalid",
+                        base_message="Access token invalid",
+                    )
             elif error and error_code != "ok":
                 error_message = error.get("message") or "Upload image error"
                 self.save_errors(
@@ -387,12 +396,25 @@ class TiktokService(BaseService):
 
                     return False
 
-                TiktokTokenService.refresh_token(link=self.link, user=self.user)
-                self.user_link = UserService.find_user_link(
-                    link_id=self.link.id, user_id=self.user.id
+                refreshed = TiktokTokenService.refresh_token(
+                    link=self.link, user=self.user
                 )
-                self.meta = json.loads(self.user_link.meta)
-                return self.upload_video_by_url(media_url=media_url, retry=retry + 1)
+                if refreshed:
+                    self.user_link = UserService.find_user_link(
+                        link_id=self.link.id, user_id=self.user.id
+                    )
+                    self.meta = json.loads(self.user_link.meta)
+                    return self.upload_video_by_url(
+                        media_url=media_url, retry=retry + 1
+                    )
+                else:
+                    self.save_errors(
+                        "ERRORED",
+                        f"POST {self.key_log} UPLOAD VIDEO INIT: Access token invalid",
+                        base_message="Access token invalid",
+                    )
+
+                    return False
             elif error and error_code != "ok":
                 error_message = error.get("message") or "Upload video INIT error"
                 self.save_errors(
@@ -469,17 +491,28 @@ class TiktokService(BaseService):
                     "message": "Access token invalid",
                 }
 
-            TiktokTokenService.refresh_token(link=self.link, user=self.user)
-            self.user_link = UserService.find_user_link(
-                link_id=self.link.id, user_id=self.user.id
-            )
-            self.meta = json.loads(self.user_link.meta)
+            refreshed = TiktokTokenService.refresh_token(link=self.link, user=self.user)
+            if refreshed:
+                self.user_link = UserService.find_user_link(
+                    link_id=self.link.id, user_id=self.user.id
+                )
+                self.meta = json.loads(self.user_link.meta)
 
-            if count <= 6:
-                self.save_uploading(self.progress + (count * 10))
+                if count <= 6:
+                    self.save_uploading(self.progress + (count * 10))
 
-            time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
-            return self.check_status(publish_id, count=count, retry=retry + 1)
+                time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
+                return self.check_status(publish_id, count=count, retry=retry + 1)
+            else:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} CHECK STATUS: Access token invalid",
+                    base_message="Access token invalid",
+                )
+                return {
+                    "status": False,
+                    "message": "Access token invalid",
+                }
 
         elif error and error_code != "ok":
             error_message = error.get("message") or "Upload video CHECK STATUS error"
@@ -607,12 +640,21 @@ class TiktokService(BaseService):
 
                 return False
 
-            TiktokTokenService.refresh_token(link=self.link, user=self.user)
-            self.user_link = UserService.find_user_link(
-                link_id=self.link.id, user_id=self.user.id
-            )
-            self.meta = json.loads(self.user_link.meta)
-            return self.upload_video_init(media=media, retry=retry + 1)
+            refreshed = TiktokTokenService.refresh_token(link=self.link, user=self.user)
+            if refreshed:
+                self.user_link = UserService.find_user_link(
+                    link_id=self.link.id, user_id=self.user.id
+                )
+                self.meta = json.loads(self.user_link.meta)
+                return self.upload_video_init(media=media, retry=retry + 1)
+            else:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} UPLOAD VIDEO INIT: Access token invalid",
+                    base_message="Access token invalid",
+                )
+
+                return False
         elif error and error_code != "ok":
             error_message = error.get("message") or "Upload video INIT error"
             self.save_errors(

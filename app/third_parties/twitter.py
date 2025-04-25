@@ -142,13 +142,13 @@ class TwitterTokenService:
 
             is_refresing = redis_client.get(redis_key_check)
             if is_refresing:
-                is_refresh_done = redis_client.get(redis_key_done)
-                while is_refresh_done:
+                while True:
+                    refresh_done = redis_client.get(redis_key_done)
+                    if refresh_done:
+                        if refresh_done == b"failled":
+                            return False
+                        return True
                     time.sleep(1)
-
-                if is_refresh_done and is_refresh_done == "failled":
-                    return False
-                return True
 
             redis_client.set(redis_key_check, 1, ex=300)
 
@@ -198,7 +198,7 @@ class TwitterTokenService:
 
             redis_client.set(redis_key_done, "success", ex=300)
 
-            return data
+            return True
         except Exception as e:
             traceback.print_exc()
             log_twitter_message(e)
@@ -311,12 +311,23 @@ class TwitterService(BaseService):
 
                     return False
 
-                TwitterTokenService().refresh_token(link=self.link, user=self.user)
-                self.user_link = UserService.find_user_link(
-                    link_id=self.link.id, user_id=self.user.id
+                refreshed = TwitterTokenService().refresh_token(
+                    link=self.link, user=self.user
                 )
-                self.meta = json.loads(self.user_link.meta)
-                return self.send_post_images(media_ids, post, link, retry + 1)
+                if refreshed:
+                    self.user_link = UserService.find_user_link(
+                        link_id=self.link.id, user_id=self.user.id
+                    )
+                    self.meta = json.loads(self.user_link.meta)
+                    return self.send_post_images(media_ids, post, link, retry + 1)
+                else:
+                    self.save_errors(
+                        "ERRORED",
+                        f"POST {self.key_log} SEND POST IMAGES: Access token invalid",
+                        base_message="Access token invalid",
+                    )
+
+                    return False
             elif status == 403:
                 self.save_errors(
                     "ERRORED",
@@ -428,12 +439,25 @@ class TwitterService(BaseService):
 
                     return False
 
-                TwitterTokenService().refresh_token(link=self.link, user=self.user)
-                self.user_link = UserService.find_user_link(
-                    link_id=self.link.id, user_id=self.user.id
+                refreshed = TwitterTokenService().refresh_token(
+                    link=self.link, user=self.user
                 )
-                self.meta = json.loads(self.user_link.meta)
-                return self.send_post_video_to_x(media, post, link, media_id, retry + 1)
+                if refreshed:
+                    self.user_link = UserService.find_user_link(
+                        link_id=self.link.id, user_id=self.user.id
+                    )
+                    self.meta = json.loads(self.user_link.meta)
+                    return self.send_post_video_to_x(
+                        media, post, link, media_id, retry + 1
+                    )
+                else:
+                    self.save_errors(
+                        "ERRORED",
+                        f"POST {self.key_log} SEND POST VIDEO: Access token invalid",
+                        base_message="Access token invalid",
+                    )
+
+                    return False
             elif status == 403:
                 self.save_errors(
                     "ERRORED",
@@ -552,7 +576,6 @@ class TwitterService(BaseService):
         status_code = req.status_code
         if status_code == 401:
             if retry > 0:
-
                 self.save_errors(
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD MEDIA INIT: Access token invalid",
@@ -560,17 +583,27 @@ class TwitterService(BaseService):
                 )
                 return False
 
-            TwitterTokenService().refresh_token(link=self.link, user=self.user)
-            self.user_link = UserService.find_user_link(
-                link_id=self.link_id, user_id=self.user.id
+            refreshed = TwitterTokenService().refresh_token(
+                link=self.link, user=self.user
             )
-            self.meta = json.loads(self.user_link.meta)
-            return self.upload_media_init(
-                media_type=media_type,
-                total_bytes=total_bytes,
-                is_video=is_video,
-                retry=retry + 1,
-            )
+            if refreshed:
+                self.user_link = UserService.find_user_link(
+                    link_id=self.link_id, user_id=self.user.id
+                )
+                self.meta = json.loads(self.user_link.meta)
+                return self.upload_media_init(
+                    media_type=media_type,
+                    total_bytes=total_bytes,
+                    is_video=is_video,
+                    retry=retry + 1,
+                )
+            else:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} UPLOAD MEDIA INIT: Access token invalid",
+                    base_message="Access token invalid",
+                )
+                return False
 
         res_json = req.json()
         if "data" not in res_json:
@@ -642,17 +675,27 @@ class TwitterService(BaseService):
                     )
                     return False
 
-                TwitterTokenService().refresh_token(link=self.link, user=self.user)
-                self.user_link = UserService.find_user_link(
-                    link_id=self.link.id, user_id=self.user.id
+                refreshed = TwitterTokenService().refresh_token(
+                    link=self.link, user=self.user
                 )
-                self.meta = json.loads(self.user_link.meta)
-                return self.upload_append(
-                    media_id=media_id,
-                    content=content,
-                    total_bytes=total_bytes,
-                    retry=retry + 1,
-                )
+                if refreshed:
+                    self.user_link = UserService.find_user_link(
+                        link_id=self.link.id, user_id=self.user.id
+                    )
+                    self.meta = json.loads(self.user_link.meta)
+                    return self.upload_append(
+                        media_id=media_id,
+                        content=content,
+                        total_bytes=total_bytes,
+                        retry=retry + 1,
+                    )
+                else:
+                    self.save_errors(
+                        "ERRORED",
+                        f"POST {self.key_log} UPLOAD MEDIA APPEND: Access token invalid",
+                        base_message="Access token invalid",
+                    )
+                    return False
 
             if req.status_code < 200 or req.status_code > 299:
                 self.save_errors(
@@ -701,12 +744,23 @@ class TwitterService(BaseService):
                 )
 
                 return False
-            TwitterTokenService().refresh_token(link=self.link, user=self.user)
-            self.user_link = UserService.find_user_link(
-                link_id=self.link.id, user_id=self.user.id
+            refreshed = TwitterTokenService().refresh_token(
+                link=self.link, user=self.user
             )
-            self.meta = json.loads(self.user_link.meta)
-            return self.upload_finalize(media_id=media_id, retry=retry + 1)
+            if refreshed:
+                self.user_link = UserService.find_user_link(
+                    link_id=self.link.id, user_id=self.user.id
+                )
+                self.meta = json.loads(self.user_link.meta)
+                return self.upload_finalize(media_id=media_id, retry=retry + 1)
+            else:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} UPLOAD MEDIA FINALIZE: Access token invalid",
+                    base_message="Access token invalid",
+                )
+
+                return False
         else:
             try:
                 response_json = req.json()
@@ -782,12 +836,24 @@ class TwitterService(BaseService):
                     base_message="Access token invalid",
                 )
                 return False
-            TwitterTokenService().refresh_token(link=self.link, user=self.user)
-            self.user_link = UserService.find_user_link(
-                link_id=self.link.id, user_id=self.user.id
+            refreshed = TwitterTokenService().refresh_token(
+                link=self.link, user=self.user
             )
-            self.meta = json.loads(self.user_link.meta)
-            return self.check_status(media_id=media_id, count=count, retry=retry + 1)
+            if refreshed:
+                self.user_link = UserService.find_user_link(
+                    link_id=self.link.id, user_id=self.user.id
+                )
+                self.meta = json.loads(self.user_link.meta)
+                return self.check_status(
+                    media_id=media_id, count=count, retry=retry + 1
+                )
+            else:
+                self.save_errors(
+                    "ERRORED",
+                    f"POST {self.key_log} UPLOAD MEDIA STATUS: Access token invalid",
+                    base_message="Access token invalid",
+                )
+                return False
 
         if count <= 5:
             progress = 40 + (count * 10)
