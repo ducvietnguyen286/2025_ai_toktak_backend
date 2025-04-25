@@ -170,6 +170,8 @@ class APINewLink(Resource):
                 title=f"{link.type} 연결이 완료되었습니다.",
             )
 
+            PostService.update_default_template(current_user.id, link_id)
+
             return Response(
                 data=user_link._to_json(),
                 message="Thêm link thành công",
@@ -805,6 +807,9 @@ class APITiktokLogin(Resource):
         try:
             user_id = args.get("user_id")
             link_id = args.get("link_id")
+
+            logger.info(f"User ID: {user_id}, Link ID: {link_id}")
+
             state_token = self.generate_state_token(user_id, link_id)
             scope = "user.info.basic,user.info.profile,video.publish,video.upload"
 
@@ -828,6 +833,8 @@ class APITiktokLogin(Resource):
             return False
 
     def generate_state_token(self, user_id, link_id):
+
+        logger.info(f"Generate state token for user_id: {user_id}, link_id: {link_id}")
 
         nonce = secrets.token_urlsafe(16)
         payload = {
@@ -939,8 +946,7 @@ class APIGetCallbackTiktok(Resource):
                     + "&error_description="
                     + error_description
                 )
-
-            print("Token data:", token_data)
+ 
 
             token = token_data.get("data")
             if not token:
@@ -957,6 +963,13 @@ class APIGetCallbackTiktok(Resource):
                 user_link.meta = json.dumps(token)
                 user_link.status = 1
                 user_link.save()
+
+                NotificationServices.create_notification(
+                    user_id=int_user_id,
+                    title="TIKTOK 연결이 완료되었습니다.",
+                )
+
+                PostService.update_default_template(int_user_id, link_id)
 
             user_info = TiktokTokenService().fetch_user_info(user_link)
             logger.info(f"-----------TIKTOK DATA: {user_info}-------------")
@@ -1155,6 +1168,11 @@ class APIGetCallbackYoutube(Resource):
             int_link_id = int(link_id)
 
             if not client:
+                NotificationServices.create_notification(
+                    user_id=user_id ,
+                    status=const.NOTIFICATION_FALSE,
+                    title="Youtube 연결에 실패했습니다. 계정 정보를 확인해주세요.",
+                )
                 return Response(
                     message="Invalid client",
                     status=400,
@@ -1168,6 +1186,11 @@ class APIGetCallbackYoutube(Resource):
                     status=1,
                     meta=json.dumps({}),
                 )
+                NotificationServices.create_notification(
+                    user_id=int_user_id,
+                    title="Youtube 연결이 완료되었습니다.",
+                )
+                PostService.update_default_template(int_user_id, link_id)
 
             response = YoutubeTokenService().exchange_code_for_token(
                 code=code,
@@ -1175,6 +1198,11 @@ class APIGetCallbackYoutube(Resource):
                 client=client,
             )
             if not response:
+                NotificationServices.create_notification(
+                    user_id=user_id ,
+                    status=const.NOTIFICATION_FALSE,
+                    title="Youtube 연결에 실패했습니다. 계정 정보를 확인해주세요.",
+                )
                 return Response(
                     message="Lỗi kết nối",
                     status=400,
@@ -1512,6 +1540,24 @@ class APIDeleteLink(Resource):
                 ).to_dict()
             else:
                 user_link.delete()
+                user_template = PostService.get_template_video_by_user_id(
+                    current_user.id
+                )
+
+                if user_template:
+                    link_sns = json.loads(user_template.link_sns)
+                    if link_id in link_sns["video"]:
+                        link_sns["video"].remove(link_id)
+                    if link_id in link_sns["image"]:
+                        link_sns["image"].remove(link_id)
+
+                    data_update_template = {
+                        "link_sns": json.dumps(link_sns),
+                    }
+
+                    user_template = PostService.update_template(
+                        user_template.id, **data_update_template
+                    )
 
             return Response(
                 data={},

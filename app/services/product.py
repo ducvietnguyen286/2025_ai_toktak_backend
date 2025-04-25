@@ -13,6 +13,8 @@ from app.services.image_template import ImageTemplateService
 import os
 import json
 import const
+import hashlib
+from app.models.batch import Batch
 
 
 class ProductService:
@@ -109,13 +111,61 @@ class ProductService:
         return 1
 
     @staticmethod
-    def delete_product_by_user_id(product_id, user_id):
-        product = Product.query.filter_by(id=product_id, user_id=user_id).first()
-        if product:
-            db.session.delete(product)
-            db.session.commit()
-            return True
-        return False
+    def delete_product_by_user_id(product_ids, user_id):
+
+        products_to_delete = Product.query.filter(
+            and_(Product.id.in_(product_ids), Product.user_id == user_id)
+        )
+
+        # Đếm số lượng để biết có xóa gì không
+        if products_to_delete.count() == 0:
+            return False  # Không có sản phẩm để xóa
+
+        # Thực hiện xóa
+        products_to_delete.delete(synchronize_session=False)
+        db.session.commit()
+        return True
+
     @staticmethod
     def find_post_by_user_id(id, user_id):
         return Product.query.filter_by(id=id, user_id=user_id).first()
+
+    @staticmethod
+    def is_product_exist(user_id, product_url_hash):
+        try:
+            existing_product = Product.query.filter_by(
+                user_id=user_id, product_url_hash=product_url_hash
+            ).first()
+            return existing_product is not None
+        except Exception as ex:
+            return None
+        return None
+
+    @staticmethod
+    def create_sns_product(user_id, batch_id):
+        try:
+            batch_detail = Batch.query.get(batch_id)
+            if not batch_detail:
+                return
+            product_url = batch_detail.url
+            product_url_hash = hashlib.sha1(product_url.encode()).hexdigest()
+
+            is_product_exist = ProductService.is_product_exist(
+                user_id, product_url_hash
+            )
+            if not is_product_exist:
+                data_content = json.loads(batch_detail.content)
+                ProductService.create_product(
+                    user_id=user_id,
+                    product_name=data_content.get("name", ""),
+                    description=data_content.get("description", ""),
+                    shorten_link=data_content.get("shorten_link", ""),
+                    price=data_content.get("price", ""),
+                    product_url=batch_detail.url,
+                    product_image=batch_detail.thumbnail,
+                    product_url_hash=product_url_hash,
+                    content=batch_detail.content,
+                )
+        except Exception as ex:
+            return None
+        return True

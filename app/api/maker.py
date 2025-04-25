@@ -46,6 +46,7 @@ from flask import request, send_file, after_this_request
 
 import tempfile, glob, shutil
 from zipfile import ZipFile
+from app.services.product import ProductService
 
 from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
@@ -1138,11 +1139,7 @@ class APIGetStatusUploadBySyncId(Resource):
                             description=error_message,
                             description_korea="",
                         )
-                    elif (instagram_status == "" and sns_status == "ERRORED") and (
-                        sns_status == "PUBLISHED"
-                        and instagram_status != ""
-                        and instagram_status == "ERRORED"
-                    ):
+                    elif sns_status == "ERRORED":
                         description_korea = replace_phrases_in_text(error_message)
                         NotificationServices.update_notification(
                             notification.id,
@@ -1245,13 +1242,7 @@ class APIGetStatusUploadWithBatch(Resource):
                                     description=error_message,
                                     description_korea="",
                                 )
-                            elif (
-                                not status_instagram and sns_status == "ERRORED"
-                            ) and (
-                                sns_status == "PUBLISHED"
-                                and status_instagram
-                                and status_instagram == "ERRORED"
-                            ):
+                            elif sns_status == "ERRORED":
                                 description_korea = replace_phrases_in_text(
                                     error_message
                                 )

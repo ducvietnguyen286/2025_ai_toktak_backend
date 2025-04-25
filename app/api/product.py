@@ -14,6 +14,7 @@ from app.services.auth import AuthService
 from app.services.notification import NotificationServices
 from app.lib.string import get_level_images
 import const
+import hashlib
 
 from app.services.product import ProductService
 
@@ -87,6 +88,8 @@ class ProductCreateApi(Resource):
             product_image = args.get("product_image", "")
             price = args.get("price", "")
 
+            product_url_hash = hashlib.sha1(product_url.encode()).hexdigest()
+
             product_detail = ProductService.create_product(
                 user_id=current_user.id,
                 product_name=product_name,
@@ -94,6 +97,7 @@ class ProductCreateApi(Resource):
                 product_image=product_image,
                 price=price,
                 description="",
+                product_url_hash=product_url_hash,
                 content=json.dumps([]),
             )
             if not product_detail:
@@ -169,16 +173,24 @@ class ProductDeleteAPI(Resource):
     @parameters(
         type="object",
         properties={
-            "product_id": {"type": "integer"},
+            "product_ids": {"type": "string"},
         },
-        required=["product_id"],
+        required=["product_ids"],
     )
     def post(self, args):
         try:
             current_user = AuthService.get_current_identity()
-            product_id = args.get("product_id", 0)
+            product_ids = args.get("product_ids", "")
+            id_list = [int(id.strip()) for id in product_ids.split(",")]
+
+            if not id_list:
+                return Response(
+                    message="Invalid product_ids format",
+                    code=201,
+                ).to_dict()
+
             product_update = ProductService.delete_product_by_user_id(
-                product_id, current_user.id
+                id_list, current_user.id
             )
             if not product_update:
                 return Response(
@@ -191,5 +203,80 @@ class ProductDeleteAPI(Resource):
             ).to_dict()
 
         except Exception as e:
-            logger.error(f"Update product  error: {str(e)}")
+            logger.error(f"delete product  error: {str(e)}")
             return Response(message="상품을 삭제하지 못했습니다.", code=201).to_dict()
+
+
+@ns.route("/multi_product_create")
+class MultiProductCreateApi(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "products": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "product_url": {"type": "string"},
+                        "product_name": {"type": "string"},
+                        "product_image": {"type": "string"},
+                        "price": {"type": "string"},
+                    },
+                    "required": [
+                        "product_url",
+                        "product_name",
+                        "product_image",
+                        "price",
+                    ],
+                },
+            }
+        },
+        required=["products"],
+    )
+    def post(self, args):
+        try:
+            current_user = AuthService.get_current_identity()
+            products = args.get("products", [])
+
+            created_products = []
+
+            for item in products:
+                product_url = item.get("product_url", "")
+                product_name = item.get("product_name", "")
+                product_image = item.get("product_image", "")
+                price = item.get("price", "")
+
+                product_url_hash = hashlib.sha1(product_url.encode()).hexdigest()
+
+                is_product_exist = ProductService.is_product_exist(
+                    current_user.id, product_url_hash
+                )
+                if not is_product_exist:
+                    product_detail = ProductService.create_product(
+                        user_id=current_user.id,
+                        product_name=product_name,
+                        product_url=product_url,
+                        product_image=product_image,
+                        price=price,
+                        description="",
+                        product_url_hash=product_url_hash,
+                        content=json.dumps([]),
+                    )
+
+                    if product_detail:
+                        created_products.append(product_detail.to_dict())
+
+            if not created_products:
+                return Response(message="제품 생성에 실패했습니다.", code=201).to_dict()
+
+            return Response(
+                data=created_products,
+                message="모든 제품이 성공적으로 추가되었습니다.",
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Create multiple products error: {str(e)}")
+            return Response(
+                message="제품 추가 중 오류가 발생했습니다.", code=201
+            ).to_dict()

@@ -28,7 +28,7 @@ class UserVideoTemplates(db.Model, BaseModel):
     video_hooks = db.Column(db.Text, nullable=False, default="")
     viral_messages = db.Column(db.Text, nullable=False, default="")
     subscribe_video = db.Column(db.Text, nullable=False, default="")
-    link_sns = db.Column(db.Text, nullable=False, default="{}")
+    link_sns = db.Column(db.Text, nullable=False, default='{"video": [], "image": []}')
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

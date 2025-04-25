@@ -5,6 +5,7 @@ import time
 import traceback
 
 import requests
+from app.enums.limit import LimitSNS
 from app.lib.logger import log_thread_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
@@ -620,7 +621,7 @@ class ThreadService(BaseService):
                     )
                     return False
                 else:
-                    time.sleep(5)
+                    time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
                     return self.get_upload_status(media_id)
             else:
                 self.save_errors(

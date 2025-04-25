@@ -11,6 +11,7 @@ from app.models.setting import Setting
 from app.lib.logger import logger
 from app.lib.response import Response
 from app.models.request_log import RequestLog
+import const
 
 ns = Namespace(name="setting", description="Setting API")
 
@@ -94,4 +95,30 @@ class GetConfig(Resource):
         return Response(
             data={"TWITTER_CLIENT_ID": setting.setting_value},
             message="Get  setting",
+        ).to_dict()
+
+
+@ns.route("/get_public_config")
+class GetPublicConfig(Resource):
+    def get(self):
+        remote_ip = request.remote_addr
+        print(remote_ip)
+
+        # Danh sách IP được phép truy cập
+
+        settings = Setting.query.filter_by(status=0).all()
+        settings_dict = {
+            setting.setting_name: setting.setting_value for setting in settings
+        }
+
+        logger.info(settings_dict)
+
+        if settings_dict["IS_MAINTANCE"] == "1":
+            if remote_ip in conts.ALLOWED_IPS:
+                settings_dict["IS_MAINTANCE"] = "0"
+
+        logger.info(settings_dict)
+        return Response(
+            data=settings_dict,
+            message="Get Public setting",
         ).to_dict()

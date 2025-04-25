@@ -136,6 +136,9 @@ class BaseService:
         self.social_post.process_number = 100
         self.social_post.save()
         PostService.update_post(self.post_id, status=1)
+        RequestSocialLogService.increment_social_post_created(
+            self.user.id, self.service
+        )
 
     def save_social_post_error(
         self, status, message, base_message="", instagram_quote=""

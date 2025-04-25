@@ -362,3 +362,38 @@ class PostService:
             voice_id=3,
         )
         return user_template
+
+    @staticmethod
+    def update_default_template(user_id, link_id):
+        try:
+            link_id=  int(link_id)
+            user_template = PostService.get_template_video_by_user_id(user_id)
+
+            if user_template:
+                link_sns = json.loads(user_template.link_sns)
+
+                if (
+                    not link_sns
+                    or not isinstance(link_sns, dict)
+                    or "video" not in link_sns
+                    or "image" not in link_sns
+                ):
+                    link_sns = {"video": [], "image": []}
+                    
+                if link_id not in link_sns["video"]:
+                    link_sns["video"].append(link_id)
+
+                if link_id not in link_sns["image"]:
+                    link_sns["image"].append(link_id)
+
+
+                data_update_template = {
+                    "link_sns": json.dumps(link_sns),
+                }
+
+                user_template = PostService.update_template(
+                    user_template.id, **data_update_template
+                )
+        except Exception as ex:
+            return None
+        return user_template

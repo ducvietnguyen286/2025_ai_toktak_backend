@@ -5,6 +5,7 @@ import time
 import traceback
 
 import requests
+from app.enums.limit import LimitSNS
 from app.lib.logger import log_instagram_message
 from app.services.request_social_log import RequestSocialLogService
 from app.services.social_post import SocialPostService
@@ -557,7 +558,7 @@ class InstagramService(BaseService):
                     )
                     return False
                 else:
-                    time.sleep(30)
+                    time.sleep(LimitSNS.WAIT_SECOND_CHECK_STATUS.value)
                     return self.get_upload_status(media_id)
             else:
                 self.save_errors(

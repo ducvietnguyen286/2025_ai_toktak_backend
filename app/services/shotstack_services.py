@@ -1479,8 +1479,10 @@ def add_centered_text_to_png(
     if text_length <= 3:
         base_image_path = "app/makers/fonts/emoji_tag_base_3.png"
     elif text_length <= 5:
+        offset_x = 16
         base_image_path = "app/makers/fonts/emoji_tag_base_5.png"
     elif text_length <= 7:
+        offset_x = 13
         base_image_path = "app/makers/fonts/emoji_tag_base_7.png"
     else:
         base_image_path = "app/makers/fonts/emoji_tag_base.png"

@@ -245,7 +245,7 @@ def allowed_image(filename):
 
 def split_line_with_url(line):
     # Tìm URL
-    url_pattern = re.compile(r'(https?://\S+)')
+    url_pattern = re.compile(r"(https?://\S+)")
     match = url_pattern.search(line)
 
     if not match:
@@ -268,11 +268,12 @@ def split_line_with_url(line):
 
 
 def split_toktak_url(line):
-    pattern = re.compile(r'(https://s\.toktak\.ai/\S+)')
+    # Mẫu regex để khớp các URL có dạng s.toktak.ai, link.coupang.com, s.click
+    pattern = re.compile(r"(https://(?:s\.toktak\.ai|link\.coupang\.com|s\.click)\S*)")
     match = pattern.search(line)
 
     if not match:
-        return [line]  # Không có URL cần xử lý → trả về nguyên dòng
+        return [line]
 
     start, end = match.span()
     url = match.group()

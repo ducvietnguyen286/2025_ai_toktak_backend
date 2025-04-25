@@ -39,10 +39,20 @@ class MemberProfileAPI(Resource):
             profile = ProfileServices.profile_by_user_id(current_user.id)
             if not profile:
                 nick_name = generate_random_nick_name(current_user.email)
-                design_settings = []
+                design_settings = {
+                    "background_color": "#E8F0FE",
+                    "main_text_color": "#0A1929",
+                    "sub_text_color": "#6B7F99",
+                    "notice_color": "#6B7F99",
+                    "notice_background_color": "#FFFFFF",
+                    "product_background_color": "#FFFFFF",
+                    "product_name_color": "#6B7F99",
+                    "product_price_color": "#1E4C94",
+                }
                 profile = ProfileServices.create_profile(
                     user_id=current_user.id,
                     nick_name=nick_name,
+                    status=0,
                     design_settings=json.dumps(design_settings),
                 )
             return profile.to_dict()
@@ -70,6 +80,7 @@ class MemberProfileUpdateAPI(Resource):
                 "description": form.get("description"),
                 "content": form.get("content"),
                 "member_address": form.get("member_address"),
+                "status": 2,
             }
 
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -99,6 +110,44 @@ class MemberProfileUpdateAPI(Resource):
             logger.error(f"Update profile error: {str(e)}")
             return Response(
                 message="프로필 업데이트 중 오류가 발생했습니다.", code=201
+            ).to_dict()
+
+
+@ns.route("/status_update")
+class MemberProfileStatusUpdateAPI(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            current_user = AuthService.get_current_identity()
+
+            profile_member = ProfileServices.profile_by_user_id(current_user.id)
+            print(current_user.id)
+            if not profile_member:
+                return Response(
+                    message="상태를 업데이트하는 중에 문제가 발생했습니다.", code=201
+                ).to_dict()
+
+            status = profile_member.status
+            print(status)
+            if status != 0:
+                return Response(
+                    message="상태를 업데이트하는 중에 문제가 발생했습니다.", code=201
+                ).to_dict()
+            else:
+                data_update = {
+                    "status": 1,
+                }
+                profile = ProfileServices.update_profile_by_user_id(
+                    current_user.id, **data_update
+                )
+            return Response(
+                data=profile.to_dict(), message="상태가 성공적으로 업데이트되었습니다."
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Update profile error: {str(e)}")
+            return Response(
+                message="상태를 업데이트하는 중에 문제가 발생했습니다.", code=201
             ).to_dict()
 
 
@@ -157,13 +206,12 @@ class MemberProfileDesignSettingsUpdateAPI(Resource):
     def post(self):
         try:
             current_user = AuthService.get_current_identity()
-            data_form = request.get_json() 
+            data_form = request.get_json()
             data_update = {}
-            
-            
+
             print(data_form)
 
-            data_update["design_settings"] = json.dumps(data_form, ensure_ascii=False) 
+            data_update["design_settings"] = json.dumps(data_form, ensure_ascii=False)
 
             profile = ProfileServices.update_profile_by_user_id(
                 current_user.id, **data_update
@@ -181,4 +229,25 @@ class MemberProfileDesignSettingsUpdateAPI(Resource):
             logger.error(f"Update profile error: {str(e)}")
             return Response(
                 message="디자인 설정 정보 업데이트에 실패했습니다.", code=201
+            ).to_dict()
+
+
+@ns.route("/view/<string:user_name>")
+class ViewMemberProfileAPI(Resource):
+    def get(self, user_name):
+        try:
+            profile = ProfileServices.find_by_nick_name(user_name)
+            if not profile:
+                return Response(
+                    message="디자인 설정 정보 업데이트에 실패했습니다.", code=201
+                ).to_dict()
+
+            return Response(data=profile.to_dict()).to_dict()
+
+            return profile.to_dict()
+        except Exception as e:
+            logger.error(f"Exception: 프로필이 존재하지 않습니다.  :  {str(e)}")
+            return Response(
+                message="프로필이 존재하지 않습니다.",
+                code=201,
             ).to_dict()
