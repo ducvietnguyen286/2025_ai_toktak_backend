@@ -899,8 +899,6 @@ class APIGetCallbackTiktok(Resource):
                 error_description=error_description,
             )
 
-            logger.info(f"State token payload: {payload}")
-
             TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 
             r_data = {

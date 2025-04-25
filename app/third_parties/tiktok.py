@@ -11,6 +11,7 @@ from app.services.social_post import SocialPostService
 from app.services.user import UserService
 from app.lib.logger import log_tiktok_message
 from app.third_parties.base_service import BaseService
+from app.extensions import redis_client
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
@@ -65,6 +66,24 @@ class TiktokTokenService:
             log_tiktok_message(
                 "------------------  REFRESH TIKTOK TOKEN  ------------------"
             )
+
+            user_id = user.id
+
+            redis_key_done = f"toktak:users:{user_id}:refreshtoken-done:TIKTOK"
+            redis_key_check = f"toktak:users:{user_id}:refresh-token:TIKTOK"
+
+            is_refresing = redis_client.get(redis_key_check)
+            if is_refresing:
+                is_refresh_done = redis_client.get(redis_key_done)
+                while is_refresh_done:
+                    time.sleep(1)
+
+                if is_refresh_done and is_refresh_done == "failled":
+                    return False
+                return True
+
+            redis_client.set(redis_key_check, 1, ex=300)
+
             user_link = UserService.find_user_link(link_id=link.id, user_id=user.id)
             meta = json.loads(user_link.meta)
             refresh_token = meta.get("refresh_token")
@@ -84,6 +103,7 @@ class TiktokTokenService:
             try:
                 token_data = response.json()
             except Exception as e:
+                redis_client.set(redis_key_done, "failled", ex=300)
                 return f"Error parsing response: {e}", 500
 
             log_tiktok_message(f"Refresh token response: {token_data}")
@@ -102,6 +122,9 @@ class TiktokTokenService:
             if not token_data or not data_token or not data_token.get("access_token"):
                 user_link.status = 0
                 user_link.save()
+
+                redis_client.set(redis_key_done, "failled", ex=300)
+
                 return token_data
 
             meta = user_link.meta
@@ -109,6 +132,8 @@ class TiktokTokenService:
             meta.update(data_token)
             user_link.meta = json.dumps(meta)
             user_link.save()
+
+            redis_client.set(redis_key_done, "success", ex=300)
 
             return token_data
         except Exception as e:

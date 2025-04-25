@@ -15,6 +15,7 @@ from app.services.social_post import SocialPostService
 from app.services.user import UserService
 
 from app.third_parties.base_service import BaseService
+from app.extensions import redis_client
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
@@ -131,8 +132,26 @@ class TwitterTokenService:
                 "utf-8"
             )
 
-            user_link = UserService.find_user_link(link_id=link.id, user_id=user.id)
+            user_id = user.id
+
+            user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
             user_link_meta = json.loads(user_link.meta)
+
+            redis_key_done = f"toktak:users:{user_id}:refreshtoken-done:X"
+            redis_key_check = f"toktak:users:{user_id}:refresh-token:X"
+
+            is_refresing = redis_client.get(redis_key_check)
+            if is_refresing:
+                is_refresh_done = redis_client.get(redis_key_done)
+                while is_refresh_done:
+                    time.sleep(1)
+
+                if is_refresh_done and is_refresh_done == "failled":
+                    return False
+                return True
+
+            redis_client.set(redis_key_check, 1, ex=300)
+
             refresh_token = user_link_meta.get("refresh_token")
 
             headers = {
@@ -165,6 +184,9 @@ class TwitterTokenService:
             if not has_token:
                 user_link.status = 0
                 user_link.save()
+
+                redis_client.set(redis_key_done, "failled", ex=300)
+
                 return False
 
             meta = user_link.meta
@@ -173,6 +195,8 @@ class TwitterTokenService:
 
             user_link.meta = json.dumps(meta)
             user_link.save()
+
+            redis_client.set(redis_key_done, "success", ex=300)
 
             return data
         except Exception as e:

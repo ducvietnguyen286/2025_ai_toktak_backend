@@ -1,7 +1,13 @@
-class SocialMedia:
+from enum import Enum
+
+
+class SocialMedia(Enum):
     """
     Enum for social media platforms.
     """
+
+    PUBLISHED = "PUBLISHED"
+    ERRORED = "ERRORED"
 
     FACEBOOK = "FACEBOOK"
     TWITTER = "X-TWITTER"
@@ -9,11 +15,3 @@ class SocialMedia:
     INSTAGRAM = "INSTAGRAM"
     YOUTUBE = "youtube"
     TIKTOK = "tiktok"
-
-    @classmethod
-    def choices(cls):
-        return [
-            (attr, attr)
-            for attr in dir(cls)
-            if not attr.startswith("__") and not callable(getattr(cls, attr))
-        ]
