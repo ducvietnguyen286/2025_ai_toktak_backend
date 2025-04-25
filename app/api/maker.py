@@ -1155,6 +1155,7 @@ class APIGetStatusUploadBySyncId(Resource):
                         social_post_each["status"] == SocialMedia.PUBLISHED.value
                     show_post_detail.append(social_post_each)
 
+                post["social_sns_description"] = json.dumps(new_social_sns_description)
                 post["social_posts"] = show_post_detail
 
                 if status_check_sns == const.UPLOADED:
@@ -1254,7 +1255,7 @@ class APIGetStatusUploadWithBatch(Resource):
                         if link_type == SocialMedia.INSTAGRAM.value:
                             sns_post_detail["status"] = SocialMedia.PUBLISHED.value
 
-                        show_detail_posts.append(social_post_detail)
+                        show_detail_posts.append(sns_post_detail)
 
                     update_data = {
                         "social_sns_description": json.dumps(social_post_detail)
@@ -1264,7 +1265,9 @@ class APIGetStatusUploadWithBatch(Resource):
                         update_data["status"] = const.UPLOADED
 
                     PostService.update_post(post_id, **update_data)
-
+                    post_detail["social_sns_description"] = json.dumps(
+                        social_post_detail
+                    )
                     post_detail["social_post_detail"] = show_detail_posts
                     show_posts.append(post_detail)
 
