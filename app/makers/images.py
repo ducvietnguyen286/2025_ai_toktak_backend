@@ -13,12 +13,12 @@ import cv2
 from ultralytics import YOLO, FastSAM
 from google.cloud import vision
 import torch
-import easyocr
 import multiprocessing
 from multiprocessing import Pool
 import numpy as np
 from app.enums.blocked_text import BlockedText
 from app.lib.logger import logger
+from app.extensions import sam_model
 
 from app.lib.header import generate_desktop_user_agent
 from app.third_parties.google import GoogleVision
@@ -258,11 +258,13 @@ class ImageMaker:
             }
         output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
 
-        while not os.path.exists(image_path):
+        timeout = 10
+        start_time = time.time()
+        while not os.path.exists(image_path) and (time.time() - start_time < timeout):
             time.sleep(0.5)
 
-        if not os.path.exists(output_folder):
-            os.makedirs(output_folder)
+        if not os.path.exists(image_path):
+            return {"image_urls": [image_path], "is_cut_out": False}
 
         try:
             image = Image.open(image_path)
@@ -278,169 +280,134 @@ class ImageMaker:
 
         image_width, image_height = image.size
 
-        if image_height > (image_width * 4):
+        if image_height <= (image_width * 4):
+            image_name = os.path.basename(image_path)
+            image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+            return {"image_urls": [image_url], "is_cut_out": False}
 
-            model_path = os.path.join(os.getcwd(), "app/ais/models")
-            fast_sam_path = os.path.join(model_path, "FastSAM-x.pt")
-            yolo_path = os.path.join(model_path, "yolov8s-seg.pt")
+        try:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            results = sam_model(
+                image_path,
+                retina_masks=True,
+                imgsz=1024,
+                conf=0.6,
+                iou=0.9,
+                device=device,
+            )
 
-            try:
-                is_gpu = torch.cuda.is_available()
-                if is_gpu:
-                    model = FastSAM(fast_sam_path).cuda()
-                    # model = YOLO(yolo_path).cuda()
-                else:
-                    model = FastSAM(fast_sam_path)
-                    # model = YOLO(yolo_path)
+            image_cv = cv2.imread(image_path)
+            if image_cv is None:
+                return [image_path]
 
-                results = model(
-                    image_path, retina_masks=True, imgsz=1024, conf=0.6, iou=0.9
-                )
-                # logger.info(f"Results: {results}")
-                # results = model(image_path, conf=0.5)
-                image_cv = cv2.imread(image_path)
-                if image_cv is None:
-                    return [image_path]
+            cropped_images = []
+            needed_length = 5
+            current_image_count = 1
 
-                cropped_images = []
+            for result in results:
 
-                excluded_labels = ["barcode", "qr code", "text", "logo"]
+                if current_image_count >= needed_length:
+                    break
 
-                min_width = 200
-                min_height = 200
-                min_area = 50000
+                need_check_images = []
+                conf_images = {}
 
-                needed_length = 5
-                current_image_count = 0
+                for box in result.boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])  # Lấy tọa độ bounding box
+                    conf = box.conf[0].item()
 
-                for result in results:
+                    w = x2 - x1
+                    h = y2 - y1
 
-                    if current_image_count >= needed_length:
-                        break
+                    if w < 200 or h < 200 or w * h < 50000:
+                        continue
 
-                    need_check_images = []
-                    conf_images = {}
+                    cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
 
-                    for box in result.boxes:
-                        x1, y1, x2, y2 = map(
-                            int, box.xyxy[0]
-                        )  # Lấy tọa độ bounding box
+                    timestamp = int(time.time())
+                    unique_id = uuid.uuid4().hex
+                    new_name = f"{timestamp}_{unique_id}.jpg"
+                    cropped_path = os.path.join(output_folder, new_name)
 
-                        label = result.names[int(box.cls[0])]
-                        conf = box.conf[0].item()
+                    # Resize the cropped image to the target size (1350x1080)
+                    target_size = (1350, 1080)
+                    h, w, _ = cropped.shape
+                    scale = min(target_size[1] / h, target_size[0] / w)
+                    new_w = int(w * scale)
+                    new_h = int(h * scale)
+                    resized = cv2.resize(
+                        cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
+                    )
 
-                        if label.lower() in excluded_labels:
+                    cropped_resized = np.zeros(
+                        (target_size[1], target_size[0], 3), dtype=np.uint8
+                    )
+                    y_offset = (target_size[1] - new_h) // 2
+                    x_offset = (target_size[0] - new_w) // 2
+                    cropped_resized[
+                        y_offset : y_offset + new_h, x_offset : x_offset + new_w
+                    ] = resized
+
+                    cv2.imwrite(cropped_path, cropped_resized)  # Save the resized image
+
+                    need_check_images.append(cropped_path)
+                    conf_images[cropped_path] = conf
+
+                if os.environ.get("USE_OCR") == "true":
+                    for cropped_path in need_check_images:
+                        result = process_beauty_image(cropped_path)
+                        if "is_remove" in result and result["is_remove"]:
+                            cropped_image_path = result["image_path"]
+                            if os.path.exists(cropped_image_path):
+                                os.remove(cropped_image_path)
                             continue
-
-                        # Kiểm tra kích thước của bounding box
-                        w = x2 - x1
-                        h = y2 - y1
-                        area = w * h
-
-                        if w < min_width or h < min_height or area < min_area:
-                            continue
-
-                        cropped = image_cv[y1:y2, x1:x2]  # Cắt ảnh theo bounding box
-
-                        timestamp = int(time.time())
-                        unique_id = uuid.uuid4().hex
-                        new_name = f"{timestamp}_{unique_id}.jpg"
-                        cropped_path = os.path.join(output_folder, new_name)
-
-                        logger.error(
-                            f"Bounding box coordinates: url={cropped_path}, x1={x1}, y1={y1}, x2={x2}, y2={y2}"
-                        )
-
-                        # Resize the cropped image to the target size (1350x1080)
-                        target_size = (1350, 1080)
-                        h, w, _ = cropped.shape
-                        scale = min(target_size[1] / h, target_size[0] / w)
-                        new_w = int(w * scale)
-                        new_h = int(h * scale)
-                        resized = cv2.resize(
-                            cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
-                        )
-
-                        cropped_resized = np.zeros(
-                            (target_size[1], target_size[0], 3), dtype=np.uint8
-                        )
-                        y_offset = (target_size[1] - new_h) // 2
-                        x_offset = (target_size[0] - new_w) // 2
-                        cropped_resized[
-                            y_offset : y_offset + new_h, x_offset : x_offset + new_w
-                        ] = resized
-
-                        cv2.imwrite(
-                            cropped_path, cropped_resized
-                        )  # Save the resized image
-
-                        need_check_images.append(cropped_path)
-                        conf_images[cropped_path] = conf
-
-                    if os.environ.get("USE_OCR") == "true":
-                        for cropped_path in need_check_images:
-                            result = process_beauty_image(cropped_path)
-                            if "is_remove" in result and result["is_remove"]:
-                                cropped_image_path = result["image_path"]
-                                if os.path.exists(cropped_image_path):
-                                    os.remove(cropped_image_path)
-                                continue
-                            if "is_remove" in result and result["is_remove"] == False:
-                                cropped_image_path = result["image_path"]
-                                file_name = cropped_image_path.split("/")[-1]
-                                cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
-                                conf = conf_images[cropped_image_path]
-                                cropped_images.append((cropped_url, conf))
-                                current_image_count += 1
-
-                    else:
-                        for cropped_path in need_check_images:
-                            file_name = cropped_path.split("/")[-1]
+                        if "is_remove" in result and result["is_remove"] == False:
+                            cropped_image_path = result["image_path"]
+                            file_name = cropped_image_path.split("/")[-1]
                             cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
-                            conf = conf_images[cropped_path]
+                            conf = conf_images[cropped_image_path]
                             cropped_images.append((cropped_url, conf))
                             current_image_count += 1
 
-                if cropped_images:
-                    cropped_data_sorted = sorted(
-                        cropped_images, key=lambda x: x[1], reverse=True
-                    )
-                    top = [url for url, c in cropped_data_sorted[:needed_length]]
-                    for cropped_url, _ in cropped_images[needed_length:]:
-                        cropped_image_path = os.path.join(
-                            output_folder, os.path.basename(cropped_url)
-                        )
-                        if os.path.exists(cropped_image_path):
-                            os.remove(cropped_image_path)
-                    image.close()
-                    if os.path.exists(image_path):
-                        os.remove(image_path)
-                    return {
-                        "image_urls": top,
-                        "is_cut_out": True,
-                    }
-                    # return cropped_images
+                else:
+                    for cropped_path in need_check_images:
+                        file_name = cropped_path.split("/")[-1]
+                        cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
+                        conf = conf_images[cropped_path]
+                        cropped_images.append((cropped_url, conf))
+                        current_image_count += 1
 
-            except Exception as e:
-                print(f"Error: {e}")
-                logger.debug(f"Error: {e}")
-                logger.error(f"Error: {e}")
-                traceback.print_exc()
-                image_name = image_path.split("/")[-1]
-                image_url = (
-                    f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+            if cropped_images:
+                cropped_data_sorted = sorted(
+                    cropped_images, key=lambda x: x[1], reverse=True
                 )
+                top = [url for url, c in cropped_data_sorted[:needed_length]]
+                for cropped_url, _ in cropped_images[needed_length:]:
+                    cropped_image_path = os.path.join(
+                        output_folder, os.path.basename(cropped_url)
+                    )
+                    if os.path.exists(cropped_image_path):
+                        os.remove(cropped_image_path)
+                image.close()
+                if os.path.exists(image_path):
+                    os.remove(image_path)
                 return {
-                    "image_urls": [image_url],
-                    "is_cut_out": False,
+                    "image_urls": top,
+                    "is_cut_out": True,
                 }
+                # return cropped_images
 
-        image_name = image_path.split("/")[-1]
-        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
-        return {
-            "image_urls": [image_url],
-            "is_cut_out": False,
-        }
+        except Exception as e:
+            print(f"Error: {e}")
+            logger.debug(f"Error: {e}")
+            logger.error(f"Error: {e}")
+            traceback.print_exc()
+            image_name = image_path.split("/")[-1]
+            image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+            return {
+                "image_urls": [image_url],
+                "is_cut_out": False,
+            }
 
     @staticmethod
     def cut_out_long_height_images_by_google(image_url, batch_id=0):

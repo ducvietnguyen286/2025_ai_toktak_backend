@@ -7,7 +7,7 @@ from .errors.handler import api_error_handler
 
 from flask import Flask, jsonify
 from flask_cors import CORS
-from .extensions import redis_client, db, bcrypt, jwt, db_mongo
+from .extensions import redis_client, db, bcrypt, jwt, db_mongo, init_sam_model
 
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
@@ -42,6 +42,7 @@ def __init_app(app):
     bcrypt.init_app(app)
     jwt.init_app(app)
     db_mongo.init_app(app)
+    init_sam_model(app)
 
     app.logger.info("Initial app...")
 
