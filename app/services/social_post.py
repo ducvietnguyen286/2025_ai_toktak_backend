@@ -57,14 +57,20 @@ class SocialPostService:
         return data
 
     @staticmethod
-    def update_social_post(id, *args):
-        social_post = SocialPost.query.get(id)
-        social_post.update(*args)
+    def update_social_post(id, **args):
+        social_post = SocialPost.objects.get(id=id)
+        social_post.update(**args)
+        return social_post
+
+    @staticmethod
+    def update_multple_social_post_by__ids(ids, **args):
+        social_post = SocialPost.objects(id__in=ids)
+        social_post.update(**args)
         return social_post
 
     @staticmethod
     def delete_social_post(id):
-        return SocialPost.query.get(id).delete()
+        return SocialPost.objects.get(id=id).delete()
 
     @staticmethod
     def create_social_sync(*args, **kwargs):
