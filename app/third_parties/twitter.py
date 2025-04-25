@@ -182,8 +182,8 @@ class TwitterTokenService:
 
             has_token = data.get("access_token")
             if not has_token:
-                user_link.status = 0
-                user_link.save()
+                # user_link.status = 0
+                # user_link.save()
 
                 redis_client.set(redis_key_done, "failled", ex=300)
 
