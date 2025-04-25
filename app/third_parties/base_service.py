@@ -4,6 +4,7 @@ import os
 import requests
 import mimetypes
 
+from app.enums.social import SocialMedia
 from app.extensions import redis_client
 from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import (
@@ -143,6 +144,9 @@ class BaseService:
     def save_social_post_error(
         self, status, message, base_message="", instagram_quote=""
     ):
+        status = SocialMedia.ERRORED.value
+        if self.service == SocialMedia.INSTAGRAM.value:
+            status = SocialMedia.PUBLISHED.value
         self.social_post.status = status
         self.social_post.error_message = message
         self.social_post.show_message = base_message
