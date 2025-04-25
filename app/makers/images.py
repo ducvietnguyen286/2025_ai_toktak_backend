@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import io
 import os
+import threading
 import time
 import datetime
 import traceback
@@ -22,6 +23,8 @@ from app.extensions import sam_model
 
 from app.lib.header import generate_desktop_user_agent
 from app.third_parties.google import GoogleVision
+
+gpu_semaphore = threading.Semaphore(2)
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -157,6 +160,25 @@ def process_beauty_image(image_path):
         }
 
 
+def process_inference(image_path):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    with gpu_semaphore:
+        try:
+            results = sam_model(
+                image_path,
+                retina_masks=True,
+                imgsz=1024,
+                conf=0.6,
+                iou=0.9,
+                device=device,
+            )
+            torch.cuda.empty_cache()
+            return results
+        except Exception as e:
+            print(f"Error processing {image_path}: {e}")
+            return None
+
+
 class ImageMaker:
 
     @staticmethod
@@ -181,14 +203,9 @@ class ImageMaker:
         process_images = []
         base_images = []
 
-        downloaded_images = []
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            downloaded_images = list(
-                executor.map(
-                    lambda url: ImageMaker.save_image_url_get_path(url, batch_id),
-                    images,
-                )
-            )
+        downloaded_images = list(
+            map(lambda url: ImageMaker.save_image_url_get_path(url, batch_id), images)
+        )
 
         time.sleep(1)
 
@@ -286,15 +303,7 @@ class ImageMaker:
             return {"image_urls": [image_url], "is_cut_out": False}
 
         try:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            results = sam_model(
-                image_path,
-                retina_masks=True,
-                imgsz=1024,
-                conf=0.6,
-                iou=0.9,
-                device=device,
-            )
+            results = process_inference(image_path=image_path)
 
             image_cv = cv2.imread(image_path)
             if image_cv is None:
