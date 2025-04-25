@@ -1,0 +1,25 @@
+SET SQL_SAFE_UPDATES = 0;
+UPDATE `toktak`.`user_video_templates` SET `link_sns` = '{\"image\": [], \"video\": []}'  ;
+
+UPDATE user_video_templates uvt
+JOIN (
+    SELECT user_id, JSON_ARRAYAGG(link_id) AS link_ids
+    FROM user_links
+    WHERE status = 1
+    GROUP BY user_id
+) AS agg
+ON uvt.user_id = agg.user_id
+SET uvt.link_sns = JSON_OBJECT(
+    'video', JSON_MERGE_PRESERVE(
+        IFNULL(JSON_EXTRACT(uvt.link_sns, '$.video'), JSON_ARRAY()),
+        agg.link_ids
+    ),
+    'image', JSON_MERGE_PRESERVE(
+        IFNULL(JSON_EXTRACT(uvt.link_sns, '$.image'), JSON_ARRAY()),
+        agg.link_ids
+    )
+);
+ 
+SELECT link_sns , user_video_templates.* FROM  user_video_templates  ;
+
+ 

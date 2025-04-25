@@ -47,6 +47,7 @@ from flask import request, send_file, after_this_request
 
 import tempfile, glob, shutil
 from zipfile import ZipFile
+from app.services.product import ProductService
 
 from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
@@ -1113,13 +1114,13 @@ class APIGetStatusUploadBySyncId(Resource):
                     error_message = social_post_each["error_message"]
                     link_type = social_post_each["link_type"]
                     process_number = social_post_each["process_number"]
-                    instagram_status = ""
                     if sns_status == SocialMedia.PUBLISHED.value:
                         status_check_sns = const.UPLOADED
-
-                    if link_type == "INSTAGRAM" and process_number == 100:
+                    if (
+                        link_type == SocialMedia.INSTAGRAM.value
+                        and process_number == 100
+                    ):
                         status_check_sns = const.UPLOADED
-                        instagram_status = sns_status
 
                     notification = NotificationServices.find_notification_sns(
                         post_id, notification_type
@@ -1132,10 +1133,7 @@ class APIGetStatusUploadBySyncId(Resource):
                             notification_type=notification_type,
                             title=f"🔄{notification_type}에 업로드 중입니다.",
                         )
-                    if sns_status == SocialMedia.PUBLISHED.value and (
-                        instagram_status == ""
-                        or instagram_status == SocialMedia.PUBLISHED.value
-                    ):
+                    if sns_status == SocialMedia.PUBLISHED.value:
                         NotificationServices.update_notification(
                             notification.id,
                             title=f"✅{notification_type} 업로드에 성공했습니다.",
@@ -1143,14 +1141,7 @@ class APIGetStatusUploadBySyncId(Resource):
                             description=error_message,
                             description_korea="",
                         )
-                    elif (
-                        instagram_status == ""
-                        and sns_status == SocialMedia.ERRORED.value
-                    ) and (
-                        sns_status == SocialMedia.ERRORED.value
-                        and instagram_status != ""
-                        and instagram_status == SocialMedia.PUBLISHED.value
-                    ):
+                    elif sns_status == SocialMedia.ERRORED.value:
                         description_korea = replace_phrases_in_text(error_message)
                         NotificationServices.update_notification(
                             notification.id,
@@ -1215,7 +1206,6 @@ class APIGetStatusUploadWithBatch(Resource):
                     post_detail["social_post_detail"] = social_post_detail
 
                     status_check_sns = 0
-                    instagram_check = {}
                     show_detail_posts = []
                     for sns_post_detail in social_post_detail:
                         sns_post_id = sns_post_detail["post_id"]
@@ -1225,18 +1215,17 @@ class APIGetStatusUploadWithBatch(Resource):
                         link_type = sns_post_detail["link_type"]
                         process_number = sns_post_detail["process_number"]
                         if sns_status == SocialMedia.PUBLISHED.value:
-                            status_check_sns = 1
+                            status_check_sns = const.UPLOADED
+
                         if (
                             link_type == SocialMedia.INSTAGRAM.value
                             and process_number == 100
                         ):
                             status_check_sns = const.UPLOADED
-                            instagram_check[post_id] = sns_status
 
                         notification = NotificationServices.find_notification_sns(
                             sns_post_id, notification_type
                         )
-                        status_instagram = instagram_check.get(sns_post_id, None)
                         if not notification:
                             notification = NotificationServices.create_notification(
                                 user_id=post_detail["user_id"],
@@ -1245,10 +1234,7 @@ class APIGetStatusUploadWithBatch(Resource):
                                 notification_type=notification_type,
                                 title=f"🔄{notification_type}에 업로드 중입니다.",
                             )
-                        if sns_status == SocialMedia.PUBLISHED.value and (
-                            not status_instagram
-                            or status_instagram == SocialMedia.PUBLISHED.value
-                        ):
+                        if sns_status == SocialMedia.PUBLISHED.value:
                             NotificationServices.update_notification(
                                 notification.id,
                                 title=f"✅{notification_type} 업로드에 성공했습니다.",
@@ -1256,14 +1242,7 @@ class APIGetStatusUploadWithBatch(Resource):
                                 description=error_message,
                                 description_korea="",
                             )
-                        elif (
-                            not status_instagram
-                            and sns_status == SocialMedia.ERRORED.value
-                        ) and (
-                            sns_status == SocialMedia.ERRORED.value
-                            and status_instagram
-                            and status_instagram == SocialMedia.PUBLISHED.value
-                        ):
+                        elif sns_status == SocialMedia.ERRORED.value:
                             description_korea = replace_phrases_in_text(error_message)
                             NotificationServices.update_notification(
                                 notification.id,

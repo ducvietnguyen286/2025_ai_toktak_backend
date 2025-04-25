@@ -6,6 +6,7 @@ from app.models.post import Post
 from app.models.batch import Batch
 from app.models.social_account import SocialAccount
 from app.models.notification import Notification
+from app.models.memberprofile import MemberProfile
 from app.extensions import db
 from app.lib.logger import logger
 from sqlalchemy import or_
@@ -247,6 +248,10 @@ class UserService:
                 synchronize_session=False
             )
             UserLink.query.filter(UserLink.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+
+            MemberProfile.query.filter(MemberProfile.user_id.in_(user_ids)).delete(
                 synchronize_session=False
             )
 

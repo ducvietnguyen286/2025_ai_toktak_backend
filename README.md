@@ -2,8 +2,7 @@
 py -m venv env
 python -m venv venv  # Tạo môi trường ảo
 
-venv\Scripts\activate
-flask run --port=5001
+venv\Scripts\activate 
 flask run --port=6001 --host=0.0.0.0
 
 
@@ -73,6 +72,12 @@ Server 82
 
 rm -rf /var/www/logs/* && rm -rf /var/www/toktak/logs/* && sudo systemctl restart nginx && sudo systemctl restart toktak.service && sudo systemctl restart toktak_watchdog.service
 
+sudo systemctl restart consumer_toktak_instagram.service
+sudo systemctl restart consumer_toktak_thread.service
+sudo systemctl restart consumer_toktak_tiktok.service
+sudo systemctl restart consumer_toktak_twitter.service
+sudo systemctl restart consumer_toktak_youtube.service
+
 sudo systemctl restart nginx 
 
 
@@ -81,3 +86,11 @@ chmod +x /var/www/toktak/entry-point.sh
 
 git update-index --no-assume-unchanged run_with_watchdog.sh
 git update-index --no-assume-unchanged entry-point.sh
+
+sudo systemctl status toktak.service
+sudo systemctl status toktak_watchdog.service
+
+
+sudo systemctl status rabbitmq-serve
+
+
