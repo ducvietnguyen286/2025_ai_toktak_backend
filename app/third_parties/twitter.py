@@ -189,11 +189,8 @@ class TwitterTokenService:
 
                 return False
 
-            meta = user_link.meta
-            meta = json.loads(meta)
-            meta.update(data)
-
-            user_link.meta = json.dumps(meta)
+            user_link_meta.update(data)
+            user_link.meta = json.dumps(user_link_meta)
             user_link.save()
 
             redis_client.set(redis_key_done, "success", ex=300)

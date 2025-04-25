@@ -127,8 +127,6 @@ class TiktokTokenService:
 
                 return False
 
-            meta = user_link.meta
-            meta = json.loads(meta)
             meta.update(data_token)
             user_link.meta = json.dumps(meta)
             user_link.save()
