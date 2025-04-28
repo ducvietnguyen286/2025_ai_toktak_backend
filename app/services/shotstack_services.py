@@ -53,6 +53,8 @@ class ShotStackService:
         progress_json = redis_client.get(key_redis)
         timestamp = datetime.datetime.now().strftime("%H%M%S")
 
+        last_time = 0
+
         if progress_json:
             caption_videos_default = json.loads(progress_json) if progress_json else {}
         else:
@@ -113,6 +115,7 @@ class ShotStackService:
                 config,
                 caption_videos_default,
             )
+            last_time = clips_data["current_start"]
         else:
 
             first_duration = 0
@@ -127,6 +130,7 @@ class ShotStackService:
                 caption_videos_default,
                 product_video_url,
             )
+            last_time = clips_data["current_start"]
 
         file_caption = generate_srt(
             origin_caption,
@@ -240,6 +244,7 @@ class ShotStackService:
                 layout_advance_caption_top = {}
 
             if is_caption_last == 1:
+                last_time = clips_data["current_start"]
                 layout_advance_image_last = {
                     "clips": [
                         {
@@ -252,6 +257,7 @@ class ShotStackService:
                         }
                     ]
                 }
+                last_time = clips_data["current_start"] + 5
 
         clips_watermarker = {}
         if batch_type == const.TYPE_NORMAL:
@@ -534,6 +540,9 @@ def create_combined_clips_normal(
     )
 
     end_time = current_start
+
+    next_time_begin = 0
+
     for j_index, image_slider_detail in enumerate(images_slider_url):
         url = image_slider_detail["url"]
         start_time = image_slider_detail["start_time"]
@@ -569,24 +578,15 @@ def create_combined_clips_normal(
                 clip_detail["effect"] = random_effect
             clips.append(clip_detail)
 
+        next_time_begin = int(start_slider_time + length)
         # lấy thời gian cuối
         current_start = end_time
 
     # last_viral_url = last_viral_detail["video_url"]
     # last_duration = float(last_viral_detail["duration"] or 0)
     last_duration = 0
-    # clips.append(
-    #     {
-    #         "asset": {"type": "video", "src": last_viral_url},
-    #         "start": current_start,
-    #         "length": last_duration,
-    #     }
-    # )
 
-    # clip_detail = create_header_text(
-    #     last_caption_videos_default, current_start, last_duration
-    # )
-    # clips.append(clip_detail)
+    clips = add_gif_like_me(clips, next_time_begin)
 
     current_start = current_start + last_duration
 
@@ -663,6 +663,7 @@ def create_combined_clips_with_advance(
 
     end_time = current_start
     start_time = 0
+    next_time_begin = 0
     for j_index, image_slider_detail in enumerate(images_slider_url):
         url = image_slider_detail["url"]
         start_time = image_slider_detail["start_time"]
@@ -698,14 +699,17 @@ def create_combined_clips_with_advance(
                 clip_detail["effect"] = random_effect
             clips.append(clip_detail)
 
+        next_time_begin = start_slider_time + length
+
         # khi chon 영상 위에 바이럴 문구가 표시됩니다. moi hien thi text tren dau
         if is_caption_top == 1:
+            length_caption = 2
             if j_index == 0:
                 first_caption_image_default = ShotStackService.filter_content_by_type(
-                    caption_videos_default, 2
+                    caption_videos_default, length_caption
                 )
                 clip_detail = create_header_text(
-                    first_caption_image_default, start_slider_time, 2
+                    first_caption_image_default, start_slider_time, length_caption
                 )
                 clips.append(clip_detail)
             elif j_index == 2:
@@ -714,16 +718,19 @@ def create_combined_clips_with_advance(
                     caption_videos_default, 3
                 )
                 clip_detail = create_header_text(
-                    first_caption_image_default, start_slider_time, 2
+                    first_caption_image_default, start_slider_time, length_caption
                 )
                 clips.append(clip_detail)
 
             elif j_index == 4:
                 # When 5th image start, display for 2 sec & When start last hooking video, display for 2 sec in the middle of screen until end of video
                 clip_detail = create_header_text(
-                    last_caption_videos_default, start_slider_time, 2
+                    last_caption_videos_default, start_slider_time, length_caption
                 )
                 clips.append(clip_detail)
+
+            next_time_begin = start_slider_time + length_caption
+
         # lấy thời gian cuối
         current_start = end_time
 
@@ -737,12 +744,19 @@ def create_combined_clips_with_advance(
                 "length": last_duration,
             }
         )
+
+        next_time_begin = current_start + last_duration
+
         if is_caption_top == 1:
             clip_detail = create_header_text(
                 last_caption_videos_default, current_start, last_duration
             )
             clips.append(clip_detail)
             current_start = current_start + last_duration
+
+            next_time_begin = current_start + last_duration
+
+    clips = add_gif_like_me(clips, next_time_begin)
 
     # Kết hợp hai danh sách clip lại
     combined_clips = clips
@@ -1486,7 +1500,7 @@ def add_centered_text_to_png(
         base_image_path = "app/makers/fonts/emoji_tag_base_7.png"
     else:
         base_image_path = "app/makers/fonts/emoji_tag_base.png"
-        
+
     # base_image_path = "app/makers/fonts/emoji_tag_base.png"
 
     # Mở ảnh gốc (RGBA để giữ alpha)
@@ -1510,7 +1524,7 @@ def add_centered_text_to_png(
     # Tính vị trí căn giữa + offset
     img_width, img_height = base_image.size
     x = (img_width - text_width) // 2 + offset_x
-    #x = 55
+    # x = 55
     y = (img_height - text_height) // 2
 
     # Vẽ text lên lớp trong suốt
@@ -1527,3 +1541,24 @@ def add_centered_text_to_png(
     file_url = f"{current_domain}/{output_file_image_tag}"
 
     return file_url
+
+
+def add_gif_like_me(clips, next_time_begin):
+    current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+    for value_i in range(3, -1, -1):
+        clips.append(
+            {
+                "fit": "contain",
+                "asset": {
+                    "type": "video",
+                    "src": f"{current_domain}/voice/advance/likeme.mov",
+                },
+                "length": 1,
+                "start": next_time_begin - value_i - 1,
+                "offset": {"x": -0.054, "y": -0.105},
+                "position": "center",
+                "transform": {"rotate": {"angle": 23.81}},
+                "scale": 0.611,
+            }
+        )
+    return clips
