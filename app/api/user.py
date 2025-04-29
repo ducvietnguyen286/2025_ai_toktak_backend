@@ -811,7 +811,6 @@ class APITiktokLogin(Resource):
             user_id = args.get("user_id")
             link_id = args.get("link_id")
 
-
             state_token = self.generate_state_token(user_id, link_id)
             scope = "user.info.basic,user.info.profile,video.publish,video.upload"
 
@@ -825,7 +824,6 @@ class APITiktokLogin(Resource):
             }
             url = f"{TIKTOK_AUTHORIZATION_URL}?{urlencode(params)}"
 
-
             return redirect(url)
         except Exception as e:
             traceback.print_exc()
@@ -834,7 +832,6 @@ class APITiktokLogin(Resource):
             return False
 
     def generate_state_token(self, user_id, link_id):
-
 
         nonce = secrets.token_urlsafe(16)
         payload = {
@@ -1475,6 +1472,42 @@ class APICheckSNSLink(Resource):
                         message="Batch not found",
                         code=201,
                     ).to_dict()
+                is_valid_video = False
+                is_valid_images = False
+                posts = PostService.get_posts_by_batch(batchId)
+                for post in posts:
+                    if post.type == "video":
+                        video_url = post.video_url
+                        video_path = post.video_path
+                        exist_path = os.path.exists(video_path) if video_path else False
+                        if video_url and video_url != "" and video_path and exist_path:
+                            is_valid_video = exist_path
+                    if post.type == "image":
+                        images = post.images
+                        images = json.loads(images) if images else []
+                        if images and len(images) > 0:
+                            is_valid_images = True
+
+                if not is_valid_video:
+                    return Response(
+                        message=MessageError.CHECK_CREATE_POST_VIDEO.value["message"],
+                        data={
+                            "error_message": MessageError.CHECK_CREATE_POST_VIDEO.value[
+                                "error_message"
+                            ]
+                        },
+                        code=201,
+                    ).to_dict()
+                if not is_valid_images:
+                    return Response(
+                        message=MessageError.CHECK_CREATE_POST_IMAGE.value["message"],
+                        data={
+                            "error_message": MessageError.CHECK_CREATE_POST_IMAGE.value[
+                                "error_message"
+                            ]
+                        },
+                        code=201,
+                    ).to_dict()
 
             return Response(
                 message="Check Active Link Success",
@@ -1587,7 +1620,6 @@ class APIUserLinkTemplate(Resource):
                 link_sns_data = json.loads(user_template.link_sns)
             except Exception:
                 pass
-
 
         # Hàm dựng danh sách link cho mỗi loại
         def build_link_array(selected_ids):

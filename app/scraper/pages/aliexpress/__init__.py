@@ -1,5 +1,4 @@
 import hashlib
-import hmac
 from http.cookiejar import CookieJar
 import json
 import os
@@ -69,9 +68,9 @@ class AliExpressScraper:
         else:
             request_url = self.url
 
-        data = self.run_api_ali_data(request_url)
+        data = self.run_api_ali_data_hub_6(request_url)
         if not data:
-            data = self.run_api_ali_data_hub_6(request_url)
+            data = self.run_api_ali_data(request_url)
         if not data:
             data = self.run_api_ali_data_hub_2(request_url)
         if not data:
