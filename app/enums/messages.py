@@ -45,11 +45,6 @@ class MessageError(Enum):
         "error_message": "설정에서 SNS 계정을 먼저 연결해 주세요. 😊",
     }
 
-    REQUIRE_LINK = {
-        "message": "아직 SNS 연결 전이에요😢</br>지금 계정 연동하고 업로드 해보세요!",
-        "error_message": "설정에서 SNS 계정을 먼저 연결해 주세요. 😊",
-    }
-
     CANT_CONNECT_SNS = {
         "message": "⚠️ 계정 연결에 실패했습니다!",
         "error_message": "SNS 계정 정보를 확인해주세요😢",
