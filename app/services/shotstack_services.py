@@ -563,14 +563,7 @@ def create_combined_clips_normal(
         effects = [
             SHOTSTACK_IMAGE_EFFECTS,
         ]
-
-    last_caption_videos_default = ShotStackService.filter_content_by_type(
-        caption_videos_default, 4
-    )
-
     end_time = current_start
-
-    next_time_begin = 0
 
     for j_index, image_slider_detail in enumerate(images_slider_url):
         url = image_slider_detail["url"]
@@ -607,19 +600,12 @@ def create_combined_clips_normal(
                 clip_detail["effect"] = random_effect
             clips.append(clip_detail)
 
-        next_time_begin = int(start_slider_time + length)
         # lấy thời gian cuối
         current_start = end_time
-
-    # last_viral_url = last_viral_detail["video_url"]
-    # last_duration = float(last_viral_detail["duration"] or 0)
     last_duration = 0
-
-    clips = add_gif_like_me(clips, next_time_begin)
 
     current_start = current_start + last_duration
 
-    # Kết hợp hai danh sách clip lại
     combined_clips = clips
     return {
         "intro_length": intro_length,
