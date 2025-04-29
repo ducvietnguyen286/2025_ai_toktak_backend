@@ -37,10 +37,27 @@ def parse_mobile_response(html, url, base_url):
         sku = data.get("sku")
         image_url = images[0] if images else ""
         domain = get_domain(url)
+
         offers = data.get("offers")
-        price = offers.get("price") if offers else ""
+        price = ""
+        # 1. Ưu tiên lấy priceSpecification ngoài cùng
+        price_spec = data.get("priceSpecification")
+        if price_spec and price_spec.get("price"):
+            price = price_spec.get("price")
+
+        # 2. Nếu chưa có, lấy offers.priceSpecification.price
+        if not price and offers:
+            offers_price_spec = offers.get("priceSpecification")
+            if offers_price_spec and offers_price_spec.get("price"):
+                price = offers_price_spec.get("price")
+
+        # 3. Nếu vẫn chưa có, lấy offers.price
+        if not price and offers and offers.get("price"):
+            price = offers.get("price")
+
         price_show = format_currency(price) if price != "" else ""
         availability = offers.get("availability") if offers else ""
+
         brand = data.get("brand")
         store_name = brand.get("name") if brand else ""
         in_stock = 1 if "InStock" in availability else 0
