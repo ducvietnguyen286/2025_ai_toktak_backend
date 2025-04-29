@@ -86,7 +86,8 @@ class AliExpressScraper:
             if exist_data:
                 return json.loads(exist_data.response)
 
-            product_id = real_url.path.split("/")[-1].split(".")[0]
+            parsed_url = urlparse(real_url)
+            product_id = parsed_url.path.split("/")[-1].split(".")[0]
 
             RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
 
@@ -124,23 +125,34 @@ class AliExpressScraper:
             sku_images = []
             if sku:
                 sku_images = sku.get("skuImages", {})
+
                 if sku_images:
                     sku_images = [
-                        (
-                            f"https:{img['url']}"
-                            if img["url"].startswith("//")
-                            else img["url"]
-                        )
+                        f"https:{img}" if img.startswith("//") else img
                         for img in sku_images.values()
                     ]
-                    
+
                 sku_def = sku.get("def", {})
                 if sku_def:
                     promotionPrice = sku_def.get("promotionPrice", "")
-                    print(promotionPrice)
                     price_show = promotionPrice.split("-")[0].strip()
-                    
-                
+                    try:
+                        if price_show:
+                            price_show_no_comma = price_show.replace(",", "")
+                            if not price_show_no_comma.isdigit():
+                                logger.error(f"Not a number {price_show}")
+                            if len(price_show_no_comma) > 2:
+                                price_show = (
+                                    price_show_no_comma[:2]
+                                    + ","
+                                    + price_show_no_comma[2:]
+                                )
+                            if not price_show.startswith("₩"):
+                                price_show = f"₩{price_show}"
+                    except Exception as e:
+                        logger.error(f"Exception {e}")
+                        pass
+
             video = item.get("video", {})
             video_url = ""
             video_thumbnail = ""
