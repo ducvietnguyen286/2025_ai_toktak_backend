@@ -153,6 +153,22 @@ def process_redis_message(message):
         return
 
 
+def push_redis_notification_message(message):
+    SOCKETIO_NOTIFICATION_EVENT = (
+        os.environ.get("SOCKETIO_NOTIFICATION_EVENT") or "notifications"
+    )
+
+    try:
+        data = json.loads(message)
+        user_id = data.get("room")
+        socketio.emit(SOCKETIO_NOTIFICATION_EVENT, json.dumps(data), room=user_id)
+        return
+    except Exception as e:
+        log_socket_message(f"Error processing Redis message: {e}")
+        traceback.print_exc()
+        return
+
+
 def start_redis_subscriber(app):
     """
     Khởi chạy một thread lắng nghe channel Redis (PROGRESS_CHANNEL) và xử lý message.
@@ -171,7 +187,7 @@ def start_redis_subscriber(app):
                 if item.get("type") != "message":
                     continue
                 message_str = item.get("data").decode("utf-8")
-                process_redis_message(message_str)
+                push_redis_notification_message(message_str)
 
     thread = threading.Thread(target=redis_listener)
     thread.daemon = True
@@ -186,7 +202,7 @@ def start_notification_subscriber(app):
     def redis_listener():
         with app.app_context():
             NOTIFICATION_CHANNEL = (
-                os.environ.get("REDIS_NOTIFICATION_CHANNEL") or "progessbar"
+                os.environ.get("REDIS_NOTIFICATION_CHANNEL") or "toktak:notification"
             )
 
             pubsub = redis_client.pubsub()
@@ -203,6 +219,46 @@ def start_notification_subscriber(app):
     thread = threading.Thread(target=redis_listener)
     thread.daemon = True
     thread.start()
+
+
+@socketio.on("ready-to-listen-notification")
+def handle_ready_to_listen_notification(data):
+    """
+    Cho phép client gửi yêu cầu bắt đầu nghe sự kiện emit từ server trả về.
+    Dữ liệu data phải chứa key 'room' (ví dụ: user_id)
+    """
+    room = data.get("room")
+    if room:
+        ready_rooms.add(room)
+        socketio.emit(
+            "comfirmed", {"msg": f"Ready Listen message from {room}"}, room=room
+        )
+        messages = pending_messages.pop(room, [])
+        SOCKETIO_NOTIFICATION_EVENT = (
+            os.environ.get("SOCKETIO_NOTIFICATION_EVENT") or "notifications"
+        )
+        for message in messages:
+            message = json.loads(message)
+            socketio.emit(SOCKETIO_NOTIFICATION_EVENT, message, room=room)
+            sleep(0.1)
+    else:
+        log_socket_message("Room not provided in join event")
+
+
+@socketio.on("join-notification")
+def handle_join(data):
+    """
+    Cho phép client gửi yêu cầu join room.
+    Dữ liệu data phải chứa key 'room' (ví dụ: user_id)
+    """
+    room = data.get("room")
+    if room:
+        join_room(room)
+        socketio.emit(
+            "join_notification_response", {"msg": f"Joined room {room}"}, room=room
+        )
+    else:
+        log_socket_message("Room not provided in join event")
 
 
 @socketio.on("ready-to-listen")

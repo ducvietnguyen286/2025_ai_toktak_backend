@@ -1,5 +1,6 @@
 # coding: utf8
 from logging import DEBUG
+import os
 
 from werkzeug.exceptions import default_exceptions
 
@@ -15,7 +16,10 @@ from flask_jwt_extended.exceptions import NoAuthorizationError
 def create_app(config_app):
     app = Flask(__name__)
     # CORS(app)
-    CORS(app, resources={r"/*": {"origins": "*"}})
+
+    cors_scheme = os.environ.get("CORS_SCHEME") or "*"
+
+    CORS(app, resources={r"/*": {"origins": cors_scheme}})
     app.config.from_object(config_app)
     __init_app(app)
     __config_logging(app)

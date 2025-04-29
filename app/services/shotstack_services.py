@@ -274,7 +274,7 @@ class ShotStackService:
                         "start": last_time - 3,
                         "length": 3,
                         "position": "center",
-                        "offset": {"x": 0, "y": 0},
+                        "offset": {"x": 0, "y": -0.101},
                     },
                 )
 
@@ -531,21 +531,6 @@ def create_combined_clips_normal(
     clips = []
     current_start = 0
     intro_length = 0
-
-    # intro_length = first_duration
-    # clips.append(
-    #     {
-    #         "asset": {"type": "video", "src": first_viral_url},
-    #         "start": current_start,
-    #         "length": intro_length,
-    #     }
-    # )
-    # first_caption_videos_default = ShotStackService.filter_content_by_type(
-    #     caption_videos_default, 1
-    # )
-
-    # clip_detail = create_header_text(first_caption_videos_default, current_start, 2)
-    # clips.append(clip_detail)
 
     current_start += intro_length
 
@@ -1555,7 +1540,8 @@ def add_centered_text_to_png(
 
 def add_gif_like_me(clips, next_time_begin):
     current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
-    for value_i in range(3, -1, -1):
+    next_time_begin =next_time_begin -1
+    for value_i in range(2, -1, -1):
         clips.append(
             {
                 "fit": "contain",
@@ -1564,11 +1550,12 @@ def add_gif_like_me(clips, next_time_begin):
                     "src": f"{current_domain}/voice/advance/likeme.mov",
                 },
                 "length": 1,
-                "start": next_time_begin - value_i,
-                "offset": {"x": -0.154, "y": -0.163},
+                "start": next_time_begin ,
+                "offset": {"x": -0.1, "y": -0.25},
                 "position": "center",
                 "transform": {"rotate": {"angle": 23.81}},
                 "scale": 0.611,
             }
         )
+        next_time_begin = next_time_begin -1
     return clips
