@@ -820,15 +820,9 @@ class APIMakePost(Resource):
                     file_size += img_res.get("file_size", 0)
                     mime_type = img_res.get("mime_type", "")
                     maker_images = image_urls
-
-                logger.info(
-                    "-------------------- PROCESSED CREATE IMAGES -------------------"
-                )
+ 
             elif type == "blog":
-                logger.info(
-                    "-------------------- PROCESSING CREATE LOGS -------------------"
-                )
-
+                 
                 blog_images = images
                 if blog_images and len(blog_images) < need_count:
                     current_length = len(blog_images)
