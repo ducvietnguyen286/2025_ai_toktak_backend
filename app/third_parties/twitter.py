@@ -145,8 +145,11 @@ class TwitterTokenService:
             if is_refresing:
                 while True:
                     refresh_done = redis_client.get(redis_key_done)
+                    refresh_done = str(refresh_done) if refresh_done else False
                     if refresh_done:
-                        if refresh_done == b"failled":
+                        redis_client.delete(redis_key_check)
+                        redis_client.delete(redis_key_done)
+                        if refresh_done == "failled":
                             return False
                         return True
                     time.sleep(1)
@@ -610,7 +613,7 @@ class TwitterService(BaseService):
             else:
                 self.save_errors(
                     "ERRORED",
-                    f"POST {self.key_log} UPLOAD MEDIA INIT: Access token invalid",
+                    f"POST {self.key_log} UPLOAD MEDIA INIT: Access token invalid Refresh Fail",
                     base_message="Access token invalid",
                 )
                 return False
