@@ -45,9 +45,29 @@ class MessageError(Enum):
         "error_message": "설정에서 SNS 계정을 먼저 연결해 주세요. 😊",
     }
 
+    REQUIRE_LINK = {
+        "message": "아직 SNS 연결 전이에요😢</br>지금 계정 연동하고 업로드 해보세요!",
+        "error_message": "설정에서 SNS 계정을 먼저 연결해 주세요. 😊",
+    }
+
     CANT_CONNECT_SNS = {
         "message": "⚠️ 계정 연결에 실패했습니다!",
         "error_message": "SNS 계정 정보를 확인해주세요😢",
+    }
+
+    NO_ACCESS_TOKEN_X = {
+        "message": "🔒 X의 액세스 토큰이 만료됐어요!",
+        "error_message": "🔗다시 연결해 주세요. 😊",
+    }
+
+    CHECK_CREATE_POST_VIDEO = {
+        "message": "⚠️ 비디오 생성에 실패했습니다.",
+        "error_message": "⏳ 잠시 후 다시 시도해 주세요. 😊",
+    }
+
+    CHECK_CREATE_POST_IMAGE = {
+        "message": "⚠️ 비디오 생성에 실패했습니다.",
+        "error_message": "⏳ 잠시 후 다시 시도해 주세요. 😊",
     }
 
     CREATE_POST_VIDEO = "비디오 생성이 성공적으로 완료되었습니다."
