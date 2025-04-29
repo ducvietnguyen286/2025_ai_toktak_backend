@@ -10,6 +10,10 @@ from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
 from app.services.crawl_data import CrawlDataService
 
+from app.lib.string import (
+    format_price_show,
+)
+
 
 class AliExpressScraper:
     def __init__(self, params):
@@ -135,24 +139,15 @@ class AliExpressScraper:
                 sku_def = sku.get("def", {})
                 if sku_def:
                     promotionPrice = sku_def.get("promotionPrice", "")
-                    price_show = promotionPrice.split("-")[0].strip()
-                    try:
-                        if price_show:
-                            price_show_no_comma = price_show.replace(",", "")
-                            if not price_show_no_comma.isdigit():
-                                logger.error(f"Not a number {price_show}")
-                            if len(price_show_no_comma) > 2:
-                                price_show = (
-                                    price_show_no_comma[:2]
-                                    + ","
-                                    + price_show_no_comma[2:]
-                                )
-                            if not price_show.startswith("₩"):
-                                price_show = f"₩{price_show}"
-                    except Exception as e:
-                        logger.error(f"Exception {e}")
-                        pass
+                    price = sku_def.get("price", "")
+                    price_show = ""
 
+                    if promotionPrice:
+                        price_show = promotionPrice.split("-")[0].strip()
+                    elif price:
+                        price_show = price.split("-")[0].strip()
+
+                    price_show = format_price_show(price_show)
             video = item.get("video", {})
             video_url = ""
             video_thumbnail = ""
