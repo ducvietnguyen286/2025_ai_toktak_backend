@@ -86,7 +86,7 @@ class AliExpressScraper:
             if exist_data:
                 return json.loads(exist_data.response)
 
-            product_id = parsed_url.path.split("/")[-1].split(".")[0]
+            product_id = real_url.path.split("/")[-1].split(".")[0]
 
             RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
 
@@ -96,7 +96,7 @@ class AliExpressScraper:
             }
 
             querystring = {
-                "productId": product_id,
+                "itemId": product_id,
                 "currency": "KRW",
                 "region": "kr",
                 "locale": "ko_KR",
