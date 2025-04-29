@@ -94,7 +94,7 @@ class ShotStackService:
         audio_urls = get_random_audio(1)
         first_viral_detail = video_urls[0] or []
         first_duration = float(first_viral_detail["duration"] or 0)
-
+        last_time = 0
         if is_advance == 1:
 
             template_info = data_make_video["template_info"]
@@ -116,6 +116,8 @@ class ShotStackService:
                 caption_videos_default,
             )
             last_time = clips_data["current_start"]
+
+            log_make_video_message(f"last_timelast_timelast_timelast_time {last_time}")
         else:
 
             first_duration = 0
@@ -189,16 +191,17 @@ class ShotStackService:
                 output_path=f"{dir_path}/emoji_with_text_{timestamp}.png",
             )
 
+            purchase_guide_format = purchase_guide
             if len(purchase_guide) > 5:
-                purchase_guide = purchase_guide[:5] + "\n" + purchase_guide[5:]
+                purchase_guide_format = purchase_guide[:5] + "\n" + purchase_guide[5:]
 
             is_product_name = int(template_info.get("is_product_name", 0))
             is_purchase_guide = int(template_info.get("is_purchase_guide", 0))
 
-            clip_advance = []
+            view_data_advance = []
             # Chỉ thêm ảnh nếu is_product_name là 1
             if is_product_name == 1:
-                clip_advance.append(
+                view_data_advance.append(
                     {
                         "asset": {
                             "type": "image",
@@ -211,37 +214,6 @@ class ShotStackService:
                         "offset": {"x": 0.04, "y": -0.026},
                     }
                 )
-
-            # Chỉ thêm văn bản nếu is_purchase_guide == 1
-            if is_purchase_guide == 1:
-                clip_advance.append(
-                    {
-                        "asset": {
-                            "type": "text",
-                            "text": purchase_guide,
-                            "font": {
-                                "family": "GmarketSansTTFMedium",
-                                "color": "#ffffff",
-                                "size": 30,
-                                "lineHeight": 1.2,
-                            },
-                            "stroke": {"color": "#000000", "width": 0.5},
-                            "height": 200,
-                            "width": 600,
-                        },
-                        "start": 0.01,
-                        "length": "end",
-                        "position": "topRight",
-                        "offset": {"x": 0.25, "y": 0.0255},
-                    }
-                )
-
-            # Chỉ gán `clips` vào `layout_advance` nếu có phần tử
-            if clip_advance:
-                layout_advance["clips"] = clip_advance
-
-            if is_caption_top == 1:
-                layout_advance_caption_top = {}
 
             if is_caption_last == 1:
                 last_time = clips_data["current_start"]
@@ -258,6 +230,63 @@ class ShotStackService:
                     ]
                 }
                 last_time = clips_data["current_start"] + 5
+
+            # Chỉ thêm văn bản nếu is_purchase_guide == 1
+            if is_purchase_guide == 1:
+                view_data_advance.append(
+                    {
+                        "asset": {
+                            "type": "text",
+                            "text": purchase_guide_format,
+                            "font": {
+                                "family": "GmarketSansTTFMedium",
+                                "color": "#ffffff",
+                                "size": 30,
+                                "lineHeight": 1.2,
+                            },
+                            "stroke": {"color": "#000000", "width": 0.5},
+                            "height": 200,
+                            "width": 600,
+                        },
+                        "start": 0.01,
+                        "length": last_time - 3,
+                        "position": "topRight",
+                        "offset": {"x": 0.25, "y": 0.0255},
+                    }
+                )
+
+                view_data_advance.append(
+                    {
+                        "asset": {
+                            "type": "text",
+                            "text": purchase_guide,
+                            "alignment": {"horizontal": "center", "vertical": "center"},
+                            "font": {
+                                "family": "Jalnan2",
+                                "color": "#ffffff",
+                                "size": 65,
+                                "lineHeight": 1.2,
+                            },
+                            "stroke": {"color": "#000000", "width": 3.5},
+                            "height": 360,
+                            "width": 700,
+                        },
+                        "start": last_time - 3,
+                        "length": 3,
+                        "position": "center",
+                        "offset": {"x": 0, "y": 0},
+                    },
+                )
+
+            # Chỉ gán `clips` vào `layout_advance` nếu có phần tử
+            if view_data_advance:
+                log_make_video_message("clip_advanceclip_advanceclip_advance")
+                log_make_video_message(view_data_advance)
+                log_make_video_message("clip_advanceclip_advanceclip_advance")
+                layout_advance["clips"] = view_data_advance
+
+            if is_caption_top == 1:
+                layout_advance_caption_top = {}
 
         clips_watermarker = {}
         if batch_type == const.TYPE_NORMAL:
@@ -663,7 +692,6 @@ def create_combined_clips_with_advance(
 
     end_time = current_start
     start_time = 0
-    next_time_begin = 0
     for j_index, image_slider_detail in enumerate(images_slider_url):
         url = image_slider_detail["url"]
         start_time = image_slider_detail["start_time"]
@@ -745,18 +773,14 @@ def create_combined_clips_with_advance(
             }
         )
 
-        next_time_begin = current_start + last_duration
-
         if is_caption_top == 1:
             clip_detail = create_header_text(
                 last_caption_videos_default, current_start, last_duration
             )
             clips.append(clip_detail)
-            current_start = current_start + last_duration
+        current_start = current_start + last_duration
 
-            next_time_begin = current_start + last_duration
-
-    clips = add_gif_like_me(clips, next_time_begin)
+    clips = add_gif_like_me(clips, current_start)
 
     # Kết hợp hai danh sách clip lại
     combined_clips = clips
@@ -1554,8 +1578,8 @@ def add_gif_like_me(clips, next_time_begin):
                     "src": f"{current_domain}/voice/advance/likeme.mov",
                 },
                 "length": 1,
-                "start": next_time_begin - value_i - 1,
-                "offset": {"x": -0.054, "y": -0.105},
+                "start": next_time_begin - value_i,
+                "offset": {"x": -0.154, "y": -0.163},
                 "position": "center",
                 "transform": {"rotate": {"angle": 23.81}},
                 "scale": 0.611,
