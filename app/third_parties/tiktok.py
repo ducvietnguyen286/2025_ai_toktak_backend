@@ -76,8 +76,9 @@ class TiktokTokenService:
             if is_refresing:
                 while True:
                     refresh_done = redis_client.get(redis_key_done)
+                    refresh_done = str(refresh_done) if refresh_done else False
                     if refresh_done:
-                        if refresh_done == b"failled":
+                        if refresh_done == "failled":
                             return False
                         return True
                     time.sleep(1)

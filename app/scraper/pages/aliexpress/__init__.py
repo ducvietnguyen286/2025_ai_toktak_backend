@@ -1,5 +1,4 @@
 import hashlib
-import hmac
 from http.cookiejar import CookieJar
 import json
 import os
@@ -10,6 +9,10 @@ import requests
 from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
 from app.services.crawl_data import CrawlDataService
+
+from app.lib.string import (
+    format_price_show,
+)
 
 
 class AliExpressScraper:
@@ -69,9 +72,9 @@ class AliExpressScraper:
         else:
             request_url = self.url
 
-        data = self.run_api_ali_data(request_url)
+        data = self.run_api_ali_data_hub_6(request_url)
         if not data:
-            data = self.run_api_ali_data_hub_6(request_url)
+            data = self.run_api_ali_data(request_url)
         if not data:
             data = self.run_api_ali_data_hub_2(request_url)
         if not data:
@@ -87,6 +90,7 @@ class AliExpressScraper:
             if exist_data:
                 return json.loads(exist_data.response)
 
+            parsed_url = urlparse(real_url)
             product_id = parsed_url.path.split("/")[-1].split(".")[0]
 
             RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
@@ -97,7 +101,7 @@ class AliExpressScraper:
             }
 
             querystring = {
-                "productId": product_id,
+                "itemId": product_id,
                 "currency": "KRW",
                 "region": "kr",
                 "locale": "ko_KR",
@@ -125,15 +129,25 @@ class AliExpressScraper:
             sku_images = []
             if sku:
                 sku_images = sku.get("skuImages", {})
+
                 if sku_images:
                     sku_images = [
-                        (
-                            f"https:{img['url']}"
-                            if img["url"].startswith("//")
-                            else img["url"]
-                        )
+                        f"https:{img}" if img.startswith("//") else img
                         for img in sku_images.values()
                     ]
+
+                sku_def = sku.get("def", {})
+                if sku_def:
+                    promotionPrice = sku_def.get("promotionPrice", "")
+                    price = sku_def.get("price", "")
+                    price_show = ""
+
+                    if promotionPrice:
+                        price_show = promotionPrice.split("-")[0].strip()
+                    elif price:
+                        price_show = price.split("-")[0].strip()
+
+                    price_show = format_price_show(price_show)
             video = item.get("video", {})
             video_url = ""
             video_thumbnail = ""

@@ -6,6 +6,7 @@ import traceback
 import requests
 
 from app.enums.limit import LimitSNS
+from app.enums.messages import MessageError
 from app.services.post import PostService
 from app.services.video_service import VideoService
 
@@ -144,8 +145,11 @@ class TwitterTokenService:
             if is_refresing:
                 while True:
                     refresh_done = redis_client.get(redis_key_done)
+                    refresh_done = str(refresh_done) if refresh_done else False
                     if refresh_done:
-                        if refresh_done == b"failled":
+                        redis_client.delete(redis_key_check)
+                        redis_client.delete(redis_key_done)
+                        if refresh_done == "failled":
                             return False
                         return True
                     time.sleep(1)
@@ -227,6 +231,7 @@ class TwitterService(BaseService):
         self.link_id = link.id
         self.post_id = post.id
         self.batch_id = post.batch_id
+        self.user_id = self.user.id or 0
         self.social_post_id = str(self.social_post.id)
         self.key_log = f"{self.post_id} - {self.social_post.session_key}"
 
@@ -304,6 +309,10 @@ class TwitterService(BaseService):
                         "ERRORED",
                         f"POST {self.key_log} SEND POST IMAGES: Access token invalid",
                         base_message="Access token invalid",
+                    )
+                    self.send_notification(
+                        MessageError.NO_ACCESS_TOKEN_X.value["message"],
+                        MessageError.NO_ACCESS_TOKEN_X.value["error_message"],
                     )
 
                     return False
@@ -433,7 +442,10 @@ class TwitterService(BaseService):
                         f"POST {self.key_log} SEND POST VIDEO: Access token invalid",
                         base_message="Access token invalid",
                     )
-
+                    self.send_notification(
+                        MessageError.NO_ACCESS_TOKEN_X.value["message"],
+                        MessageError.NO_ACCESS_TOKEN_X.value["error_message"],
+                    )
                     return False
 
                 refreshed = TwitterTokenService().refresh_token(
@@ -578,6 +590,10 @@ class TwitterService(BaseService):
                     f"POST {self.key_log} UPLOAD MEDIA INIT: Access token invalid",
                     base_message="Access token invalid",
                 )
+                self.send_notification(
+                    MessageError.NO_ACCESS_TOKEN_X.value["message"],
+                    MessageError.NO_ACCESS_TOKEN_X.value["error_message"],
+                )
                 return False
 
             refreshed = TwitterTokenService().refresh_token(
@@ -597,7 +613,7 @@ class TwitterService(BaseService):
             else:
                 self.save_errors(
                     "ERRORED",
-                    f"POST {self.key_log} UPLOAD MEDIA INIT: Access token invalid",
+                    f"POST {self.key_log} UPLOAD MEDIA INIT: Access token invalid Refresh Fail",
                     base_message="Access token invalid",
                 )
                 return False
@@ -670,6 +686,10 @@ class TwitterService(BaseService):
                         f"POST {self.key_log} UPLOAD MEDIA APPEND: Access token invalid",
                         base_message="Access token invalid",
                     )
+                    self.send_notification(
+                        MessageError.NO_ACCESS_TOKEN_X.value["message"],
+                        MessageError.NO_ACCESS_TOKEN_X.value["error_message"],
+                    )
                     return False
 
                 refreshed = TwitterTokenService().refresh_token(
@@ -739,7 +759,10 @@ class TwitterService(BaseService):
                     f"POST {self.key_log} UPLOAD MEDIA FINALIZE: Access token invalid",
                     base_message="Access token invalid",
                 )
-
+                self.send_notification(
+                    MessageError.NO_ACCESS_TOKEN_X.value["message"],
+                    MessageError.NO_ACCESS_TOKEN_X.value["error_message"],
+                )
                 return False
             refreshed = TwitterTokenService().refresh_token(
                 link=self.link, user=self.user
@@ -831,6 +854,10 @@ class TwitterService(BaseService):
                     "ERRORED",
                     f"POST {self.key_log} UPLOAD MEDIA STATUS: Access token invalid",
                     base_message="Access token invalid",
+                )
+                self.send_notification(
+                    MessageError.NO_ACCESS_TOKEN_X.value["message"],
+                    MessageError.NO_ACCESS_TOKEN_X.value["error_message"],
                 )
                 return False
             refreshed = TwitterTokenService().refresh_token(
