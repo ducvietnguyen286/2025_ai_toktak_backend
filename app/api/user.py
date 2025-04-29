@@ -1479,9 +1479,13 @@ class APICheckSNSLink(Resource):
                     if post.type == "video":
                         video_url = post.video_url
                         video_path = post.video_path
-                        exist_path = os.path.exists(video_path) if video_path else False
-                        if video_url and video_url != "" and video_path and exist_path:
-                            is_valid_video = exist_path
+                        if (
+                            video_url
+                            and video_url != ""
+                            and video_path
+                            and video_path != ""
+                        ):
+                            is_valid_video = True
                     if post.type == "image":
                         images = post.images
                         images = json.loads(images) if images else []
