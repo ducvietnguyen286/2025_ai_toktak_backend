@@ -1,5 +1,6 @@
-import logging
+from app.lib.logger import logger
 from urllib.parse import urlparse
+import re
 
 
 def get_domain(url):
@@ -37,6 +38,7 @@ def parse_response(html, base_url):
     url_content = url["content"] if url else ""
     domain = get_domain(url_content)
     single_price = html.find("div", {"class": "lItemPrice"})
+    price = ""
     if single_price:
         price = single_price.text
     else:
@@ -45,6 +47,17 @@ def parse_response(html, base_url):
             price = multiple_price.find("td", {"data-idx": 1}).text + "원"
         else:
             price = ""
+
+    if price == "":
+        lGGookDealAmt = html.find("div", {"class": "lGGookDealAmt"})
+        if lGGookDealAmt:
+            html_string = lGGookDealAmt.find("b")
+            if html_string:
+                clean_text = html_string.get_text(strip=True)
+                logger.error(clean_text)
+                price = clean_text
+
+
     info_view_contents = html.find("div", {"id": "lInfoViewItemContents"})
 
     images, gifs, iframes, text = extract_images_and_text(info_view_contents)

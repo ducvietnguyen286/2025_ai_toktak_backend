@@ -133,6 +133,14 @@ class AliExpressScraper:
                         )
                         for img in sku_images.values()
                     ]
+                    
+                sku_def = sku.get("def", {})
+                if sku_def:
+                    promotionPrice = sku_def.get("promotionPrice", "")
+                    print(promotionPrice)
+                    price_show = promotionPrice.split("-")[0].strip()
+                    
+                
             video = item.get("video", {})
             video_url = ""
             video_thumbnail = ""
