@@ -117,7 +117,6 @@ class ShotStackService:
             )
             last_time = clips_data["current_start"]
 
-            log_make_video_message(f"last_timelast_timelast_timelast_time {last_time}")
         else:
 
             first_duration = 0
@@ -174,8 +173,6 @@ class ShotStackService:
         }
 
         layout_advance = {}
-        layout_advance_image_last = {}
-        layout_advance_caption_top = {}
         if is_advance == 1:
             template_info = json.loads(template_info)
             product_name = template_info["product_name"]
@@ -214,22 +211,6 @@ class ShotStackService:
                         "offset": {"x": 0.04, "y": -0.026},
                     }
                 )
-
-            if is_caption_last == 1:
-                last_time = clips_data["current_start"]
-                layout_advance_image_last = {
-                    "clips": [
-                        {
-                            "asset": {
-                                "type": "video",
-                                "src": f"{current_domain}/voice/advance/subscribe_video.mp4",
-                            },
-                            "start": clips_data["current_start"],
-                            "length": 5,
-                        }
-                    ]
-                }
-                last_time = clips_data["current_start"] + 5
 
             # Chỉ thêm văn bản nếu is_purchase_guide == 1
             if is_purchase_guide == 1:
@@ -280,9 +261,6 @@ class ShotStackService:
 
             # Chỉ gán `clips` vào `layout_advance` nếu có phần tử
             if view_data_advance:
-                log_make_video_message("clip_advanceclip_advanceclip_advance")
-                log_make_video_message(view_data_advance)
-                log_make_video_message("clip_advanceclip_advanceclip_advance")
                 layout_advance["clips"] = view_data_advance
 
             if is_caption_top == 1:
@@ -343,9 +321,6 @@ class ShotStackService:
         if layout_advance:
             tracks.insert(2, layout_advance)
 
-        if layout_advance_image_last:
-            tracks.append(layout_advance_image_last)
-
         payload = {
             "timeline": {
                 "fonts": [
@@ -386,9 +361,6 @@ class ShotStackService:
                 {"provider": "shotstack", "exclude": True},
             ]
 
-        log_make_video_message(
-            f"++++++++++++++++++++++++++++++payload_dumps:\n\n {json.dumps(payload)} \n\n"
-        )
 
         # Header với API Key
         headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
@@ -405,7 +377,6 @@ class ShotStackService:
                 result = response.json()
                 result["status_code"] = 200
 
-                log_make_video_message(f"render_id : : {result}")
 
                 RequestLogService.create_request_log(
                     post_id=post_id,
@@ -751,8 +722,23 @@ def create_combined_clips_with_advance(
             clips.append(clip_detail)
         current_start = current_start + last_duration
 
-    clips = add_gif_like_me(clips, current_start)
+    if is_caption_last == 1:
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
+        clips.append(
+            {
+                "asset": {
+                    "type": "video",
+                    "src": f"{current_domain}/voice/advance/subscribe_video.mp4",
+                    "volume": 0,
+                },
+                "start": current_start,
+                "length": 5,
+            }
+        )
+        current_start = current_start + 5
+
+    clips = add_gif_like_me(clips, current_start)
     # Kết hợp hai danh sách clip lại
     combined_clips = clips
     return {
@@ -1060,7 +1046,6 @@ def generate_caption_from_audio(
                 # Cập nhật thời gian bắt đầu cho caption tiếp theo (+0.01 giây)
                 current_time = end_time + 0.01
 
-        log_make_video_message(f"Đã tạo file caption: {output_caption_file}")
 
         # Chuyển đường dẫn thành URL để trả về
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -1411,7 +1396,6 @@ def distribute_images_over_audio(image_list, audio_duration=None, start_offset=0
         )
         start_time = end_time
 
-    log_make_video_message(timestamps)
     return timestamps
 
 
@@ -1540,7 +1524,7 @@ def add_centered_text_to_png(
 
 def add_gif_like_me(clips, next_time_begin):
     current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
-    next_time_begin =next_time_begin -1
+    next_time_begin = next_time_begin - 1
     for value_i in range(2, -1, -1):
         clips.append(
             {
@@ -1550,12 +1534,12 @@ def add_gif_like_me(clips, next_time_begin):
                     "src": f"{current_domain}/voice/advance/likeme.mov",
                 },
                 "length": 1,
-                "start": next_time_begin ,
+                "start": next_time_begin,
                 "offset": {"x": -0.1, "y": -0.25},
                 "position": "center",
                 "transform": {"rotate": {"angle": 23.81}},
                 "scale": 0.611,
             }
         )
-        next_time_begin = next_time_begin -1
+        next_time_begin = next_time_begin - 1
     return clips
