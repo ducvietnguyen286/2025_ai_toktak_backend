@@ -18,7 +18,7 @@ from pathlib import Path
 from app.services.user import UserService
 from app.services.product import ProductService
 import const
-
+from app.extensions import redis_client 
 ns = Namespace(name="video_maker", description="Video Maker API")
 
 
@@ -203,13 +203,8 @@ class ShortstackWebhook(Resource):
                         video_url=video_url,
                         video_path=file_path,
                     )
-                    current_user = UserService.find_user(user_id)
 
-                    if current_user:
-                        new_batch_remain = max(current_user.batch_remain - 1, 0)
-                        UserService.update_user(user_id, batch_remain=new_batch_remain)
-
-                    # trừ số lần được tạo của người dùng
+                    check_and_update_user_batch_remain(user_id , batch_id)
 
             return {
                 "message": "Webhook received successfully",
@@ -314,3 +309,32 @@ def download_video(video_url, batch_id):
         f"❌ Tải video thất bại batch_id: {batch_id} sau {MAX_RETRIES} lần: {video_url}"
     )
     return None
+
+
+def check_and_update_user_batch_remain(user_id: int, batch_id: int):
+    redis_key = f"user_batch_remain_updated:{user_id}:{batch_id}"
+    
+    try:
+        # Nếu đã cập nhật rồi trong 5 phút, thì không làm gì
+        if redis_client.exists(redis_key):
+            return False  # Đã cập nhật rồi
+
+        current_user = UserService.find_user(user_id)
+        if not current_user:
+            return False  # Không tìm thấy user
+        
+        batch_remain = current_user.batch_remain
+        new_batch_remain = max(current_user.batch_remain - 1, 0)
+        
+        log_webhook_message(f"[Cap Nhat batch_remain  ] user_id={user_id}, batch_id={batch_id}, batch_remain={batch_remain}, new_batch_remain={new_batch_remain}")
+        
+        UserService.update_user(user_id, batch_remain=new_batch_remain)
+
+        # Đặt key trong Redis với TTL là 5 phút (300 giây)
+        redis_client.setex(redis_key, 300, "1")
+        return True  # Đã cập nhật thành công
+
+    except Exception as e:
+        # Log lỗi nếu cần
+        log_webhook_message(f"[Redis/UserService Error] user_id={user_id}, batch_id={batch_id}, error={str(e)}")
+        return False  # Báo lỗi chung
