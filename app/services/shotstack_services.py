@@ -361,7 +361,6 @@ class ShotStackService:
                 {"provider": "shotstack", "exclude": True},
             ]
 
-
         # Header với API Key
         headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
 
@@ -376,7 +375,6 @@ class ShotStackService:
             if response.status_code == 201:
                 result = response.json()
                 result["status_code"] = 200
-
 
                 RequestLogService.create_request_log(
                     post_id=post_id,
@@ -593,8 +591,8 @@ def create_combined_clips_with_advance(
     # Chọn 2 URL khác nhau một cách ngẫu nhiên
     first_viral_url = first_viral_detail["video_url"]
     first_duration = float(first_viral_detail["duration"] or 0)
-    
-    is_purchase_guide = template_info["is_purchase_guide"]
+
+    is_purchase_guide = int(template_info.get("is_purchase_guide", 0))
 
     clips = []
     current_start = 0
@@ -740,10 +738,9 @@ def create_combined_clips_with_advance(
         )
         current_start = current_start + 5
 
-
-    if is_purchase_guide == 1:
+    if is_purchase_guide == 1 and purchase_guide != "":
         clips = add_gif_like_me(clips, current_start)
-        
+
     # Kết hợp hai danh sách clip lại
     combined_clips = clips
     return {
@@ -1050,7 +1047,6 @@ def generate_caption_from_audio(
 
                 # Cập nhật thời gian bắt đầu cho caption tiếp theo (+0.01 giây)
                 current_time = end_time + 0.01
-
 
         # Chuyển đường dẫn thành URL để trả về
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
