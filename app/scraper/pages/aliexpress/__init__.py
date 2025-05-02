@@ -135,19 +135,18 @@ class AliExpressScraper:
                         f"https:{img}" if img.startswith("//") else img
                         for img in sku_images.values()
                     ]
+                # sku_def = sku.get("def", {})
+                # if sku_def:
+                #     promotionPrice = sku_def.get("promotionPrice", "")
+                #     price = sku_def.get("price", "")
+                #     price_show = ""
 
-                sku_def = sku.get("def", {})
-                if sku_def:
-                    promotionPrice = sku_def.get("promotionPrice", "")
-                    price = sku_def.get("price", "")
-                    price_show = ""
+                #     if promotionPrice:
+                #         price_show = promotionPrice.split("-")[0].strip()
+                #     elif price:
+                #         price_show = price.split("-")[0].strip()
 
-                    if promotionPrice:
-                        price_show = promotionPrice.split("-")[0].strip()
-                    elif price:
-                        price_show = price.split("-")[0].strip()
-
-                    price_show = format_price_show(price_show)
+                #     price_show = format_price_show(price_show)
             video = item.get("video", {})
             video_url = ""
             video_thumbnail = ""
@@ -369,9 +368,10 @@ class AliExpressScraper:
             shop_info = data.get("shopInfo", {})
             store_name = shop_info.get("storeName", "")
             image_url = data.get("image", "")
-            prices = data.get("prices", {})
-            target_price = prices.get("targetSkuPriceInfo", {})
-            price_show = target_price.get("salePriceString", "")
+            # prices = data.get("prices", {})
+            # target_price = prices.get("targetSkuPriceInfo", {})
+            # price_show = target_price.get("salePriceString", "")
+            price_show = ""
             media = data.get("media", {})
             thumbnails = media.get("images", [])
             sku_images = media.get("currentSkuImages", [])

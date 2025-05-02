@@ -5,6 +5,7 @@ import re
 import hashlib
 import base64
 import string
+from app.lib.logger import logger
 
 
 def is_json(data):
@@ -307,3 +308,12 @@ def format_price_show(price_text):
         return ""
 
     return price_text
+
+
+def convert_video_path(path: str, domain: str):
+    try:
+        path = path or ""
+        return path.replace("static/", domain).replace("/mnt/", f"{domain}/voice/")
+    except Exception as e:
+        logger.error(f"[convert_video_path] Failed for path: {path} — Error: {e}")
+        return ""
