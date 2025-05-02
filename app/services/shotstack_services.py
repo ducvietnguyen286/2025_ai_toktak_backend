@@ -593,6 +593,8 @@ def create_combined_clips_with_advance(
     # Chọn 2 URL khác nhau một cách ngẫu nhiên
     first_viral_url = first_viral_detail["video_url"]
     first_duration = float(first_viral_detail["duration"] or 0)
+    
+    is_purchase_guide = template_info["is_purchase_guide"]
 
     clips = []
     current_start = 0
@@ -738,7 +740,10 @@ def create_combined_clips_with_advance(
         )
         current_start = current_start + 5
 
-    clips = add_gif_like_me(clips, current_start)
+
+    if is_purchase_guide == 1:
+        clips = add_gif_like_me(clips, current_start)
+        
     # Kết hợp hai danh sách clip lại
     combined_clips = clips
     return {
