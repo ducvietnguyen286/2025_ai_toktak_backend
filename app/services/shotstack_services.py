@@ -53,6 +53,8 @@ class ShotStackService:
         progress_json = redis_client.get(key_redis)
         timestamp = datetime.datetime.now().strftime("%H%M%S")
 
+        last_time = 0
+
         if progress_json:
             caption_videos_default = json.loads(progress_json) if progress_json else {}
         else:
@@ -92,7 +94,7 @@ class ShotStackService:
         audio_urls = get_random_audio(1)
         first_viral_detail = video_urls[0] or []
         first_duration = float(first_viral_detail["duration"] or 0)
-
+        last_time = 0
         if is_advance == 1:
 
             template_info = data_make_video["template_info"]
@@ -113,6 +115,8 @@ class ShotStackService:
                 config,
                 caption_videos_default,
             )
+            last_time = clips_data["current_start"]
+
         else:
 
             first_duration = 0
@@ -127,6 +131,7 @@ class ShotStackService:
                 caption_videos_default,
                 product_video_url,
             )
+            last_time = clips_data["current_start"]
 
         file_caption = generate_srt(
             origin_caption,
@@ -168,8 +173,6 @@ class ShotStackService:
         }
 
         layout_advance = {}
-        layout_advance_image_last = {}
-        layout_advance_caption_top = {}
         if is_advance == 1:
             template_info = json.loads(template_info)
             product_name = template_info["product_name"]
@@ -185,16 +188,17 @@ class ShotStackService:
                 output_path=f"{dir_path}/emoji_with_text_{timestamp}.png",
             )
 
+            purchase_guide_format = purchase_guide
             if len(purchase_guide) > 5:
-                purchase_guide = purchase_guide[:5] + "\n" + purchase_guide[5:]
+                purchase_guide_format = purchase_guide[:5] + "\n" + purchase_guide[5:]
 
             is_product_name = int(template_info.get("is_product_name", 0))
             is_purchase_guide = int(template_info.get("is_purchase_guide", 0))
 
-            clip_advance = []
+            view_data_advance = []
             # Chỉ thêm ảnh nếu is_product_name là 1
             if is_product_name == 1:
-                clip_advance.append(
+                view_data_advance.append(
                     {
                         "asset": {
                             "type": "image",
@@ -210,11 +214,11 @@ class ShotStackService:
 
             # Chỉ thêm văn bản nếu is_purchase_guide == 1
             if is_purchase_guide == 1:
-                clip_advance.append(
+                view_data_advance.append(
                     {
                         "asset": {
                             "type": "text",
-                            "text": purchase_guide,
+                            "text": purchase_guide_format,
                             "font": {
                                 "family": "GmarketSansTTFMedium",
                                 "color": "#ffffff",
@@ -226,32 +230,41 @@ class ShotStackService:
                             "width": 600,
                         },
                         "start": 0.01,
-                        "length": "end",
+                        "length": last_time - 3,
                         "position": "topRight",
                         "offset": {"x": 0.25, "y": 0.0255},
                     }
                 )
 
+                view_data_advance.append(
+                    {
+                        "asset": {
+                            "type": "text",
+                            "text": purchase_guide,
+                            "alignment": {"horizontal": "center", "vertical": "center"},
+                            "font": {
+                                "family": "Jalnan2",
+                                "color": "#ffffff",
+                                "size": 65,
+                                "lineHeight": 1.2,
+                            },
+                            "stroke": {"color": "#000000", "width": 3.5},
+                            "height": 360,
+                            "width": 700,
+                        },
+                        "start": last_time - 3,
+                        "length": 3,
+                        "position": "center",
+                        "offset": {"x": 0, "y": -0.101},
+                    },
+                )
+
             # Chỉ gán `clips` vào `layout_advance` nếu có phần tử
-            if clip_advance:
-                layout_advance["clips"] = clip_advance
+            if view_data_advance:
+                layout_advance["clips"] = view_data_advance
 
             if is_caption_top == 1:
                 layout_advance_caption_top = {}
-
-            if is_caption_last == 1:
-                layout_advance_image_last = {
-                    "clips": [
-                        {
-                            "asset": {
-                                "type": "video",
-                                "src": f"{current_domain}/voice/advance/subscribe_video.mp4",
-                            },
-                            "start": clips_data["current_start"],
-                            "length": 5,
-                        }
-                    ]
-                }
 
         clips_watermarker = {}
         if batch_type == const.TYPE_NORMAL:
@@ -308,9 +321,6 @@ class ShotStackService:
         if layout_advance:
             tracks.insert(2, layout_advance)
 
-        if layout_advance_image_last:
-            tracks.append(layout_advance_image_last)
-
         payload = {
             "timeline": {
                 "fonts": [
@@ -351,10 +361,6 @@ class ShotStackService:
                 {"provider": "shotstack", "exclude": True},
             ]
 
-        log_make_video_message(
-            f"++++++++++++++++++++++++++++++payload_dumps:\n\n {json.dumps(payload)} \n\n"
-        )
-
         # Header với API Key
         headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
 
@@ -369,8 +375,6 @@ class ShotStackService:
             if response.status_code == 201:
                 result = response.json()
                 result["status_code"] = 200
-
-                log_make_video_message(f"render_id : : {result}")
 
                 RequestLogService.create_request_log(
                     post_id=post_id,
@@ -497,21 +501,6 @@ def create_combined_clips_normal(
     current_start = 0
     intro_length = 0
 
-    # intro_length = first_duration
-    # clips.append(
-    #     {
-    #         "asset": {"type": "video", "src": first_viral_url},
-    #         "start": current_start,
-    #         "length": intro_length,
-    #     }
-    # )
-    # first_caption_videos_default = ShotStackService.filter_content_by_type(
-    #     caption_videos_default, 1
-    # )
-
-    # clip_detail = create_header_text(first_caption_videos_default, current_start, 2)
-    # clips.append(clip_detail)
-
     current_start += intro_length
 
     SHOTSTACK_IMAGE_EFFECTS = config["SHOTSTACK_IMAGE_EFFECTS"] or ""
@@ -528,12 +517,8 @@ def create_combined_clips_normal(
         effects = [
             SHOTSTACK_IMAGE_EFFECTS,
         ]
-
-    last_caption_videos_default = ShotStackService.filter_content_by_type(
-        caption_videos_default, 4
-    )
-
     end_time = current_start
+
     for j_index, image_slider_detail in enumerate(images_slider_url):
         url = image_slider_detail["url"]
         start_time = image_slider_detail["start_time"]
@@ -571,26 +556,10 @@ def create_combined_clips_normal(
 
         # lấy thời gian cuối
         current_start = end_time
-
-    # last_viral_url = last_viral_detail["video_url"]
-    # last_duration = float(last_viral_detail["duration"] or 0)
     last_duration = 0
-    # clips.append(
-    #     {
-    #         "asset": {"type": "video", "src": last_viral_url},
-    #         "start": current_start,
-    #         "length": last_duration,
-    #     }
-    # )
-
-    # clip_detail = create_header_text(
-    #     last_caption_videos_default, current_start, last_duration
-    # )
-    # clips.append(clip_detail)
 
     current_start = current_start + last_duration
 
-    # Kết hợp hai danh sách clip lại
     combined_clips = clips
     return {
         "intro_length": intro_length,
@@ -622,6 +591,8 @@ def create_combined_clips_with_advance(
     # Chọn 2 URL khác nhau một cách ngẫu nhiên
     first_viral_url = first_viral_detail["video_url"]
     first_duration = float(first_viral_detail["duration"] or 0)
+
+    is_purchase_guide = int(template_info.get("is_purchase_guide", 0))
 
     clips = []
     current_start = 0
@@ -698,14 +669,17 @@ def create_combined_clips_with_advance(
                 clip_detail["effect"] = random_effect
             clips.append(clip_detail)
 
+        next_time_begin = start_slider_time + length
+
         # khi chon 영상 위에 바이럴 문구가 표시됩니다. moi hien thi text tren dau
         if is_caption_top == 1:
+            length_caption = 2
             if j_index == 0:
                 first_caption_image_default = ShotStackService.filter_content_by_type(
-                    caption_videos_default, 2
+                    caption_videos_default, length_caption
                 )
                 clip_detail = create_header_text(
-                    first_caption_image_default, start_slider_time, 2
+                    first_caption_image_default, start_slider_time, length_caption
                 )
                 clips.append(clip_detail)
             elif j_index == 2:
@@ -714,16 +688,19 @@ def create_combined_clips_with_advance(
                     caption_videos_default, 3
                 )
                 clip_detail = create_header_text(
-                    first_caption_image_default, start_slider_time, 2
+                    first_caption_image_default, start_slider_time, length_caption
                 )
                 clips.append(clip_detail)
 
             elif j_index == 4:
                 # When 5th image start, display for 2 sec & When start last hooking video, display for 2 sec in the middle of screen until end of video
                 clip_detail = create_header_text(
-                    last_caption_videos_default, start_slider_time, 2
+                    last_caption_videos_default, start_slider_time, length_caption
                 )
                 clips.append(clip_detail)
+
+            next_time_begin = start_slider_time + length_caption
+
         # lấy thời gian cuối
         current_start = end_time
 
@@ -737,12 +714,32 @@ def create_combined_clips_with_advance(
                 "length": last_duration,
             }
         )
+
         if is_caption_top == 1:
             clip_detail = create_header_text(
                 last_caption_videos_default, current_start, last_duration
             )
             clips.append(clip_detail)
-            current_start = current_start + last_duration
+        current_start = current_start + last_duration
+
+    if is_caption_last == 1:
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+
+        clips.append(
+            {
+                "asset": {
+                    "type": "video",
+                    "src": f"{current_domain}/voice/advance/subscribe_video.mp4",
+                    "volume": 0,
+                },
+                "start": current_start,
+                "length": 5,
+            }
+        )
+        current_start = current_start + 5
+
+    if is_purchase_guide == 1 and purchase_guide != "":
+        clips = add_gif_like_me(clips, current_start)
 
     # Kết hợp hai danh sách clip lại
     combined_clips = clips
@@ -1050,8 +1047,6 @@ def generate_caption_from_audio(
 
                 # Cập nhật thời gian bắt đầu cho caption tiếp theo (+0.01 giây)
                 current_time = end_time + 0.01
-
-        log_make_video_message(f"Đã tạo file caption: {output_caption_file}")
 
         # Chuyển đường dẫn thành URL để trả về
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -1402,7 +1397,6 @@ def distribute_images_over_audio(image_list, audio_duration=None, start_offset=0
         )
         start_time = end_time
 
-    log_make_video_message(timestamps)
     return timestamps
 
 
@@ -1486,7 +1480,7 @@ def add_centered_text_to_png(
         base_image_path = "app/makers/fonts/emoji_tag_base_7.png"
     else:
         base_image_path = "app/makers/fonts/emoji_tag_base.png"
-        
+
     # base_image_path = "app/makers/fonts/emoji_tag_base.png"
 
     # Mở ảnh gốc (RGBA để giữ alpha)
@@ -1510,7 +1504,7 @@ def add_centered_text_to_png(
     # Tính vị trí căn giữa + offset
     img_width, img_height = base_image.size
     x = (img_width - text_width) // 2 + offset_x
-    #x = 55
+    # x = 55
     y = (img_height - text_height) // 2
 
     # Vẽ text lên lớp trong suốt
@@ -1527,3 +1521,26 @@ def add_centered_text_to_png(
     file_url = f"{current_domain}/{output_file_image_tag}"
 
     return file_url
+
+
+def add_gif_like_me(clips, next_time_begin):
+    current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+    next_time_begin = next_time_begin - 1
+    for value_i in range(2, -1, -1):
+        clips.append(
+            {
+                "fit": "contain",
+                "asset": {
+                    "type": "video",
+                    "src": f"{current_domain}/voice/advance/likeme.mov",
+                },
+                "length": 1,
+                "start": next_time_begin,
+                "offset": {"x": -0.1, "y": -0.25},
+                "position": "center",
+                "transform": {"rotate": {"angle": 23.81}},
+                "scale": 0.611,
+            }
+        )
+        next_time_begin = next_time_begin - 1
+    return clips

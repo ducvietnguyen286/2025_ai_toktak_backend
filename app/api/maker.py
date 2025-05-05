@@ -24,6 +24,7 @@ from app.lib.string import (
     merge_by_key,
     replace_phrases_in_text,
     get_ads_content,
+    convert_video_path,
 )
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
@@ -821,13 +822,7 @@ class APIMakePost(Resource):
                     mime_type = img_res.get("mime_type", "")
                     maker_images = image_urls
 
-                logger.info(
-                    "-------------------- PROCESSED CREATE IMAGES -------------------"
-                )
             elif type == "blog":
-                logger.info(
-                    "-------------------- PROCESSING CREATE LOGS -------------------"
-                )
 
                 blog_images = images
                 if blog_images and len(blog_images) < need_count:
@@ -1180,10 +1175,8 @@ class APIGetStatusUploadBySyncId(Resource):
                 if status_check_sns == const.UPLOADED:
                     update_data["status_sns"] = const.UPLOADED
                     update_data["status"] = const.UPLOADED
-                    
-                    ProductService.create_sns_product(
-                        post["user_id"], post["batch_id"]
-                    )
+
+                    ProductService.create_sns_product(post["user_id"], post["batch_id"])
                 else:
                     update_data["status_sns"] = 0
                     update_data["status"] = const.DRAFT_STATUS
@@ -1299,11 +1292,10 @@ class APIGetStatusUploadWithBatch(Resource):
                     if status_check_sns == 1:
                         update_data["status_sns"] = const.UPLOADED
                         update_data["status"] = const.UPLOADED
-                        
+
                         ProductService.create_sns_product(
                             post_detail["user_id"], post_detail["batch_id"]
                         )
-                            
 
                     PostService.update_post(post_id, **update_data)
 
@@ -1414,9 +1406,9 @@ class APIHistories(Resource):
             "data": [
                 {
                     **post_json,
-                    "video_path": post_json.get("video_path", "")
-                    .replace("static/", current_domain)
-                    .replace("/mnt/", f"{current_domain}/voice/"),
+                    "video_path": convert_video_path(
+                        post_json.get("video_path", ""), current_domain
+                    ),
                 }
                 for post in posts.items
                 if (post_json := post._to_json())
