@@ -58,7 +58,9 @@ def main():
                 x_link = link
                 break
         for user in users:
-            user_link = UserService.find_user_link(user.get("id"), x_link.get("id"))
+            user_id = user.get("id")
+            x_link_id = x_link.get("id")
+            user_link = UserService.find_user_link(user_id=user_id, link_id=x_link_id)
             if user_link:
                 UserService.delete_user_link(user_link_id=user_link.id)
                 NotificationServices.create_notification(
@@ -67,6 +69,7 @@ def main():
                     description="🔗 계속 사용하시려면 X 계정을 다시 연결해 주세요. 😊",
                     description_korea="🔗 계속 사용하시려면 X 계정을 다시 연결해 주세요. 😊",
                 )
+        app.logger.info("End Script...")
 
 
 if __name__ == "__main__":
