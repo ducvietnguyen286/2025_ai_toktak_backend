@@ -54,7 +54,7 @@ def main():
         links = LinkService.get_all_links()
         x_link = None
         for link in links:
-            if link.type == "X":
+            if link.get("type") == "X":
                 x_link = link
                 break
         for user in users:
