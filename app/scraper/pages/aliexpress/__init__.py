@@ -160,6 +160,21 @@ class AliExpressScraper:
 
             image_url = thumbnails[0] if thumbnails else ""
 
+            if image_url.startswith("//"):
+                image_url = "https:" + image_url
+
+            image_datas = []
+            if images:
+                image_datas = [
+                    f"https:{img}" if img.startswith("//") else img for img in images
+                ]
+            thumbnails_datas = []
+            if thumbnails:
+                thumbnails_datas = [
+                    f"https:{img}" if img.startswith("//") else img
+                    for img in thumbnails
+                ]
+
             if video_url.startswith("//"):
                 video_url = "https:" + video_url
             if video_thumbnail.startswith("//"):
@@ -173,7 +188,7 @@ class AliExpressScraper:
                 "brand": "",
                 "image": image_url,
                 "sku_images": sku_images,
-                "thumbnails": thumbnails,
+                "thumbnails": thumbnails_datas,
                 "price": price_show,
                 "url": real_url,
                 "url_crawl": real_url,
@@ -181,7 +196,7 @@ class AliExpressScraper:
                 "store_name": store_name,
                 "show_free_shipping": 0,
                 "meta_url": "",
-                "images": images,
+                "images": image_datas,
                 "text": text,
                 "iframes": iframes,
                 "gifs": gifs,
@@ -279,6 +294,23 @@ class AliExpressScraper:
                     sku_image = "https:" + sku_image
 
             image_url = thumbnails[0] if thumbnails else ""
+            
+            if image_url.startswith("//"):
+                image_url = "https:" + image_url
+                
+            image_datas = []
+            if images:
+                image_datas = [
+                    f"https:{img}" if img.startswith("//") else img for img in images
+                ]
+            thumbnails_datas = []
+            if thumbnails:
+                thumbnails_datas = [
+                    f"https:{img}" if img.startswith("//") else img
+                    for img in thumbnails
+                ]
+
+
 
             if video_url.startswith("//"):
                 video_url = "https:" + video_url
@@ -293,7 +325,7 @@ class AliExpressScraper:
                 "brand": "",
                 "image": image_url,
                 "sku_images": sku_images,
-                "thumbnails": thumbnails,
+                "thumbnails": thumbnails_datas,
                 "price": price_show,
                 "url": real_url,
                 "url_crawl": real_url,
@@ -301,7 +333,7 @@ class AliExpressScraper:
                 "store_name": store_name,
                 "show_free_shipping": 0,
                 "meta_url": "",
-                "images": images,
+                "images": image_datas,
                 "text": text,
                 "iframes": iframes,
                 "gifs": gifs,
@@ -382,6 +414,22 @@ class AliExpressScraper:
                 video_info = video.get("videoPlayInfo", {})
                 video_thumbnail = video.get("posterUrl", "")
                 video_url = video_info.get("webUrl", "")
+                
+            if image_url.startswith("//"):
+                image_url = "https:" + image_url
+                    
+            image_datas = []
+            if images:
+                image_datas = [
+                    f"https:{img}" if img.startswith("//") else img for img in images
+                ]
+            thumbnails_datas = []
+            if thumbnails:
+                thumbnails_datas = [
+                    f"https:{img}" if img.startswith("//") else img
+                    for img in thumbnails
+                ]
+                
 
             result = {
                 "name": data.get("title", ""),
@@ -391,7 +439,7 @@ class AliExpressScraper:
                 "brand": "",
                 "image": image_url,
                 "sku_images": sku_images,
-                "thumbnails": thumbnails,
+                "thumbnails": thumbnails_datas,
                 "price": price_show,
                 "url": real_url,
                 "url_crawl": real_url,
@@ -399,7 +447,7 @@ class AliExpressScraper:
                 "store_name": store_name,
                 "show_free_shipping": 0,
                 "meta_url": "",
-                "images": images,
+                "images": image_datas,
                 "text": text,
                 "iframes": iframes,
                 "gifs": gifs,
