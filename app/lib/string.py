@@ -313,7 +313,9 @@ def format_price_show(price_text):
 def convert_video_path(path: str, domain: str):
     try:
         path = path or ""
-        return path.replace("static/", f"{domain}/").replace("/mnt/", f"{domain}/voice/")
+        return path.replace("static/", f"{domain}/").replace(
+            "/mnt/", f"{domain}/voice/"
+        )
     except Exception as e:
         logger.error(f"[convert_video_path] Failed for path: {path} — Error: {e}")
         return ""
