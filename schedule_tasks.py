@@ -42,7 +42,7 @@ from app.ais.chatgpt import (
 )
 from sqlalchemy import or_
 
-
+from app.third_parties.telegram import send_telegram_message
 
 
 UPLOAD_BASE_PATH = "uploads"
@@ -219,7 +219,7 @@ def translate_notification(app):
                 {"id": notification_detail.id, "text": notification_detail.description}
                 for notification_detail in notifications
             ]
-            translated_results = translate_notifications_batch(notification_data )
+            translated_results = translate_notifications_batch(notification_data)
             if translated_results:
                 NotificationServices.update_translated_notifications(translated_results)
 
@@ -276,6 +276,41 @@ def cleanup_pending_batches(app):
             app.logger.error(f"Error in cleanup_pending_batches: {str(e)}")
 
 
+def check_urls_health(app):
+    """Check the health of predefined URLs and send alerts via Telegram if any fail"""
+    app.logger.info("Start checking URL health...")
+
+    urls = [
+        "https://scraper.vodaplay.vn",
+        "https://apitoktak.voda-play.com",
+        "https://scraper.play-tube.net",
+        "https://scraper.canvasee.com",
+        "https://scraper.bodaplay.ai",
+    ]
+
+    headers = {"User-Agent": "ToktakHealthChecker/1.0"}
+    timeout_sec = 10
+
+    fe_current_domain = os.environ.get("FE_DOMAIN") or "http://localhost:5000"
+    for url in urls:
+        try:
+            response = requests.get(url, headers=headers, timeout=timeout_sec)
+            if response.status_code != 200:
+                message = (
+                    f"*Domain:* `{fe_current_domain}`\n"
+                    f"⚠️ *URL Check Failed*\n"
+                    f"- URL: `{url}`\n"
+                    f"- Status Code: `{response.status_code}`"
+                )
+
+                app.logger.warning(message)
+                send_telegram_message(message, app)
+        except Exception as e:
+            message = f"❌ *URL Unreachable*\n- URL: `{url}`\n- Error: `{str(e)}`"
+            app.logger.error(message)
+            send_telegram_message(message, app)
+
+
 def create_notification_task():
     try:
         app.logger.info("Check : Created a new notification successfully.")
@@ -296,6 +331,14 @@ def start_scheduler(app):
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
     four_am_kst_trigger = CronTrigger(hour=4, minute=0, timezone=kst)
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
+
+    every_3_hours_trigger = CronTrigger(hour="*/3", minute=0, timezone=kst)
+
+    scheduler.add_job(
+        func=lambda: check_urls_health(app),
+        trigger=every_3_hours_trigger,
+        id="check_urls_health",
+    )
 
     scheduler.add_job(
         func=lambda: translate_notification(app),
