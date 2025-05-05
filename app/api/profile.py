@@ -48,6 +48,7 @@ class MemberProfileAPI(Resource):
                     "product_background_color": "#FFFFFF",
                     "product_name_color": "#6B7F99",
                     "product_price_color": "#1E4C94",
+                    "show_price": 1,
                 }
                 profile = ProfileServices.create_profile(
                     user_id=current_user.id,
