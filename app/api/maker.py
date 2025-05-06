@@ -419,9 +419,13 @@ class APIBatchMakeImage(Resource):
 
                 base_images = content["images"] or []
                 images = []
+
+                crawl_url = content["url_crawl"] or ""
+
+                is_avif = True if "aliexpress" in crawl_url else False
                 if os.environ.get("USE_OCR") == "true":
                     images = ImageMaker.get_only_beauty_images(
-                        base_images, batch_id=batch_id
+                        base_images, batch_id=batch_id, is_avif=is_avif
                     )
                 else:
                     images = ImageMaker.save_normal_images(
@@ -430,6 +434,8 @@ class APIBatchMakeImage(Resource):
 
                 cleared_images = []
                 cutout_images = []
+
+                print("images", images)
 
                 for image in images:
                     if len(cutout_images) >= 5:

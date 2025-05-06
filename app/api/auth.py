@@ -34,6 +34,11 @@ class APILogin(Resource):
         password = args.get("password", "")
 
         user = AuthService.login(email, password)
+        if not user:
+            return Response(
+                code=201,
+                message="비밀번호가 정확하지 않습니다.",
+            ).to_dict()
         if user and user.deleted_at and (datetime.now() - user.deleted_at).days <= 30:
             return Response(
                 message="시스템에 로그인해주세요.",
@@ -276,7 +281,7 @@ class APILoginByInput(Resource):
             if not user:
                 return Response(
                     code=201,
-                    message="비밀번호가 정확하지 않습니다.",   
+                    message="비밀번호가 정확하지 않습니다.",
                 ).to_dict()
 
             tokens = AuthService.generate_token(user)
@@ -301,7 +306,6 @@ class APILoginByInput(Resource):
                 code=201,
                 message="로그인 중 오류가 발생했습니다. 나중에 다시 시도해 주세요.",
             ).to_dict()
-
 
 
 @ns.route("/update_user")

@@ -23,7 +23,7 @@ def init_sam_model(app):
     global sam_model
 
     model_path = os.path.join(os.getcwd(), "app/ais/models")
-    fast_sam_path = os.path.join(model_path, "FastSAM-x.pt")
+    fast_sam_path = os.path.join(model_path, "FastSAM-s.pt")
     # yolo_path = os.path.join(model_path, "yolov8s-seg.pt")
 
     with app.app_context():

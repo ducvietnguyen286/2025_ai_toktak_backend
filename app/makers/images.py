@@ -96,6 +96,7 @@ def wrap_text(draw, text, font, max_width):
 
 
 def process_beauty_image(image_path):
+
     extension = image_path.split(".")[-1].lower()
 
     if extension == "gif":
@@ -195,7 +196,7 @@ class ImageMaker:
         return downloaded_images
 
     @staticmethod
-    def get_only_beauty_images(images, batch_id=0):
+    def get_only_beauty_images(images, batch_id=0, is_avif=False):
         output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
 
         os.makedirs(output_folder, exist_ok=True)
@@ -204,8 +205,15 @@ class ImageMaker:
         base_images = []
 
         downloaded_images = list(
-            map(lambda url: ImageMaker.save_image_url_get_path(url, batch_id), images)
+            map(
+                lambda url: ImageMaker.save_image_url_get_path(
+                    url, batch_id, is_avif=is_avif
+                ),
+                images,
+            )
         )
+
+        print(f"Downloaded images: {downloaded_images}")
 
         time.sleep(1)
 
@@ -213,34 +221,34 @@ class ImageMaker:
             if not image_path:
                 continue
             try:
-                with Image.open(image_path) as image:
-                    image_width, image_height = image.size
-                    if image_height <= (image_width * 4):
-                        extension = image_path.split(".")[-1].lower()
-                        if extension == "gif":
-                            base_images.append(image_path)
-                            continue
+                image_cv = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+                image_height, image_width = image_cv.shape[:2]
 
-                        image_cv = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
-
-                        if image_cv is None:
-                            continue
-
-                        if not image_path.lower().endswith(".jpg"):
-                            new_image_path = image_path.rsplit(".", 1)[0] + ".jpg"
-                            cv2.imwrite(
-                                new_image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90]
-                            )
-                            os.remove(image_path)
-                            image_path = new_image_path
-                        else:
-                            cv2.imwrite(
-                                image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90]
-                            )
-
-                        process_images.append(image_path)
-                    else:
+                print(f"Image size: {image_width}x{image_height}")
+                if image_height <= (image_width * 4):
+                    extension = image_path.split(".")[-1].lower()
+                    if extension == "gif":
                         base_images.append(image_path)
+                        continue
+
+                    if image_cv is None:
+                        continue
+
+                    if not image_path.lower().endswith(".jpg"):
+                        new_image_path = image_path.rsplit(".", 1)[0] + ".jpg"
+                        cv2.imwrite(
+                            new_image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90]
+                        )
+                        os.remove(image_path)
+                        image_path = new_image_path
+                    else:
+                        cv2.imwrite(
+                            image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90]
+                        )
+
+                    process_images.append(image_path)
+                else:
+                    base_images.append(image_path)
             except IOError:
                 print(f"Cannot identify image file {image_path}")
                 time.sleep(0.5)
@@ -252,6 +260,7 @@ class ImageMaker:
         cleared_images = []
         for image_path in process_images:
             result = process_beauty_image(image_path)
+            print(f"Result: {result}")
             if "is_remove" in result and result["is_remove"]:
                 image_path = result["image_path"]
                 if os.path.exists(image_path):
@@ -267,6 +276,8 @@ class ImageMaker:
 
     @staticmethod
     def cut_out_long_height_images_by_sam(image_path, batch_id=0):
+        print(f"Cut out long height images: {image_path}")
+
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
             return {
@@ -363,6 +374,7 @@ class ImageMaker:
                     conf_images[cropped_path] = conf
 
                 if os.environ.get("USE_OCR") == "true":
+                    print(f"Need check images: {need_check_images}")
                     for cropped_path in need_check_images:
                         result = process_beauty_image(cropped_path)
                         if "is_remove" in result and result["is_remove"]:
