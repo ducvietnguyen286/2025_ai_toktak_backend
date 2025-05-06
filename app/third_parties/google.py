@@ -1,7 +1,9 @@
+import io
 import os
 from google.cloud import vision
 from shapely import unary_union
 from shapely.geometry import Polygon
+from PIL import Image, ImageEnhance
 
 
 class GoogleVision:
@@ -15,6 +17,44 @@ class GoogleVision:
         )
         client = vision.ImageAnnotatorClient.from_service_account_file(key_path)
         return client
+
+    def preprocess_image(image_path, output_path=None, enhance_factor=1.7):
+        image = Image.open(image_path)
+        enhancer_brightness = ImageEnhance.Brightness(image)
+        image = enhancer_brightness.enhance(enhance_factor)
+        enhancer_contrast = ImageEnhance.Contrast(image)
+        image = enhancer_contrast.enhance(enhance_factor)
+
+        if output_path:
+            image.save(output_path)
+        return image
+
+    def detect_objects(self, image_path):
+        client = self.initialize()
+        pil_image = self.preprocess_image(image_path)
+
+        img_byte_arr = io.BytesIO()
+        pil_image.save(img_byte_arr, format="JPEG")
+        content = img_byte_arr.getvalue()
+
+        vision_image = vision.Image(content=content)
+        response = client.object_localization(image=vision_image)
+        if response.error.message:
+            return False, response.error.message
+        objects = response.localized_object_annotations
+
+        detected_objects = [
+            {
+                "name": obj.name,
+                "confidence": obj.score,
+                "bounding_poly": [
+                    (v.x, v.y) for v in obj.bounding_poly.normalized_vertices
+                ],
+            }
+            for obj in objects
+        ]
+
+        return detected_objects
 
     def analyze_image(self, image_path, image_width=0, image_height=0):
         client = self.initialize()

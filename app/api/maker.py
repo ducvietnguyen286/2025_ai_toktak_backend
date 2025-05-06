@@ -435,8 +435,6 @@ class APIBatchMakeImage(Resource):
                 cleared_images = []
                 cutout_images = []
 
-                print("images", images)
-
                 for image in images:
                     if len(cutout_images) >= 5:
                         break
@@ -444,6 +442,11 @@ class APIBatchMakeImage(Resource):
                     cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
                     )
+                    if "is_cut_out" not in cuted_image:
+                        return {
+                            "image": image,
+                            "content": cuted_image,
+                        }
                     is_cut_out = cuted_image.get("is_cut_out", False)
                     image_urls = cuted_image.get("image_urls", [])
                     if is_cut_out:
