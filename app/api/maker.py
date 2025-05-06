@@ -439,7 +439,7 @@ class APIBatchMakeImage(Resource):
                     if len(cutout_images) >= 5:
                         break
 
-                    cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
+                    cuted_image = ImageMaker.cut_out_long_height_images_by_google(
                         image, batch_id=batch_id
                     )
                     if "is_cut_out" not in cuted_image:
@@ -908,14 +908,14 @@ class APIMakePost(Resource):
                     description = json.dumps(docx)
                 if parse_response and "content" in parse_response:
                     content = parse_response.get("content", "")
-                    # cleared_images = data.get("cleared_images", [])
-                    # if cleared_images:
-                    #     pre_content = ""
-                    #     for index, cleared_image in enumerate(cleared_images):
-                    #         current_stt = index + 1
-                    #         pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
+                    cleared_images = data.get("cleared_images", [])
+                    if cleared_images:
+                        pre_content = ""
+                        for index, cleared_image in enumerate(cleared_images):
+                            current_stt = index + 1
+                            pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
 
-                    #     content = pre_content + content
+                        content = pre_content + content
 
                     for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
