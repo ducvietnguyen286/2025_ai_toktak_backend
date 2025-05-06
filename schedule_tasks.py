@@ -287,7 +287,6 @@ def check_urls_health(app):
 
     urls = [
         "https://scraper.vodaplay.vn/ping",
-        "https://apitoktak.voda-play.com/ping",
         "https://scraper.play-tube.net/ping",
         "https://scraper.canvasee.com/ping",
         "https://scraper.bodaplay.ai/ping",
