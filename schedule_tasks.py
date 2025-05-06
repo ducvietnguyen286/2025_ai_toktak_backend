@@ -277,38 +277,47 @@ def cleanup_pending_batches(app):
 
 
 def check_urls_health(app):
-    """Check the health of predefined URLs and send alerts via Telegram if any fail"""
+    """Check the health of predefined URLs and send one combined Telegram alert if any fail."""
     app.logger.info("Start checking URL health...")
 
+    # 103.98.152.125
+    # 3.38.117.230
+    # 43.203.118.116
+    # 3.35.172.6
+
     urls = [
-        "https://scraper.vodaplay.vn",
-        "https://apitoktak.voda-play.com",
-        "https://scraper.play-tube.net",
-        "https://scraper.canvasee.com",
-        "https://scraper.bodaplay.ai",
+        "https://scraper.vodaplay.vn/ping",
+        "https://apitoktak.voda-play.com/ping",
+        "https://scraper.play-tube.net/ping",
+        "https://scraper.canvasee.com/ping",
+        "https://scraper.bodaplay.ai/ping",
     ]
 
     headers = {"User-Agent": "ToktakHealthChecker/1.0"}
     timeout_sec = 10
-
     fe_current_domain = os.environ.get("FE_DOMAIN") or "http://localhost:5000"
+
+    failed_reports = []
+
     for url in urls:
         try:
             response = requests.get(url, headers=headers, timeout=timeout_sec)
             if response.status_code != 200:
-                message = (
-                    f"*Domain:* `{fe_current_domain}`\n"
-                    f"⚠️ *URL Check Failed*\n"
-                    f"- URL: `{url}`\n"
-                    f"- Status Code: `{response.status_code}`"
+                failed_reports.append(
+                    f"⚠️ [URL Check Failed]({url})\nStatus Code: `{response.status_code}`"
                 )
-
-                app.logger.warning(message)
-                send_telegram_message(message, app)
         except Exception as e:
-            message = f"❌ *URL Unreachable*\n- URL: `{url}`\n- Error: `{str(e)}`"
-            app.logger.error(message)
-            send_telegram_message(message, app)
+            failed_reports.append(f"❌ [URL Unreachable]({url})\nError: `{str(e)}`")
+
+    if failed_reports:
+        message = (
+            f"*Domain:* `{fe_current_domain}`\n"
+            f"*Failed URL Reports:* 🚨\n\n" + "\n\n".join(failed_reports)
+        )
+        app.logger.warning("Some URLs failed health check.")
+        send_telegram_message(message, app, parse_mode="Markdown")
+    else:
+        app.logger.info("✅ All URLs are healthy.")
 
 
 def create_notification_task():
