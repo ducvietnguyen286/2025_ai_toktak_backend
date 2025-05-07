@@ -53,6 +53,7 @@ from app.services.product import ProductService
 from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
 import const
+
 from flask_jwt_extended import (
     verify_jwt_in_request,
 )
@@ -303,7 +304,10 @@ class APICreateBatch(Resource):
             posts = []
             for post_type in post_types:
                 post = PostService.create_post(
-                    user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
+                    user_id=user_id_login,
+                    batch_id=batch.id,
+                    type=post_type,
+                    status=99,
                 )
 
                 post_res = post.to_dict()
@@ -1106,7 +1110,8 @@ class APIGetStatusUploadBySyncId(Resource):
                 notification_type = post["type"]
 
                 update_data = {
-                    "social_sns_description": json.dumps(new_social_sns_description)
+                    "social_sns_description": json.dumps(new_social_sns_description) ,
+                    "schedule_date" :  datetime.datetime.utcnow()
                 }
                 show_post_detail = []
                 status_check_sns = 0
@@ -1178,7 +1183,7 @@ class APIGetStatusUploadBySyncId(Resource):
 
                     ProductService.create_sns_product(post["user_id"], post["batch_id"])
                 else:
-                    update_data["status_sns"] = 0
+                    update_data["status_sns"] = const.UPLOADED_FALSE
                     update_data["status"] = const.DRAFT_STATUS
 
                 PostService.update_post(post_id, **update_data)
@@ -1287,7 +1292,8 @@ class APIGetStatusUploadWithBatch(Resource):
                         show_detail_posts.append(sns_post_detail)
 
                     update_data = {
-                        "social_sns_description": json.dumps(social_post_detail)
+                        "social_sns_description": json.dumps(social_post_detail),
+                        "schedule_date": datetime.datetime.utcnow(),
                     }
                     if status_check_sns == 1:
                         update_data["status_sns"] = const.UPLOADED
@@ -1296,6 +1302,8 @@ class APIGetStatusUploadWithBatch(Resource):
                         ProductService.create_sns_product(
                             post_detail["user_id"], post_detail["batch_id"]
                         )
+                    else:
+                        update_data["status_sns"] = const.UPLOADED_FALSE
 
                     PostService.update_post(post_id, **update_data)
 
@@ -1715,6 +1723,34 @@ class APIDownloadZip(Resource):
                 message="상품 정보를 불러올 수 없어요.(Error code : )",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/schedule_batch")
+class ApiScheduleBatch(Resource):
+    def post(self):
+        from app.tasks import call_maker_batch_api  # 👈 Lazy import tránh circular
+
+        data = request.json
+        try:
+            # Hỗ trợ định dạng "2025-05-06 17:11:00"
+            run_at = datetime.datetime.strptime(data["run_at"], "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            return {
+                "message": "Định dạng thời gian không hợp lệ. Đúng định dạng: YYYY-MM-DD HH:MM:SS"
+            }, 400
+
+        delay_seconds = (run_at - datetime.datetime.now()).total_seconds()
+
+        if delay_seconds <= 0:
+            return {"message": "Thời gian không hợp lệ (trong quá khứ)"}, 400
+
+        call_maker_batch_api.apply_async(countdown=delay_seconds)
+        hours, remainder = divmod(int(delay_seconds), 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        return {
+            "message": f"Đã lên lịch gọi API sau {hours} giờ {minutes} phút {seconds} giây"
+        }
 
 
 def _cleanup_zip(zip_path, tmp_dir, response):

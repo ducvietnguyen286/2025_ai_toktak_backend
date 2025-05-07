@@ -1027,7 +1027,6 @@ class ImageMaker:
     def save_image_url_get_path(image_url, batch_id=0, is_avif=False):
         new_folder = f"{UPLOAD_FOLDER}/{batch_id}"
         os.makedirs(new_folder, exist_ok=True)
-        print(f"Downloading image from {image_url}")
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
 

@@ -5,6 +5,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 import json
 from app.services.auth import AuthService
 from app.services.schedule_services import ScheduleService
+from app.services.post import PostService
 from app.lib.response import Response
 from app.lib.logger import logger
 
@@ -91,12 +92,15 @@ class APIAdminGetSchedules(Resource):
         current_user = AuthService.get_current_identity() or None
         user_id_login = current_user.id
 
-        start = request.args.get("start")
-        end = request.args.get("end")
-        status = request.args.get("status")
-        schedules = ScheduleService.get_schedule_by_user_id(
-            start, end, status
-        )
+        start_date = request.args.get("start_date")
+        end_date = request.args.get("end_date")
+        # status = request.args.get("status")
+        data_search = {
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+
+        schedules = PostService.get_post_schedule(data_search)
         return Response(
             data=schedules,
             message="Schedule List.",
