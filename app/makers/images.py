@@ -421,10 +421,10 @@ class ImageMaker:
                 # return cropped_images
 
         except Exception as e:
-            print(f"Error: {e}")
-            logger.debug(f"Error: {e}")
-            logger.error(f"Error: {e}")
+            print(f"Error processing {image_path}: {e}")
+            logger.error(f"Error processing {image_path}: {e}")
             traceback.print_exc()
+            logger.error(f"Traceback: {traceback.format_exc()}")
             image_name = image_path.split("/")[-1]
             image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
             return {
@@ -548,6 +548,9 @@ class ImageMaker:
 
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
+            logger.error(f"Error processing {image_path}: {e}")
+            traceback.print_exc()
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 "image_urls": [base_url],
                 "is_cut_out": False,
