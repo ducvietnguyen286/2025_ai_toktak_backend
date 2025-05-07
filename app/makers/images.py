@@ -526,7 +526,7 @@ class ImageMaker:
                     cropped_images.append((cropped_url, conf))
                     current_image_count += 1
             logger.info(f"Cropped images: {cropped_images}")
-            if cropped_images:
+            if cropped_images and len(cropped_images) > 0:
                 cropped_data_sorted = sorted(
                     cropped_images, key=lambda x: x[1], reverse=True
                 )
@@ -544,6 +544,12 @@ class ImageMaker:
                 return {
                     "image_urls": top,
                     "is_cut_out": True,
+                }
+            else:
+                logger.info(f"No cropped images found")
+                return {
+                    "image_urls": [base_url],
+                    "is_cut_out": False,
                 }
 
         except Exception as e:
