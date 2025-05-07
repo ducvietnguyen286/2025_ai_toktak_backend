@@ -426,6 +426,8 @@ class ImageMaker:
                     "is_cut_out": True,
                 }
                 # return cropped_images
+            else:
+                return None
 
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
