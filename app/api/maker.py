@@ -442,6 +442,7 @@ class APIBatchMakeImage(Resource):
                     cuted_image = ImageMaker.cut_out_long_height_images_by_google(
                         image, batch_id=batch_id
                     )
+                    logger.info(f"cuted_image: {cuted_image}")
                     if "is_cut_out" not in cuted_image:
                         return {
                             "image": image,
@@ -453,6 +454,7 @@ class APIBatchMakeImage(Resource):
                         cutout_images.extend(image_urls)
                     cleared_images.extend(image_urls)
                 content["cleared_images"] = cleared_images
+                logger.info(f"cleared_images: {cleared_images}")
                 data_update_batch = {
                     "content": json.dumps(content),
                 }
