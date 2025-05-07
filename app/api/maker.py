@@ -432,13 +432,13 @@ class APIBatchMakeImage(Resource):
                         base_images, batch_id=batch_id
                     )
 
-                cleared_images = []
+                description_images = []
                 cutout_images = []
+                cutout_by_sam_images = []
 
                 for image in images:
-                    if len(cutout_images) >= 5:
-                        break
-
+                    has_google_cut_out = False
+                    has_sam_cut_out = False
                     cuted_image = ImageMaker.cut_out_long_height_images_by_google(
                         image, batch_id=batch_id
                     )
@@ -448,14 +448,32 @@ class APIBatchMakeImage(Resource):
                     image_urls = cuted_image.get("image_urls", [])
                     if is_cut_out:
                         cutout_images.extend(image_urls)
-                    cleared_images.extend(image_urls)
+                        has_google_cut_out = True
+
+                    sam_cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
+                        image, batch_id=batch_id
+                    )
+                    if "is_cut_out" not in sam_cuted_image:
+                        continue
+                    is_sam_cut_out = sam_cuted_image.get("is_cut_out", False)
+                    sam_image_urls = sam_cuted_image.get("image_urls", [])
+                    if is_sam_cut_out:
+                        cutout_by_sam_images.extend(sam_image_urls)
+                        has_sam_cut_out = True
+
+                    if not has_google_cut_out and not has_sam_cut_out:
+                        description_images.extend(image_urls)
                 merge_cleared_images = []
-                if len(cleared_images) > 0:
-                    merge_cleared_images = cleared_images
                 if len(cutout_images) > 0:
                     merge_cleared_images.extend(cutout_images)
+                if len(cutout_by_sam_images) > 0:
+                    merge_cleared_images.extend(cutout_by_sam_images)
+                if len(description_images) > 0:
+                    merge_cleared_images = description_images
                 content["cleared_images"] = merge_cleared_images
                 content["cutout_images"] = cutout_images
+                content["sam_cutout_images"] = cutout_images
+                content["description_images"] = cutout_images
                 data_update_batch = {
                     "content": json.dumps(content),
                 }
@@ -918,6 +936,8 @@ class APIMakePost(Resource):
                 if parse_response and "content" in parse_response:
                     content = parse_response.get("content", "")
                     cutout_images = data.get("cutout_images", [])
+                    cutout_by_sam_images = data.get("sam_cutout_images", [])
+                    description_images = data.get("description_images", [])
                     cleared_images = data.get("cleared_images", [])
                     pre_content_cutout = f"<h2>IMAGES CUTTED OUT BY GOOGLE VISION: TOTAL - {len(cutout_images)}</h2>"
                     if len(cutout_images) > 0:
@@ -926,14 +946,26 @@ class APIMakePost(Resource):
                             current_stt = index + 1
                             pre_content_cutout += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
 
-                    pre_content = f"<br></br><br></br><h2>IMAGES CLEARED: DESCRIPTION IMAGES & CUTTED OUT IMAGE: TOTAL - {len(cleared_images)}</h2>"
-                    if cleared_images:
+                    pre_content_cutout_sam = f"<br></br><h2>IMAGES CUTTED OUT BY SERVER: TOTAL - {len(cutout_by_sam_images)}</h2>"
+                    if len(cutout_by_sam_images) > 0:
                         current_stt = 0
-                        for index, cleared_image in enumerate(cleared_images):
+                        for index, cutout_image in enumerate(cutout_by_sam_images):
+                            current_stt = index + 1
+                            pre_content_cutout_sam += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
+
+                    pre_content = f"<br></br><h2>DESCRIPTION IMAGES: TOTAL - {len(description_images)}</h2>"
+                    if len(description_images) > 0:
+                        current_stt = 0
+                        for index, cleared_image in enumerate(description_images):
                             current_stt = index + 1
                             pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
 
-                    content = pre_content_cutout + pre_content + content
+                    content = (
+                        pre_content_cutout
+                        + pre_content_cutout_sam
+                        + pre_content
+                        + content
+                    )
 
                     for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
