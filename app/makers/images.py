@@ -465,6 +465,7 @@ class ImageMaker:
 
         try:
             results = GoogleVision().detect_objects(image_path=image_path)
+            logger.info(f"Google Vision Result: {results}")
             if not results:
                 return {
                     "image_urls": [base_url],
