@@ -525,7 +525,7 @@ class ImageMaker:
                     )
                     cropped_images.append((cropped_url, conf))
                     current_image_count += 1
-
+            logger.info(f"Cropped images: {cropped_images}")
             if cropped_images:
                 cropped_data_sorted = sorted(
                     cropped_images, key=lambda x: x[1], reverse=True
@@ -539,6 +539,8 @@ class ImageMaker:
                         os.remove(cropped_image_path)
                 if os.path.exists(image_path):
                     os.remove(image_path)
+
+                logger.info(f"Top images: {top}")
                 return {
                     "image_urls": top,
                     "is_cut_out": True,
