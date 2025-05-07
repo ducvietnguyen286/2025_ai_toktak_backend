@@ -122,14 +122,12 @@ class MemberProfileStatusUpdateAPI(Resource):
             current_user = AuthService.get_current_identity()
 
             profile_member = ProfileServices.profile_by_user_id(current_user.id)
-            print(current_user.id)
             if not profile_member:
                 return Response(
                     message="상태를 업데이트하는 중에 문제가 발생했습니다.", code=201
                 ).to_dict()
 
             status = profile_member.status
-            print(status)
             if status != 0:
                 return Response(
                     message="상태를 업데이트하는 중에 문제가 발생했습니다.", code=201

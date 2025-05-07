@@ -1110,7 +1110,8 @@ class APIGetStatusUploadBySyncId(Resource):
                 notification_type = post["type"]
 
                 update_data = {
-                    "social_sns_description": json.dumps(new_social_sns_description)
+                    "social_sns_description": json.dumps(new_social_sns_description) ,
+                    "schedule_date" :  datetime.datetime.utcnow()
                 }
                 show_post_detail = []
                 status_check_sns = 0
@@ -1182,10 +1183,8 @@ class APIGetStatusUploadBySyncId(Resource):
 
                     ProductService.create_sns_product(post["user_id"], post["batch_id"])
                 else:
-                    update_data["status_sns"] = 0
+                    update_data["status_sns"] = const.UPLOADED_FALSE
                     update_data["status"] = const.DRAFT_STATUS
-
-                update_data["schedule_date"] = datetime.datetime.now()
 
                 PostService.update_post(post_id, **update_data)
 
@@ -1294,7 +1293,7 @@ class APIGetStatusUploadWithBatch(Resource):
 
                     update_data = {
                         "social_sns_description": json.dumps(social_post_detail),
-                        "schedule_date": datetime.datetime.now(),
+                        "schedule_date": datetime.datetime.utcnow(),
                     }
                     if status_check_sns == 1:
                         update_data["status_sns"] = const.UPLOADED
@@ -1303,6 +1302,8 @@ class APIGetStatusUploadWithBatch(Resource):
                         ProductService.create_sns_product(
                             post_detail["user_id"], post_detail["batch_id"]
                         )
+                    else:
+                        update_data["status_sns"] = const.UPLOADED_FALSE
 
                     PostService.update_post(post_id, **update_data)
 

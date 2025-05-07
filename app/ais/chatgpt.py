@@ -648,7 +648,6 @@ def call_chatgpt(
 
 def translate_notifications_batch(notifications_batch):
     try:
-        print(f"chatgpt_api_key{chatgpt_api_key}")
         client = OpenAI(api_key=chatgpt_api_key)
 
         assistant_id = "asst_rBXxdDDCdHuv3UxNDTiHrxVv"
