@@ -697,6 +697,8 @@ class APIMakePost(Resource):
                     else:
                         process_images = process_images + images
 
+            logger.info(f"PROCESSED IMAGES: {process_images}")
+
             response = None
             render_id = ""
             hooking = []
@@ -714,6 +716,7 @@ class APIMakePost(Resource):
                 is_avif = True
 
             if type == "video":
+                logger.info(f"START PROCESS VIDEO: {post}")
                 response = call_chatgpt_create_caption(process_images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
@@ -785,19 +788,19 @@ class APIMakePost(Resource):
                                 post_id=post.id,
                             )
                         else:
+                            logger.info(f"PROCESS VIDEO ERROR: {post}")
                             return Response(
                                 message=result["message"],
                                 status=200,
                                 code=201,
                             ).to_dict()
-
+                logger.info(f"END PROCESS VIDEO: {post}")
             elif type == "image":
-                logger.info(
-                    "-------------------- PROCESSING CREATE IMAGES -------------------"
-                )
+                logger.info(f"START PROCESS IMAGES: {post}")
 
                 image_template_id = template_info.get("image_template_id", "")
                 if image_template_id == "":
+                    logger.info(f"ERROR TEMPLATE IMAGE")
                     return Response(
                         message="Vui lòng chọn template",
                         status=200,
@@ -813,6 +816,7 @@ class APIMakePost(Resource):
                         image_template_id
                     )
                     if not image_template:
+                        logger.info(f"ERROR PROCESS TEMPLATE IMAGES: {post}")
                         return Response(
                             message="Template không tồn tại",
                             status=200,
@@ -830,9 +834,9 @@ class APIMakePost(Resource):
                     file_size += img_res.get("file_size", 0)
                     mime_type = img_res.get("mime_type", "")
                     maker_images = image_urls
-
+                logger.info(f"END PROCESS IMAGES: {post}")
             elif type == "blog":
-
+                logger.info(f"START PROCESS BLOG: {post}")
                 blog_images = images
                 if blog_images and len(blog_images) < need_count:
                     current_length = len(blog_images)
@@ -875,9 +879,7 @@ class APIMakePost(Resource):
                     file_size = res_txt.get("file_size", 0)
                     mime_type = res_txt.get("mime_type", "")
 
-                logger.info(
-                    "-------------------- PROCESSED CREATE LOGS -------------------"
-                )
+                logger.info(f"END PROCESS BLOG: {post}")
 
             title = ""
             subtitle = ""
@@ -886,6 +888,7 @@ class APIMakePost(Resource):
             hashtag = ""
             description = ""
 
+            logger.info(f"START PROCESS DATA: {post}")
             if response:
                 parse_caption = json.loads(response)
                 parse_response = parse_caption.get("response", {})
@@ -919,8 +922,9 @@ class APIMakePost(Resource):
 
                     for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
-
+                logger.info(f"END PROCESS DATA: {post}")
             else:
+                logger.info(f"ERROR PROCESS DATA: {response}")
                 message_error = {
                     "video": MessageError.CREATE_POST_VIDEO.value,
                     "image": MessageError.CREATE_POST_IMAGE.value,
@@ -934,7 +938,7 @@ class APIMakePost(Resource):
                 ).to_dict()
 
             url = batch.url
-
+            logger.info(f"START SAVING DATA: {post}")
             if type == "blog":
                 content = update_ads_content(url, content)
 
@@ -967,6 +971,8 @@ class APIMakePost(Resource):
             current_done_post = batch.done_post
 
             batch = BatchService.update_batch(batch.id, done_post=current_done_post + 1)
+
+            logger.info(f"END SAVING DATA: {post}")
 
             if batch.done_post == batch.count_post:
                 BatchService.update_batch(batch.id, status=1)
