@@ -1,5 +1,6 @@
 import io
 import os
+import traceback
 from google.cloud import vision
 from shapely import unary_union
 from shapely.geometry import Polygon
@@ -20,7 +21,7 @@ class GoogleVision:
         client = vision.ImageAnnotatorClient.from_service_account_file(key_path)
         return client
 
-    def preprocess_image(image_path, output_path=None, enhance_factor=1.7):
+    def preprocess_image(self, image_path, output_path=None, enhance_factor=1.7):
         image = Image.open(image_path)
         enhancer_brightness = ImageEnhance.Brightness(image)
         image = enhancer_brightness.enhance(enhance_factor)
@@ -62,6 +63,8 @@ class GoogleVision:
 
             return detected_objects
         except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Traceback: {traceback.format_exc()}")
             logger.error(f"Error in detect_objects: {e}")
             return []
 
