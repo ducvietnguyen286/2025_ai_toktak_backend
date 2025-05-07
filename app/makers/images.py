@@ -302,7 +302,7 @@ class ImageMaker:
             logger.error(f"Cannot identify image file {image_path}")
             print(f"Cannot identify image file {image_path}")
             image_name = image_path.split("/")[-1]
-            image_url = f"{CURRENT_DOMAIN}/{date_create}/{batch_id}/{image_name}"
+            image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
             return {
                 "image_urls": [image_url],
                 "is_cut_out": False,
@@ -437,7 +437,7 @@ class ImageMaker:
         extension = image_path.split(".")[-1].lower()
 
         image_name = image_path.split("/")[-1]
-        base_url = f"{CURRENT_DOMAIN}/{date_create}/{batch_id}/{image_name}"
+        base_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
 
         if extension == "gif":
             return {
