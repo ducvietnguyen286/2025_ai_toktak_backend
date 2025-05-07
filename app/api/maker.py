@@ -472,8 +472,8 @@ class APIBatchMakeImage(Resource):
                     merge_cleared_images = description_images
                 content["cleared_images"] = merge_cleared_images
                 content["cutout_images"] = cutout_images
-                content["sam_cutout_images"] = cutout_images
-                content["description_images"] = cutout_images
+                content["sam_cutout_images"] = cutout_by_sam_images
+                content["description_images"] = description_images
                 data_update_batch = {
                     "content": json.dumps(content),
                 }
