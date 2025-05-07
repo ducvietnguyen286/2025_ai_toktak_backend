@@ -5,6 +5,8 @@ from shapely import unary_union
 from shapely.geometry import Polygon
 from PIL import Image, ImageEnhance
 
+from app.lib.logger import logger
+
 
 class GoogleVision:
     def initialize(self):
@@ -30,31 +32,36 @@ class GoogleVision:
         return image
 
     def detect_objects(self, image_path):
-        client = self.initialize()
-        pil_image = self.preprocess_image(image_path)
+        try:
+            logger.info(f"Detecting objects in {image_path}")
+            client = self.initialize()
+            pil_image = self.preprocess_image(image_path)
 
-        img_byte_arr = io.BytesIO()
-        pil_image.save(img_byte_arr, format="JPEG")
-        content = img_byte_arr.getvalue()
+            img_byte_arr = io.BytesIO()
+            pil_image.save(img_byte_arr, format="JPEG")
+            content = img_byte_arr.getvalue()
 
-        vision_image = vision.Image(content=content)
-        response = client.object_localization(image=vision_image)
-        if response.error.message:
-            return False, response.error.message
-        objects = response.localized_object_annotations
+            vision_image = vision.Image(content=content)
+            response = client.object_localization(image=vision_image)
+            if response.error.message:
+                return False, response.error.message
+            objects = response.localized_object_annotations
 
-        detected_objects = [
-            {
-                "name": obj.name,
-                "confidence": obj.score,
-                "bounding_poly": [
-                    (v.x, v.y) for v in obj.bounding_poly.normalized_vertices
-                ],
-            }
-            for obj in objects
-        ]
+            detected_objects = [
+                {
+                    "name": obj.name,
+                    "confidence": obj.score,
+                    "bounding_poly": [
+                        (v.x, v.y) for v in obj.bounding_poly.normalized_vertices
+                    ],
+                }
+                for obj in objects
+            ]
 
-        return detected_objects
+            return detected_objects
+        except Exception as e:
+            logger.error(f"Error in detect_objects: {e}")
+            return []
 
     def analyze_image(self, image_path, image_width=0, image_height=0):
         client = self.initialize()
