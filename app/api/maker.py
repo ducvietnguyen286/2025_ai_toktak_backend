@@ -795,6 +795,7 @@ class APIMakePost(Resource):
                                 code=201,
                             ).to_dict()
                 logger.info(f"END PROCESS VIDEO: {post}")
+                logger.info(f"RESPONSE PROCESS VIDEO: {response}")
             elif type == "image":
                 logger.info(f"START PROCESS IMAGES: {post}")
 
@@ -835,6 +836,7 @@ class APIMakePost(Resource):
                     mime_type = img_res.get("mime_type", "")
                     maker_images = image_urls
                 logger.info(f"END PROCESS IMAGES: {post}")
+                logger.info(f"RESPONSE PROCESS IMAGES: {response}")
             elif type == "blog":
                 logger.info(f"START PROCESS BLOG: {post}")
                 blog_images = images
@@ -880,6 +882,7 @@ class APIMakePost(Resource):
                     mime_type = res_txt.get("mime_type", "")
 
                 logger.info(f"END PROCESS BLOG: {post}")
+                logger.info(f"RESPONSE PROCESS BLOG: {response}")
 
             title = ""
             subtitle = ""
@@ -888,7 +891,7 @@ class APIMakePost(Resource):
             hashtag = ""
             description = ""
 
-            logger.info(f"START PROCESS DATA: {post}")
+            logger.info(f"START PROCESS DATA: {type} - {post}")
             if response:
                 parse_caption = json.loads(response)
                 parse_response = parse_caption.get("response", {})
@@ -922,9 +925,9 @@ class APIMakePost(Resource):
 
                     for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
-                logger.info(f"END PROCESS DATA: {post}")
+                logger.info(f"END PROCESS DATA: {type} - {post}")
             else:
-                logger.info(f"ERROR PROCESS DATA: {response}")
+                logger.info(f"ERROR PROCESS DATA: {type} - {response}")
                 message_error = {
                     "video": MessageError.CREATE_POST_VIDEO.value,
                     "image": MessageError.CREATE_POST_IMAGE.value,
@@ -938,7 +941,7 @@ class APIMakePost(Resource):
                 ).to_dict()
 
             url = batch.url
-            logger.info(f"START SAVING DATA: {post}")
+            logger.info(f"START SAVING DATA: {type}")
             if type == "blog":
                 content = update_ads_content(url, content)
 
@@ -972,11 +975,12 @@ class APIMakePost(Resource):
 
             batch = BatchService.update_batch(batch.id, done_post=current_done_post + 1)
 
-            logger.info(f"END SAVING DATA: {post}")
-
             if batch.done_post == batch.count_post:
                 BatchService.update_batch(batch.id, status=1)
 
+            logger.info(f"END SAVING DATA: {type}")
+
+            logger.info(f"START NOTIFICATION DATA: {type}")
             if type == "video":
                 message = MessageSuccess.CREATE_POST_VIDEO.value
             elif type == "image":
@@ -998,7 +1002,7 @@ class APIMakePost(Resource):
                     post_id=post.id,
                     notification_type="blog",
                 )
-
+            logger.info(f"END NOTIFICATION DATA: {type}")
             return Response(
                 data=post._to_json(),
                 message=message,

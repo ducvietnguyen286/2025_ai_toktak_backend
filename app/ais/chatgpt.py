@@ -635,6 +635,7 @@ def call_chatgpt(
             return content
         return None
     except Exception as e:
+        logger.error(f"[ChatGPT API Error] {e}")
         response_log = json.dumps({"error": str(e)})
         RequestLogService.create_request_log(
             post_id=post_id,
