@@ -120,7 +120,9 @@ def process_beauty_image(image_path):
 
             # response = requests.post(PADDLE_URL, json={"image_path": image_path})
 
-            full_text, ratio = GoogleVision().analyze_image(image_path, width, height)
+            full_text, ratio, length_labels = GoogleVision().analyze_image(
+                image_path, width, height
+            )
 
             if not full_text:
                 return {
@@ -143,6 +145,11 @@ def process_beauty_image(image_path):
                         "image_path": image_path,
                         "is_remove": True,
                     }
+            if length_labels <= 0:
+                return {
+                    "image_path": image_path,
+                    "is_remove": True,
+                }
             if (ratio * 10) > 3.5:
                 return {
                     "image_path": image_path,

@@ -79,6 +79,12 @@ class GoogleVision:
             return False, response.error.message
         texts = response.text_annotations
 
+        label_response = client.label_detection(image=image)
+        if label_response.error.message:
+            return False, label_response.error.message
+        labels = label_response.label_annotations
+        length_labels = len(labels)
+
         full_text = ""
         ratio = 0.0
         polygons = []
@@ -110,7 +116,7 @@ class GoogleVision:
                 )
                 ratio = sum_text_area / image_area if image_area > 0 else 0.0
 
-        return full_text, ratio
+        return full_text, ratio, length_labels
 
     def merge_close_polygons(self, polygons, distance_threshold):
         buffered_polygons = [p.buffer(distance_threshold) for p in polygons]
