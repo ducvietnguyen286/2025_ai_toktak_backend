@@ -508,11 +508,30 @@ class ImageMaker:
                     continue
                 if w < 200 or h < 200 or w * h < 50000:
                     continue
+
+                target_size = (1350, 1080)
+                h, w, _ = cropped.shape
+                scale = min(target_size[1] / h, target_size[0] / w)
+                new_w = int(w * scale)
+                new_h = int(h * scale)
+                resized = cv2.resize(
+                    cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
+                )
+
+                cropped_resized = np.zeros(
+                    (target_size[1], target_size[0], 3), dtype=np.uint8
+                )
+                y_offset = (target_size[1] - new_h) // 2
+                x_offset = (target_size[0] - new_w) // 2
+                cropped_resized[
+                    y_offset : y_offset + new_h, x_offset : x_offset + new_w
+                ] = resized
+
                 timestamp = int(time.time())
                 unique_id = uuid.uuid4().hex
                 new_name = f"{timestamp}_{unique_id}.jpg"
                 cropped_path = os.path.join(output_folder, new_name)
-                cv2.imwrite(cropped_path, cropped)
+                cv2.imwrite(cropped_path, cropped_resized)
 
                 if os.environ.get("USE_OCR") == "true":
                     result = process_beauty_image(cropped_path)
