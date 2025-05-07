@@ -453,14 +453,17 @@ class ImageMaker:
 
         image_cv = cv2.imread(image_path)
         if image_cv is None:
+            logger.error(f"Cannot identify image file {image_path}")
             return {
                 "image_urls": [base_url],
                 "is_cut_out": False,
             }
 
         image_height, image_width = image_cv.shape[:2]
+        logger.info(f"Image size: {image_width}x{image_height}")
 
         if image_height <= (image_width * 4):
+            logger.info(f"Image is not long height: {image_width}x{image_height}")
             return {"image_urls": [base_url], "is_cut_out": False}
 
         try:
