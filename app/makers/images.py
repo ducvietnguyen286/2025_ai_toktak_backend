@@ -475,7 +475,7 @@ class ImageMaker:
 
         try:
             results = GoogleVision().detect_objects(image_path=image_path)
-            logger.info(f"Google Vision Result: {results}")
+            logger.info(f"Google Vision Result: {len(results)}")
             if not results:
                 return {
                     "image_urls": [base_url],
@@ -532,7 +532,7 @@ class ImageMaker:
                     )
                     cropped_images.append((cropped_url, conf))
                     current_image_count += 1
-            logger.info(f"Cropped images: {cropped_images}")
+            logger.info(f"Cropped images: {len(cropped_images)}")
             if cropped_images and len(cropped_images) > 0:
                 cropped_data_sorted = sorted(
                     cropped_images, key=lambda x: x[1], reverse=True
