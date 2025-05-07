@@ -546,12 +546,7 @@ class ImageMaker:
                     "is_cut_out": True,
                 }
             else:
-                logger.info(f"No cropped images found")
-                return {
-                    "image_urls": [base_url],
-                    "is_cut_out": False,
-                }
-
+                return None
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
             logger.error(f"Error processing {image_path}: {e}")

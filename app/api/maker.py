@@ -442,24 +442,26 @@ class APIBatchMakeImage(Resource):
                     cuted_image = ImageMaker.cut_out_long_height_images_by_google(
                         image, batch_id=batch_id
                     )
-                    if "is_cut_out" not in cuted_image:
+                    if cuted_image and "is_cut_out" not in cuted_image:
                         continue
-                    is_cut_out = cuted_image.get("is_cut_out", False)
-                    image_urls = cuted_image.get("image_urls", [])
-                    if is_cut_out:
-                        cutout_images.extend(image_urls)
-                        has_google_cut_out = True
+                    elif cuted_image:
+                        is_cut_out = cuted_image.get("is_cut_out", False)
+                        image_urls = cuted_image.get("image_urls", [])
+                        if is_cut_out:
+                            cutout_images.extend(image_urls)
+                            has_google_cut_out = True
 
                     sam_cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
                     )
-                    if "is_cut_out" not in sam_cuted_image:
+                    if sam_cuted_image and "is_cut_out" not in sam_cuted_image:
                         continue
-                    is_sam_cut_out = sam_cuted_image.get("is_cut_out", False)
-                    sam_image_urls = sam_cuted_image.get("image_urls", [])
-                    if is_sam_cut_out:
-                        cutout_by_sam_images.extend(sam_image_urls)
-                        has_sam_cut_out = True
+                    elif sam_cuted_image:
+                        is_sam_cut_out = sam_cuted_image.get("is_cut_out", False)
+                        sam_image_urls = sam_cuted_image.get("image_urls", [])
+                        if is_sam_cut_out:
+                            cutout_by_sam_images.extend(sam_image_urls)
+                            has_sam_cut_out = True
 
                     if not has_google_cut_out and not has_sam_cut_out:
                         description_images.extend(image_urls)
@@ -499,7 +501,7 @@ class APIBatchMakeImage(Resource):
             ).to_dict()
         except Exception as e:
             traceback.print_exc()
-            logger.error("Exception: {0}".format(str(e)))
+            logger.error("Batch IMAGE Exception: {0}".format(str(e)))
             return Response(
                 message="상품 정보를 불러올 수 없어요.(Error code : )",
                 code=201,
