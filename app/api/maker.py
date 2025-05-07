@@ -926,14 +926,14 @@ class APIMakePost(Resource):
                             current_stt = index + 1
                             pre_content_cutout += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
 
+                    pre_content = f"<br></br><br></br><h2>IMAGES CLEARED: DESCRIPTION IMAGES & CUTTED OUT IMAGE: TOTAL - {len(cleared_images)}</h2>"
                     if cleared_images:
-                        pre_content = "<br></br><br></br><h2>IMAGES CLEARED: DESCRIPTION IMAGES & CUTTED OUT IMAGE</h2>"
                         current_stt = 0
                         for index, cleared_image in enumerate(cleared_images):
                             current_stt = index + 1
                             pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
 
-                        content = pre_content_cutout + pre_content + content
+                    content = pre_content_cutout + pre_content + content
 
                     for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
