@@ -1400,16 +1400,17 @@ class APICheckSNSLink(Resource):
                 ).to_dict()
 
             if batchId:
-                if current_user.batch_remain == 0:
-                    return Response(
-                        message=MessageError.NO_BATCH_REMAINING.value["message"],
-                        data={
-                            "error_message": MessageError.NO_BATCH_REMAINING.value[
-                                "error_message"
-                            ]
-                        },
-                        code=201,
-                    ).to_dict()
+                
+                # if current_user.batch_remain == 0:
+                #     return Response(
+                #         message=MessageError.NO_BATCH_REMAINING.value["message"],
+                #         data={
+                #             "error_message": MessageError.NO_BATCH_REMAINING.value[
+                #                 "error_message"
+                #             ]
+                #         },
+                #         code=201,
+                #     ).to_dict()
                 if (
                     current_user.batch_sns_remain < 2
                     and current_user.batch_no_limit_sns == 0
