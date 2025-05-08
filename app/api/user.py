@@ -46,6 +46,8 @@ from app.rabbitmq.producer import (
 from app.third_parties.youtube import YoutubeTokenService
 import const
 
+from app.services.nice_services import NiceAuthService
+
 ns = Namespace(name="user", description="User API")
 
 
@@ -1400,7 +1402,7 @@ class APICheckSNSLink(Resource):
                 ).to_dict()
 
             if batchId:
-                
+
                 # if current_user.batch_remain == 0:
                 #     return Response(
                 #         message=MessageError.NO_BATCH_REMAINING.value["message"],
@@ -1677,3 +1679,15 @@ class APIUpdateUserLinkTemplate(Resource):
         return Response(
             data={}, message="링크 선택이 성공적으로 업데이트되었습니다."
         ).to_dict()
+
+
+@ns.route("/nice_auth")
+class APINiceAuth(Resource):
+    @jwt_required()
+    def get(self):
+        urrent_user = AuthService.get_current_identity()
+        user_id = urrent_user.id
+
+        data_nice = NiceAuthService.get_nice_auth(user_id)
+
+        return Response(data=data_nice, message="Nice return.").to_dict()
