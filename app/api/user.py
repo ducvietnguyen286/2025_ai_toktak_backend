@@ -1708,7 +1708,7 @@ class APINiceAuthSuccess(Resource):
         data_nice = NiceAuthService.checkplus_success(user_id, result_item)
 
         return Response(
-            data=data_nice.get("data", {}), message="Nice return."
+            data=data_nice, message="Nice return."
         ).to_dict()
 
 
