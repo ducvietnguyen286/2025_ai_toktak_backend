@@ -241,6 +241,8 @@ class APIMe(Resource):
             user_dict["subscription_name"] = subscription_name
             user_dict["latest_coupon"] = latest_coupon
             user_dict["used_date_range"] = used_date_range
+            user_dict.pop("auth_nice_result", None)
+            user_dict.pop("password_certificate", None)
 
             return Response(
                 data=user_dict,
