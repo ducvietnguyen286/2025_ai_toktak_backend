@@ -1,6 +1,7 @@
 from app.extensions import db
 from app.models.base import BaseModel
 from datetime import datetime
+import pytz
 
 
 class Post(db.Model, BaseModel):
@@ -67,7 +68,7 @@ class Post(db.Model, BaseModel):
             "social_sns_description": self.social_sns_description,
             "user_email": self.user.email if self.user else None,  # Lấy email từ user
             "schedule_date": (
-                self.schedule_date.strftime("%Y-%m-%d %H:%M:%S")
+                pytz.utc.localize(self.schedule_date).strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.schedule_date
                 else None
             ),
