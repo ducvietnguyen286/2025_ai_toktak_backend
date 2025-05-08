@@ -34,6 +34,12 @@ class User(db.Model, BaseModel):
 
     level = db.Column(db.Integer, default=0)
     level_info = db.Column(db.Text, nullable=False)
+    
+    is_auth_nice = db.Column(db.Integer, default=0)
+    is_verify_email = db.Column(db.Integer, default=0)
+    auth_nice_result = db.Column(db.Text, nullable=False)
+    gender = db.Column(db.String(255), nullable=False, default="")
+    password_certificate = db.Column(db.String(255), nullable=False, default="")
 
     ali_express_active = db.Column(db.Boolean, default=False)
     ali_express_info = db.Column(db.Text)

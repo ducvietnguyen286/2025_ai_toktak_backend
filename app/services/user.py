@@ -298,3 +298,9 @@ class UserService:
         user_dict["latest_coupon"] = latest_coupon
         user_dict["used_date_range"] = used_date_range
         return user_dict
+
+    @staticmethod
+    def check_phone_verify_nice(mobileno):
+        user = User.query.filter(User.phone == mobileno, User.is_auth_nice == 1).first()
+
+        return user

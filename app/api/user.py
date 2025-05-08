@@ -1685,9 +1685,44 @@ class APIUpdateUserLinkTemplate(Resource):
 class APINiceAuth(Resource):
     @jwt_required()
     def get(self):
-        urrent_user = AuthService.get_current_identity()
-        user_id = urrent_user.id
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
 
         data_nice = NiceAuthService.get_nice_auth(user_id)
+
+        return Response(data=data_nice, message="Nice return.").to_dict()
+
+
+@ns.route("/checkplus_success")
+class APINiceAuthSuccess(Resource):
+    @jwt_required()
+    def get(self, args):
+        enc_data = args.get("EncodeData")
+        result_item = { 
+            "EncodeData": enc_data,
+        }
+
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+
+        data_nice = NiceAuthService.checkplus_success(user_id, result_item)
+
+        return Response(data=data_nice, message="Nice return.").to_dict()
+
+
+
+@ns.route("/checkplus_fail")
+class APINiceAuthSuccess(Resource):
+    @jwt_required()
+    def get(self, args):
+        enc_data = args.get("EncodeData")
+        result_item = { 
+            "EncodeData": enc_data,
+        }
+
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+
+        data_nice = NiceAuthService.checkplus_success(user_id, result_item)
 
         return Response(data=data_nice, message="Nice return.").to_dict()
