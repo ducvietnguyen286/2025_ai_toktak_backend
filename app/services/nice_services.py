@@ -2,6 +2,8 @@ from app.lib.logger import logger
 import subprocess
 import os
 from app.services.user import UserService
+import re
+import base64
 
 
 class NiceAuthService:
@@ -29,14 +31,7 @@ class NiceAuthService:
             customize = ""
 
             # Gọi shell command để lấy reqseq
-            result = subprocess.run(
-                [cb_encode_path, "SEQ", sitecode],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,  # gộp stderr vào stdout
-                text=True,
-            )
-
-            reqseq = result.stdout.strip()  # Lấy toàn bộ kết quả trả ra
+            reqseq = NiceAuthService.run_command([cb_encode_path, "SEQ", sitecode])
 
             # Lưu thông tin người dùng nếu có
             user_data = UserService.find_user(user_id)
@@ -58,16 +53,9 @@ class NiceAuthService:
 
             # Mã hóa dữ liệu
 
-            result_2 = subprocess.run(
-                [cb_encode_path, "ENC", sitecode, sitepasswd, plaindata],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,  # gộp stderr vào stdout
-                text=True,
+            enc_data = NiceAuthService.run_command(
+                [cb_encode_path, "ENC", sitecode, sitepasswd, plaindata]
             )
-
-            enc_data = result_2.stdout.strip()  # Lấy toàn bộ kết quả trả ra
-
-            logger.info(enc_data)
 
             # Chỉ xử lý nếu là mã lỗi (-1, -2, -3, -9)
             if enc_data in ["-1", "-2", "-3", "-9"]:
@@ -89,6 +77,121 @@ class NiceAuthService:
         return {"code": 500, "message": return_msg, "data": result_item}
 
     @staticmethod
+    def checkplus_success(user_id, data_search):
+        sitecode = os.environ.get("SITE_CODE", "")
+        sitepasswd = os.environ.get("SITE_PASSWORD", "")
+        cb_encode_path = os.environ.get("ENCODE_PATH", "")
+
+        result_code = 200
+        return_msg = ""
+        result_item = {}
+
+        try:
+
+            enc_data = data_search.get("EncodeData", "")
+
+            # Validate encoding
+            if re.search(r"[^0-9a-zA-Z+/=]", enc_data):
+                return {
+                    "code": 404,
+                    "message": f"입력 값 확인이 필요합니다",
+                    "data": {},
+                }
+
+            try:
+                decoded = base64.b64decode(enc_data)
+                if base64.b64encode(decoded).decode() != enc_data:
+                    return {"code": 404, "message": "Invalid base64", "data": {}}
+            except Exception:
+                return {"code": 404, "message": "입력 값 확인이 필요합니다", "data": {}}
+
+            # Decrypt
+            plaindata = NiceAuthService.run_command(
+                [cb_encode_path, "DEC", sitecode, sitepasswd, enc_data]
+            )
+
+            # Check decrypt result
+            if plaindata in ["-1", "-4", "-5", "-6", "-9", "-12"]:
+                error_map = {
+                    "-1": "암/복호화 시스템 오류",
+                    "-4": "복호화 처리 오류",
+                    "-5": "HASH값 불일치",
+                    "-6": "복호화 데이터 오류",
+                    "-9": "입력값 오류",
+                    "-12": "사이트 비밀번호 오류",
+                }
+                return {
+                    "code": 500,
+                    "message": error_map.get(plaindata, "복호화 실패"),
+                    "data": {},
+                }
+
+            # Parse decrypted result
+            name = NiceAuthService.get_value(plaindata, "NAME")
+            name = name.encode("euc-kr").decode("utf-8", errors="ignore")
+
+            result_item = {
+                "requestnumber": NiceAuthService.get_value(plaindata, "REQ_SEQ"),
+                "responsenumber": NiceAuthService.get_value(plaindata, "RES_SEQ"),
+                "authtype": NiceAuthService.get_value(plaindata, "AUTH_TYPE"),
+                "name": name,
+                "birthdate": NiceAuthService.get_value(plaindata, "BIRTHDATE"),
+                "gender": NiceAuthService.get_value(plaindata, "GENDER"),
+                "nationalinfo": NiceAuthService.get_value(plaindata, "NATIONALINFO"),
+                "dupinfo": NiceAuthService.get_value(plaindata, "DI"),
+                "conninfo": NiceAuthService.get_value(plaindata, "CI"),
+                "mobileno": NiceAuthService.get_value(plaindata, "MOBILE_NO"),
+                "mobileco": NiceAuthService.get_value(plaindata, "MOBILE_CO"),
+            }
+
+            # Validate user session
+            user_data = UserService.find_user(user_id)
+
+            if not user_data:
+                logger.warning("Not found User Verify")
+                return {
+                    "code": 403,
+                    "message": "사용자 로그인을 해주세요",
+                    "data": result_item,
+                }
+
+            if user_data.password_certificate != result_item["requestnumber"]:
+                logger.warning(
+                    f"Session mismatch: cert={user_data.password_certificate} req={result_item['requestnumber']}"
+                )
+                return {
+                    "code": 403,
+                    "message": "세션값이 다릅니다. 올바른 경로로 접근하시기 바랍니다.",
+                    "data": result_item,
+                }
+
+            mobileno = result_item["mobileno"]
+            verify_detail = UserService.check_phone_verify_nice(mobileno)
+
+            if verify_detail:
+                data_update = {
+                    "phone": mobileno,
+                    "auth_nice_result": result_item,
+                    "is_auth_nice": 1,
+                    "is_verify_email": 1,
+                    "name": name,
+                    "gender": "M" if result_item["gender"] == "1" else "F",
+                }
+                UserService.update_user(user_id, data_update)
+                return {"code": 200, "message": "인증 성공", "data": result_item}
+            else:
+                logger.warning("Not found User Verify FROM NICE")
+                return {
+                    "code": 403,
+                    "message": "이미 본인 인증에 사용된 전화번호(또는 이메일) 입니다.",
+                    "data": result_item,
+                }
+
+        except Exception as e:
+            logger.error(str(e))
+            return {"code": 500, "message": str(e), "data": result_item}
+
+    @staticmethod
     def interpret_error_code(enc_data):
         error_messages = {
             "-1": "암/복호화 시스템 오류입니다.",
@@ -99,3 +202,50 @@ class NiceAuthService:
         return error_messages.get(enc_data, ""), (
             "" if enc_data in error_messages else enc_data
         )
+
+    @staticmethod
+    def run_command(cmd: list) -> str:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        return result.stdout.strip()
+
+    @staticmethod
+    def get_value(s: str, name: str) -> str:
+        pos = 0
+        length = len(s)
+
+        while pos < length:
+            # Tìm vị trí dấu ':' để xác định chiều dài của key
+            colon_pos = s.find(":", pos)
+            if colon_pos == -1:
+                break
+
+            key_len = int(s[pos:colon_pos])
+            key_start = colon_pos + 1
+            key_end = key_start + key_len
+            key = s[key_start:key_end]
+
+            pos = key_end
+
+            if key == name:
+                # Tìm tiếp phần value
+                colon_pos = s.find(":", pos)
+                if colon_pos == -1:
+                    break
+                val_len = int(s[pos:colon_pos])
+                val_start = colon_pos + 1
+                val_end = val_start + val_len
+                return s[val_start:val_end]
+            else:
+                # Skip value không khớp
+                colon_pos = s.find(":", pos)
+                if colon_pos == -1:
+                    break
+                val_len = int(s[pos:colon_pos])
+                pos = colon_pos + 1 + val_len
+
+        return ""
