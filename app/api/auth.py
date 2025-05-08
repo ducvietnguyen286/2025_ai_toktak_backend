@@ -278,7 +278,7 @@ class APILoginByInput(Resource):
             if not user:
                 return Response(
                     code=201,
-                    message="비밀번호가 정확하지 않습니다.",   
+                    message="비밀번호가 정확하지 않습니다.",
                 ).to_dict()
 
             tokens = AuthService.generate_token(user)
@@ -303,7 +303,6 @@ class APILoginByInput(Resource):
                 code=201,
                 message="로그인 중 오류가 발생했습니다. 나중에 다시 시도해 주세요.",
             ).to_dict()
-
 
 
 @ns.route("/update_user")
@@ -334,6 +333,7 @@ class APIMeUpdate(Resource):
             message = f"✏️ 이름이 변경되었습니다. ({user_login.name} → {name})"
         if phone is not None:
             update_data["phone"] = phone
+            update_data["is_auth_nice"] = 0
             message = f"📞 연락처가 변경되었습니다. ({user_login.phone} → {phone})"
         if contact is not None:
             update_data["contact"] = contact
@@ -448,6 +448,9 @@ class APIUserProfile(Resource):
             user_dict["coupons"] = result_coupons
             user_dict["latest_coupon"] = latest_coupon
             user_dict["used_date_range"] = used_date_range
+
+            user_dict.pop("auth_nice_result", None)
+            user_dict.pop("password_certificate", None)
 
             return Response(
                 data=user_dict,
