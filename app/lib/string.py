@@ -319,3 +319,10 @@ def convert_video_path(path: str, domain: str):
     except Exception as e:
         logger.error(f"[convert_video_path] Failed for path: {path} — Error: {e}")
         return ""
+
+
+def insert_hashtags_to_string(tag_string, index=6):
+    new_hashtags = ["#톡탁", "#toktak"]
+    tag_list = tag_string.strip().split()
+    tag_list = tag_list[:index] + new_hashtags + tag_list[index:]
+    return " ".join(tag_list)
