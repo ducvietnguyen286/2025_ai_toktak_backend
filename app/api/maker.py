@@ -25,6 +25,7 @@ from app.lib.string import (
     replace_phrases_in_text,
     get_ads_content,
     convert_video_path,
+    insert_hashtags_to_string,
 )
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
@@ -932,6 +933,9 @@ class APIMakePost(Resource):
 
             if is_paid_advertisements == 1:
                 hashtag = f"#광고 {hashtag}"
+
+            if type == "image" or type == "video":
+                hashtag = insert_hashtags_to_string(hashtag)
 
             if should_replace_shortlink(url):
                 shorten_link = batch.shorten_link
