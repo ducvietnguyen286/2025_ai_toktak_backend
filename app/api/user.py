@@ -1689,8 +1689,8 @@ class APINiceAuth(Resource):
         user_id = current_user.id
 
         data_nice = NiceAuthService.get_nice_auth(user_id)
-
-        return Response(data=data_nice, message="Nice return.").to_dict()
+        return data_nice
+        # return Response(data=data_nice, message="Nice return.").to_dict()
 
 
 @ns.route("/checkplus_success")
@@ -1706,10 +1706,8 @@ class APINiceAuthSuccess(Resource):
         user_id = current_user.id
 
         data_nice = NiceAuthService.checkplus_success(user_id, result_item)
-
-        return Response(
-            data=data_nice.get("data", {}), message="Nice return."
-        ).to_dict()
+        return data_nice
+        
 
 
 @ns.route("/checkplus_fail")
