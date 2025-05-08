@@ -1698,7 +1698,7 @@ class APINiceAuthSuccess(Resource):
     @jwt_required()
     def get(self, args):
         enc_data = args.get("EncodeData")
-        result_item = { 
+        result_item = {
             "EncodeData": enc_data,
         }
 
@@ -1707,8 +1707,9 @@ class APINiceAuthSuccess(Resource):
 
         data_nice = NiceAuthService.checkplus_success(user_id, result_item)
 
-        return Response(data=data_nice, message="Nice return.").to_dict()
-
+        return Response(
+            data=data_nice.get("data", {}), message="Nice return."
+        ).to_dict()
 
 
 @ns.route("/checkplus_fail")
@@ -1716,7 +1717,7 @@ class APINiceAuthSuccess(Resource):
     @jwt_required()
     def get(self, args):
         enc_data = args.get("EncodeData")
-        result_item = { 
+        result_item = {
             "EncodeData": enc_data,
         }
 

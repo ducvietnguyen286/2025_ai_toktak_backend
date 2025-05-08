@@ -307,7 +307,7 @@ class APICreateBatch(Resource):
                     user_id=user_id_login,
                     batch_id=batch.id,
                     type=post_type,
-                    status=99,
+                    status=0,
                 )
 
                 post_res = post.to_dict()
@@ -764,7 +764,6 @@ class APIMakePost(Resource):
                             data_make_video
                         )
 
-
                         if result["status_code"] == 200:
                             render_id = result["response"]["id"]
 
@@ -1108,8 +1107,8 @@ class APIGetStatusUploadBySyncId(Resource):
                 notification_type = post["type"]
 
                 update_data = {
-                    "social_sns_description": json.dumps(new_social_sns_description) ,
-                    "schedule_date" :  datetime.datetime.utcnow()
+                    "social_sns_description": json.dumps(new_social_sns_description),
+                    "schedule_date": datetime.datetime.utcnow(),
                 }
                 show_post_detail = []
                 status_check_sns = 0
