@@ -818,12 +818,18 @@ class APISelectFacebookPage(Resource):
                     status=400,
                 ).to_dict()
             select_page = FacebookTokenService().get_page_info_by_id(page_id, user_link)
+            logger.info(f"-----------SELECT PAGE: {select_page}-------------")
             if not select_page:
                 return Response(
                     message="Không tìm thấy trang Facebook",
                     status=400,
                 ).to_dict()
             page_info = FacebookTokenService().get_info_page(select_page)
+            if not page_info:
+                return Response(
+                    message="Không tìm thấy thông tin trang Facebook",
+                    status=400,
+                ).to_dict()
 
             UserLinkService.update_info_user_link(user_link=user_link, info=page_info)
 
