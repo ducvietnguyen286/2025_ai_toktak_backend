@@ -17,6 +17,7 @@ class UserLink(db.Model, BaseModel):
     meta_url = db.Column(db.String(1024), nullable=False)
     youtube_client = db.Column(db.Text)
     warning = db.Column(db.Integer, default=0)
+    page_id = db.Column(db.String(250))
     expired_at = db.Column(db.DateTime, nullable=True)
     expired_date = db.Column(db.Date, nullable=True, index=True)
     status = db.Column(db.Integer, default=1)

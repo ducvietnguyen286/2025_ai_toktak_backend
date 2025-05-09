@@ -98,9 +98,19 @@ class FacebookTokenService:
                         break
                 return first_page
 
+            getted_page = None
             for page in data.get("data"):
                 if page.get("id") == page_id:
-                    return page.get("access_token")
+                    getted_page = page
+                    break
+            if not getted_page:
+                log_facebook_message("Page not found")
+                return None
+            tasks = getted_page.get("tasks")
+            if "CREATE_CONTENT" not in tasks:
+                log_facebook_message("Page not have CREATE_CONTENT permission")
+                return None
+            return getted_page
 
         except Exception as e:
             log_facebook_message(e)
@@ -231,8 +241,13 @@ class FacebookService(BaseService):
         self.social_post_id = str(self.social_post.id)
         self.key_log = f"{self.post_id} - {self.social_post.session_key}"
 
+        is_all = (
+            False if self.user_link.page_id and self.user_link.page_id != "" else True
+        )
+        selected_page_id = self.user_link.page_id if is_all else page_id
+
         token_page = FacebookTokenService.fetch_page_token_backend(
-            self.user_link, page_id, is_all
+            user_link=self.user_link, page_id=selected_page_id, is_all=is_all
         )
 
         if not is_all and not token_page:

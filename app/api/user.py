@@ -7,7 +7,7 @@ import time
 import traceback
 from urllib.parse import urlencode
 import uuid
-from flask import redirect
+from flask import redirect , request
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
 import jwt
@@ -45,6 +45,8 @@ from app.rabbitmq.producer import (
 )
 from app.third_parties.youtube import YoutubeTokenService
 import const
+
+from app.services.nice_services import NiceAuthService
 
 ns = Namespace(name="user", description="User API")
 
@@ -779,11 +781,47 @@ class APIGetFacebookPage(Resource):
                         "id": page.get("id"),
                         "name": page.get("name"),
                         "picture": page.get("picture"),
+                        "tasks": page.get("tasks"),
                     }
                 )
         return Response(
             data=list_pages,
             message="Lấy link Facebook thành công",
+        ).to_dict()
+
+
+@ns.route("/select-facebook-page")
+class APISelectFacebookPage(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "page_id": {"type": "string"},
+        },
+        required=["page_id"],
+    )
+    def post(self, args):
+        current_user = AuthService.get_current_identity()
+        link = LinkService.find_link_by_type("FACEBOOK")
+        if not link:
+            return Response(
+                message="Không tìm thấy link Facebook",
+                status=400,
+            ).to_dict()
+        page_id = args.get("page_id")
+        user_link = UserService.find_user_link(link.id, current_user.id)
+        if not user_link:
+            return Response(
+                message="Không tìm thấy link Facebook",
+                status=400,
+            ).to_dict()
+        url = f"https://facebook.com/profile.php?id={page_id}" or ""
+        user_link.url = url
+        user_link.page_id = page_id
+        user_link.save()
+        return Response(
+            message="Lưu trang Facebook thành công",
         ).to_dict()
 
 
@@ -1400,16 +1438,17 @@ class APICheckSNSLink(Resource):
                 ).to_dict()
 
             if batchId:
-                if current_user.batch_remain == 0:
-                    return Response(
-                        message=MessageError.NO_BATCH_REMAINING.value["message"],
-                        data={
-                            "error_message": MessageError.NO_BATCH_REMAINING.value[
-                                "error_message"
-                            ]
-                        },
-                        code=201,
-                    ).to_dict()
+
+                # if current_user.batch_remain == 0:
+                #     return Response(
+                #         message=MessageError.NO_BATCH_REMAINING.value["message"],
+                #         data={
+                #             "error_message": MessageError.NO_BATCH_REMAINING.value[
+                #                 "error_message"
+                #             ]
+                #         },
+                #         code=201,
+                #     ).to_dict()
                 if (
                     current_user.batch_sns_remain < 2
                     and current_user.batch_no_limit_sns == 0
@@ -1676,3 +1715,49 @@ class APIUpdateUserLinkTemplate(Resource):
         return Response(
             data={}, message="링크 선택이 성공적으로 업데이트되었습니다."
         ).to_dict()
+
+
+@ns.route("/nice_auth")
+class APINiceAuth(Resource):
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+
+        data_nice = NiceAuthService.get_nice_auth(user_id)
+        return data_nice
+        # return Response(data=data_nice, message="Nice return.").to_dict()
+
+
+@ns.route("/checkplus_success")
+class APINiceAuthSuccess(Resource):
+    @jwt_required()
+    def get(self):
+        enc_data = request.args.get("EncodeData")  # <-- lấy từ request.args
+        result_item = {
+            "EncodeData": enc_data,
+        }
+
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+
+        data_nice = NiceAuthService.checkplus_success(user_id, result_item)
+        return data_nice
+        
+
+
+@ns.route("/checkplus_fail")
+class APINiceAuthSuccess(Resource):
+    @jwt_required()
+    def get(self, args):
+        enc_data = args.get("EncodeData")
+        result_item = {
+            "EncodeData": enc_data,
+        }
+
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+
+        data_nice = NiceAuthService.checkplus_success(user_id, result_item)
+
+        return Response(data=data_nice, message="Nice return.").to_dict()

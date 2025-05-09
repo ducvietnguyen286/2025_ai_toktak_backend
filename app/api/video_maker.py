@@ -127,8 +127,6 @@ class VideoList(Resource):
     def get(self):
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
-        print("page", page)
-        print("per_page", per_page)
 
         videos = VideoService.get_videos(page, per_page)
 

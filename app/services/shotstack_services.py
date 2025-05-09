@@ -1274,7 +1274,6 @@ def generate_srt(text, audio_file, output_srt, start_offset=0.0):
         with open(output_srt, "w", encoding="utf-8") as f:
             f.write(srt_content)
 
-        # print(f"✅ Đã tạo file SRT (KHÔNG có index): {output_srt}")
 
         # Tạo đường dẫn file trên server
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"

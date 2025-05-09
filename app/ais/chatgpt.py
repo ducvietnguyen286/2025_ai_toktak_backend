@@ -635,6 +635,7 @@ def call_chatgpt(
             return content
         return None
     except Exception as e:
+        logger.error(f"[ChatGPT API Error] {e}")
         response_log = json.dumps({"error": str(e)})
         RequestLogService.create_request_log(
             post_id=post_id,
@@ -648,7 +649,6 @@ def call_chatgpt(
 
 def translate_notifications_batch(notifications_batch):
     try:
-        print(f"chatgpt_api_key{chatgpt_api_key}")
         client = OpenAI(api_key=chatgpt_api_key)
 
         assistant_id = "asst_rBXxdDDCdHuv3UxNDTiHrxVv"
