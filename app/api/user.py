@@ -814,6 +814,8 @@ class APISelectFacebookPage(Resource):
                 message="Không tìm thấy link Facebook",
                 status=400,
             ).to_dict()
+        url = f"https://facebook.com/profile.php?id={page_id}" or ""
+        user_link.url = url
         user_link.page_id = page_id
         user_link.save()
         return Response(
