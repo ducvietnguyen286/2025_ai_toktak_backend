@@ -7,7 +7,7 @@ import time
 import traceback
 from urllib.parse import urlencode
 import uuid
-from flask import redirect , request
+from flask import redirect, request
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
 import jwt
@@ -816,10 +816,16 @@ class APISelectFacebookPage(Resource):
                 message="Không tìm thấy link Facebook",
                 status=400,
             ).to_dict()
-        url = f"https://facebook.com/profile.php?id={page_id}" or ""
-        user_link.url = url
-        user_link.page_id = page_id
-        user_link.save()
+        select_page = FacebookTokenService().get_page_info_by_id(page_id, user_link)
+        if not select_page:
+            return Response(
+                message="Không tìm thấy trang Facebook",
+                status=400,
+            ).to_dict()
+        page_info = FacebookTokenService().get_info_page(select_page)
+
+        UserLinkService.update_info_user_link(user_link=user_link, info=page_info)
+
         return Response(
             message="Lưu trang Facebook thành công",
         ).to_dict()
@@ -1743,7 +1749,6 @@ class APINiceAuthSuccess(Resource):
 
         data_nice = NiceAuthService.checkplus_success(user_id, result_item)
         return data_nice
-        
 
 
 @ns.route("/checkplus_fail")

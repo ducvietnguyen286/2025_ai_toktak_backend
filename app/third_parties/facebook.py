@@ -53,6 +53,35 @@ class FacebookTokenService:
             return None
 
     @staticmethod
+    def get_page_info_by_id(page_id, user_link):
+        try:
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("access_token")
+            if not access_token:
+                log_facebook_message("Token not found")
+                return None
+
+            PAGE_URL = f"https://graph.facebook.com/v22.0/{page_id}?access_token={access_token}&fields=id,name,picture,access_token,tasks"
+
+            response = requests.get(PAGE_URL, timeout=20)
+            data = response.json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="FACEBOOK",
+                social_post_id="",
+                user_id=user_link.user_id,
+                type="get_page_info_by_id",
+                request=json.dumps({"access_token": access_token}),
+                response=json.dumps(data),
+            )
+
+            return data
+
+        except Exception as e:
+            log_facebook_message(e)
+            return None
+
+    @staticmethod
     def get_info_page(page):
         return {
             "id": page.get("id") or "",
