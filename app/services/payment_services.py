@@ -1,7 +1,7 @@
 from app.models.user import User
 from app.models.post import Post
 from app.models.link import Link
-from app.models.schedule import Schedules
+from app.models.payment import Payment
 from app.extensions import db
 from sqlalchemy import and_, func, or_
 from flask import jsonify
@@ -13,74 +13,70 @@ import const
 import hashlib
 from app.models.batch import Batch
 from app.lib.logger import logger
+from dateutil.relativedelta import relativedelta
+
+from const import PACKAGE_PRICES, PACKAGE_DURATION_DAYS, PACKAGE_ORDER
 
 
 class PaymentService:
 
     @staticmethod
-    def create_payment(*args, **kwargs):
-        schedule_detail = Schedules(*args, **kwargs)
-        schedule_detail.save()
-        return schedule_detail
+    def can_upgrade(current_package: str, new_package: str) -> bool:
+        """Kiểm tra xem việc nâng cấp có hợp lệ không (theo thứ tự gói)"""
+        return PACKAGE_ORDER[new_package] > PACKAGE_ORDER[current_package]
 
     @staticmethod
-    def find_schedule(id):
-        return Schedules.query.get(id)
-
-    @staticmethod
-    def update_schedule(id, *args, **kwargs):
-        schedule_detail = Schedules.query.get(id)
-        if not schedule_detail:
-            return None
-        schedule_detail.update(**kwargs)
-        return schedule_detail
-
-    @staticmethod
-    def delete_schedules(id):
-        return Schedules.query.get(id).delete()
-
-    @staticmethod
-    def delete_schedules_by_ids(ids):
-        try:
-            Schedules.query.filter(Schedules.id.in_(ids)).delete(
-                synchronize_session=False
-            )
-            db.session.commit()
-        except Exception as ex:
-            db.session.rollback()
-            return 0
-        return 1
-
-    @staticmethod
-    def delete_schedules_by_user_id(ids, user_id):
-
-        products_to_delete = Schedules.query.filter(
-            and_(Schedules.id.in_(ids), Schedules.user_id == user_id)
+    def has_active_subscription(user_id):
+        now = datetime.utcnow()
+        active_payment = (
+            Payment.query.filter_by(user_id=user_id)
+            .filter(Payment.end_date > now)
+            .order_by(Payment.end_date.desc())
+            .first()
         )
+        return active_payment
 
-        # Đếm số lượng để biết có xóa gì không
-        if products_to_delete.count() == 0:
-            return False  # Không có sản phẩm để xóa
+    @staticmethod
+    def create_new_payment(user_id, package_name):
+        now = datetime.utcnow()
+        price = PACKAGE_PRICES[package_name]
+        start_date = now
+        end_date = start_date + relativedelta(months=1)
 
-        # Thực hiện xóa
-        products_to_delete.delete(synchronize_session=False)
+        payment = Payment(
+            user_id=user_id,
+            package_name=package_name,
+            price=price,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        db.session.add(payment)
         db.session.commit()
-        return True
+        return payment
 
     @staticmethod
-    def find_schedule_by_user_id(id, user_id):
-        return Schedules.query.filter_by(id=id, user_id=user_id).first()
+    def upgrade_package(user_id, new_package):
+        now = datetime.utcnow()
+        active_payment = PaymentService.has_active_subscription(user_id)
 
-    @staticmethod
-    def get_schedule_by_user_id(start, end, status):
-        query = Schedules.query
+        if not active_payment:
+            return PaymentService.create_new_payment(user_id, new_package)
 
-        if start and end:
-            query = query.filter(Schedules.date.between(start, end))
+        # Tính tiền còn lại của gói cũ
+        remaining_days = (active_payment.end_date - now).days
+        old_price_per_day = active_payment.price / PACKAGE_DURATION_DAYS
+        remaining_value = round(old_price_per_day * remaining_days)
 
-        if status:
-            query = query.filter(Schedules.status == status)
+        new_price = PACKAGE_PRICES[new_package]
+        final_price = max(0, new_price - remaining_value)
 
-        schedules = query.all()
-        
-        return [schedule_detail._to_json() for schedule_detail in schedules]
+        new_payment = Payment(
+            user_id=user_id,
+            package_name=new_package,
+            price=final_price,
+            start_date=now,
+            end_date=active_payment.end_date,
+        )
+        db.session.add(new_payment)
+        db.session.commit()
+        return new_payment
