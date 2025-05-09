@@ -7,7 +7,7 @@ import time
 import traceback
 from urllib.parse import urlencode
 import uuid
-from flask import redirect
+from flask import redirect , request
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
 import jwt
@@ -1696,8 +1696,8 @@ class APINiceAuth(Resource):
 @ns.route("/checkplus_success")
 class APINiceAuthSuccess(Resource):
     @jwt_required()
-    def get(self, args):
-        enc_data = args.get("EncodeData")
+    def get(self):
+        enc_data = request.args.get("EncodeData")  # <-- lấy từ request.args
         result_item = {
             "EncodeData": enc_data,
         }

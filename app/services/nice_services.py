@@ -4,6 +4,9 @@ import os
 from app.services.user import UserService
 import re
 import base64
+import datetime
+import json
+import urllib.parse
 
 
 class NiceAuthService:
@@ -36,7 +39,7 @@ class NiceAuthService:
             # Lưu thông tin người dùng nếu có
             user_data = UserService.find_user(user_id)
             if user_data:
-                UserService.update_user(user_id, {"password_certificate": reqseq})
+                UserService.update_user(user_id, password_certificate=reqseq)
 
             returnurl = url_verify_result
             errorurl = url_verify_result
@@ -87,23 +90,28 @@ class NiceAuthService:
         result_item = {}
 
         try:
-
             enc_data = data_search.get("EncodeData", "")
-
-            # Validate encoding
             if re.search(r"[^0-9a-zA-Z+/=]", enc_data):
                 return {
                     "code": 404,
-                    "message": f"입력 값 확인이 필요합니다",
+                    "message": "입력 값 확인이 필요합니다",
                     "data": {},
                 }
 
             try:
                 decoded = base64.b64decode(enc_data)
                 if base64.b64encode(decoded).decode() != enc_data:
-                    return {"code": 404, "message": "Invalid base64", "data": {}}
+                    return {
+                        "code": 404,
+                        "message": "Invalid base64",
+                        "data": {"enc_data": enc_data},
+                    }
             except Exception:
-                return {"code": 404, "message": "입력 값 확인이 필요합니다", "data": {}}
+                return {
+                    "code": 404,
+                    "message": "입력 값 확인이 필요합니다",
+                    "data": {"enc_data": enc_data},
+                }
 
             # Decrypt
             plaindata = NiceAuthService.run_command(
@@ -126,11 +134,18 @@ class NiceAuthService:
                     "data": {},
                 }
 
-            # Parse decrypted result
-            name = NiceAuthService.get_value(plaindata, "NAME")
-            name = name.encode("euc-kr").decode("utf-8", errors="ignore")
+            utf8_name_raw = NiceAuthService.get_value(plaindata, "UTF8_NAME")
+            if utf8_name_raw:
+                name = urllib.parse.unquote(utf8_name_raw)
+            else:
+                # fallback EUC-KR 방식
+                name_raw = NiceAuthService.get_value(plaindata, "NAME")
+                name = name_raw.encode("latin1").decode("euc-kr", errors="ignore")
+
+            logger.info(name)
 
             result_item = {
+                "user_id": user_id,
                 "requestnumber": NiceAuthService.get_value(plaindata, "REQ_SEQ"),
                 "responsenumber": NiceAuthService.get_value(plaindata, "RES_SEQ"),
                 "authtype": NiceAuthService.get_value(plaindata, "AUTH_TYPE"),
@@ -168,22 +183,21 @@ class NiceAuthService:
             mobileno = result_item["mobileno"]
             verify_detail = UserService.check_phone_verify_nice(mobileno)
 
-            if verify_detail:
+            if not verify_detail:
                 data_update = {
                     "phone": mobileno,
-                    "auth_nice_result": result_item,
+                    "auth_nice_result": json.dumps(result_item),
                     "is_auth_nice": 1,
                     "is_verify_email": 1,
                     "name": name,
                     "gender": "M" if result_item["gender"] == "1" else "F",
                 }
-                UserService.update_user(user_id, data_update)
+                UserService.update_user(user_id, **data_update)
                 return {"code": 200, "message": "인증 성공", "data": result_item}
             else:
-                logger.warning("Not found User Verify FROM NICE")
                 return {
                     "code": 403,
-                    "message": "이미 본인 인증에 사용된 전화번호(또는 이메일) 입니다.",
+                    "message": "⚠️ 이 전화번호는 이미 다른 계정의 인증에 사용되었습니다.",
                     "data": result_item,
                 }
 
