@@ -69,6 +69,8 @@ class NiceAuthService:
                 "EncodeData": enc_data,
                 "endpoint": "https://nice.checkplus.co.kr/CheckPlusSafeModel/checkplus.cb",
             }
+            logger.info("---------------------------------------")
+            logger.info(result_item)
 
             return {"code": result_code, "message": return_msg, "data": result_item}
 
