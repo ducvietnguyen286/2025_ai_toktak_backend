@@ -11,15 +11,18 @@ import pillow_avif
 from PIL import Image, ImageDraw, ImageFont
 import requests
 import cv2
-from ultralytics import YOLO, FastSAM
+
+# from ultralytics import YOLO, FastSAM
 from google.cloud import vision
-import torch
+
+# import torch
 import multiprocessing
 from multiprocessing import Pool
 import numpy as np
 from app.enums.blocked_text import BlockedText
 from app.lib.logger import logger
-from app.extensions import sam_model
+
+# from app.extensions import sam_model
 
 from app.lib.header import generate_desktop_user_agent
 from app.third_parties.google import GoogleVision
@@ -36,7 +39,9 @@ FONT_FOLDER = os.path.join(os.getcwd(), "app/makers/fonts")
 CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
 PADDLE_OCR_URL = os.environ.get("PADDLE_OCR_URL")
+SAM_URL = os.environ.get("SAM_URL")
 PADDLE_URL = f"{PADDLE_OCR_URL}/check_text"
+SAM_CHECK_IMAGE_URL = f"{SAM_URL}/check-beauty-image"
 
 
 def wrap_text_by_pixel(draw, text, font, max_width):
@@ -161,23 +166,23 @@ def process_beauty_image(image_path):
         }
 
 
-def process_inference(image_path):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    with gpu_semaphore:
-        try:
-            results = sam_model(
-                image_path,
-                retina_masks=True,
-                imgsz=1024,
-                conf=0.6,
-                iou=0.9,
-                device=device,
-            )
-            torch.cuda.empty_cache()
-            return results
-        except Exception as e:
-            print(f"Error processing {image_path}: {e}")
-            return None
+# def process_inference(image_path):
+#     device = "cuda" if torch.cuda.is_available() else "cpu"
+#     with gpu_semaphore:
+#         try:
+#             results = sam_model(
+#                 image_path,
+#                 retina_masks=True,
+#                 imgsz=1024,
+#                 conf=0.6,
+#                 iou=0.9,
+#                 device=device,
+#             )
+#             torch.cuda.empty_cache()
+#             return results
+#         except Exception as e:
+#             print(f"Error processing {image_path}: {e}")
+#             return None
 
 
 class ImageMaker:
@@ -314,7 +319,12 @@ class ImageMaker:
             return {"image_urls": [image_url], "is_cut_out": False}
 
         try:
-            results = process_inference(image_path=image_path)
+            # results = process_inference(image_path=image_path)
+            response = requests.post(
+                SAM_CHECK_IMAGE_URL, json={"image_path": image_path}
+            )
+            json_response = response.json()
+            results = json_response.get("images", [])
 
             image_cv = cv2.imread(image_path)
             if image_cv is None:
