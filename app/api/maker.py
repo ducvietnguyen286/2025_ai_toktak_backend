@@ -500,6 +500,10 @@ class APIUpdateTemplateVideoUser(Resource):
             "is_caption_top": {"type": ["integer", "null"]},
             "is_caption_last": {"type": ["integer", "null"]},
             "image_template_id": {"type": ["string", "null"]},
+            "comment": {"type": "string"},
+            "hashtag": {"type": "array", "items": {"type": "string"}},
+            "is_comment": {"type": ["integer", "null"]},
+            "is_hashtag": {"type": ["integer", "null"]},
         },
         required=["batch_id"],
     )
@@ -517,6 +521,10 @@ class APIUpdateTemplateVideoUser(Resource):
             is_caption_top = args.get("is_caption_top", 0)
             is_caption_last = args.get("is_caption_last", 0)
             image_template_id = args.get("image_template_id", 0)
+            is_comment = args.get("is_comment", 0)
+            is_hashtag = args.get("is_hashtag", 0)
+            comment = args.get("comment", "")
+            hashtag = args.get("hashtag", [])
 
             user_id_login = 0
             current_user = AuthService.get_current_identity() or None
@@ -541,6 +549,10 @@ class APIUpdateTemplateVideoUser(Resource):
                 "is_caption_top": is_caption_top,
                 "is_caption_last": is_caption_last,
                 "image_template_id": image_template_id,
+                "is_comment": is_comment,
+                "is_hashtag": is_hashtag,
+                "comment": comment,
+                "hashtag": json.dumps(hashtag),
             }
 
             user_template = PostService.update_template(
