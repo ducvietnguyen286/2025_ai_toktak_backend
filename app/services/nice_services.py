@@ -43,7 +43,7 @@ class NiceAuthService:
 
             returnurl = url_verify_result
             errorurl = url_verify_result
-
+            logger.info("---------------------------------------")
             # Tạo plain data
             plaindata = (
                 f"7:REQ_SEQ{len(reqseq)}:{reqseq}"
@@ -53,6 +53,7 @@ class NiceAuthService:
                 f"7:ERR_URL{len(errorurl)}:{errorurl}"
                 f"9:CUSTOMIZE{len(customize)}:{customize}"
             )
+            logger.info(plaindata)
 
             # Mã hóa dữ liệu
 
