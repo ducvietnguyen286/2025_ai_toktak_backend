@@ -799,7 +799,7 @@ class APISelectFacebookPage(Resource):
         properties={
             "page_id": {"type": "string"},
         },
-        required=["link_id", "page_id"],
+        required=["page_id"],
     )
     def post(self, args):
         current_user = AuthService.get_current_identity()
