@@ -424,31 +424,63 @@ class APIBatchMakeImage(Resource):
 
                 base_images = content["images"] or []
                 images = []
+
+                crawl_url = content["url_crawl"] or ""
+
+                is_avif = True if "aliexpress" in crawl_url else False
                 if os.environ.get("USE_OCR") == "true":
                     images = ImageMaker.get_only_beauty_images(
-                        base_images, batch_id=batch_id
+                        base_images, batch_id=batch_id, is_avif=is_avif
                     )
                 else:
                     images = ImageMaker.save_normal_images(
                         base_images, batch_id=batch_id
                     )
 
-                cleared_images = []
+                description_images = []
                 cutout_images = []
+                cutout_by_sam_images = []
 
                 for image in images:
-                    if len(cutout_images) >= 5:
-                        break
-
-                    cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
+                    has_google_cut_out = False
+                    has_sam_cut_out = False
+                    cuted_image = ImageMaker.cut_out_long_height_images_by_google(
                         image, batch_id=batch_id
                     )
-                    is_cut_out = cuted_image.get("is_cut_out", False)
-                    image_urls = cuted_image.get("image_urls", [])
-                    if is_cut_out:
-                        cutout_images.extend(image_urls)
-                    cleared_images.extend(image_urls)
-                content["cleared_images"] = cleared_images
+                    if cuted_image and "is_cut_out" not in cuted_image:
+                        continue
+                    elif cuted_image:
+                        is_cut_out = cuted_image.get("is_cut_out", False)
+                        image_urls = cuted_image.get("image_urls", [])
+                        if is_cut_out:
+                            cutout_images.extend(image_urls)
+                            has_google_cut_out = True
+
+                    sam_cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
+                        image, batch_id=batch_id
+                    )
+                    if sam_cuted_image and "is_cut_out" not in sam_cuted_image:
+                        continue
+                    elif sam_cuted_image:
+                        is_sam_cut_out = sam_cuted_image.get("is_cut_out", False)
+                        sam_image_urls = sam_cuted_image.get("image_urls", [])
+                        if is_sam_cut_out:
+                            cutout_by_sam_images.extend(sam_image_urls)
+                            has_sam_cut_out = True
+
+                    if not has_google_cut_out and not has_sam_cut_out:
+                        description_images.extend(image_urls)
+                merge_cleared_images = []
+                if len(cutout_images) > 0:
+                    merge_cleared_images.extend(cutout_images)
+                if len(cutout_by_sam_images) > 0:
+                    merge_cleared_images.extend(cutout_by_sam_images)
+                if len(description_images) > 0:
+                    merge_cleared_images = description_images
+                content["cleared_images"] = merge_cleared_images
+                content["cutout_images"] = cutout_images
+                content["sam_cutout_images"] = cutout_by_sam_images
+                content["description_images"] = description_images
                 data_update_batch = {
                     "content": json.dumps(content),
                 }
@@ -474,7 +506,7 @@ class APIBatchMakeImage(Resource):
             ).to_dict()
         except Exception as e:
             traceback.print_exc()
-            logger.error("Exception: {0}".format(str(e)))
+            logger.error("Batch IMAGE Exception: {0}".format(str(e)))
             return Response(
                 message="상품 정보를 불러올 수 없어요.(Error code : )",
                 code=201,
@@ -693,6 +725,8 @@ class APIMakePost(Resource):
                     else:
                         process_images = process_images + images
 
+            logger.info(f"PROCESSED IMAGES: {process_images}")
+
             response = None
             render_id = ""
             hooking = []
@@ -710,6 +744,7 @@ class APIMakePost(Resource):
                 is_avif = True
 
             if type == "video":
+                logger.info(f"START PROCESS VIDEO: {post}")
                 response = call_chatgpt_create_caption(process_images, data, post.id)
                 if response:
                     parse_caption = json.loads(response)
@@ -778,19 +813,20 @@ class APIMakePost(Resource):
                                 post_id=post.id,
                             )
                         else:
+                            logger.info(f"PROCESS VIDEO ERROR: {post}")
                             return Response(
                                 message=result["message"],
                                 status=200,
                                 code=201,
                             ).to_dict()
-
+                logger.info(f"END PROCESS VIDEO: {post}")
+                logger.info(f"RESPONSE PROCESS VIDEO: {response}")
             elif type == "image":
-                logger.info(
-                    "-------------------- PROCESSING CREATE IMAGES -------------------"
-                )
+                logger.info(f"START PROCESS IMAGES: {post}")
 
                 image_template_id = template_info.get("image_template_id", "")
                 if image_template_id == "":
+                    logger.info(f"ERROR TEMPLATE IMAGE")
                     return Response(
                         message="Vui lòng chọn template",
                         status=200,
@@ -806,6 +842,7 @@ class APIMakePost(Resource):
                         image_template_id
                     )
                     if not image_template:
+                        logger.info(f"ERROR PROCESS TEMPLATE IMAGES: {post}")
                         return Response(
                             message="Template không tồn tại",
                             status=200,
@@ -823,9 +860,10 @@ class APIMakePost(Resource):
                     file_size += img_res.get("file_size", 0)
                     mime_type = img_res.get("mime_type", "")
                     maker_images = image_urls
-
+                logger.info(f"END PROCESS IMAGES: {post}")
+                logger.info(f"RESPONSE PROCESS IMAGES: {response}")
             elif type == "blog":
-
+                logger.info(f"START PROCESS BLOG: {post}")
                 blog_images = images
                 if blog_images and len(blog_images) < need_count:
                     current_length = len(blog_images)
@@ -868,9 +906,8 @@ class APIMakePost(Resource):
                     file_size = res_txt.get("file_size", 0)
                     mime_type = res_txt.get("mime_type", "")
 
-                logger.info(
-                    "-------------------- PROCESSED CREATE LOGS -------------------"
-                )
+                logger.info(f"END PROCESS BLOG: {post}")
+                logger.info(f"RESPONSE PROCESS BLOG: {response}")
 
             title = ""
             subtitle = ""
@@ -879,6 +916,7 @@ class APIMakePost(Resource):
             hashtag = ""
             description = ""
 
+            logger.info(f"START PROCESS DATA: {type} - {post}")
             if response:
                 parse_caption = json.loads(response)
                 parse_response = parse_caption.get("response", {})
@@ -901,19 +939,43 @@ class APIMakePost(Resource):
                     description = json.dumps(docx)
                 if parse_response and "content" in parse_response:
                     content = parse_response.get("content", "")
-                    # cleared_images = data.get("cleared_images", [])
-                    # if cleared_images:
-                    #     pre_content = ""
-                    #     for index, cleared_image in enumerate(cleared_images):
-                    #         current_stt = index + 1
-                    #         pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
+                    cutout_images = data.get("cutout_images", [])
+                    cutout_by_sam_images = data.get("sam_cutout_images", [])
+                    description_images = data.get("description_images", [])
+                    cleared_images = data.get("cleared_images", [])
+                    pre_content_cutout = f"<h2>IMAGES CUTTED OUT BY GOOGLE VISION: TOTAL - {len(cutout_images)}</h2>"
+                    if len(cutout_images) > 0:
+                        current_stt = 0
+                        for index, cutout_image in enumerate(cutout_images):
+                            current_stt = index + 1
+                            pre_content_cutout += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
 
-                    #     content = pre_content + content
+                    pre_content_cutout_sam = f"<br></br><h2>IMAGES CUTTED OUT BY SERVER: TOTAL - {len(cutout_by_sam_images)}</h2>"
+                    if len(cutout_by_sam_images) > 0:
+                        current_stt = 0
+                        for index, cutout_image in enumerate(cutout_by_sam_images):
+                            current_stt = index + 1
+                            pre_content_cutout_sam += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
+
+                    pre_content = f"<br></br><h2>DESCRIPTION IMAGES: TOTAL - {len(description_images)}</h2>"
+                    if len(description_images) > 0:
+                        current_stt = 0
+                        for index, cleared_image in enumerate(description_images):
+                            current_stt = index + 1
+                            pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
+
+                    content = (
+                        pre_content_cutout
+                        + pre_content_cutout_sam
+                        + pre_content
+                        + content
+                    )
 
                     for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
-
+                logger.info(f"END PROCESS DATA: {type} - {post}")
             else:
+                logger.info(f"ERROR PROCESS DATA: {type} - {response}")
                 message_error = {
                     "video": MessageError.CREATE_POST_VIDEO.value,
                     "image": MessageError.CREATE_POST_IMAGE.value,
@@ -927,7 +989,7 @@ class APIMakePost(Resource):
                 ).to_dict()
 
             url = batch.url
-
+            logger.info(f"START SAVING DATA: {type}")
             if type == "blog":
                 content = update_ads_content(url, content)
 
@@ -967,6 +1029,9 @@ class APIMakePost(Resource):
             if batch.done_post == batch.count_post:
                 BatchService.update_batch(batch.id, status=1)
 
+            logger.info(f"END SAVING DATA: {type}")
+
+            logger.info(f"START NOTIFICATION DATA: {type}")
             if type == "video":
                 message = MessageSuccess.CREATE_POST_VIDEO.value
             elif type == "image":
@@ -988,7 +1053,7 @@ class APIMakePost(Resource):
                     post_id=post.id,
                     notification_type="blog",
                 )
-
+            logger.info(f"END NOTIFICATION DATA: {type}")
             return Response(
                 data=post._to_json(),
                 message=message,

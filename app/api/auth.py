@@ -34,6 +34,11 @@ class APILogin(Resource):
         password = args.get("password", "")
 
         user = AuthService.login(email, password)
+        if not user:
+            return Response(
+                code=201,
+                message="비밀번호가 정확하지 않습니다.",
+            ).to_dict()
         if user and user.deleted_at and (datetime.now() - user.deleted_at).days <= 30:
             return Response(
                 message="시스템에 로그인해주세요.",

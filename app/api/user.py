@@ -781,11 +781,45 @@ class APIGetFacebookPage(Resource):
                         "id": page.get("id"),
                         "name": page.get("name"),
                         "picture": page.get("picture"),
+                        "tasks": page.get("tasks"),
                     }
                 )
         return Response(
             data=list_pages,
             message="Lấy link Facebook thành công",
+        ).to_dict()
+
+
+@ns.route("/select-facebook-page")
+class APISelectFacebookPage(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "page_id": {"type": "string"},
+        },
+        required=["link_id", "page_id"],
+    )
+    def post(self, args):
+        current_user = AuthService.get_current_identity()
+        link = LinkService.find_link_by_type("FACEBOOK")
+        if not link:
+            return Response(
+                message="Không tìm thấy link Facebook",
+                status=400,
+            ).to_dict()
+        page_id = args.get("page_id")
+        user_link = UserService.find_user_link(link.id, current_user.id)
+        if not user_link:
+            return Response(
+                message="Không tìm thấy link Facebook",
+                status=400,
+            ).to_dict()
+        user_link.page_id = page_id
+        user_link.save()
+        return Response(
+            message="Lưu trang Facebook thành công",
         ).to_dict()
 
 
