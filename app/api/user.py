@@ -779,6 +779,7 @@ class APIGetFacebookPage(Resource):
                         "id": page.get("id"),
                         "name": page.get("name"),
                         "picture": page.get("picture"),
+                        "tasks": page.get("tasks"),
                     }
                 )
         return Response(
@@ -794,16 +795,20 @@ class APISelectFacebookPage(Resource):
     @parameters(
         type="object",
         properties={
-            "link_id": {"type": "integer"},
             "page_id": {"type": "string"},
         },
         required=["link_id", "page_id"],
     )
     def post(self, args):
         current_user = AuthService.get_current_identity()
-        link_id = args.get("link_id")
+        link = LinkService.find_link_by_type("FACEBOOK")
+        if not link:
+            return Response(
+                message="Không tìm thấy link Facebook",
+                status=400,
+            ).to_dict()
         page_id = args.get("page_id")
-        user_link = UserService.find_user_link(link_id, current_user.id)
+        user_link = UserService.find_user_link(link.id, current_user.id)
         if not user_link:
             return Response(
                 message="Không tìm thấy link Facebook",
