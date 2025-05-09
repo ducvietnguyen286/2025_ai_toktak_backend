@@ -329,12 +329,11 @@ def insert_hashtags_to_string(tag_string, index=6):
 
 
 def change_advance_hashtags(original_str, new_hashtag, max_count=10):
-    # Tách chuỗi gốc thành list
     original_list = original_str.strip().split()
 
-    # Ghép mảng mới vào đầu, rồi cắt tối đa max_count
-    combined = new_hashtag + original_list
-    trimmed = combined[:max_count]
+    cleaned_new = [f"#{tag.lstrip('#')}" for tag in new_hashtag]
 
-    # Gộp lại thành chuỗi
+    combined = cleaned_new + original_list
+
+    trimmed = combined[:max_count]
     return " ".join(trimmed)
