@@ -26,6 +26,7 @@ from app.lib.string import (
     get_ads_content,
     convert_video_path,
     insert_hashtags_to_string,
+    change_advance_hashtags,
 )
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
@@ -948,6 +949,21 @@ class APIMakePost(Resource):
 
             if type == "image" or type == "video":
                 hashtag = insert_hashtags_to_string(hashtag)
+
+            comment = template_info.get("comment", "")
+            is_comment = template_info.get("is_comment", 0)
+            is_hashtag = template_info.get("is_hashtag", 0)
+            if is_comment == 1:
+                description = f"{comment} {description}"
+
+            if is_hashtag == 1:
+                raw_hashtag = template_info.get("hashtag", "[]")
+                try:
+                    new_hashtag = json.loads(raw_hashtag)
+                except Exception:
+                    logger.error("can get change_advance_hashtags")
+                    new_hashtag = []
+                hashtag = change_advance_hashtags(hashtag, new_hashtag)
 
             if should_replace_shortlink(url):
                 shorten_link = batch.shorten_link
