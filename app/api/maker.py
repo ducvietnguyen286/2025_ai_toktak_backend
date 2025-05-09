@@ -1016,7 +1016,7 @@ class APIMakePost(Resource):
             is_comment = template_info.get("is_comment", 0)
             is_hashtag = template_info.get("is_hashtag", 0)
             if is_comment == 1 and comment != "":
-                description = f"{comment}\n {description}"
+                description = f"{comment}\n{description}"
 
             if is_hashtag == 1:
                 raw_hashtag = template_info.get("hashtag", "[]")
