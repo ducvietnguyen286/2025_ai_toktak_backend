@@ -326,3 +326,14 @@ def insert_hashtags_to_string(tag_string, index=6):
     tag_list = tag_string.strip().split()
     tag_list = tag_list[:index] + new_hashtags + tag_list[index:]
     return " ".join(tag_list)
+
+
+def change_advance_hashtags(original_str, new_hashtag, max_count=10):
+    original_list = original_str.strip().split()
+
+    cleaned_new = [f"#{tag.lstrip('#')}" for tag in new_hashtag]
+
+    combined = cleaned_new + original_list
+
+    trimmed = combined[:max_count]
+    return " ".join(trimmed)
