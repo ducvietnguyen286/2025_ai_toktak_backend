@@ -787,6 +787,35 @@ class APIGetFacebookPage(Resource):
         ).to_dict()
 
 
+@ns.route("/select-facebook-page")
+class APISelectFacebookPage(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "link_id": {"type": "integer"},
+            "page_id": {"type": "string"},
+        },
+        required=["link_id", "page_id"],
+    )
+    def post(self, args):
+        current_user = AuthService.get_current_identity()
+        link_id = args.get("link_id")
+        page_id = args.get("page_id")
+        user_link = UserService.find_user_link(link_id, current_user.id)
+        if not user_link:
+            return Response(
+                message="Không tìm thấy link Facebook",
+                status=400,
+            ).to_dict()
+        user_link.page_id = page_id
+        user_link.save()
+        return Response(
+            message="Lưu trang Facebook thành công",
+        ).to_dict()
+
+
 TIKTOK_REDIRECT_URL = (
     os.environ.get("CURRENT_DOMAIN") + "/api/v1/user/oauth/tiktok-callback"
 )
@@ -1400,7 +1429,7 @@ class APICheckSNSLink(Resource):
                 ).to_dict()
 
             if batchId:
-                
+
                 # if current_user.batch_remain == 0:
                 #     return Response(
                 #         message=MessageError.NO_BATCH_REMAINING.value["message"],
