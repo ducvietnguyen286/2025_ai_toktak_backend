@@ -20,6 +20,7 @@ from app.api.youtube_client import ns as youtube_client_ns
 from app.api.profile import ns as profile_ns
 from app.api.product import ns as product_ns
 from app.api.schedule import ns as schedule_ns
+from app.api.payment import ns as payment_ns
 
 bp = Blueprint("api", __name__, url_prefix="/api/v1")
 
@@ -43,3 +44,4 @@ api.add_namespace(ns=youtube_client_ns)
 api.add_namespace(ns=profile_ns)
 api.add_namespace(ns=product_ns)
 api.add_namespace(ns=schedule_ns)
+api.add_namespace(ns=payment_ns)
