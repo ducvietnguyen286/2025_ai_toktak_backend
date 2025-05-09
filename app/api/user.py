@@ -802,33 +802,41 @@ class APISelectFacebookPage(Resource):
         required=["page_id"],
     )
     def post(self, args):
-        current_user = AuthService.get_current_identity()
-        link = LinkService.find_link_by_type("FACEBOOK")
-        if not link:
-            return Response(
-                message="Không tìm thấy link Facebook",
-                status=400,
-            ).to_dict()
-        page_id = args.get("page_id")
-        user_link = UserService.find_user_link(link.id, current_user.id)
-        if not user_link:
-            return Response(
-                message="Không tìm thấy link Facebook",
-                status=400,
-            ).to_dict()
-        select_page = FacebookTokenService().get_page_info_by_id(page_id, user_link)
-        if not select_page:
-            return Response(
-                message="Không tìm thấy trang Facebook",
-                status=400,
-            ).to_dict()
-        page_info = FacebookTokenService().get_info_page(select_page)
+        try:
+            current_user = AuthService.get_current_identity()
+            link = LinkService.find_link_by_type("FACEBOOK")
+            if not link:
+                return Response(
+                    message="Không tìm thấy link Facebook",
+                    status=400,
+                ).to_dict()
+            page_id = args.get("page_id")
+            user_link = UserService.find_user_link(link.id, current_user.id)
+            if not user_link:
+                return Response(
+                    message="Không tìm thấy link Facebook",
+                    status=400,
+                ).to_dict()
+            select_page = FacebookTokenService().get_page_info_by_id(page_id, user_link)
+            if not select_page:
+                return Response(
+                    message="Không tìm thấy trang Facebook",
+                    status=400,
+                ).to_dict()
+            page_info = FacebookTokenService().get_info_page(select_page)
 
-        UserLinkService.update_info_user_link(user_link=user_link, info=page_info)
+            UserLinkService.update_info_user_link(user_link=user_link, info=page_info)
 
-        return Response(
-            message="Lưu trang Facebook thành công",
-        ).to_dict()
+            return Response(
+                message="Lưu trang Facebook thành công",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
 
 
 TIKTOK_REDIRECT_URL = (
