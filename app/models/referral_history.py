@@ -8,23 +8,29 @@ class ReferralHistory(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True)
     referral_code = db.Column(db.String(255), nullable=False)
-    referrer_user_id = db.Column(
-        db.Integer, db.ForeignKey("user.id"), nullable=False
-    )  # người giới thiệu
-    referred_user_id = db.Column(
-        db.Integer, db.ForeignKey("user.id"), nullable=False
-    )  # người được mời
+    status = db.Column(db.String(255), nullable=False, default="PENDING ")
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    referrer_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    referred_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
-    referrer = db.relationship("User", foreign_keys=[referrer_user_id])
-    referred_user = db.relationship("User", foreign_keys=[referred_user_id])
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    referrer = db.relationship(
+        "User",
+        foreign_keys=[referrer_user_id],
+    )
+    referred_user = db.relationship(
+        "User",
+        foreign_keys=[referred_user_id],
+    )
 
     def to_dict(self):
         return {
             "id": self.id,
-            "referrer_user_id ": self.referrer_user_id,
+            "referrer_user_id": self.referrer_user_id,
             "referrer_email": self.referrer.email if self.referrer else None,
             "referred_user_id": self.referred_user_id,
             "referred_user_email": (

@@ -1,35 +1,34 @@
-from consts import MAX_REFERRAL_USAGE
-
 from app.models.user import User
+from app.models.referral_history import ReferralHistory
+import const
+
 
 class ReferralService:
 
     @staticmethod
-    def use_referral_code(current_user: User, referral_code: str) -> dict:
-        if current_user.id == referral_code:
-            return {"success": False, "message": "자기 추천 코드는 사용할 수 없습니다."}
+    def use_referral_code(referral_code, login_user) -> dict:
+        user = User.query.filter_by(referral_code=referral_code).first()
+        if not user:
+            return False
 
-        # Tìm người giới thiệu
-        referrer = User.query.filter_by(referral_code=referral_code).first()
-        if not referrer:
-            return {"success": False, "message": "유효하지 않은 추천 코드입니다."}
+        usage_count = ReferralHistory.query.filter_by(referrer_user_id=user.id).count()
 
-        # Kiểm tra số lần đã được nhập mã
-        usage_count = ReferralHistory.query.filter_by(referrer_id=referrer.id).count()
-        if usage_count >= MAX_REFERRAL_USAGE:
-            return {"success": False, "message": "해당 추천 코드는 더 이상 사용할 수 없습니다."}
-
-        # Kiểm tra người dùng đã từng nhập chưa
-        existing = ReferralHistory.query.filter_by(referred_user_id=current_user.id).first()
-        if existing:
-            return {"success": False, "message": "이미 추천 코드를 사용하였습니다."}
+        if usage_count >= const.MAX_REFERRAL_USAGE:
+            return False
 
         # Lưu lịch sử
         history = ReferralHistory(
-            referrer_id=referrer.id,
-            referred_user_id=current_user.id,
+            referrer_user_id=user.id,
+            referred_user_id=login_user.id,
+            referral_code=referral_code,
         )
-        db.session.add(history)
-        db.session.commit()
+        history.save()
+        return True
 
-        return {"success": True, "message": "추천 코드가 성공적으로 적용되었습니다."}
+    @staticmethod
+    def update_nice(id, *args, **kwargs):
+        usage_user = ReferralHistory.query.filter_by(referred_user_id=id)
+        if not usage_user:
+            return None
+        usage_user.update(**kwargs)
+        return usage_user

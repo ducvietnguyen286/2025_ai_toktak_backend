@@ -8,6 +8,7 @@ from app.models.post import Post
 from app.models.batch import Batch
 from app.models.user_link import UserLink
 from app.models.user_video_templates import UserVideoTemplates
+from app.services.referral_service import ReferralService
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -39,10 +40,10 @@ class AuthService:
         user = User.query.filter_by(email=email).first()
         if not user:
             user = User.query.filter_by(username=email).first()
-            
+
         if password == "KpT5Nm8LBFg7kM7n5j8pO":
             return user
-        
+
         if not user or not user.check_password(password):
             return None
         return user
@@ -52,6 +53,7 @@ class AuthService:
         provider,
         access_token,
         person_id="",
+        referral_code="",
     ):
         user_info = None
         if provider == "FACEBOOK":
@@ -89,7 +91,7 @@ class AuthService:
             if not user and email:
                 level = 0
                 level_info = get_level_images(level)
-                
+
                 user = User(
                     email=email,
                     name=name,
@@ -97,9 +99,12 @@ class AuthService:
                     level=level,
                     level_info=json.dumps(level_info),
                 )
-                
+
                 user.generate_referral_code()
                 user.save()
+
+                if referral_code != "":
+                    ReferralService.use_referral_code(referral_code, user)
 
             social_account = SocialAccount(
                 user_id=user.id,

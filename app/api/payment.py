@@ -6,10 +6,12 @@ import json
 from app.services.auth import AuthService
 from app.services.payment_services import PaymentService
 from app.services.notification import NotificationServices
+from app.decorators import parameters, admin_required
 from app.services.post import PostService
 from app.lib.response import Response
 from app.lib.logger import logger
-from const import PACKAGE_CONFIG
+import const
+
 ns = Namespace("payment", description="Payment API")
 
 
@@ -19,8 +21,8 @@ class APICreateNewPayment(Resource):
     def post(self):
         data = request.get_json()
         package_name = data.get("package_name")
-        
-        PACKAGE_CHOICES = list(PACKAGE_CONFIG.keys())
+
+        PACKAGE_CHOICES = list(const.PACKAGE_CONFIG.keys())
 
         if package_name not in PACKAGE_CHOICES:
             return Response(
@@ -83,3 +85,37 @@ class APICreateNewPayment(Resource):
             data={"payment": payment._to_json()},
             code=200,
         ).to_dict()
+
+    @ns.route("/admin/histories")
+    class APIAdminNotificationHistories(Resource):
+        @jwt_required()
+        @admin_required()
+        def get(self):
+            page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+            per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+            status = request.args.get("status", const.UPLOADED, type=int)
+            type_order = request.args.get("type_order", "", type=str)
+            type_post = request.args.get("type_post", "", type=str)
+            time_range = request.args.get("time_range", "", type=str)
+            type_payment = request.args.get("type_payment", "", type=str)
+            search_key = request.args.get("search_key", "", type=str)
+            data_search = {
+                "page": page,
+                "per_page": per_page,
+                "status": status,
+                "type_order": type_order,
+                "type_post": type_post,
+                "time_range": time_range,
+                "type_payment": type_payment,
+                "search_key": search_key,
+            }
+            billings = PaymentService.get_admin_billings(data_search)
+            return {
+                "status": True,
+                "message": "Success",
+                "total": billings.total,
+                "page": billings.page,
+                "per_page": billings.per_page,
+                "total_pages": billings.pages,
+                "data": [post.to_dict() for post in billings.items],
+            }, 200

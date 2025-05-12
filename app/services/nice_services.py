@@ -2,6 +2,7 @@ from app.lib.logger import logger
 import subprocess
 import os
 from app.services.user import UserService
+from app.services.referral_service import ReferralService
 import re
 import base64
 import datetime
@@ -53,7 +54,7 @@ class NiceAuthService:
                 f"7:ERR_URL{len(errorurl)}:{errorurl}"
                 f"9:CUSTOMIZE{len(customize)}:{customize}"
             )
-            logger.info(plaindata)
+            # logger.info(plaindata)
 
             # Mã hóa dữ liệu
 
@@ -196,6 +197,12 @@ class NiceAuthService:
                     "gender": "M" if result_item["gender"] == "1" else "F",
                 }
                 UserService.update_user(user_id, **data_update)
+                
+                data_update_referral = {
+                    "status" : "DONE"
+                }
+                ReferralService.update_nice(user_id, **data_update_referral)
+                
                 return {"code": 200, "message": "인증 성공", "data": result_item}
             else:
                 return {

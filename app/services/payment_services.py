@@ -120,3 +120,63 @@ class PaymentService:
 
         # Hợp lệ (gói hết hạn hoặc chưa có)
         return True
+
+    @staticmethod
+    def get_admin_billings(data_search):
+        # Query cơ bản với các điều kiện
+        query = Payment.query
+
+        search_key = data_search.get("search_key", "")
+
+        if search_key != "":
+            search_pattern = f"%{search_key}%"
+            query = query.filter(
+                or_(
+                    Payment.package_name.ilike(search_pattern),
+                    Payment.customer_name.ilike(search_pattern),
+                    Payment.user.has(User.email.ilike(search_pattern)),
+                )
+            )
+
+        # Xử lý type_order
+        if data_search["type_order"] == "id_asc":
+            query = query.order_by(Payment.id.asc())
+        elif data_search["type_order"] == "id_desc":
+            query = query.order_by(Payment.id.desc())
+        else:
+            query = query.order_by(Payment.id.desc())
+
+        # Xử lý type_payment
+        if data_search["type_payment"] == "BASIC":
+            query = query.filter(Payment.package_name == "BASIC")
+        elif data_search["type_payment"] == "STANDARD":
+            query = query.filter(Payment.package_name == "STANDARD")
+        elif data_search["type_payment"] == "BUSINESS":
+            query = query.filter(Payment.package_name == "BUSINESS")
+        elif data_search["type_payment"] == "FREE":
+            query = query.filter(Payment.package_name == "FREE")
+
+        time_range = data_search.get("time_range")  # Thêm biến time_range
+        # Lọc theo khoảng thời gian
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            query = query.filter(Payment.created_at >= start_date)
+
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            query = query.filter(Payment.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            query = query.filter(Payment.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            query = query.filter(Payment.created_at >= start_date)
+
+        pagination = query.paginate(
+            page=data_search["page"], per_page=data_search["per_page"], error_out=False
+        )
+        return pagination
