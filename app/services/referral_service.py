@@ -32,3 +32,22 @@ class ReferralService:
             return None
         usage_user.update(**kwargs)
         return usage_user
+
+    @staticmethod
+    def get_by_user_id(user_id):
+        referral_histories = ReferralHistory.query.filter_by(
+            referrer_user_id=user_id, status="DONE"
+        ).all()
+
+        total = len(referral_histories)
+        total_days = 0
+        result = []
+
+        for referral_detail in referral_histories:
+            days = referral_detail.days
+            total_days += days
+        return {
+            "referral_histories": result,
+            "total": total,
+            "total_days": total_days,
+        }
