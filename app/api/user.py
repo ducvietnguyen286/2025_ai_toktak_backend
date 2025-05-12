@@ -47,6 +47,7 @@ from app.third_parties.youtube import YoutubeTokenService
 import const
 
 from app.services.nice_services import NiceAuthService
+from app.services.referral_service import ReferralService
 
 ns = Namespace(name="user", description="User API")
 
@@ -1725,3 +1726,17 @@ class APINiceAuthSuccess(Resource):
         data_nice = NiceAuthService.checkplus_success(user_id, result_item)
 
         return Response(data=data_nice, message="Nice return.").to_dict()
+
+
+@ns.route("/get_refer_user")
+class APIGetReferUserSuccess(Resource):
+    @jwt_required()
+    def get(self):
+
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+        
+        refer = ReferralService.get_by_user_id (user_id)
+
+
+        return Response(data=refer, message="refer return.").to_dict()
