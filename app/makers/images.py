@@ -151,11 +151,16 @@ def process_beauty_image(image_path):
                         "image_path": image_path,
                         "is_remove": True,
                     }
+
+            logger.info(
+                f"Ratio: {ratio}, Length labels: {length_labels}, Length Text: {len(full_text)} Image path: {image_path}"
+            )
             if length_labels <= 0:
                 return {
                     "image_path": image_path,
                     "is_remove": True,
                 }
+
             if (ratio * 10) > 3.5:
                 return {
                     "image_path": image_path,
