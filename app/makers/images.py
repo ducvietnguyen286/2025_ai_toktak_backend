@@ -237,7 +237,6 @@ class ImageMaker:
                 image_cv = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
                 image_height, image_width = image_cv.shape[:2]
 
-                print(f"Image size: {image_width}x{image_height}")
                 if image_height <= (image_width * 3):
                     extension = image_path.split(".")[-1].lower()
                     if extension == "gif":
@@ -333,9 +332,7 @@ class ImageMaker:
             response = requests.post(
                 SAM_CHECK_IMAGE_URL, json={"image_path": image_path}
             )
-            logger.info(f"Response SAM: {response}")
             json_response = response.json()
-            logger.info(f"Response SAM JSON: {json_response}")
             results = json_response.get("images", [])
 
             image_cv = cv2.imread(image_path)
@@ -486,7 +483,6 @@ class ImageMaker:
             }
 
         image_height, image_width = image_cv.shape[:2]
-        logger.info(f"Image size: {image_width}x{image_height}")
 
         if image_height <= (image_width * 3):
             logger.info(f"Image is not long height: {image_width}x{image_height}")
@@ -494,7 +490,6 @@ class ImageMaker:
 
         try:
             results = GoogleVision().detect_objects(image_path=image_path)
-            logger.info(f"Google Vision Result: {len(results)}")
             if not results:
                 return {
                     "image_urls": [base_url],
@@ -570,7 +565,6 @@ class ImageMaker:
                     )
                     cropped_images.append((cropped_url, conf))
                     current_image_count += 1
-            logger.info(f"Cropped images: {len(cropped_images)}")
             if cropped_images and len(cropped_images) > 0:
                 cropped_data_sorted = sorted(
                     cropped_images, key=lambda x: x[1], reverse=True
@@ -585,7 +579,6 @@ class ImageMaker:
                 if os.path.exists(image_path):
                     os.remove(image_path)
 
-                logger.info(f"Top images: {top}")
                 return {
                     "image_urls": top,
                     "is_cut_out": True,
