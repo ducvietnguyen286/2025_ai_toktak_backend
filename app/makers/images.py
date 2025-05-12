@@ -354,9 +354,13 @@ class ImageMaker:
                 need_check_images = []
                 conf_images = {}
 
-                for box in result.boxes:
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])  # Lấy tọa độ bounding box
-                    conf = box.conf[0].item()
+                boxes = result.get("boxes", [])
+
+                for box in boxes:
+                    xxyxy = box.get("xyxy", [])
+                    conf = box.get("conf", 0)
+                    x1, y1, x2, y2 = map(int, xxyxy[0])  # Lấy tọa độ bounding box
+                    conf = conf[0].item()
 
                     w = x2 - x1
                     h = y2 - y1
