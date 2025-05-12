@@ -25,6 +25,7 @@ from app.lib.logger import logger
 # from app.extensions import sam_model
 
 from app.lib.header import generate_desktop_user_agent
+from app.lib.string import is_json
 from app.third_parties.google import GoogleVision
 
 gpu_semaphore = threading.Semaphore(2)
@@ -332,8 +333,9 @@ class ImageMaker:
             response = requests.post(
                 SAM_CHECK_IMAGE_URL, json={"image_path": image_path}
             )
+            logger.info(f"Response SAM: {response}")
             json_response = response.json()
-            logger.info(f"Response SAM: {json_response}")
+            logger.info(f"Response SAM JSON: {json_response}")
             results = json_response.get("images", [])
 
             image_cv = cv2.imread(image_path)
