@@ -237,7 +237,7 @@ class ImageMaker:
                 image_height, image_width = image_cv.shape[:2]
 
                 print(f"Image size: {image_width}x{image_height}")
-                if image_height <= (image_width * 4):
+                if image_height <= (image_width * 3):
                     extension = image_path.split(".")[-1].lower()
                     if extension == "gif":
                         base_images.append(image_path)
@@ -322,7 +322,7 @@ class ImageMaker:
 
         image_width, image_height = image.size
 
-        if image_height <= (image_width * 4):
+        if image_height <= (image_width * 3):
             image_name = os.path.basename(image_path)
             image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
             return {"image_urls": [image_url], "is_cut_out": False}
@@ -481,7 +481,7 @@ class ImageMaker:
         image_height, image_width = image_cv.shape[:2]
         logger.info(f"Image size: {image_width}x{image_height}")
 
-        if image_height <= (image_width * 4):
+        if image_height <= (image_width * 3):
             logger.info(f"Image is not long height: {image_width}x{image_height}")
             return {"image_urls": [base_url], "is_cut_out": False}
 
