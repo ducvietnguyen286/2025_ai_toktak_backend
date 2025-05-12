@@ -161,7 +161,13 @@ def process_beauty_image(image_path):
                     "is_remove": True,
                 }
 
-            if (ratio * 10) > 3.5:
+            if len(full_text) > 0 and length_labels <= 3:
+                return {
+                    "image_path": image_path,
+                    "is_remove": True,
+                }
+
+            if (ratio * 10) > 3:
                 return {
                     "image_path": image_path,
                     "is_remove": True,
