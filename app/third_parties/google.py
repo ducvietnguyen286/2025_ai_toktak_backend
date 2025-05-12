@@ -37,6 +37,8 @@ class GoogleVision:
             client = self.initialize()
             pil_image = self.preprocess_image(image_path)
             img_byte_arr = io.BytesIO()
+            if pil_image.mode == "RGBA":
+                pil_image = pil_image.convert("RGB")
             pil_image.save(img_byte_arr, format="JPEG")
             content = img_byte_arr.getvalue()
 
