@@ -165,13 +165,14 @@ class APICreateImageTemplate(Resource):
             ).to_dict()
 
 
-@ns.route("/update/<int:id>")
+@ns.route("/update")
 class APIUpdateImageTemplate(Resource):
 
     @jwt_required()
     @parameters(
         type="object",
         properties={
+            "id": {"type": "string"},
             "template_name": {"type": "string"},
             "template_code": {"type": "string"},
             "font": {"type": "font"},
@@ -192,9 +193,33 @@ class APIUpdateImageTemplate(Resource):
             "margin": {"type": "string"},
             "type": {"type": "string"},
         },
-        required=[],
+        required=["id"],
     )
     def put(self, id, args):
+        date_create = datetime.now().strftime("%Y_%m_%d")
+        UPLOAD_FOLDER = os.path.join(os.getcwd(), f"uploads/{date_create}/fonts")
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
+
+        if "template_image" in request.files:
+            template_image = ImageMaker().save_image_from_request(
+                request.files["template_image"]
+            )
+            args["template_image"] = template_image
+        if "font" in request.files:
+            font = request.files["font"]
+            font_name = font.filename
+            timestamp = int(time.time())
+            unique_id = uuid.uuid4().hex
+
+            font_ext = font_name.split(".")[-1]
+            font_save_name = f"{timestamp}_{unique_id}.{font_ext}"
+            font_path = f"{UPLOAD_FOLDER}/{font_save_name}"
+            with open(font_path, "wb") as font_file:
+                font_file.write(font.read())
+            args["font"] = font_name
+            args["font_path"] = font_path
+
         image_template = ImageTemplateService.update_image_template(id, *args)
         return Response(
             data=image_template,
