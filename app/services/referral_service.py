@@ -41,13 +41,12 @@ class ReferralService:
 
         total = len(referral_histories)
         total_days = 0
-        result = []
 
         for referral_detail in referral_histories:
             days = referral_detail.days
             total_days += days
         return {
-            "referral_histories": result,
+            "referral_histories": [referral_detail.to_dict() for referral_detail in referral_histories],
             "total": total,
             "total_days": total_days,
         }
