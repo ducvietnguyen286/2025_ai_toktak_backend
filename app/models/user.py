@@ -1,7 +1,7 @@
 from app.extensions import db, bcrypt
 from app.models.base import BaseModel
 from datetime import datetime
-
+import uuid
 import const
 
 
@@ -40,6 +40,7 @@ class User(db.Model, BaseModel):
     auth_nice_result = db.Column(db.Text, nullable=False)
     gender = db.Column(db.String(255), nullable=False, default="")
     password_certificate = db.Column(db.String(255), nullable=False, default="")
+    referral_code = db.Column(db.String(255), nullable=False, default="")
 
     ali_express_active = db.Column(db.Boolean, default=False)
     ali_express_info = db.Column(db.Text)
@@ -92,3 +93,6 @@ class User(db.Model, BaseModel):
                 else None
             ),
         }
+
+    def generate_referral_code(self):
+        self.referral_code = str(uuid.uuid4())[:8]

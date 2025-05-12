@@ -89,6 +89,7 @@ class AuthService:
             if not user and email:
                 level = 0
                 level_info = get_level_images(level)
+                
                 user = User(
                     email=email,
                     name=name,
@@ -96,6 +97,8 @@ class AuthService:
                     level=level,
                     level_info=json.dumps(level_info),
                 )
+                
+                user.generate_referral_code()
                 user.save()
 
             social_account = SocialAccount(
