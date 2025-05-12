@@ -71,6 +71,7 @@ class APISocialLogin(Resource):
             "provider": {"type": "string", "enum": ["FACEBOOK", "GOOGLE"]},
             "access_token": {"type": "string"},
             "person_id": {"type": "string"},
+            "referral_code": {"type": "string"},
         },
         required=["provider", "access_token"],
     )
@@ -78,11 +79,13 @@ class APISocialLogin(Resource):
         provider = args.get("provider", "")
         access_token = args.get("access_token", "")
         person_id = args.get("person_id", "")
+        referral_code = args.get("referral_code", "")
 
         user = AuthService.social_login(
             provider=provider,
             access_token=access_token,
             person_id=person_id,
+            referral_code=referral_code,
         )
 
         if user.deleted_at and (datetime.now() - user.deleted_at).days <= 30:

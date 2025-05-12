@@ -149,18 +149,32 @@ LIMIT_BATCH = {
 }
 
 
-ALLOWED_IPS = {  "218.154.54.97"}
+ALLOWED_IPS = {"218.154.54.97"}
 
-PACKAGE_PRICES = {
-    "BASIC": 299000,
-    "STANDARD": 899000,
-    "BUSINESS": 999000,
+ 
+
+PACKAGE_CONFIG = {
+    "BASIC": {
+        "order_index": 1,
+        "total_create": 30,
+        "price": 299_000,
+        "total_link": 1,
+    },
+    "STANDARD": {
+        "order_index": 2,
+        "total_create": 60,
+        "price": 899_000,
+        "total_link": 7,
+    },
+    "BUSINESS": {
+        "order_index": 3,
+        "total_create": 30,
+        "price": 999_000,
+        "total_link": 7,
+    },
 }
 
-PACKAGE_ORDER = {
-    "BASIC": 1,
-    "STANDARD": 2,
-    "BUSINESS": 3,
-}
 
 PACKAGE_DURATION_DAYS = 30
+
+MAX_REFERRAL_USAGE = 13
