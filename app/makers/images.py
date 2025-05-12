@@ -348,7 +348,7 @@ class ImageMaker:
 
             image_cv = cv2.imread(image_path)
             if image_cv is None:
-                return [image_path]
+                return None
 
             cropped_images = []
             needed_length = 5
@@ -408,7 +408,6 @@ class ImageMaker:
                     conf_images[cropped_path] = conf
 
                 if os.environ.get("USE_OCR") == "true":
-                    print(f"Need check images: {need_check_images}")
                     for cropped_path in need_check_images:
                         result = process_beauty_image(cropped_path)
                         if "is_remove" in result and result["is_remove"]:
@@ -487,7 +486,6 @@ class ImageMaker:
 
         image_cv = cv2.imread(image_path)
         if image_cv is None:
-            logger.error(f"Cannot identify image file {image_path}")
             return {
                 "image_urls": [base_url],
                 "is_cut_out": False,
@@ -496,7 +494,6 @@ class ImageMaker:
         image_height, image_width = image_cv.shape[:2]
 
         if image_height <= (image_width * 3):
-            logger.info(f"Image is not long height: {image_width}x{image_height}")
             return {"image_urls": [base_url], "is_cut_out": False}
 
         try:
