@@ -680,12 +680,6 @@ class APIMakePost(Resource):
                     status=201,
                 ).to_dict()
 
-            log_batch = batch._to_json()
-            log_post = post._to_json()
-
-            logger.info(f"BATCH: {log_batch}")
-            logger.info(f"POST: {log_post}")
-
             if batch.status == 1 or post.status == 1:
                 return Response(
                     message="Post đã được tạo",

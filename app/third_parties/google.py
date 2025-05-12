@@ -34,10 +34,8 @@ class GoogleVision:
 
     def detect_objects(self, image_path):
         try:
-            logger.info(f"Detecting objects in {image_path}")
             client = self.initialize()
             pil_image = self.preprocess_image(image_path)
-            logger.info(f"preprocess_image {pil_image}")
             img_byte_arr = io.BytesIO()
             pil_image.save(img_byte_arr, format="JPEG")
             content = img_byte_arr.getvalue()
@@ -47,8 +45,6 @@ class GoogleVision:
             if response.error.message:
                 return False, response.error.message
             objects = response.localized_object_annotations
-
-            logger.info(f"preprocess_image {objects}")
 
             detected_objects = [
                 {
