@@ -71,7 +71,7 @@ class APISocialLogin(Resource):
             "provider": {"type": "string", "enum": ["FACEBOOK", "GOOGLE"]},
             "access_token": {"type": "string"},
             "person_id": {"type": "string"},
-            "referral_code": {"type": "string"},
+            "referral_code": {"type": ["string", "null"]},
         },
         required=["provider", "access_token"],
     )
