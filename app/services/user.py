@@ -337,11 +337,13 @@ class UserService:
             User.subscription_expired <= now
         ).all()
 
+        extended = 0
         for user in expired_users:
             new_expiry = now + relativedelta(months=1)
             user.subscription_expired = new_expiry
             user.batch_total = 10
             user.batch_remain = 10
+            extended += 1
 
         db.session.commit()
-        return 0
+        return extended

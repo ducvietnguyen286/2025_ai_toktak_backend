@@ -323,7 +323,8 @@ def auto_extend_subscription_task(app):
     app.logger.info("Start auto_extend_subscription_task...")
     with app.app_context():
         try:
-            UserService.auto_extend_free_subscriptions()
+            count = UserService.auto_extend_free_subscriptions()
+            app.logger.info(f"✓ Auto-extended {count} FREE users")
         except Exception as e:
             app.logger.error(f"Error in auto_extend_subscription_task: {str(e)}")
 
