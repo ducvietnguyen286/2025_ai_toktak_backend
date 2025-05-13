@@ -227,6 +227,9 @@ class APIUpdateImageTemplate(Resource):
             args["font"] = font_name
             args["font_path"] = font_path
 
+        if "id" in args:
+            del args["id"]
+
         image_template = ImageTemplateService.update_image_template(id, **args)
         if not image_template:
             return Response(
