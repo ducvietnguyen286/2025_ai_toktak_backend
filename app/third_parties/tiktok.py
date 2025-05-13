@@ -2,6 +2,7 @@ import json
 import os
 import time
 import traceback
+import uuid
 
 import requests
 from app.enums.limit import LimitSNS
@@ -71,7 +72,7 @@ class TiktokTokenService:
 
             redis_key_done = f"toktak:users:{user_id}:refreshtoken-done:TIKTOK"
             redis_key_check = f"toktak:users:{user_id}:refresh-token:TIKTOK"
-            unique_value = f"{time.time()}_{user_id}"
+            unique_value = f"{time.time()}_{user_id}_{uuid.uuid4()}"
             redis_key_check_count = f"toktak:users:{user_id}:logging:TIKTOK"
             redis_client.rpush(redis_key_check_count, unique_value)
             redis_client.expire(redis_key_check_count, 300)
@@ -95,9 +96,13 @@ class TiktokTokenService:
             if is_refresing:
                 while True:
                     refresh_done = redis_client.get(redis_key_done)
-                    refresh_done = str(refresh_done) if refresh_done else False
-                    if refresh_done:
-                        if refresh_done == "failled":
+                    refresh_done_str = (
+                        refresh_done.decode("utf-8") if refresh_done else None
+                    )
+                    if refresh_done_str:
+                        redis_client.delete(redis_key_check)
+                        redis_client.delete(redis_key_done)
+                        if refresh_done_str == "failled":
                             return False
                         return True
                     time.sleep(1)
