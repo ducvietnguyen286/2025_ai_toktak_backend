@@ -62,6 +62,7 @@ class ReferralService:
             "referral_histories": result,
             "total": total,
             "total_days": total_days,
+            "max_days": 90,
         }
 
     @staticmethod
