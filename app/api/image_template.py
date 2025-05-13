@@ -196,6 +196,14 @@ class APIUpdateImageTemplate(Resource):
         required=["id"],
     )
     def put(self, args):
+        id = args.get("id", "")
+        current_template = ImageTemplateService.find_image_template(id)
+        if not current_template:
+            return Response(
+                message="Không tìm thấy image_template",
+                status=400,
+            ).to_dict()
+
         date_create = datetime.now().strftime("%Y_%m_%d")
         UPLOAD_FOLDER = os.path.join(os.getcwd(), f"uploads/{date_create}/fonts")
         if not os.path.exists(UPLOAD_FOLDER):
@@ -221,6 +229,17 @@ class APIUpdateImageTemplate(Resource):
             args["font_path"] = font_path
 
         image_template = ImageTemplateService.update_image_template(id, *args)
+        if not image_template:
+            return Response(
+                message="Cập nhật image_template thất bại",
+                status=400,
+            ).to_dict()
+        if "template_image" in args:
+            if os.path.exists(current_template.template_image):
+                os.remove(current_template.template_image)
+        if "font_path" in args:
+            if os.path.exists(current_template.font_path):
+                os.remove(current_template.font_path)
         return Response(
             data=image_template,
             message="Tạo image_template thành công",
