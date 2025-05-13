@@ -237,9 +237,13 @@ class NiceAuthService:
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            text=True,
+            text=False  # Đọc dạng bytes để tránh lỗi decode
         )
-        return result.stdout.strip()
+        try:
+            # Ưu tiên UTF-8, fallback sang EUC-KR nếu lỗi
+            return result.stdout.decode("utf-8")
+        except UnicodeDecodeError:
+            return result.stdout.decode("euc-kr", errors="ignore")
 
     @staticmethod
     def get_value(s: str, name: str) -> str:
