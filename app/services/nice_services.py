@@ -10,6 +10,7 @@ import json
 import urllib.parse
 import traceback
 
+
 class NiceAuthService:
 
     @staticmethod
@@ -197,12 +198,10 @@ class NiceAuthService:
                     "gender": "M" if result_item["gender"] == "1" else "F",
                 }
                 UserService.update_user(user_id, **data_update)
-                
-                data_update_referral = {
-                    "status" : "DONE"
-                }
+
+                data_update_referral = {"status": "DONE"}
                 ReferralService.update_nice(user_id, **data_update_referral)
-                
+
                 return {"code": 200, "message": "인증 성공", "data": result_item}
             else:
                 return {
@@ -233,51 +232,49 @@ class NiceAuthService:
 
     @staticmethod
     def run_command(cmd: list) -> str:
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=False  # Đọc dạng bytes để tránh lỗi decode
-        )
         try:
-            # Ưu tiên UTF-8, fallback sang EUC-KR nếu lỗi
-            return result.stdout.decode("utf-8")
-        except UnicodeDecodeError:
-            return result.stdout.decode("euc-kr", errors="ignore")
+            # 인증결과 암호화 데이터 복호화 처리
+            #  plaindata = subprocess.check_output([cb_encode_path, 'DEC', sitecode, sitepasswd, enc_data])
+            plaindata = subprocess.run(
+                cmd, capture_output=True, encoding="euc-kr"
+            ).stdout
+        except subprocess.CalledProcessError as e:
+            # check_output 함수 이용하는 경우 1 이외의 결과는 에러로 처리됨
+            plaindata = e.output.decode("euc-kr")
+            logger.error("===== NiceAuthService run_command Error =====")
+            logger.error(f"cmd: {cmd}")
+            logger.error(f"Error: {e.output}")
+            logger.error("Traceback:")
+            logger.error(traceback.format_exc())  # Ghi log traceback để biết dòng lỗi
+        return plaindata
 
     @staticmethod
-    def get_value(s: str, name: str) -> str:
-        pos = 0
-        length = len(s)
+    def get_value(plaindata, key) -> str:
+        value = ""
+        keyIndex = -1
+        valLen = 0
 
-        while pos < length:
-            # Tìm vị trí dấu ':' để xác định chiều dài của key
-            colon_pos = s.find(":", pos)
-            if colon_pos == -1:
+        # 복호화 데이터 분할
+        arrData = plaindata.split(":")
+        cnt = len(arrData)
+        for i in range(cnt):
+            item = arrData[i]
+            itemKey = re.sub("[\d]+$", "", item)
+
+            # 키값 검색
+            if itemKey == key:
+                keyIndex = i
+
+                # 데이터 길이값 추출
+                valLen = int(item.replace(key, "", 1))
+
+                if key != "NAME":
+                    # 실제 데이터 추출
+                    value = arrData[keyIndex + 1][:valLen]
+                else:
+                    # 이름 데이터 추출 (한글 깨짐 대응)
+                    value = re.sub("[\d]+$", "", arrData[keyIndex + 1])
+
                 break
 
-            key_len = int(s[pos:colon_pos])
-            key_start = colon_pos + 1
-            key_end = key_start + key_len
-            key = s[key_start:key_end]
-
-            pos = key_end
-
-            if key == name:
-                # Tìm tiếp phần value
-                colon_pos = s.find(":", pos)
-                if colon_pos == -1:
-                    break
-                val_len = int(s[pos:colon_pos])
-                val_start = colon_pos + 1
-                val_end = val_start + val_len
-                return s[val_start:val_end]
-            else:
-                # Skip value không khớp
-                colon_pos = s.find(":", pos)
-                if colon_pos == -1:
-                    break
-                val_len = int(s[pos:colon_pos])
-                pos = colon_pos + 1 + val_len
-
-        return ""
+        return value
