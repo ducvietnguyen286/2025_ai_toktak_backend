@@ -30,7 +30,7 @@ class ReferralService:
         usage_user = ReferralHistory.query.filter_by(referred_user_id=id)
         if not usage_user:
             return None
-        usage_user.update(**kwargs)
+        usage_user.update(kwargs)
         return usage_user
 
     @staticmethod

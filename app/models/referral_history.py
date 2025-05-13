@@ -35,6 +35,7 @@ class ReferralHistory(db.Model, BaseModel):
             "referrer_email": self.referrer.email if self.referrer else None,
             "referred_user_id": self.referred_user_id,
             "referral_code": self.referral_code,
+            "status": self.status,
             "referred_user_email": (
                 self.referred_user.email if self.referred_user else None
             ),
