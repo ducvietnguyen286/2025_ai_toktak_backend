@@ -337,3 +337,8 @@ def change_advance_hashtags(original_str, new_hashtag, max_count=10):
 
     trimmed = combined[:max_count]
     return " ".join(trimmed)
+
+
+def mask_string_with_x(name, created_at):
+    masked_name = "X" * len(name)
+    return f"{created_at} {masked_name}님이 초대를 수락했어요"

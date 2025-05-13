@@ -4,6 +4,8 @@ import const
 from datetime import datetime, timedelta
 from app.extensions import db
 from sqlalchemy import and_, func, or_
+from app.lib.string import mask_string_with_x
+
 
 class ReferralService:
 
@@ -44,14 +46,20 @@ class ReferralService:
 
         total = len(referral_histories)
         total_days = 0
-
+        result = []
         for referral_detail in referral_histories:
             days = referral_detail.days
             total_days += days
+
+            item = referral_detail.to_dict()
+
+            item["display_name"] = mask_string_with_x(item["referred_user_name"] , item["updated_at_view"]) 
+            item.pop("referred_user_name", None)
+            item.pop("referred_user_email", None)
+            result.append(item)
+
         return {
-            "referral_histories": [
-                referral_detail.to_dict() for referral_detail in referral_histories
-            ],
+            "referral_histories": result,
             "total": total,
             "total_days": total_days,
         }
@@ -72,11 +80,11 @@ class ReferralService:
                     ReferralHistory.referred_user.has(User.email.ilike(search_pattern)),
                 )
             )
-            
+
         if data_search["type_status"] == "PENDING":
             query = query.filter(ReferralHistory.status == "PENDING")
         elif data_search["type_status"] == "DONE":
-            query = query.filter(ReferralHistory.status == "DONE") 
+            query = query.filter(ReferralHistory.status == "DONE")
 
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":
@@ -110,7 +118,7 @@ class ReferralService:
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
         return pagination
-    
+
     @staticmethod
     def admin_delete_by_ids(post_ids):
         try:

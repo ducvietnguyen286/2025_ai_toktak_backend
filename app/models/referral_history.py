@@ -39,6 +39,9 @@ class ReferralHistory(db.Model, BaseModel):
             "referred_user_email": (
                 self.referred_user.email if self.referred_user else None
             ),
+            "referred_user_name": (
+                self.referred_user.name if self.referred_user else None
+            ),
             "created_at": (
                 self.created_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.created_at
@@ -46,6 +49,11 @@ class ReferralHistory(db.Model, BaseModel):
             ),
             "updated_at": (
                 self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.updated_at
+                else None
+            ),
+            "updated_at_view": (
+                self.updated_at.strftime("%Y-%m-%d")
                 if self.updated_at
                 else None
             ),
