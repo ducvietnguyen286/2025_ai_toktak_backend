@@ -8,7 +8,7 @@ import base64
 import datetime
 import json
 import urllib.parse
-
+import traceback
 
 class NiceAuthService:
 
@@ -212,7 +212,11 @@ class NiceAuthService:
                 }
 
         except Exception as e:
-            logger.error(str(e))
+            logger.error("===== NiceAuthService checkplus_success Error =====")
+            logger.error(f"EncodeData: {enc_data}")
+            logger.error(f"Error: {str(e)}")
+            logger.error("Traceback:")
+            logger.error(traceback.format_exc())  # Ghi log traceback để biết dòng lỗi
             return {"code": 500, "message": str(e), "data": result_item}
 
     @staticmethod
