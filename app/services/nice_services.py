@@ -54,7 +54,7 @@ class NiceAuthService:
                 f"7:ERR_URL{len(errorurl)}:{errorurl}"
                 f"9:CUSTOMIZE{len(customize)}:{customize}"
             )
-            # logger.info(plaindata)
+            logger.info(plaindata)
 
             # Mã hóa dữ liệu
 
