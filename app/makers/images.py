@@ -204,6 +204,18 @@ def process_beauty_image(image_path):
 class ImageMaker:
 
     @staticmethod
+    def get_image_url_from_path(image_path):
+        if not os.path.exists(image_path):
+            return None
+        image_name = image_path.split("/")[-1]
+        image_date_create = image_path.split("/")[-2]
+        image_batch_id = image_path.split("/")[-3]
+        url = (
+            f"{CURRENT_DOMAIN}/files/{image_date_create}/{image_batch_id}/{image_name}"
+        )
+        return url
+
+    @staticmethod
     def save_normal_images(images, batch_id=0):
         downloaded_images = []
         with ThreadPoolExecutor(max_workers=5) as executor:
