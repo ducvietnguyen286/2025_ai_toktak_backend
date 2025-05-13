@@ -193,7 +193,15 @@ class UserService:
         if "search" in data_search and data_search["search"]:
             search_term = f"%{data_search['search']}%"
             query = query.filter(
-                or_(User.email.ilike(search_term), User.name.ilike(search_term))
+                or_(
+                    User.email.ilike(search_term),
+                    User.name.ilike(search_term),
+                    User.username.ilike(search_term),
+                    User.phone.ilike(search_term),
+                    User.contact.ilike(search_term),
+                    User.company_name.ilike(search_term),
+                    User.referral_code.ilike(search_term),
+                )
             )
         if "member_type" in data_search and data_search["member_type"]:
             query = query.filter(User.subscription == data_search["member_type"])
@@ -255,12 +263,12 @@ class UserService:
             MemberProfile.query.filter(MemberProfile.user_id.in_(user_ids)).delete(
                 synchronize_session=False
             )
-            ReferralHistory.query.filter(ReferralHistory.referrer_user_id.in_(user_ids)).delete(
-                synchronize_session=False
-            )
-            ReferralHistory.query.filter(ReferralHistory.referred_user_id.in_(user_ids)).delete(
-                synchronize_session=False
-            )
+            ReferralHistory.query.filter(
+                ReferralHistory.referrer_user_id.in_(user_ids)
+            ).delete(synchronize_session=False)
+            ReferralHistory.query.filter(
+                ReferralHistory.referred_user_id.in_(user_ids)
+            ).delete(synchronize_session=False)
 
             User.query.filter(User.id.in_(user_ids)).delete(synchronize_session=False)
 
