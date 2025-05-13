@@ -433,7 +433,6 @@ class APIBatchMakeImage(Resource):
                     images = ImageMaker.get_only_beauty_images(
                         base_images, batch_id=batch_id, is_avif=is_avif
                     )
-                    logger.info(f"BEAUTY IMAGES: {images}")
                 else:
                     images = ImageMaker.save_normal_images(
                         base_images, batch_id=batch_id
@@ -449,7 +448,6 @@ class APIBatchMakeImage(Resource):
                     cuted_image = ImageMaker.cut_out_long_height_images_by_google(
                         image, batch_id=batch_id
                     )
-                    logger.info(f"Cuted image GOOOGLE: {cuted_image}")
                     if cuted_image and "is_cut_out" not in cuted_image:
                         continue
                     elif cuted_image:
@@ -462,7 +460,6 @@ class APIBatchMakeImage(Resource):
                     sam_cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
                     )
-                    logger.info(f"Cuted image SAM: {sam_cuted_image}")
                     if sam_cuted_image and "is_cut_out" not in sam_cuted_image:
                         continue
                     elif sam_cuted_image:
@@ -473,8 +470,7 @@ class APIBatchMakeImage(Resource):
                             has_sam_cut_out = True
 
                     if not has_google_cut_out and not has_sam_cut_out:
-                        logger.info(f"description_images IMAGES: {image}")
-                        description_images.extend(image)
+                        description_images.append(image)
                 merge_cleared_images = []
                 if len(cutout_images) > 0:
                     merge_cleared_images.extend(cutout_images)
