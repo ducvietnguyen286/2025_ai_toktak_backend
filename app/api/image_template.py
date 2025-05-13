@@ -195,7 +195,7 @@ class APIUpdateImageTemplate(Resource):
         },
         required=["id"],
     )
-    def put(self, id, args):
+    def put(self, args):
         date_create = datetime.now().strftime("%Y_%m_%d")
         UPLOAD_FOLDER = os.path.join(os.getcwd(), f"uploads/{date_create}/fonts")
         if not os.path.exists(UPLOAD_FOLDER):
