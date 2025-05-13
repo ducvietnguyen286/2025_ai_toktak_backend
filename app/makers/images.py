@@ -207,9 +207,10 @@ class ImageMaker:
     def get_image_url_from_path(image_path):
         if not os.path.exists(image_path):
             return None
-        image_name = image_path.split("/")[-1]
-        image_batch_id = image_path.split("/")[-2]
-        image_date_create = image_path.split("/")[-3]
+        split_path = image_path.split("/")
+        image_name = split_path[-1]
+        image_batch_id = split_path[-2]
+        image_date_create = split_path[-3]
         url = (
             f"{CURRENT_DOMAIN}/files/{image_date_create}/{image_batch_id}/{image_name}"
         )
