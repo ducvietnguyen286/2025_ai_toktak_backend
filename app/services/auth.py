@@ -32,6 +32,7 @@ class AuthService:
             raise BadRequest(message="Email already exists")
         user = User(email=email, username=username, level_info=level_info)
         user.set_password(password)
+        user.generate_referral_code()
         user.save()
         return user
 
@@ -84,6 +85,7 @@ class AuthService:
         else:
             if not email:
                 user = User(name=name, avatar=avatar)
+                user.generate_referral_code()
                 user.save()
             else:
                 user = User.query.filter_by(email=email).first()

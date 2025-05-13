@@ -8,7 +8,7 @@ class ReferralHistory(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True)
     referral_code = db.Column(db.String(255), nullable=False)
-    status = db.Column(db.String(255), nullable=False, default="DONE")
+    status = db.Column(db.String(255), nullable=False, default="PENDING")
 
     referrer_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     referred_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)

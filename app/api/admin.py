@@ -10,7 +10,7 @@ from app.lib.logger import logger
 import json
 from flask import request
 from app.services.auth import AuthService
-from app.services.notification import NotificationServices
+from app.services.referral_service import ReferralService
 from app.lib.string import get_level_images
 import const
 import os
@@ -230,3 +230,84 @@ class GetDetailLog(Resource):
 
         except Exception as e:
             return Response(message=str(e), code=500).to_dict()
+
+    @ns.route("/referral_histories")
+    class APIAdminReferralHistories(Resource):
+        @jwt_required()
+        @admin_required()
+        def get(self):
+            page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+            per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+            status = request.args.get("status", const.UPLOADED, type=int)
+            type_order = request.args.get("type_order", "", type=str)
+            type_post = request.args.get("type_post", "", type=str)
+            time_range = request.args.get("time_range", "", type=str)
+            type_status = request.args.get("type_status", "", type=str)
+            search_key = request.args.get("search_key", "", type=str)
+            data_search = {
+                "page": page,
+                "per_page": per_page,
+                "status": status,
+                "type_order": type_order,
+                "type_post": type_post,
+                "time_range": time_range,
+                "type_status": type_status,
+                "search_key": search_key,
+            }
+            billings = ReferralService.get_admin_referral_history(data_search)
+            return {
+                "status": True,
+                "message": "Success",
+                "total": billings.total,
+                "page": billings.page,
+                "per_page": billings.per_page,
+                "total_pages": billings.pages,
+                "data": [post.to_dict() for post in billings.items],
+            }, 200
+
+    @ns.route("/admin/delete_referral_history")
+    class APIAdminDeleteReferralHistory(Resource):
+        @jwt_required()
+        @parameters(
+            type="object",
+            properties={
+                "post_ids": {"type": "string"},
+            },
+            required=["post_ids"],
+        )
+        def post(self, args):
+            try:
+                post_ids = args.get("post_ids", "")
+                # Chuyển chuỗi post_ids thành list các integer
+                if not post_ids:
+                    return Response(
+                        message="No post_ids provided",
+                        code=201,
+                    ).to_dict()
+
+                # Tách chuỗi và convert sang list integer
+                id_list = [int(id.strip()) for id in post_ids.split(",")]
+
+                if not id_list:
+                    return Response(
+                        message="Invalid post_ids format",
+                        code=201,
+                    ).to_dict()
+
+                process_delete = ReferralService.admin_delete_by_ids(id_list)
+                if process_delete == 1:
+                    message = "Delete Referral Success"
+                else:
+                    message = "Delete Referral Fail"
+
+                return Response(
+                    message=message,
+                    code=200,
+                ).to_dict()
+
+            except Exception as e:
+                logger.error(f"Exception: Delete Referral Fail  :  {str(e)}")
+                return Response(
+                    message="Delete Referral Fail",
+                    code=201,
+                ).to_dict()
