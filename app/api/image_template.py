@@ -175,7 +175,7 @@ class APIUpdateImageTemplate(Resource):
             "id": {"type": "string"},
             "template_name": {"type": "string"},
             "template_code": {"type": "string"},
-            "font_size": {"type": "int"},
+            "font_size": {"type": "string"},
             "main_text_color": {"type": "string"},
             "text_color": {"type": "string"},
             "stroke_color": {"type": "string"},
