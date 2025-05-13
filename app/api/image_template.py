@@ -242,7 +242,10 @@ class APIUpdateImageTemplate(Resource):
         if "font_path" in args:
             if os.path.exists(current_template.font_path):
                 os.remove(current_template.font_path)
+
+        image_template = ImageTemplateService.find_image_template(id)
+
         return Response(
             data=image_template.to_json(),
-            message="Tạo image_template thành công",
+            message="Update image_template thành công",
         ).to_dict()
