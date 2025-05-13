@@ -10,6 +10,8 @@ import json
 import urllib.parse
 import traceback
 
+from dateutil.relativedelta import relativedelta
+
 
 class NiceAuthService:
 
@@ -189,6 +191,7 @@ class NiceAuthService:
             verify_detail = UserService.check_phone_verify_nice(mobileno)
 
             if not verify_detail:
+                subscription = user_data.subscription
                 data_update = {
                     "phone": mobileno,
                     "auth_nice_result": json.dumps(result_item),
@@ -197,10 +200,29 @@ class NiceAuthService:
                     "name": name,
                     "gender": "M" if result_item["gender"] == "1" else "F",
                 }
+                if subscription in ["FREE", "BASIC_RE"]:
+                    if subscription == "BASIC_RE":
+                        old_subscription_expired = (
+                            user_data.subscription_expired or datetime.datetime.now()
+                        )
+                        subscription_expired = old_subscription_expired + relativedelta(
+                            days=7
+                        )
+                    else:
+                        subscription_expired = datetime.datetime.now() + relativedelta(
+                            days=7
+                        )
+
+                    data_update["subscription_expired"] = subscription_expired
+                    data_update["subscription"] = "BASIC_RE"
+
                 UserService.update_user(user_id, **data_update)
 
                 data_update_referral = {"status": "DONE"}
                 ReferralService.update_nice(user_id, **data_update_referral)
+
+                # cập nhật Gói cơ bản (Basic) 7 ngày
+
                 return {"code": 200, "message": "인증 성공", "data": result_item}
             else:
                 return {
