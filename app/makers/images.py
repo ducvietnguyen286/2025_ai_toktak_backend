@@ -152,9 +152,6 @@ def process_beauty_image(image_path):
                         "is_remove": True,
                     }
 
-            logger.info(
-                f"Ratio: {ratio}, Length labels: {length_labels}, Length Text: {len(full_text)} Image path: {image_path}"
-            )
             if length_labels <= 0:
                 return {
                     "image_path": image_path,
@@ -283,7 +280,6 @@ class ImageMaker:
         cleared_images = []
         for image_path in process_images:
             result = process_beauty_image(image_path)
-            print(f"Result: {result}")
             if "is_remove" in result and result["is_remove"]:
                 image_path = result["image_path"]
                 if os.path.exists(image_path):
