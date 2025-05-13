@@ -29,12 +29,12 @@ class ReferralService:
         return True
 
     @staticmethod
-    def update_nice(id, *args, **kwargs):
-        usage_user = ReferralHistory.query.filter_by(referred_user_id=id)
+    def update_nice(user_id, **kwargs):
+        usage_user = ReferralHistory.query.filter_by(referred_user_id=user_id).first()
         if not usage_user:
             return None
-        usage_user.update(kwargs)
-        return usage_user
+
+        return usage_user.update(**kwargs)
 
     @staticmethod
     def get_by_user_id(user_id):

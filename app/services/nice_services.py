@@ -201,7 +201,6 @@ class NiceAuthService:
 
                 data_update_referral = {"status": "DONE"}
                 ReferralService.update_nice(user_id, **data_update_referral)
-
                 return {"code": 200, "message": "인증 성공", "data": result_item}
             else:
                 return {
