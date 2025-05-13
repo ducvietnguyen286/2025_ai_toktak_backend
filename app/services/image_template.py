@@ -37,7 +37,7 @@ class ImageTemplateService:
     @staticmethod
     def update_image_template(id, *args):
         image_template = ImageTemplate.objects.get(id=id)
-        image_template.update(*args)
+        image_template.update(**args)
         return image_template
 
     @staticmethod
