@@ -12,10 +12,17 @@ from app.extensions import db
 from app.lib.logger import logger
 from sqlalchemy import or_
 import const
+from dateutil.relativedelta import relativedelta
 
 
 class UserService:
 
+    @staticmethod
+    def create_user(*args, **kwargs):
+        user_detail = User(*args, **kwargs)
+        user_detail.save()
+        return user_detail
+    
     @staticmethod
     def get_user_coupons(user_id):
         list_coupons = (
@@ -320,3 +327,21 @@ class UserService:
         user = User.query.filter(User.phone == mobileno, User.is_auth_nice == 1).first()
 
         return user
+    
+    @staticmethod
+    def auto_extend_free_subscriptions():
+        now = datetime.now()
+
+        expired_users = User.query.filter(
+            User.subscription == 'FREE',
+            User.subscription_expired <= now
+        ).all()
+
+        for user in expired_users:
+            new_expiry = now + relativedelta(months=1)
+            user.subscription_expired = new_expiry
+            user.batch_total = 10
+            user.batch_remain = 10
+
+        db.session.commit()
+        return 0

@@ -24,6 +24,8 @@ import json
 import const
 import secrets
 import string
+from dateutil.relativedelta import relativedelta
+from datetime import datetime
 
 
 class AuthService:
@@ -87,7 +89,18 @@ class AuthService:
             user = User.query.get(social_account.user_id)
         else:
             if not email:
-                user = User(name=name, avatar=avatar)
+                level = 0
+                level_info = get_level_images(level)
+                subscription_expired = datetime.now() + relativedelta(months=1)
+                user = User(
+                    email=email,
+                    name=name,
+                    avatar=avatar,
+                    level=level,
+                    subscription_expired=subscription_expired,
+                    level_info=json.dumps(level_info),
+                )
+
                 user.generate_referral_code()
                 user.save()
             else:
@@ -97,11 +110,13 @@ class AuthService:
                 level = 0
                 level_info = get_level_images(level)
 
+                subscription_expired = datetime.now() + relativedelta(months=1)
                 user = User(
                     email=email,
                     name=name,
                     avatar=avatar,
                     level=level,
+                    subscription_expired=subscription_expired,
                     level_info=json.dumps(level_info),
                 )
 

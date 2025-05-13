@@ -30,6 +30,7 @@ from app.extensions import redis_client, db, db_mongo
 from app.models.batch import Batch
 from app.models.post import Post
 from app.models.notification import Notification
+from app.services.user import UserService
 from pytz import timezone
 import requests
 
@@ -318,6 +319,14 @@ def check_urls_health(app):
     else:
         app.logger.info("✅ All URLs are healthy.")
 
+def auto_extend_subscription_task(app):
+    app.logger.info("Start auto_extend_subscription_task...")
+    with app.app_context():
+        try:
+            UserService.auto_extend_free_subscriptions()
+        except Exception as e:
+            app.logger.error(f"Error in auto_extend_subscription_task: {str(e)}")
+
 
 def create_notification_task():
     try:
@@ -339,6 +348,8 @@ def start_scheduler(app):
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
     four_am_kst_trigger = CronTrigger(hour=4, minute=0, timezone=kst)
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
+
+    twelve_oh_one_trigger = CronTrigger(hour=0, minute=1, timezone=kst)
 
     every_3_hours_trigger = CronTrigger(hour="*/3", minute=0, timezone=kst)
 
@@ -387,6 +398,14 @@ def start_scheduler(app):
         trigger=four_am_kst_trigger,
         id="exchange_thread_token",
     )
+    
+    
+    scheduler.add_job(
+        func=lambda: auto_extend_subscription_task(app),
+        trigger=twelve_oh_one_trigger,
+        id="auto_extend_subscription_task",
+    )
+
 
     atexit.register(lambda: scheduler.shutdown(wait=False))
     scheduler.start()
