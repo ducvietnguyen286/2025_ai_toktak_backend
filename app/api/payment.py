@@ -119,3 +119,19 @@ class APICreateNewPayment(Resource):
                 "total_pages": billings.pages,
                 "data": [post.to_dict() for post in billings.items],
             }, 200
+
+
+@ns.route("/admin/approval")
+class APIPaymentApproval(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        payment_id = data.get("payment_id")
+
+        payment = PaymentService.update_payment(payment_id, status="PAID")
+        message = "승인이 완료되었습니다."
+        return Response(
+            message=message,
+            data={"payment": payment._to_json()},
+            code=200,
+        ).to_dict()

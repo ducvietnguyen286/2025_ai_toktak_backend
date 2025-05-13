@@ -21,6 +21,14 @@ from const import PACKAGE_CONFIG, PACKAGE_DURATION_DAYS
 class PaymentService:
 
     @staticmethod
+    def update_payment(id, *args, **kwargs):
+        payment = Payment.query.get(id)
+        if not payment:
+            return None
+        payment.update(**kwargs)
+        return payment
+    
+    @staticmethod
     def can_upgrade(current_package: str, new_package: str) -> bool:
         """Kiểm tra xem việc nâng cấp có hợp lệ không (theo thứ tự gói)"""
         return (

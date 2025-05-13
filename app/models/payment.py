@@ -17,7 +17,8 @@ class Payment(db.Model, BaseModel):
     payment_date = db.Column(db.DateTime, nullable=False)
     price = db.Column(db.Float, nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    status = db.Column(db.Integer, default=1)
+    
+    status = db.Column(db.String(255), default='PENDING')
     total_link = db.Column(db.Integer, default=0)
     total_create = db.Column(db.Integer, default=10)
 
