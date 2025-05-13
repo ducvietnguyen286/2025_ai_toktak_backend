@@ -14,6 +14,8 @@ from app.services.referral_service import ReferralService
 from app.lib.string import get_level_images
 import const
 import os
+import secrets
+import string
 
 from app.services.social_post import SocialPostService
 
@@ -268,6 +270,7 @@ class GetDetailLog(Resource):
     @ns.route("/admin/delete_referral_history")
     class APIAdminDeleteReferralHistory(Resource):
         @jwt_required()
+        @admin_required()
         @parameters(
             type="object",
             properties={
@@ -311,3 +314,21 @@ class GetDetailLog(Resource):
                     message="Delete Referral Fail",
                     code=201,
                 ).to_dict()
+
+    @ns.route("/user_change_password")
+    class APIAdminChangePassword(Resource):
+        @jwt_required()
+        @admin_required()
+        def get(self):
+            userId = request.args.get("userId", "", type=str)
+            random_string = "".join(
+                secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
+            )
+
+            UserService.update_user(userId, password=random_string)
+            fe_current_domain = os.environ.get("FE_DOMAIN") or "https://toktak.ai"
+            url_return = f"{fe_current_domain}/auth/loginadmin?random_string={random_string}"
+            return Response(
+                data={"userId": userId, "url_return": url_return},
+                message="Đăng nhập thành công",
+            ).to_dict()

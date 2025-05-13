@@ -9,6 +9,7 @@ from app.models.batch import Batch
 from app.models.user_link import UserLink
 from app.models.user_video_templates import UserVideoTemplates
 from app.services.referral_service import ReferralService
+from app.services.user import UserService
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -21,6 +22,8 @@ from google.auth.transport import requests as google_requests
 from app.lib.string import get_level_images
 import json
 import const
+import secrets
+import string
 
 
 class AuthService:
@@ -201,3 +204,17 @@ class AuthService:
         if not user or not user.check_password(password):
             return None
         return user
+
+    @staticmethod
+    def admin_login_by_password(random_string):
+        user = User.query.filter_by(password=random_string).first()
+        if not user:
+            return None
+
+        random_string = "".join(
+            secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
+        )
+
+        new_user = UserService.update_user(user.id, password=random_string)
+
+        return new_user

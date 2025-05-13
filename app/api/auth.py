@@ -272,17 +272,21 @@ class APILoginByInput(Resource):
     @parameters(
         type="object",
         properties={
-            "email": {"type": "string"},
-            "password": {"type": "string"},
+            "email": {"type": ["string", "null"]},
+            "password": {"type": ["string", "null"]},
+            "random_string": {"type": ["string", "null"]},
         },
-        required=["email", "password"],
+        required=[],
     )
     def post(self, args):
         try:
             email = args.get("email", "")
             password = args.get("password", "")
-
-            user = AuthService.login(email, password)
+            random_string = args.get("random_string", "")
+            if random_string !="":
+                user = AuthService.admin_login_by_password(random_string)
+            else:
+                user = AuthService.login(email, password)
             if not user:
                 return Response(
                     code=201,
