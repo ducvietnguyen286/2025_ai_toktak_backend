@@ -227,7 +227,7 @@ class APIUpdateImageTemplate(Resource):
             args["font"] = font_name
             args["font_path"] = font_path
 
-        image_template = ImageTemplateService.update_image_template(id, *args)
+        image_template = ImageTemplateService.update_image_template(id, **args)
         if not image_template:
             return Response(
                 message="Cập nhật image_template thất bại",
