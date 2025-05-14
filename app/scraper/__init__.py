@@ -31,7 +31,7 @@ class Scraper:
     def scraper(self, params):
         response = get_page_scraper(params)
         if not response:
-            
+
             # 103.98.152.125
             # 3.38.117.230
             # 43.203.118.116
