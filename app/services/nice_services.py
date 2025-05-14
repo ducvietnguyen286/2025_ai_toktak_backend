@@ -5,12 +5,13 @@ from app.services.user import UserService
 from app.services.referral_service import ReferralService
 import re
 import base64
-import datetime
+from datetime import datetime
 import json
 import urllib.parse
 import traceback
 
 from dateutil.relativedelta import relativedelta
+from const import PACKAGE_CONFIG
 
 
 class NiceAuthService:
@@ -191,7 +192,7 @@ class NiceAuthService:
             verify_detail = UserService.check_phone_verify_nice(mobileno)
 
             if not verify_detail:
-                subscription = user_data.subscription
+                datetime_now = datetime.now()
                 data_update = {
                     "phone": mobileno,
                     "auth_nice_result": json.dumps(result_item),
@@ -200,28 +201,57 @@ class NiceAuthService:
                     "name": name,
                     "gender": "M" if result_item["gender"] == "1" else "F",
                 }
-                if subscription in ["FREE", "BASIC_RE"]:
-                    if subscription == "BASIC_RE":
-                        old_subscription_expired = (
-                            user_data.subscription_expired or datetime.datetime.now()
-                        )
-                        subscription_expired = old_subscription_expired + relativedelta(
-                            days=7
-                        )
-                    else:
-                        subscription_expired = datetime.datetime.now() + relativedelta(
-                            days=7
-                        )
-
-                    data_update["subscription_expired"] = subscription_expired
-                    data_update["subscription"] = "BASIC_RE"
-
                 UserService.update_user(user_id, **data_update)
+                # Tìm theo người được giới thiệu khi xác thực thành công
+                referral_history_detail = ReferralService.find_by_referred_user_id(
+                    user_id
+                )
+                # nếu có giới thiệu
+                if referral_history_detail:
+                    # người được giới thiệu =  user_id hiện tại
+                    referred_user_id = referral_history_detail.referred_user_id
+                    # Gia hạn 7 ngày cho người được mời
+                    basic_package = PACKAGE_CONFIG["BASIC"]
 
-                data_update_referral = {"status": "DONE"}
-                ReferralService.update_nice(user_id, **data_update_referral)
+                    referred_update_data = {
+                        "subscription_expired": datetime_now + relativedelta(days=7),
+                        "subscription": "BASIC",
+                        "batch_total": basic_package["batch_total"],
+                        "batch_remain": basic_package["batch_remain"],
+                        "total_link_active": basic_package["total_link_active"],
+                    }
 
-                # cập nhật Gói cơ bản (Basic) 7 ngày
+                    UserService.update_user(referred_user_id, **referred_update_data)
+
+                    # -------------------------------
+                    # 3. Cập nhật cho người giới thiệu
+                    # -------------------------------
+
+                    # người giới thiệu
+                    referrer_user_id = referral_history_detail.referrer_user_id
+                    referrer_user_data = UserService.find_user(referrer_user_id)
+                    subscription = referrer_user_data.subscription
+
+                    if subscription in ["FREE", "BASIC"]:
+                        if subscription == "BASIC":
+                            old_exp = referrer_user_data.subscription_expired
+                            subscription_expired = old_exp + relativedelta(days=7)
+                        else:
+                            subscription_expired = datetime_now + relativedelta(days=7)
+
+                        referrer_update_data = {
+                            "subscription_expired": subscription_expired,
+                            "subscription": "BASIC",
+                            "batch_total": basic_package["batch_total"],
+                            "batch_remain": basic_package["batch_remain"],
+                            "total_link_active": basic_package["total_link_active"],
+                        }
+                        UserService.update_user(
+                            referrer_user_id, **referrer_update_data
+                        )
+
+                    referral_history_detail.status = "DONE"
+                    referral_history_detail.save()
 
                 return {"code": 200, "message": "인증 성공", "data": result_item}
             else:

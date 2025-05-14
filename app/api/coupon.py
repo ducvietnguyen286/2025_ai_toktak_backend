@@ -50,6 +50,7 @@ class APIUsedCoupon(Resource):
         if coupon == "expired":
             return Response(
                 message="쿠폰 코드가 만료되었습니다<br/>쿠폰 번호를 확인해 주세요😭",
+                message_en="Mã đã hết hạn expired",
                 code=201,
             ).to_dict()
 

@@ -5,9 +5,17 @@ from datetime import datetime, timedelta
 from app.extensions import db
 from sqlalchemy import and_, func, or_
 from app.lib.string import mask_string_with_x
+from app.services.user import UserService
 
 
 class ReferralService:
+
+    @staticmethod
+    def find_by_referred_user_id(referred_user_id) -> dict:
+        referral_history_detail = ReferralHistory.query.filter_by(
+            referred_user_id=referred_user_id
+        ).first()
+        return referral_history_detail
 
     @staticmethod
     def use_referral_code(referral_code, login_user) -> dict:
@@ -28,6 +36,12 @@ class ReferralService:
             status="PENDING",
         )
         history.save()
+
+        referrer_update_data = {
+            "referrer_user_id": user.id,
+        }
+        UserService.update_user(login_user.id, **referrer_update_data)
+
         return True
 
     @staticmethod
@@ -35,8 +49,8 @@ class ReferralService:
         usage_user = ReferralHistory.query.filter_by(referred_user_id=user_id).first()
         if not usage_user:
             return None
-
-        return usage_user.update(**kwargs)
+        usage_user.update(**kwargs)
+        return usage_user
 
     @staticmethod
     def get_by_user_id(user_id):
@@ -53,7 +67,9 @@ class ReferralService:
 
             item = referral_detail.to_dict()
 
-            item["display_name"] = mask_string_with_x(item["referred_user_name"] , item["updated_at_view"]) 
+            item["display_name"] = mask_string_with_x(
+                item["referred_user_name"], item["updated_at_view"]
+            )
             item.pop("referred_user_name", None)
             item.pop("referred_user_email", None)
             result.append(item)
@@ -131,3 +147,14 @@ class ReferralService:
             db.session.rollback()
             return 0
         return 1
+
+
+    @staticmethod
+    def find_all_related_referrals(user_id):
+        return ReferralHistory.query.filter(
+            or_(
+                ReferralHistory.referrer_user_id == user_id,
+                ReferralHistory.referred_user_id == user_id,
+            ),
+            ReferralHistory.status == "DONE"
+        ).all()

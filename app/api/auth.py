@@ -5,6 +5,7 @@ from flask_restx import Namespace, Resource
 from app.decorators import parameters
 from app.lib.response import Response
 from app.services.user import UserService
+from app.services.referral_service import ReferralService
 from datetime import datetime
 
 from app.lib.logger import logger
@@ -283,7 +284,7 @@ class APILoginByInput(Resource):
             email = args.get("email", "")
             password = args.get("password", "")
             random_string = args.get("random_string", "")
-            if random_string !="":
+            if random_string != "":
                 user = AuthService.admin_login_by_password(random_string)
             else:
                 user = AuthService.login(email, password)
@@ -440,6 +441,25 @@ class APIUserProfile(Resource):
                     coupon_remain = 0
                 coupon["remain"] = coupon_remain
                 result_coupons.append(coupon)
+
+            user_referral_histories = ReferralService.find_all_related_referrals(
+                user.id
+            )
+
+            for user_referral_history_detail in user_referral_histories:
+                user_referral_data = user_referral_history_detail._to_json()
+                result_coupons.append(
+                    {
+                        "type": "referral",
+                        "code": user_referral_data['referral_code'],
+                        "expired_at": user_referral_data['created_at'],
+                        "created_at": user_referral_data['created_at'],
+                        "coupon_name": user_referral_data['referral_code'],
+                        "num_days": 30,
+                        "value": 30,
+                        "remain": 30,
+                    }
+                )
 
             start_used = None
             if first_coupon:

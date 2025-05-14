@@ -1833,3 +1833,28 @@ class APIGetReferUserSuccess(Resource):
         refer = ReferralService.get_by_user_id(user_id)
 
         return Response(data=refer, message="refer return.").to_dict()
+
+
+@ns.route("/check_active_link_sns")
+class APICheckActiveLinkSns(Resource):
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+        user_links = UserService.get_user_links(user_id)
+        total_user_links = len(user_links)
+        total_link_active = current_user.total_link_active
+        if total_user_links >= total_link_active:
+            return Response(
+                data={},
+                message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
+                code=201,
+            ).to_dict()
+
+        return Response(
+            data={
+                "total_user_links": total_user_links,
+                "total_link_active": total_link_active,
+            },
+            message="You can add active new link",
+        ).to_dict()

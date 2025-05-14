@@ -38,6 +38,7 @@ class User(db.Model, BaseModel):
     
     is_auth_nice = db.Column(db.Integer, default=0)
     is_verify_email = db.Column(db.Integer, default=0)
+    referrer_user_id = db.Column(db.Integer, default=0)
     auth_nice_result = db.Column(db.Text, nullable=False)
     gender = db.Column(db.String(255), nullable=False, default="")
     password_certificate = db.Column(db.String(255), nullable=False, default="")
@@ -74,6 +75,8 @@ class User(db.Model, BaseModel):
             "level_info": self.level_info,
             "company_name": self.company_name,
             "batch_sns_total": self.batch_sns_total,
+            "is_auth_nice": self.is_auth_nice,
+            "referrer_user_id": self.referrer_user_id,
             "subscription_expired": (
                 self.subscription_expired.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.subscription_expired

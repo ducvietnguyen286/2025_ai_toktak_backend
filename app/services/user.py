@@ -37,6 +37,7 @@ class UserService:
             coupon_dict = coupon.coupon._to_json()
             coupon_code = coupon._to_json()
             coupon_code["coupon_name"] = coupon_dict["name"]
+            coupon_code["type"] = 'coupon'
             coupons.append(coupon_code)
 
         first_coupon = (
@@ -347,3 +348,5 @@ class UserService:
 
         db.session.commit()
         return extended
+
+    
