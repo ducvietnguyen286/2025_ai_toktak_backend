@@ -132,6 +132,15 @@ class APINewLink(Resource):
                     status=400,
                 ).to_dict()
 
+            user_links = UserService.get_user_links(current_user.id)
+            total_user_links = len(user_links)
+            batch_no_limit_sns = current_user.batch_no_limit_sns
+            if total_user_links >= batch_no_limit_sns:
+                return Response(
+                    message=f"최대 {batch_no_limit_sns}개의 채널만 설정할 수 있습니다.",
+                    status=201,
+                ).to_dict()
+
             user_link = UserService.find_user_link_exist(link_id, current_user.id)
             is_active = True
             if not user_link:
@@ -976,6 +985,22 @@ class APIGetCallbackTiktok(Resource):
             link_id = payload.get("link_id")
             int_user_id = int(user_id)
             int_link_id = int(link_id)
+
+            current_user = UserService.find_user(int_user_id)
+            if not current_user:
+                return Response(
+                    message="로그인해주세요.",
+                    status=201,
+                ).to_dict()
+            user_links = UserService.get_user_links(int_user_id)
+            total_user_links = len(user_links)
+            batch_no_limit_sns = current_user.batch_no_limit_sns
+            if total_user_links >= batch_no_limit_sns:
+                return Response(
+                    message=f"최대 {batch_no_limit_sns}개의 채널만 설정할 수 있습니다.",
+                    status=201,
+                ).to_dict()
+
             user_link = UserService.find_user_link_exist(int_link_id, int_user_id)
 
             RequestSocialLogService.create_request_social_log(
@@ -1218,6 +1243,21 @@ class APIGetCallbackYoutube(Resource):
             link_id = payload.get("link_id")
             int_user_id = int(user_id)
             int_link_id = int(link_id)
+
+            current_user = UserService.find_user(int_user_id)
+            if not current_user:
+                return Response(
+                    message="로그인해주세요.",
+                    status=201,
+                ).to_dict()
+            user_links = UserService.get_user_links(int_user_id)
+            total_user_links = len(user_links)
+            batch_no_limit_sns = current_user.batch_no_limit_sns
+            if total_user_links >= batch_no_limit_sns:
+                return Response(
+                    message=f"최대 {batch_no_limit_sns}개의 채널만 설정할 수 있습니다.",
+                    status=201,
+                ).to_dict()
 
             if not client:
                 NotificationServices.create_notification(
@@ -1789,8 +1829,7 @@ class APIGetReferUserSuccess(Resource):
 
         current_user = AuthService.get_current_identity()
         user_id = current_user.id
-        
-        refer = ReferralService.get_by_user_id (user_id)
 
+        refer = ReferralService.get_by_user_id(user_id)
 
         return Response(data=refer, message="refer return.").to_dict()

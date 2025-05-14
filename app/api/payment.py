@@ -6,11 +6,15 @@ import json
 from app.services.auth import AuthService
 from app.services.payment_services import PaymentService
 from app.services.notification import NotificationServices
+from app.services.user import UserService
 from app.decorators import parameters, admin_required
 from app.services.post import PostService
 from app.lib.response import Response
 from app.lib.logger import logger
 import const
+
+import datetime
+from dateutil.relativedelta import relativedelta
 
 ns = Namespace("payment", description="Payment API")
 
@@ -129,6 +133,27 @@ class APIPaymentApproval(Resource):
         payment_id = data.get("payment_id")
 
         payment = PaymentService.update_payment(payment_id, status="PAID")
+        if payment:
+            user_id = payment.user_id
+            package_name = payment.package_name
+            package_data = const.PACKAGE_CONFIG.get(package_name)
+            if not package_data:
+                return Response(
+                    message="유효하지 않은 패키지입니다.", code=201
+                ).to_dict()
+
+            subscription_expired = payment.end_date
+
+            data_update = {
+                "subscription": package_name,
+                "subscription_expired": subscription_expired,
+                "batch_total": package_data["batch_total"],
+                "batch_remain": package_data["batch_remain"],
+                "batch_no_limit_sns": package_data["batch_no_limit_sns"],
+            }
+
+            UserService.update_user(user_id, **data_update)
+
         message = "승인이 완료되었습니다."
         return Response(
             message=message,

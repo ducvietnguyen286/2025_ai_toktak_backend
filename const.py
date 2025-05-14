@@ -151,7 +151,6 @@ LIMIT_BATCH = {
 
 ALLOWED_IPS = {"218.154.54.97"}
 
- 
 
 PACKAGE_CONFIG = {
     "BASIC": {
@@ -159,18 +158,30 @@ PACKAGE_CONFIG = {
         "total_create": 30,
         "price": 299_000,
         "total_link": 1,
+        "batch_total": 30,
+        "batch_remain": 30,
+        "batch_sns_total": 1,
+        "batch_no_limit_sns": 1,
     },
     "STANDARD": {
         "order_index": 2,
         "total_create": 60,
         "price": 899_000,
         "total_link": 7,
+        "batch_total": 60,
+        "batch_remain": 60,
+        "batch_sns_total": 7,
+        "batch_no_limit_sns": 7,
     },
     "BUSINESS": {
         "order_index": 3,
         "total_create": 30,
         "price": 999_000,
         "total_link": 7,
+        "batch_total": 30,
+        "batch_remain": 30,
+        "batch_sns_total": 7,
+        "batch_no_limit_sns": 7,
     },
 }
 
