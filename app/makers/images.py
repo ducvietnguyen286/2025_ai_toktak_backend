@@ -313,7 +313,7 @@ class ImageMaker:
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
             image_name = image_path.split("/")[-1]
-            image_url = f"{CURRENT_DOMAIN}/{date_create}/{batch_id}/{image_name}"
+            image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
             return {
                 "image_urls": [image_url],
                 "is_cut_out": False,
@@ -326,17 +326,17 @@ class ImageMaker:
             time.sleep(0.5)
 
         if not os.path.exists(image_path):
-            return {"image_urls": [image_path], "is_cut_out": False}
+            return {"image_urls": [], "is_cut_out": False}
 
         try:
             image = Image.open(image_path)
         except IOError:
             logger.error(f"Cannot identify image file {image_path}")
             print(f"Cannot identify image file {image_path}")
-            image_name = image_path.split("/")[-1]
-            image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+            if os.path.exists(image_path):
+                os.remove(image_path)
             return {
-                "image_urls": [image_url],
+                "image_urls": [],
                 "is_cut_out": False,
             }
 
@@ -393,25 +393,25 @@ class ImageMaker:
                     cropped_path = os.path.join(output_folder, new_name)
 
                     # Resize the cropped image to the target size (1350x1080)
-                    target_size = (1350, 1080)
-                    h, w, _ = cropped.shape
-                    scale = min(target_size[1] / h, target_size[0] / w)
-                    new_w = int(w * scale)
-                    new_h = int(h * scale)
-                    resized = cv2.resize(
-                        cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
-                    )
+                    # target_size = (1350, 1080)
+                    # h, w, _ = cropped.shape
+                    # scale = min(target_size[1] / h, target_size[0] / w)
+                    # new_w = int(w * scale)
+                    # new_h = int(h * scale)
+                    # resized = cv2.resize(
+                    #     cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
+                    # )
 
-                    cropped_resized = np.zeros(
-                        (target_size[1], target_size[0], 3), dtype=np.uint8
-                    )
-                    y_offset = (target_size[1] - new_h) // 2
-                    x_offset = (target_size[0] - new_w) // 2
-                    cropped_resized[
-                        y_offset : y_offset + new_h, x_offset : x_offset + new_w
-                    ] = resized
+                    # cropped_resized = np.zeros(
+                    #     (target_size[1], target_size[0], 3), dtype=np.uint8
+                    # )
+                    # y_offset = (target_size[1] - new_h) // 2
+                    # x_offset = (target_size[0] - new_w) // 2
+                    # cropped_resized[
+                    #     y_offset : y_offset + new_h, x_offset : x_offset + new_w
+                    # ] = resized
 
-                    cv2.imwrite(cropped_path, cropped_resized)  # Save the resized image
+                    cv2.imwrite(cropped_path, cropped)  # Save the resized image
 
                     need_check_images.append(cropped_path)
                     conf_images[cropped_path] = conf
@@ -467,10 +467,10 @@ class ImageMaker:
             logger.error(f"Error processing {image_path}: {e}")
             traceback.print_exc()
             logger.error(f"Traceback: {traceback.format_exc()}")
-            image_name = image_path.split("/")[-1]
-            image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+            if os.path.exists(image_path):
+                os.remove(image_path)
             return {
-                "image_urls": [image_url],
+                "image_urls": [],
                 "is_cut_out": False,
             }
 
@@ -495,8 +495,10 @@ class ImageMaker:
 
         image_cv = cv2.imread(image_path)
         if image_cv is None:
+            if os.path.exists(image_path):
+                os.remove(image_path)
             return {
-                "image_urls": [base_url],
+                "image_urls": [],
                 "is_cut_out": False,
             }
 
@@ -508,8 +510,10 @@ class ImageMaker:
         try:
             results = GoogleVision().detect_objects(image_path=image_path)
             if not results:
+                if os.path.exists(image_path):
+                    os.remove(image_path)
                 return {
-                    "image_urls": [base_url],
+                    "image_urls": [],
                     "is_cut_out": False,
                 }
             cropped_images = []
@@ -607,8 +611,10 @@ class ImageMaker:
             logger.error(f"Error processing {image_path}: {e}")
             traceback.print_exc()
             logger.error(f"Traceback: {traceback.format_exc()}")
+            if os.path.exists(image_path):
+                os.remove(image_path)
             return {
-                "image_urls": [base_url],
+                "image_urls": [],
                 "is_cut_out": False,
             }
 
