@@ -161,7 +161,7 @@ PACKAGE_CONFIG = {
         "batch_total": 30,
         "batch_remain": 30,
         "batch_sns_total": 1,
-        "batch_no_limit_sns": 1,
+        "total_link_active": 1,
     },
     "STANDARD": {
         "order_index": 2,
@@ -171,7 +171,7 @@ PACKAGE_CONFIG = {
         "batch_total": 60,
         "batch_remain": 60,
         "batch_sns_total": 7,
-        "batch_no_limit_sns": 7,
+        "total_link_active": 7,
     },
     "BUSINESS": {
         "order_index": 3,
@@ -181,7 +181,7 @@ PACKAGE_CONFIG = {
         "batch_total": 30,
         "batch_remain": 30,
         "batch_sns_total": 7,
-        "batch_no_limit_sns": 7,
+        "total_link_active": 7,
     },
 }
 

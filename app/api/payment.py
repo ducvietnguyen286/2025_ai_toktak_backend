@@ -149,7 +149,7 @@ class APIPaymentApproval(Resource):
                 "subscription_expired": subscription_expired,
                 "batch_total": package_data["batch_total"],
                 "batch_remain": package_data["batch_remain"],
-                "batch_no_limit_sns": package_data["batch_no_limit_sns"],
+                "total_link_active": package_data["total_link_active"],
             }
 
             UserService.update_user(user_id, **data_update)

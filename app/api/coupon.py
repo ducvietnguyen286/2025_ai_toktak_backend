@@ -118,7 +118,9 @@ class APIUsedCoupon(Resource):
                             current_user.batch_remain += value_coupon
 
                             # if coupon.type == "SUB_STANDARD_2":
-                        current_user.batch_no_limit_sns = 7
+                        current_user.batch_no_limit_sns = 1
+                        # tong so luong kenh co the lien ket
+                        current_user.total_link_active = 7
                         # else:
                         #     if current_user.subscription == "FREE":
                         #         current_user.batch_sns_remain = value_coupon * 2

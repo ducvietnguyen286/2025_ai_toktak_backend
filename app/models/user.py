@@ -29,6 +29,7 @@ class User(db.Model, BaseModel):
 
     batch_no_limit_sns = db.Column(db.Integer, default=0)
     batch_sns_total = db.Column(db.Integer, default=0)
+    total_link_active = db.Column(db.Integer, default=0)
     batch_sns_remain = db.Column(db.Integer, default=0)
     batch_of_month = db.Column(db.String(50), default="")
 
@@ -72,6 +73,7 @@ class User(db.Model, BaseModel):
             "level": self.level,
             "level_info": self.level_info,
             "company_name": self.company_name,
+            "batch_sns_total": self.batch_sns_total,
             "subscription_expired": (
                 self.subscription_expired.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.subscription_expired

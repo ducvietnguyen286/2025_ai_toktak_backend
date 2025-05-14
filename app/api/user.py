@@ -134,10 +134,10 @@ class APINewLink(Resource):
 
             user_links = UserService.get_user_links(current_user.id)
             total_user_links = len(user_links)
-            batch_no_limit_sns = current_user.batch_no_limit_sns
-            if total_user_links >= batch_no_limit_sns:
+            total_link_active = current_user.total_link_active
+            if total_user_links >= total_link_active:
                 return Response(
-                    message=f"최대 {batch_no_limit_sns}개의 채널만 설정할 수 있습니다.",
+                    message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
                     status=201,
                 ).to_dict()
 
@@ -994,10 +994,10 @@ class APIGetCallbackTiktok(Resource):
                 ).to_dict()
             user_links = UserService.get_user_links(int_user_id)
             total_user_links = len(user_links)
-            batch_no_limit_sns = current_user.batch_no_limit_sns
-            if total_user_links >= batch_no_limit_sns:
+            total_link_active = current_user.total_link_active
+            if total_user_links >= total_link_active:
                 return Response(
-                    message=f"최대 {batch_no_limit_sns}개의 채널만 설정할 수 있습니다.",
+                    message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
                     status=201,
                 ).to_dict()
 
@@ -1252,10 +1252,10 @@ class APIGetCallbackYoutube(Resource):
                 ).to_dict()
             user_links = UserService.get_user_links(int_user_id)
             total_user_links = len(user_links)
-            batch_no_limit_sns = current_user.batch_no_limit_sns
-            if total_user_links >= batch_no_limit_sns:
+            total_link_active = current_user.total_link_active
+            if total_user_links >= total_link_active:
                 return Response(
-                    message=f"최대 {batch_no_limit_sns}개의 채널만 설정할 수 있습니다.",
+                    message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
                     status=201,
                 ).to_dict()
 
