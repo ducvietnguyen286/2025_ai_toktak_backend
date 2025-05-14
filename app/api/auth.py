@@ -452,7 +452,7 @@ class APIUserProfile(Resource):
                     {
                         "type": "referral",
                         "code": user_referral_data['referral_code'],
-                        "expired_at": user_referral_data['created_at'],
+                        "expired_at": user_referral_data['expired_at'],
                         "created_at": user_referral_data['created_at'],
                         "coupon_name": user_referral_data['referral_code'],
                         "num_days": 30,

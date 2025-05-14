@@ -14,6 +14,7 @@ class ReferralHistory(db.Model, BaseModel):
     referred_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     days = db.Column(db.Integer, nullable=False, default=7)
 
+    expired_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -42,6 +43,11 @@ class ReferralHistory(db.Model, BaseModel):
             "referred_user_name": (
                 self.referred_user.name if self.referred_user else None
             ),
+            "expired_at": (
+                self.expired_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.expired_at
+                else None
+            ),
             "created_at": (
                 self.created_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.created_at
@@ -53,8 +59,6 @@ class ReferralHistory(db.Model, BaseModel):
                 else None
             ),
             "updated_at_view": (
-                self.updated_at.strftime("%Y-%m-%d")
-                if self.updated_at
-                else None
+                self.updated_at.strftime("%Y-%m-%d") if self.updated_at else None
             ),
         }

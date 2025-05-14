@@ -250,6 +250,7 @@ class NiceAuthService:
                             referrer_user_id, **referrer_update_data
                         )
 
+                    referral_history_detail.expired_at = datetime_now + relativedelta(days=7)
                     referral_history_detail.status = "DONE"
                     referral_history_detail.save()
 
