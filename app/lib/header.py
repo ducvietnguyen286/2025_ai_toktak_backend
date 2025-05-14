@@ -5,10 +5,6 @@ from random_user_agent.params import SoftwareName, OperatingSystem
 def generate_user_agent():
     software_names = [
         SoftwareName.CHROME.value,
-        SoftwareName.ANDROID.value,
-        SoftwareName.SAFARI.value,
-        SoftwareName.FIREFOX.value,
-        SoftwareName.EDGE.value,
     ]
     operating_systems = [
         OperatingSystem.IOS.value,
@@ -28,7 +24,6 @@ def generate_desktop_user_agent():
         SoftwareName.CHROME.value,
         SoftwareName.SAFARI.value,
         SoftwareName.FIREFOX.value,
-        SoftwareName.EDGE.value,
     ]
     operating_systems = [
         OperatingSystem.WINDOWS.value,
