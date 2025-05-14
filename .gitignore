@@ -49,3 +49,5 @@ paddleocr-venv
 entry-point.sh
 paddleocr.sh
 run_with_watchdog.sh
+run_sam.sh
+sam-venv
