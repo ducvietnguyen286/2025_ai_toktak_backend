@@ -996,10 +996,10 @@ class APIGetCallbackTiktok(Resource):
             total_user_links = len(user_links)
             total_link_active = current_user.total_link_active
             if total_user_links >= total_link_active:
-                return Response(
-                    message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
-                    status=201,
-                ).to_dict()
+                return redirect(
+                    PAGE_PROFILE
+                    + f"?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=최대 {total_link_active}개의 채널만 설정할 수 있습니다."
+                )
 
             user_link = UserService.find_user_link_exist(int_link_id, int_user_id)
 
@@ -1254,10 +1254,10 @@ class APIGetCallbackYoutube(Resource):
             total_user_links = len(user_links)
             total_link_active = current_user.total_link_active
             if total_user_links >= total_link_active:
-                return Response(
-                    message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
-                    status=201,
-                ).to_dict()
+                return redirect(
+                    PAGE_PROFILE
+                    + f"?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=최대 {total_link_active}개의 채널만 설정할 수 있습니다."
+                )
 
             if not client:
                 NotificationServices.create_notification(
