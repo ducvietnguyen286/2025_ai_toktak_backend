@@ -82,6 +82,18 @@ class APISocialLogin(Resource):
         person_id = args.get("person_id", "")
         referral_code = args.get("referral_code", "")
 
+        if referral_code != "":
+            user_referal_detail = UserService.find_user_by_referral_code(referral_code)
+            if not user_referal_detail:
+                return Response(
+                    message="입력하신 URL을 다시 한 번 확인해 주세요. 😊",
+                    data={
+                        "error_message_title": "⚠️ 초대하기 URL에 문제가 있어요!",
+                        "error_message": "입력하신 URL을 다시 한 번 확인해 주세요. 😊",
+                    },
+                    code=202,
+                ).to_dict()
+
         user = AuthService.social_login(
             provider=provider,
             access_token=access_token,
@@ -93,7 +105,8 @@ class APISocialLogin(Resource):
             return Response(
                 message="시스템에 로그인해주세요.",
                 data={
-                    "error_message": "🚫 탈퇴하신 계정은 30일간 재가입하실 수 없습니다."
+                    "error_message_title": "⚠️ 현재는 재가입할 수 없어요!",
+                    "error_message": "🚫 탈퇴하신 계정은 30일간 재가입하실 수 없습니다.",
                 },
                 code=201,
             ).to_dict()
@@ -451,11 +464,11 @@ class APIUserProfile(Resource):
                 result_coupons.append(
                     {
                         "type": "referral",
-                        "code": user_referral_data['referral_code'],
-                        "expired_at": user_referral_data['expired_at'],
-                        "created_at": user_referral_data['created_at'],
-                        "updated_at": user_referral_data['updated_at'],
-                        "coupon_name": user_referral_data['referral_code'],
+                        "code": user_referral_data["referral_code"],
+                        "expired_at": user_referral_data["expired_at"],
+                        "created_at": user_referral_data["created_at"],
+                        "updated_at": user_referral_data["updated_at"],
+                        "coupon_name": user_referral_data["referral_code"],
                         "num_days": 30,
                         "value": 30,
                         "remain": 30,

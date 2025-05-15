@@ -22,7 +22,7 @@ class UserService:
         user_detail = User(*args, **kwargs)
         user_detail.save()
         return user_detail
-    
+
     @staticmethod
     def get_user_coupons(user_id):
         list_coupons = (
@@ -37,7 +37,7 @@ class UserService:
             coupon_dict = coupon.coupon._to_json()
             coupon_code = coupon._to_json()
             coupon_code["coupon_name"] = coupon_dict["name"]
-            coupon_code["type"] = 'coupon'
+            coupon_code["type"] = "coupon"
             coupons.append(coupon_code)
 
         first_coupon = (
@@ -328,14 +328,13 @@ class UserService:
         user = User.query.filter(User.phone == mobileno, User.is_auth_nice == 1).first()
 
         return user
-    
+
     @staticmethod
     def auto_extend_free_subscriptions():
         now = datetime.now()
 
         expired_users = User.query.filter(
-            User.subscription == 'FREE',
-            User.subscription_expired <= now
+            User.subscription == "FREE", User.subscription_expired <= now
         ).all()
 
         extended = 0
@@ -349,4 +348,7 @@ class UserService:
         db.session.commit()
         return extended
 
-    
+    @staticmethod
+    def find_user_by_referral_code(referral_code):
+        user = User.query.filter(User.referral_code == referral_code).first()
+        return user
