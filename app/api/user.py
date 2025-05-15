@@ -1861,6 +1861,7 @@ class APICheckReferCode(Resource):
     def get(self):
         current_user = AuthService.get_current_identity()
         login_user_id = current_user.id if current_user else None
+        is_auth_nice = current_user.is_auth_nice if current_user else 0
         referral_code = request.args.get("referral_code")
 
         user_detail = UserService.find_user_by_referral_code(referral_code)
@@ -1883,6 +1884,17 @@ class APICheckReferCode(Resource):
                         "referral_code": referral_code,
                     },
                     message="Same user",
+                ).to_dict()
+
+            if is_auth_nice == 1:
+                return Response(
+                    code=203,
+                    data={
+                        "error_message_title": "🔔 이미 가입된 회원입니다!",
+                        "error_message": "초대 수락은 신규 가입 계정만 가능해요. 😊",
+                        "referral_code": referral_code,
+                    },
+                    message="User Is Nice Authentication",
                 ).to_dict()
 
         return Response(
