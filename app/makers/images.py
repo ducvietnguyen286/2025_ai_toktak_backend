@@ -357,7 +357,12 @@ class ImageMaker:
 
             image_cv = cv2.imread(image_path)
             if image_cv is None:
-                return None
+                if os.path.exists(image_path):
+                    os.remove(image_path)
+                return {
+                    "image_urls": [],
+                    "is_cut_out": False,
+                }
 
             cropped_images = []
             needed_length = 5
@@ -460,7 +465,10 @@ class ImageMaker:
                 }
                 # return cropped_images
             else:
-                return None
+                return {
+                    "image_urls": [],
+                    "is_cut_out": False,
+                }
 
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
@@ -605,7 +613,10 @@ class ImageMaker:
                     "is_cut_out": True,
                 }
             else:
-                return None
+                return {
+                    "image_urls": [],
+                    "is_cut_out": False,
+                }
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
             logger.error(f"Error processing {image_path}: {e}")
