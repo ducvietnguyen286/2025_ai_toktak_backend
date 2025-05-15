@@ -77,7 +77,7 @@ class ReferralService:
         return {
             "referral_histories": result,
             "total": total,
-            "total_days": total_days,
+            "total_days": min(total_days, 90),
             "max_days": 90,
         }
 
@@ -148,7 +148,6 @@ class ReferralService:
             return 0
         return 1
 
-
     @staticmethod
     def find_all_related_referrals(user_id):
         return ReferralHistory.query.filter(
@@ -156,5 +155,5 @@ class ReferralService:
                 ReferralHistory.referrer_user_id == user_id,
                 ReferralHistory.referred_user_id == user_id,
             ),
-            ReferralHistory.status == "DONE"
+            ReferralHistory.status == "DONE",
         ).all()
