@@ -131,7 +131,7 @@ class APIUsedCoupon(Resource):
                         #         current_user.batch_sns_remain += value_coupon * 2
                         #         current_user.batch_sns_total += value_coupon * 2
 
-                        current_user.subscription = "STANDARD"
+                        current_user.subscription = "COUPON_STANDARD"
                         expired_at = datetime.datetime.now() + datetime.timedelta(
                             days=coupon_code.num_days
                         )

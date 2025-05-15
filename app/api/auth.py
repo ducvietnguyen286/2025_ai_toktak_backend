@@ -228,48 +228,19 @@ class APIMe(Resource):
                     level_info=json.dumps(level_info),
                 )
 
-            current_datetime = datetime.now()
-            if (
-                user_login.subscription_expired
-                and user_login.subscription_expired <= current_datetime
-            ):
-                user_login = AuthService.update(
-                    user_login.id,
-                    subscription="FREE",
-                    subscription_expired=None,
-                    batch_total=const.LIMIT_BATCH["FREE"],
-                    batch_remain=const.LIMIT_BATCH["FREE"],
-                    batch_sns_total=0,
-                    batch_sns_remain=0,
-                    batch_no_limit_sns=0,
-                )
-
             subscription_name = user_login.subscription
             if user_login.subscription == "FREE":
                 subscription_name = "무료 체험"
-            elif user_login.subscription == "STANDARD":
+            elif user_login.subscription == "COUPON_STANDARD":
                 subscription_name = "기업형 스탠다드 플랜"
-
-            first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
-
-            start_used = None
-            if first_coupon:
-                start_used = first_coupon.get("used_at")
-            elif latest_coupon:
-                start_used = latest_coupon.get("used_at")
-
-            last_used = latest_coupon.get("expired_at") if latest_coupon else None
-
-            used_date_range = ""
-            if start_used and last_used:
-                start_used = datetime.strptime(start_used, "%Y-%m-%dT%H:%M:%SZ")
-                last_used = datetime.strptime(last_used, "%Y-%m-%dT%H:%M:%SZ")
-                used_date_range = f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
+            else:
+                package_data = const.PACKAGE_CONFIG.get(subscription_name)
+                if not package_data:
+                    subscription_name = "무료 체험"
+                subscription_name = package_data["pack_name"]
 
             user_dict = user_login._to_json()
             user_dict["subscription_name"] = subscription_name
-            user_dict["latest_coupon"] = latest_coupon
-            user_dict["used_date_range"] = used_date_range
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)
 
@@ -420,67 +391,8 @@ class APIUserProfile(Resource):
                     level=level,
                     level_info=json.dumps(level_info),
                 )
-            current_datetime = datetime.now()
-            if (
-                user.subscription_expired
-                and user.subscription_expired <= current_datetime
-            ):
-                user = AuthService.update(
-                    user.id,
-                    subscription="FREE",
-                    subscription_expired=None,
-                    batch_total=const.LIMIT_BATCH["FREE"],
-                    batch_remain=const.LIMIT_BATCH["FREE"],
-                    batch_sns_total=0,
-                    batch_sns_remain=0,
-                    batch_no_limit_sns=0,
-                )
-
-            batch_remain = user.batch_remain
-
-            latest_coupon, first_coupon, coupons = UserService.get_user_coupons(user.id)
-            subscription_name = user.subscription
-            if user.subscription == "FREE":
-                subscription_name = "무료 체험"
-            elif user.subscription == "STANDARD":
-                subscription_name = "기업형 스탠다드 플랜"
-
-            result_coupons = []
-
-            for coupon in coupons:
-                coupon_value = coupon.get("value", 0)
-                coupon_remain = 0
-                if batch_remain >= coupon_value:
-                    coupon_remain = coupon_value
-                    batch_remain = batch_remain - coupon_value
-                else:
-                    coupon_remain = batch_remain
-                    batch_remain = 0
-
-                if coupon_remain < 0:
-                    coupon_remain = 0
-                coupon["remain"] = coupon_remain
-                result_coupons.append(coupon)
             user_histories = UserService.get_all_user_history_by_user_id(user.id)
-            start_used = None
-            if first_coupon:
-                start_used = first_coupon.get("used_at")
-            elif latest_coupon:
-                start_used = latest_coupon.get("used_at")
-
-            last_used = latest_coupon.get("expired_at") if latest_coupon else None
-
-            used_date_range = ""
-            if start_used and last_used:
-                start_used = datetime.strptime(start_used, "%Y-%m-%dT%H:%M:%SZ")
-                last_used = datetime.strptime(last_used, "%Y-%m-%dT%H:%M:%SZ")
-                used_date_range = f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
-
             user_dict = user._to_json()
-            user_dict["subscription_name"] = subscription_name
-            user_dict["coupons"] = result_coupons
-            user_dict["latest_coupon"] = latest_coupon
-            user_dict["used_date_range"] = used_date_range
             user_dict["user_histories"] = user_histories
 
             user_dict.pop("auth_nice_result", None)

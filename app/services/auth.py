@@ -151,6 +151,7 @@ class AuthService:
         access_token,
     ):
         WEB_CLIENT_ID = os.environ.get("AUTH_GOOGLE_CLIENT_ID")
+        time.sleep(1)
         idinfo = id_token.verify_oauth2_token(
             access_token, google_requests.Request(), WEB_CLIENT_ID
         )
