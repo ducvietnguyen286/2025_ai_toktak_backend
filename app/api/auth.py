@@ -227,6 +227,23 @@ class APIMe(Resource):
                     level=level,
                     level_info=json.dumps(level_info),
                 )
+                
+            current_datetime = datetime.now()
+            if (
+                user_login.subscription_expired
+                and user_login.subscription_expired <= current_datetime
+            ):
+                user_login = AuthService.update(
+                    user_login.id,
+                    subscription="FREE",
+                    subscription_expired=None,
+                    batch_total=const.LIMIT_BATCH["FREE"],
+                    batch_remain=const.LIMIT_BATCH["FREE"],
+                    batch_sns_total=0,
+                    batch_sns_remain=0,
+                    batch_no_limit_sns=0,
+                )
+                
 
             subscription_name = user_login.subscription
             if user_login.subscription == "FREE":
@@ -367,11 +384,11 @@ class APIUserProfile(Resource):
     @jwt_required()
     def get(self):
         try:
-            user = AuthService.get_current_identity()
+            user_login = AuthService.get_current_identity()
             if (
-                user
-                and user.deleted_at
-                and (datetime.now() - user.deleted_at).days <= 30
+                user_login
+                and user_login.deleted_at
+                and (datetime.now() - user_login.deleted_at).days <= 30
             ):
                 return Response(
                     message="시스템에 로그인해주세요.",
@@ -380,19 +397,35 @@ class APIUserProfile(Resource):
                     },
                     code=201,
                 ).to_dict()
-            level = user.level
-            total_link = UserService.get_user_links(user.id)
+            current_datetime = datetime.now()
+            if (
+                user_login.subscription_expired
+                and user_login.subscription_expired <= current_datetime
+            ):
+                user_login = AuthService.update(
+                    user_login.id,
+                    subscription="FREE",
+                    subscription_expired=None,
+                    batch_total=const.LIMIT_BATCH["FREE"],
+                    batch_remain=const.LIMIT_BATCH["FREE"],
+                    batch_sns_total=0,
+                    batch_sns_remain=0,
+                    batch_no_limit_sns=0,
+                )
+                
+            level = user_login.level
+            total_link = UserService.get_user_links(user_login.id)
 
             if level != len(total_link):
                 level = len(total_link)
                 level_info = get_level_images(level)
-                user = AuthService.update(
-                    user.id,
+                user_login = AuthService.update(
+                    user_login.id,
                     level=level,
                     level_info=json.dumps(level_info),
                 )
-            user_histories = UserService.get_all_user_history_by_user_id(user.id)
-            user_dict = user._to_json()
+            user_histories = UserService.get_all_user_history_by_user_id(user_login.id)
+            user_dict = user_login._to_json()
             user_dict["user_histories"] = user_histories
 
             user_dict.pop("auth_nice_result", None)
