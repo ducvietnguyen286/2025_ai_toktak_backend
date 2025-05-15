@@ -461,27 +461,7 @@ class APIUserProfile(Resource):
                     coupon_remain = 0
                 coupon["remain"] = coupon_remain
                 result_coupons.append(coupon)
-
-            user_referral_histories = ReferralService.find_all_related_referrals(
-                user.id
-            )
-
-            for user_referral_history_detail in user_referral_histories:
-                user_referral_data = user_referral_history_detail._to_json()
-                result_coupons.append(
-                    {
-                        "type": "referral",
-                        "code": user_referral_data["referral_code"],
-                        "expired_at": user_referral_data["expired_at"],
-                        "created_at": user_referral_data["created_at"],
-                        "updated_at": user_referral_data["updated_at"],
-                        "coupon_name": user_referral_data["referral_code"],
-                        "num_days": 30,
-                        "value": 30,
-                        "remain": 30,
-                    }
-                )
-
+            user_histories = UserService.get_all_user_history_by_user_id(user.id)
             start_used = None
             if first_coupon:
                 start_used = first_coupon.get("used_at")
@@ -501,6 +481,7 @@ class APIUserProfile(Resource):
             user_dict["coupons"] = result_coupons
             user_dict["latest_coupon"] = latest_coupon
             user_dict["used_date_range"] = used_date_range
+            user_dict["user_histories"] = user_histories
 
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)

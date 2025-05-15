@@ -233,6 +233,20 @@ class NiceAuthService:
                         notification_type="referral",
                     )
 
+                    # Ghi Log History
+                    data_user_history = {
+                        "user_id": referred_user_id,
+                        "type": "referral",
+                        "object_id": referral_history_detail.id,
+                        "object_start_time": datetime_now,
+                        "object_end_time": expire_date,
+                        "title": basic_package["pack_name"],
+                        "description": basic_package["pack_description"],
+                        "value": basic_package["batch_total"],
+                        "num_days": basic_package["batch_remain"],
+                    }
+                    UserService.create_user_history(**data_user_history)
+
                     # -------------------------------
                     # 3. Cập nhật cho người giới thiệu
                     # -------------------------------
@@ -266,6 +280,19 @@ class NiceAuthService:
                             title=message,
                             notification_type="referral",
                         )
+
+                        data_user_history = {
+                            "user_id": referrer_user_id,
+                            "type": "referral",
+                            "object_id": referral_history_detail.id,
+                            "object_start_time": datetime_now,
+                            "object_end_time": expire_date,
+                            "title": basic_package["pack_name"],
+                            "description": basic_package["pack_description"],
+                            "value": basic_package["batch_total"],
+                            "num_days": basic_package["batch_remain"],
+                        }
+                        UserService.create_user_history(**data_user_history)
 
                     referral_history_detail.expired_at = datetime_now + relativedelta(
                         days=7

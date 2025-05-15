@@ -153,6 +153,18 @@ class APIPaymentApproval(Resource):
             }
 
             UserService.update_user(user_id, **data_update)
+            data_user_history = {
+                "user_id": user_id,
+                "type": "payment",
+                "object_id": payment.id,
+                "object_start_time": payment.start_date,
+                "object_end_time": subscription_expired,
+                "title": package_data["pack_name"],
+                "description": package_data["pack_description"],
+                "value": package_data["batch_total"],
+                "num_days": package_data["batch_remain"],
+            }
+            UserService.create_user_history(**data_user_history)
 
         message = "승인이 완료되었습니다."
         return Response(

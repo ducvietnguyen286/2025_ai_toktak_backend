@@ -14,6 +14,8 @@ from sqlalchemy import or_
 import const
 from dateutil.relativedelta import relativedelta
 
+from app.models.user_history import UserHistory
+
 
 class UserService:
 
@@ -352,3 +354,18 @@ class UserService:
     def find_user_by_referral_code(referral_code):
         user = User.query.filter(User.referral_code == referral_code).first()
         return user
+
+    @staticmethod
+    def create_user_history(*args, **kwargs):
+        user_history_detail = UserHistory(*args, **kwargs)
+        user_history_detail.save()
+        return user_history_detail
+
+    @staticmethod
+    def get_all_user_history_by_user_id(user_id):
+        user_histories = (
+            UserHistory.query.filter(UserHistory.user_id == user_id)
+            .order_by(UserHistory.id.desc())
+            .all()
+        )
+        return [user_history._to_json() for user_history in user_histories]

@@ -9,6 +9,7 @@ from app.lib.response import Response
 
 from app.services.auth import AuthService
 from app.services.coupon import CouponService
+from app.services.user import UserService
 
 ns = Namespace(name="coupon", description="User API")
 from app.extensions import db, redis_client
@@ -160,6 +161,21 @@ class APIUsedCoupon(Resource):
                     current_user = session.merge(current_user)
 
                     result = coupon_code._to_json()
+
+                    # Ghi Log History
+                    data_user_history = {
+                        "user_id": current_user_id,
+                        "type": "USED_COUPON",
+                        "object_id": coupon_code.id,
+                        "object_start_time": coupon_code.used_at,
+                        "object_end_time": coupon_code.expired_at,
+                        "title": coupon_code.coupon.name,
+                        "description": coupon_code.code,
+                        "value": coupon_code.value,
+                        "num_days": coupon_code.num_days,
+                    }
+
+                    UserService.create_user_history(**data_user_history)
 
             except Exception as e:
                 traceback.print_exc()
