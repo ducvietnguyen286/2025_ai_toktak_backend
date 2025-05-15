@@ -1853,3 +1853,41 @@ class APICheckActiveLinkSns(Resource):
             },
             message="You can add active new link",
         ).to_dict()
+
+
+@ns.route("/check_refer_code")
+class APICheckReferCode(Resource):
+    @jwt_required(optional=True)
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        login_user_id = current_user.id if current_user else None
+        referral_code = request.args.get("referral_code")
+
+        user_detail = UserService.find_user_by_referral_code(referral_code)
+        if not user_detail:
+            return Response(
+                code=201,
+                data={
+                    "error_message_title": "⚠️ 초대하기 URL에 문제가 있어요!",
+                    "error_message": "입력하신 URL을 다시 한 번 확인해 주세요. 😊",
+                    "referral_code": referral_code,
+                },
+                message="Not found user",
+            ).to_dict()
+        else:
+            refer_id = user_detail.id
+            if refer_id == login_user_id:
+                return Response(
+                    code=202,
+                    data={
+                        "referral_code": referral_code,
+                    },
+                    message="Same user",
+                ).to_dict()
+
+        return Response(
+            data={
+                "referral_code": referral_code,
+            },
+            message="You can add active new link",
+        ).to_dict()
