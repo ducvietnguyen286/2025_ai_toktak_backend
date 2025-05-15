@@ -439,28 +439,30 @@ class APIBatchMakeImage(Resource):
                     )
 
                 description_images = []
-                cutout_images = []
+                # cutout_images = []
                 cutout_by_sam_images = []
 
                 for image in images:
                     has_google_cut_out = False
                     has_sam_cut_out = False
-                    cuted_image = ImageMaker.cut_out_long_height_images_by_google(
-                        image, batch_id=batch_id
-                    )
-                    if cuted_image and "is_cut_out" not in cuted_image:
-                        continue
-                    elif cuted_image:
-                        is_cut_out = cuted_image.get("is_cut_out", False)
-                        image_urls = cuted_image.get("image_urls", [])
-                        if is_cut_out:
-                            cutout_images.extend(image_urls)
-                            has_google_cut_out = True
+                    # cuted_image = ImageMaker.cut_out_long_height_images_by_google(
+                    #     image, batch_id=batch_id
+                    # )
+                    # if not cuted_image or (cuted_image and "is_cut_out" not in cuted_image):
+                    #     continue
+                    # elif cuted_image:
+                    #     is_cut_out = cuted_image.get("is_cut_out", False)
+                    #     image_urls = cuted_image.get("image_urls", [])
+                    #     if is_cut_out:
+                    #         cutout_images.extend(image_urls)
+                    #         has_google_cut_out = True
 
                     sam_cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
                     )
-                    if sam_cuted_image and "is_cut_out" not in sam_cuted_image:
+                    if not sam_cuted_image or (
+                        sam_cuted_image and "is_cut_out" not in sam_cuted_image
+                    ):
                         continue
                     elif sam_cuted_image:
                         is_sam_cut_out = sam_cuted_image.get("is_cut_out", False)
@@ -473,14 +475,14 @@ class APIBatchMakeImage(Resource):
                         image_url = ImageMaker.get_image_url_from_path(image)
                         description_images.append(image_url)
                 merge_cleared_images = []
-                if len(cutout_images) > 0:
-                    merge_cleared_images.extend(cutout_images)
+                # if len(cutout_images) > 0:
+                #     merge_cleared_images.extend(cutout_images)
                 if len(cutout_by_sam_images) > 0:
                     merge_cleared_images.extend(cutout_by_sam_images)
                 if len(description_images) > 0:
-                    merge_cleared_images = description_images
+                    merge_cleared_images.extend(description_images)
                 content["cleared_images"] = merge_cleared_images
-                content["cutout_images"] = cutout_images
+                # content["cutout_images"] = cutout_images
                 content["sam_cutout_images"] = cutout_by_sam_images
                 content["description_images"] = description_images
                 data_update_batch = {
