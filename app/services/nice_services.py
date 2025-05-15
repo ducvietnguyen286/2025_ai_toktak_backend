@@ -12,7 +12,7 @@ import urllib.parse
 import traceback
 
 from dateutil.relativedelta import relativedelta
-from const import PACKAGE_CONFIG
+from const import PACKAGE_CONFIG, MAX_REFERRAL_USAGE
 
 
 class NiceAuthService:
@@ -209,6 +209,13 @@ class NiceAuthService:
                 )
                 # nếu có giới thiệu
                 if referral_history_detail:
+                    #kiểm tra tối đa số lần
+                    referrer_user_id = referral_history_detail.referrer_user_id
+                    usage_count = ReferralService.find_by_referred_user_id_done(referrer_user_id)
+                    if usage_count >= MAX_REFERRAL_USAGE:
+                        return {"code": 200, "message": "인증 성공", "data": result_item}
+        
+        
                     # người được giới thiệu =  user_id hiện tại
                     referred_user_id = referral_history_detail.referred_user_id
                     # Gia hạn 7 ngày cho người được mời

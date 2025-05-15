@@ -6,6 +6,7 @@ from app.extensions import db
 from sqlalchemy import and_, func, or_
 from app.lib.string import mask_string_with_x
 from app.services.user import UserService
+from const import MAX_REFERRAL_USAGE
 
 
 class ReferralService:
@@ -18,14 +19,22 @@ class ReferralService:
         return referral_history_detail
 
     @staticmethod
+    def find_by_referred_user_id_done(referred_user_id) -> int:
+        total = ReferralHistory.query.filter(
+            ReferralHistory.referred_user_id == referred_user_id,
+            ReferralHistory.status == "DONE",
+        ).count()
+        return total
+
+    @staticmethod
     def use_referral_code(referral_code, login_user) -> dict:
         user = User.query.filter_by(referral_code=referral_code).first()
         if not user:
             return False
 
-        usage_count = ReferralHistory.query.filter_by(referrer_user_id=user.id).count()
-
-        if usage_count >= const.MAX_REFERRAL_USAGE:
+        referrer_user_id = user.id
+        usage_count = ReferralService.find_by_referred_user_id_done(referrer_user_id)
+        if usage_count >= MAX_REFERRAL_USAGE:
             return False
 
         # Lưu lịch sử
