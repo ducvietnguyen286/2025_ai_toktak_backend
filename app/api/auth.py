@@ -90,6 +90,7 @@ class APISocialLogin(Resource):
                     data={
                         "error_message_title": "⚠️ 초대하기 URL에 문제가 있어요!",
                         "error_message": "입력하신 URL을 다시 한 번 확인해 주세요. 😊",
+                        "referral_code": referral_code,
                     },
                     code=202,
                 ).to_dict()
