@@ -219,9 +219,16 @@ class NiceAuthService:
                     referred_update_data = {
                         "subscription_expired": expire_date,
                         "subscription": "BASIC",
-                        "batch_total": basic_package["batch_total"],
-                        "batch_remain": basic_package["batch_remain"],
-                        "total_link_active": basic_package["total_link_active"],
+                        "batch_total": min(
+                            basic_package["batch_total"], user_data.batch_total
+                        ),
+                        "batch_remain": min(
+                            basic_package["batch_remain"], user_data.batch_remain
+                        ),
+                        "total_link_active": max(
+                            basic_package["total_link_active"],
+                            user_data.total_link_active,
+                        ),
                     }
 
                     UserService.update_user(referred_user_id, **referred_update_data)
@@ -266,9 +273,18 @@ class NiceAuthService:
                         referrer_update_data = {
                             "subscription_expired": subscription_expired,
                             "subscription": "BASIC",
-                            "batch_total": basic_package["batch_total"],
-                            "batch_remain": basic_package["batch_remain"],
-                            "total_link_active": basic_package["total_link_active"],
+                            "batch_total": min(
+                                basic_package["batch_total"],
+                                referrer_user_data.batch_total,
+                            ),
+                            "batch_remain": min(
+                                basic_package["batch_remain"],
+                                referrer_user_data.batch_remain,
+                            ),
+                            "total_link_active": max(
+                                basic_package["total_link_active"],
+                                referrer_user_data.total_link_active,
+                            ),
                         }
                         UserService.update_user(
                             referrer_user_id, **referrer_update_data
