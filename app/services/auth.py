@@ -61,6 +61,8 @@ class AuthService:
         person_id="",
         referral_code="",
     ):
+        new_user_referral_code = False
+        
         user_info = None
         if provider == "FACEBOOK":
             user_info = AuthService.get_facebook_user_info(access_token, person_id)
@@ -125,6 +127,7 @@ class AuthService:
 
                 if referral_code != "":
                     ReferralService.use_referral_code(referral_code, user)
+                    new_user_referral_code = True
 
             social_account = SocialAccount(
                 user_id=user.id,
@@ -133,7 +136,8 @@ class AuthService:
                 access_token=access_token,
             )
             social_account.save()
-        return user
+        return user , new_user_referral_code
+    
 
     @staticmethod
     def get_facebook_user_info(access_token, person_id):

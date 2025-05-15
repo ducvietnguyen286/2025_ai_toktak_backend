@@ -1155,7 +1155,7 @@ class APIYoutubeLogin(Resource):
 
             if not client:
                 PAGE_PROFILE = (
-                    os.environ.get("TIKTOK_REDIRECT_TO_PROFILE")
+                    os.environ.get("FACEBOOK_APP_REDIRECT_TO_PROFILE")
                     or "https://toktak.ai/profile"
                 )
 
@@ -1219,7 +1219,7 @@ class APIGetCallbackYoutube(Resource):
             code = args.get("code")
             state = args.get("state")
             PAGE_PROFILE = (
-                os.environ.get("TIKTOK_REDIRECT_TO_PROFILE")
+                os.environ.get("YOUTUBE_APP_REDIRECT_TO_PROFILE")
                 or "https://toktak.ai/profile"
             )
 

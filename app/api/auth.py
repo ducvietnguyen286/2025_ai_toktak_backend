@@ -94,7 +94,7 @@ class APISocialLogin(Resource):
                     code=202,
                 ).to_dict()
 
-        user = AuthService.social_login(
+        user, new_user_referral_code = AuthService.social_login(
             provider=provider,
             access_token=access_token,
             person_id=person_id,
@@ -118,6 +118,12 @@ class APISocialLogin(Resource):
                 "expires_in": 7200,
             }
         )
+        if new_user_referral_code:
+            return Response(
+                data=tokens,
+                code=203,
+                message="Đăng nhập bằng mạng xã hội thành công",
+            ).to_dict()
 
         return Response(
             data=tokens,
