@@ -117,14 +117,9 @@ class APISocialLogin(Resource):
             {
                 "type": "Bearer",
                 "expires_in": 7200,
+                "new_user_referral_code": new_user_referral_code,
             }
-        )
-        if new_user_referral_code:
-            return Response(
-                data=tokens,
-                code=203,
-                message="Đăng nhập bằng mạng xã hội thành công",
-            ).to_dict()
+        ) 
 
         return Response(
             data=tokens,

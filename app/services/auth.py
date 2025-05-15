@@ -61,7 +61,7 @@ class AuthService:
         person_id="",
         referral_code="",
     ):
-        new_user_referral_code = False
+        new_user_referral_code = 0
 
         user_info = None
         if provider == "FACEBOOK":
@@ -124,7 +124,7 @@ class AuthService:
 
                 if referral_code != "":
                     ReferralService.use_referral_code(referral_code, user)
-                    new_user_referral_code = True
+                    new_user_referral_code = 1
 
             social_account = SocialAccount(
                 user_id=user.id,
@@ -150,7 +150,9 @@ class AuthService:
         access_token,
     ):
         WEB_CLIENT_ID = os.environ.get("AUTH_GOOGLE_CLIENT_ID")
-        time.sleep(1)
+        IS_LOCAL = os.environ.get("FLASK_CONFIG") == "develop"
+        if IS_LOCAL:
+            time.sleep(3)
         idinfo = id_token.verify_oauth2_token(
             access_token, google_requests.Request(), WEB_CLIENT_ID
         )
