@@ -179,6 +179,16 @@ class UserService:
         return [user_link._to_json() for user_link in user_links]
 
     @staticmethod
+    def get_total_link(user_id, with_out_link=const.NAVER_LINK_BLOG):
+        count = (
+            UserLink.query.where(UserLink.status == 1)
+            .where(UserLink.user_id == user_id)
+            .where(UserLink.link_id != with_out_link)
+            .count()
+        )
+        return count
+
+    @staticmethod
     def get_original_user_links(user_id=0):
         user_links = (
             UserLink.query.where(UserLink.status == 1)

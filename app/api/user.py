@@ -132,8 +132,7 @@ class APINewLink(Resource):
                     status=400,
                 ).to_dict()
 
-            user_links = UserService.get_user_links(current_user.id)
-            total_user_links = len(user_links)
+            total_user_links = UserService.get_total_link(current_user.id)
             total_link_active = current_user.total_link_active
             if total_user_links >= total_link_active:
                 return Response(
@@ -992,8 +991,7 @@ class APIGetCallbackTiktok(Resource):
                     message="로그인해주세요.",
                     status=201,
                 ).to_dict()
-            user_links = UserService.get_user_links(int_user_id)
-            total_user_links = len(user_links)
+            total_user_links = UserService.get_total_link(current_user.id)
             total_link_active = current_user.total_link_active
             if total_user_links >= total_link_active:
                 return redirect(
@@ -1250,8 +1248,7 @@ class APIGetCallbackYoutube(Resource):
                     message="로그인해주세요.",
                     status=201,
                 ).to_dict()
-            user_links = UserService.get_user_links(int_user_id)
-            total_user_links = len(user_links)
+            total_user_links = UserService.get_total_link(current_user.id)
             total_link_active = current_user.total_link_active
             if total_user_links >= total_link_active:
                 return redirect(
@@ -1840,9 +1837,7 @@ class APICheckActiveLinkSns(Resource):
     @jwt_required()
     def get(self):
         current_user = AuthService.get_current_identity()
-        user_id = current_user.id
-        user_links = UserService.get_user_links(user_id)
-        total_user_links = len(user_links)
+        total_user_links = UserService.get_total_link(current_user.id)
         total_link_active = current_user.total_link_active
         if total_user_links >= total_link_active:
             return Response(
