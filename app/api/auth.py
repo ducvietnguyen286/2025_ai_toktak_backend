@@ -227,23 +227,14 @@ class APIMe(Resource):
                     level=level,
                     level_info=json.dumps(level_info),
                 )
-                
+
             current_datetime = datetime.now()
             if (
                 user_login.subscription_expired
                 and user_login.subscription_expired <= current_datetime
             ):
-                user_login = AuthService.update(
-                    user_login.id,
-                    subscription="FREE",
-                    subscription_expired=None,
-                    batch_total=const.LIMIT_BATCH["FREE"],
-                    batch_remain=const.LIMIT_BATCH["FREE"],
-                    batch_sns_total=0,
-                    batch_sns_remain=0,
-                    batch_no_limit_sns=0,
-                )
-                
+
+                user_login = AuthService.reset_free_user(user_login.id)
 
             subscription_name = user_login.subscription
             if user_login.subscription == "FREE":
@@ -402,17 +393,8 @@ class APIUserProfile(Resource):
                 user_login.subscription_expired
                 and user_login.subscription_expired <= current_datetime
             ):
-                user_login = AuthService.update(
-                    user_login.id,
-                    subscription="FREE",
-                    subscription_expired=None,
-                    batch_total=const.LIMIT_BATCH["FREE"],
-                    batch_remain=const.LIMIT_BATCH["FREE"],
-                    batch_sns_total=0,
-                    batch_sns_remain=0,
-                    batch_no_limit_sns=0,
-                )
-                
+                user_login = AuthService.reset_free_user(user_login.id)
+
             level = user_login.level
             total_link = UserService.get_user_links(user_login.id)
 

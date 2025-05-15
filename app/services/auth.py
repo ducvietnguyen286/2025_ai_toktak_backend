@@ -62,7 +62,7 @@ class AuthService:
         referral_code="",
     ):
         new_user_referral_code = False
-        
+
         user_info = None
         if provider == "FACEBOOK":
             user_info = AuthService.get_facebook_user_info(access_token, person_id)
@@ -133,8 +133,7 @@ class AuthService:
                 access_token=access_token,
             )
             social_account.save()
-        return user , new_user_referral_code
-    
+        return user, new_user_referral_code
 
     @staticmethod
     def get_facebook_user_info(access_token, person_id):
@@ -235,3 +234,18 @@ class AuthService:
         new_user = UserService.update_user(user.id, password=random_string)
 
         return new_user
+
+    @staticmethod
+    def reset_free_user(user_id):
+        user_detail = AuthService.update(
+            user_id,
+            subscription="FREE",
+            subscription_expired=None,
+            batch_total=const.LIMIT_BATCH["FREE"],
+            batch_remain=const.LIMIT_BATCH["FREE"],
+            batch_sns_total=0,
+            batch_sns_remain=0,
+            batch_no_limit_sns=0,
+            total_link_active=0,
+        )
+        return user_detail
