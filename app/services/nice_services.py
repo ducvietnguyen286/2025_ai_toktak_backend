@@ -3,6 +3,7 @@ import subprocess
 import os
 from app.services.user import UserService
 from app.services.referral_service import ReferralService
+from app.services.notification import NotificationServices
 import re
 import base64
 from datetime import datetime
@@ -212,9 +213,11 @@ class NiceAuthService:
                     referred_user_id = referral_history_detail.referred_user_id
                     # Gia hạn 7 ngày cho người được mời
                     basic_package = PACKAGE_CONFIG["BASIC"]
+                    reward_duration = relativedelta(days=7)
 
+                    expire_date = datetime_now + reward_duration
                     referred_update_data = {
-                        "subscription_expired": datetime_now + relativedelta(days=7),
+                        "subscription_expired": expire_date,
                         "subscription": "BASIC",
                         "batch_total": basic_package["batch_total"],
                         "batch_remain": basic_package["batch_remain"],
@@ -222,6 +225,13 @@ class NiceAuthService:
                     }
 
                     UserService.update_user(referred_user_id, **referred_update_data)
+
+                    message = f"링크 초대로 가입이 완료되었습니다. 계정이 BASIC 요금제로 업그레이드되었으며, 사용 기간은 {datetime_now.strftime('%Y-%m-%d')}부터 {expire_date.strftime('%Y-%m-%d')}까지입니다."
+                    NotificationServices.create_notification(
+                        user_id=referred_user_id,
+                        title=message,
+                        notification_type="referral",
+                    )
 
                     # -------------------------------
                     # 3. Cập nhật cho người giới thiệu
@@ -235,9 +245,9 @@ class NiceAuthService:
                     if subscription in ["FREE", "BASIC"]:
                         if subscription == "BASIC":
                             old_exp = referrer_user_data.subscription_expired
-                            subscription_expired = old_exp + relativedelta(days=7)
+                            subscription_expired = old_exp + reward_duration
                         else:
-                            subscription_expired = datetime_now + relativedelta(days=7)
+                            subscription_expired = datetime_now + reward_duration
 
                         referrer_update_data = {
                             "subscription_expired": subscription_expired,
@@ -250,7 +260,16 @@ class NiceAuthService:
                             referrer_user_id, **referrer_update_data
                         )
 
-                    referral_history_detail.expired_at = datetime_now + relativedelta(days=7)
+                        message = f"추천이 완료되었습니다. 계정이 BASIC 요금제로 업그레이드되었으며, 사용 기간은 {datetime_now.strftime('%Y-%m-%d')}부터 {expire_date.strftime('%Y-%m-%d')}까지입니다."
+                        NotificationServices.create_notification(
+                            user_id=referrer_user_id,
+                            title=message,
+                            notification_type="referral",
+                        )
+
+                    referral_history_detail.expired_at = datetime_now + relativedelta(
+                        days=7
+                    )
                     referral_history_detail.status = "DONE"
                     referral_history_detail.save()
 
