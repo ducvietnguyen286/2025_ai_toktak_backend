@@ -473,8 +473,10 @@ class APIBatchMakeImage(Resource):
                             cutout_by_sam_images.extend(sam_image_urls)
                             has_sam_cut_out = True
 
-                    if not has_google_cut_out and not has_sam_cut_out:
+                    if image and not has_google_cut_out and not has_sam_cut_out:
                         image_url = ImageMaker.get_image_url_from_path(image)
+                        if not image_url:
+                            continue
                         description_images.append(image_url)
                 merge_cleared_images = []
                 if len(cutout_images) > 0:
