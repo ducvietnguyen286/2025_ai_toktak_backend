@@ -35,7 +35,7 @@ class User(db.Model, BaseModel):
 
     level = db.Column(db.Integer, default=0)
     level_info = db.Column(db.Text, nullable=False)
-    
+
     is_auth_nice = db.Column(db.Integer, default=0)
     is_verify_email = db.Column(db.Integer, default=0)
     referrer_user_id = db.Column(db.Integer, default=0)
@@ -100,4 +100,9 @@ class User(db.Model, BaseModel):
         }
 
     def generate_referral_code(self):
-        self.referral_code = str(uuid.uuid4())[:8]
+        self.referral_code = str(uuid.uuid4())[:8].upper()
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.referral_code:
+            self.generate_referral_code()

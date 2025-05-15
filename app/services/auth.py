@@ -26,6 +26,7 @@ import secrets
 import string
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
+import time
 
 
 class AuthService:
@@ -37,7 +38,6 @@ class AuthService:
             raise BadRequest(message="Email already exists")
         user = User(email=email, username=username, level_info=level_info)
         user.set_password(password)
-        user.generate_referral_code()
         user.save()
         return user
 
@@ -102,8 +102,6 @@ class AuthService:
                     subscription_expired=subscription_expired,
                     level_info=json.dumps(level_info),
                 )
-
-                user.generate_referral_code()
                 user.save()
             else:
                 user = User.query.filter_by(email=email).first()
@@ -122,7 +120,6 @@ class AuthService:
                     level_info=json.dumps(level_info),
                 )
 
-                user.generate_referral_code()
                 user.save()
 
                 if referral_code != "":
