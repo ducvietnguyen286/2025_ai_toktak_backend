@@ -50,7 +50,7 @@ class Post(db.Model, BaseModel):
             "batch_id": self.batch_id,
             "thumbnail": self.thumbnail,
             "captions": self.captions,
-            "images": json.loads(self.images),
+            "images": json.loads(self.images) if self.images else [],
             "title": self.title,
             "subtitle": self.subtitle,
             "content": self.content,
