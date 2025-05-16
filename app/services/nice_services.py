@@ -280,35 +280,32 @@ class NiceAuthService:
 
                     if subscription in ["FREE", "BASIC", "INVITE_BASIC"]:
                         if subscription == "INVITE_BASIC":
+                            batch_total = referrer_user_data.batch_total
+                            batch_remain = referrer_user_data.batch_remain
                             object_start_time = referrer_user_data.subscription_expired
                             # Trường hợp người giới thiệu đang dùng gói BASIC
                             # Kiểm tra xem subscription_expired hiện tại còn hiệu lực hay đã hết hạn
                             if referrer_user_data.subscription_expired > datetime_now:
                                 # Nếu còn hiệu lực → cộng thêm reward_duration vào thời hạn cũ
-                                logger.info(
-                                    "referrer_user_data.subscription_expired > datetime_now"
-                                )
                                 old_exp = referrer_user_data.subscription_expired
                             else:
                                 # Nếu đã hết hạn hoặc không có → bắt đầu từ thời điểm hiện tại
-
-                                logger.info("datetime_now")
                                 old_exp = datetime_now
                             subscription_expired = old_exp + reward_duration
                         else:
                             subscription_expired = datetime_now + reward_duration
-
-                        logger.info(f"subscription_expired {subscription_expired}")
+                        new_batch_total = batch_total + basic_package["batch_total"]
+                        new_batch_remain = batch_remain + basic_package["batch_remain"]
                         referrer_update_data = {
                             "subscription_expired": subscription_expired,
                             "subscription": "INVITE_BASIC",
                             "batch_total": min(
-                                basic_package["batch_total"],
-                                referrer_user_data.batch_total,
+                                new_batch_total,
+                                90,
                             ),
                             "batch_remain": min(
-                                basic_package["batch_remain"],
-                                referrer_user_data.batch_remain,
+                                new_batch_remain,
+                                90,
                             ),
                             "total_link_active": max(
                                 basic_package["total_link_active"],
