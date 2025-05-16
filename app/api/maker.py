@@ -1674,8 +1674,9 @@ class APIDownloadZip(Resource):
             IMAGE_EXTENSIONS = ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp", "*.svg"]
             folder_path = os.path.join(UPLOAD_BASE_PATH, post_date, str(post.batch_id))
             if not os.path.exists(folder_path):
+                logger.error(f"API download-zip - Folder not found {folder_path}")
                 return Response(
-                    message="Folder not found",
+                    message=f"Folder not found {post_date}",
                     code=201,
                 ).to_dict()
 
