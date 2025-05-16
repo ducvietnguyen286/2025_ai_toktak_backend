@@ -5,7 +5,7 @@ import logging
 import shutil
 from datetime import datetime
 from logging import DEBUG
-from logging.handlers import RotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -70,16 +70,20 @@ def create_app():
 
 
 def configure_logging(app):
-    """Cấu hình logging của Flask với file log theo ngày"""
+    """Cấu hình logging để tự động ghi log theo ngày (hàng ngày tạo file mới)"""
     if not os.path.exists(LOG_DIR):
         os.makedirs(LOG_DIR)
 
     log_filename = os.path.join(
-        LOG_DIR, f"schedule_tasks-{datetime.now().strftime('%Y-%m-%d')}.log"
-    )
+        LOG_DIR, "schedule_tasks.log"
+    )  # Không cần ghi ngày ở đây
 
-    file_handler = RotatingFileHandler(
-        log_filename, maxBytes=10 * 1024 * 1024, backupCount=5
+    file_handler = TimedRotatingFileHandler(
+        log_filename,
+        when="midnight",  # Reset mỗi đêm
+        interval=1,  # Mỗi 1 ngày
+        backupCount=7,  # Giữ tối đa 7 bản log cũ
+        encoding="utf-8",
     )
     file_handler.setLevel(DEBUG)
     file_handler.setFormatter(

@@ -1768,8 +1768,43 @@ class APIDownloadZip(Resource):
             IMAGE_EXTENSIONS = ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp", "*.svg"]
             folder_path = os.path.join(UPLOAD_BASE_PATH, post_date, str(post.batch_id))
             if not os.path.exists(folder_path):
+                logger.error(f"API download-zip - Folder not found {folder_path}")
+                images = json.loads(post.images)
+                file_list = []
+                current_domain = (
+                        os.environ.get("CURRENT_DOMAIN") or "https://api.toktak.ai"
+                    )
+                upload_folder = os.path.join(os.getcwd(), f"uploads/")
+                for index, image_detail in enumerate(images):
+
+                    
+                    image_detail_path = image_detail.replace(
+                        f"{current_domain}/files/", upload_folder
+                    )
+                    if os.path.exists(image_detail_path):
+                        file_list.append(image_detail_path)
+
+                if file_list:
+                    tmp_dir = tempfile.mkdtemp()
+                    zip_path = os.path.join(tmp_dir, "images.zip")
+
+                    with ZipFile(zip_path, "w") as zipf:
+                        for file_path in file_list:
+                            filename = os.path.basename(file_path)
+                            zipf.write(file_path, arcname=filename)
+                    if request:
+                        after_this_request(
+                            lambda response: _cleanup_zip(zip_path, tmp_dir, response)
+                        )
+                    return send_file(
+                        zip_path,
+                        mimetype="application/zip",
+                        as_attachment=True,
+                        download_name=f"post_{post_id}_images.zip",
+                    )
+
                 return Response(
-                    message="Folder not found",
+                    message=f"Folder not found {post_date}",
                     code=201,
                 ).to_dict()
 
