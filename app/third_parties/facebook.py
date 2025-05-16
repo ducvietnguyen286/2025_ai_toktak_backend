@@ -53,6 +53,35 @@ class FacebookTokenService:
             return None
 
     @staticmethod
+    def get_page_info_by_id(page_id, user_link):
+        try:
+            meta = json.loads(user_link.meta)
+            access_token = meta.get("access_token")
+            if not access_token:
+                log_facebook_message("Token not found")
+                return None
+
+            PAGE_URL = f"https://graph.facebook.com/v22.0/{page_id}?access_token={access_token}&fields=id,name,picture"
+
+            response = requests.get(PAGE_URL, timeout=20)
+            data = response.json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="FACEBOOK",
+                social_post_id="",
+                user_id=user_link.user_id,
+                type="get_page_info_by_id",
+                request=json.dumps({"access_token": access_token}),
+                response=json.dumps(data),
+            )
+
+            return data
+
+        except Exception as e:
+            log_facebook_message(e)
+            return None
+
+    @staticmethod
     def get_info_page(page):
         return {
             "id": page.get("id") or "",
@@ -98,9 +127,19 @@ class FacebookTokenService:
                         break
                 return first_page
 
+            getted_page = None
             for page in data.get("data"):
                 if page.get("id") == page_id:
-                    return page.get("access_token")
+                    getted_page = page
+                    break
+            if not getted_page:
+                log_facebook_message("Page not found")
+                return None
+            tasks = getted_page.get("tasks")
+            if "CREATE_CONTENT" not in tasks:
+                log_facebook_message("Page not have CREATE_CONTENT permission")
+                return None
+            return getted_page
 
         except Exception as e:
             log_facebook_message(e)
@@ -231,8 +270,13 @@ class FacebookService(BaseService):
         self.social_post_id = str(self.social_post.id)
         self.key_log = f"{self.post_id} - {self.social_post.session_key}"
 
+        is_all = (
+            False if self.user_link.page_id and self.user_link.page_id != "" else True
+        )
+        selected_page_id = self.user_link.page_id if is_all else page_id
+
         token_page = FacebookTokenService.fetch_page_token_backend(
-            self.user_link, page_id, is_all
+            user_link=self.user_link, page_id=selected_page_id, is_all=is_all
         )
 
         if not is_all and not token_page:

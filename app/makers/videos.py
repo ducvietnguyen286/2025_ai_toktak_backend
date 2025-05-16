@@ -79,7 +79,6 @@ class MakerVideo:
             "2",
             output_file,
         ]
-        print("Standardizing:", " ".join(cmd))
         subprocess.run(cmd, check=True)
 
     def merge_videos(self, video_files=[]):
@@ -137,7 +136,6 @@ class MakerVideo:
 
         print("Merging with command:")
 
-        print(" ".join(cmd))
         subprocess.run(cmd, check=True)
 
         # Xóa các file tạm sau khi merge
@@ -279,7 +277,6 @@ class MakerVideo:
 
         video_duration = len(saved_images) * self.duration_per_image
 
-        print("Đã Audio:", audio_path)
 
         self.add_audio(audio_path, video_duration)
 
@@ -315,11 +312,8 @@ class MakerVideo:
         audio = AudioSegment.from_file(temp_file, format="mp3")
         current_duration_s = len(audio) / 1000.0
 
-        print("Thời lượng audio hiện tại:", current_duration_s, "giây")
-        print("Thời lượng video cần tạo:", self.total_times, "giây")
 
         if abs(current_duration_s - self.total_times) < 0.1:
-            print("Thời lượng đã gần khớp, chỉ copy file.")
             subprocess.run(["ffmpeg", "-y", "-i", temp_file, output_file], check=True)
             return output_file, temp_file
 

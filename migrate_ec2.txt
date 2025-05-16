@@ -23,3 +23,8 @@ SET uvt.link_sns = JSON_OBJECT(
 SELECT link_sns , user_video_templates.* FROM  user_video_templates  ;
 
  
+-------------------------------------------------------
+5/07/2025
+
+ALTER TABLE `toktak`.`posts` 
+ADD COLUMN `schedule_date` DATETIME(6) NULL AFTER `video_path`;

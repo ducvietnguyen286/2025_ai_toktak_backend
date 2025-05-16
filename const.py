@@ -13,6 +13,7 @@ TYPE_NORMAL = 1
 TYPE_PRO = 2
 NOTIFICATION_FALSE = 0
 NOTIFICATION_SUCCESS = 1
+NAVER_LINK_BLOG = 7
 
 EFFECTS_CONST = [
     "zoomIn",
@@ -149,4 +150,49 @@ LIMIT_BATCH = {
 }
 
 
-ALLOWED_IPS = {  "218.154.54.97"}
+ALLOWED_IPS = {"218.154.54.97"}
+
+
+PACKAGE_CONFIG = {
+    "BASIC": {
+        "pack_name": "베이직",
+        "pack_description": "SNS 홍보를 처음 시작하는 분",
+        "order_index": 1,
+        "total_create": 30,
+        "price": 299_000,
+        "total_link": 1,
+        "batch_total": 30,
+        "batch_remain": 30,
+        "batch_sns_total": 1,
+        "total_link_active": 1,
+    },
+    "STANDARD": {
+        "pack_name": "스탠다드",
+        "pack_description": "SNS를 더 빠르게 성장시키고 싶은 분",
+        "order_index": 2,
+        "total_create": 60,
+        "price": 899_000,
+        "total_link": 7,
+        "batch_total": 60,
+        "batch_remain": 60,
+        "batch_sns_total": 7,
+        "total_link_active": 7,
+    },
+    "BUSINESS": {
+        "pack_name": "기업형 스탠다드",
+        "pack_description": "브랜드, 플랫폼, 에이전시 고객을 위한 플랜",
+        "order_index": 3,
+        "total_create": 30,
+        "price": 999_000,
+        "total_link": 7,
+        "batch_total": 30,
+        "batch_remain": 30,
+        "batch_sns_total": 7,
+        "total_link_active": 7,
+    },
+}
+
+
+PACKAGE_DURATION_DAYS = 30
+
+MAX_REFERRAL_USAGE = 13

@@ -7,13 +7,23 @@ from app.models.batch import Batch
 from app.models.social_account import SocialAccount
 from app.models.notification import Notification
 from app.models.memberprofile import MemberProfile
+from app.models.referral_history import ReferralHistory
 from app.extensions import db
 from app.lib.logger import logger
 from sqlalchemy import or_
 import const
+from dateutil.relativedelta import relativedelta
+
+from app.models.user_history import UserHistory
 
 
 class UserService:
+
+    @staticmethod
+    def create_user(*args, **kwargs):
+        user_detail = User(*args, **kwargs)
+        user_detail.save()
+        return user_detail
 
     @staticmethod
     def get_user_coupons(user_id):
@@ -29,6 +39,7 @@ class UserService:
             coupon_dict = coupon.coupon._to_json()
             coupon_code = coupon._to_json()
             coupon_code["coupon_name"] = coupon_dict["name"]
+            coupon_code["type"] = "coupon"
             coupons.append(coupon_code)
 
         first_coupon = (
@@ -168,6 +179,16 @@ class UserService:
         return [user_link._to_json() for user_link in user_links]
 
     @staticmethod
+    def get_total_link(user_id, with_out_link=const.NAVER_LINK_BLOG):
+        count = (
+            UserLink.query.where(UserLink.status == 1)
+            .where(UserLink.user_id == user_id)
+            .where(UserLink.link_id != with_out_link)
+            .count()
+        )
+        return count
+
+    @staticmethod
     def get_original_user_links(user_id=0):
         user_links = (
             UserLink.query.where(UserLink.status == 1)
@@ -192,7 +213,15 @@ class UserService:
         if "search" in data_search and data_search["search"]:
             search_term = f"%{data_search['search']}%"
             query = query.filter(
-                or_(User.email.ilike(search_term), User.name.ilike(search_term))
+                or_(
+                    User.email.ilike(search_term),
+                    User.name.ilike(search_term),
+                    User.username.ilike(search_term),
+                    User.phone.ilike(search_term),
+                    User.contact.ilike(search_term),
+                    User.company_name.ilike(search_term),
+                    User.referral_code.ilike(search_term),
+                )
             )
         if "member_type" in data_search and data_search["member_type"]:
             query = query.filter(User.subscription == data_search["member_type"])
@@ -254,6 +283,12 @@ class UserService:
             MemberProfile.query.filter(MemberProfile.user_id.in_(user_ids)).delete(
                 synchronize_session=False
             )
+            ReferralHistory.query.filter(
+                ReferralHistory.referrer_user_id.in_(user_ids)
+            ).delete(synchronize_session=False)
+            ReferralHistory.query.filter(
+                ReferralHistory.referred_user_id.in_(user_ids)
+            ).delete(synchronize_session=False)
 
             User.query.filter(User.id.in_(user_ids)).delete(synchronize_session=False)
 
@@ -298,3 +333,49 @@ class UserService:
         user_dict["latest_coupon"] = latest_coupon
         user_dict["used_date_range"] = used_date_range
         return user_dict
+
+    @staticmethod
+    def check_phone_verify_nice(mobileno):
+        return None
+        user = User.query.filter(User.phone == mobileno, User.is_auth_nice == 1).first()
+
+        return user
+
+    @staticmethod
+    def auto_extend_free_subscriptions():
+        now = datetime.now()
+
+        expired_users = User.query.filter(
+            User.subscription == "FREE", User.subscription_expired <= now
+        ).all()
+
+        extended = 0
+        for user in expired_users:
+            new_expiry = now + relativedelta(months=1)
+            user.subscription_expired = new_expiry
+            user.batch_total = 10
+            user.batch_remain = 10
+            extended += 1
+
+        db.session.commit()
+        return extended
+
+    @staticmethod
+    def find_user_by_referral_code(referral_code):
+        user = User.query.filter(User.referral_code == referral_code).first()
+        return user
+
+    @staticmethod
+    def create_user_history(*args, **kwargs):
+        user_history_detail = UserHistory(*args, **kwargs)
+        user_history_detail.save()
+        return user_history_detail
+
+    @staticmethod
+    def get_all_user_history_by_user_id(user_id):
+        user_histories = (
+            UserHistory.query.filter(UserHistory.user_id == user_id)
+            .order_by(UserHistory.id.desc())
+            .all()
+        )
+        return [user_history._to_json() for user_history in user_histories]

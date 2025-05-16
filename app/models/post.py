@@ -1,6 +1,7 @@
 from app.extensions import db
 from app.models.base import BaseModel
 from datetime import datetime
+import pytz
 
 
 class Post(db.Model, BaseModel):
@@ -29,6 +30,7 @@ class Post(db.Model, BaseModel):
     video_path = db.Column(db.String(255), nullable=False, default="")
 
     social_sns_description = db.Column(db.Text, nullable=True)
+    schedule_date = db.Column(db.DateTime)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
     updated_at = db.Column(
@@ -65,6 +67,11 @@ class Post(db.Model, BaseModel):
             "video_path": self.video_path,
             "social_sns_description": self.social_sns_description,
             "user_email": self.user.email if self.user else None,  # Lấy email từ user
+            "schedule_date": (
+                pytz.utc.localize(self.schedule_date).strftime("%Y-%m-%dT%H:%M:%SZ")
+                if self.schedule_date
+                else None
+            ),
             "created_at": (
                 self.created_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.created_at

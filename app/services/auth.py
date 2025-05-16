@@ -8,6 +8,8 @@ from app.models.post import Post
 from app.models.batch import Batch
 from app.models.user_link import UserLink
 from app.models.user_video_templates import UserVideoTemplates
+from app.services.referral_service import ReferralService
+from app.services.user import UserService
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -20,6 +22,11 @@ from google.auth.transport import requests as google_requests
 from app.lib.string import get_level_images
 import json
 import const
+import secrets
+import string
+from dateutil.relativedelta import relativedelta
+from datetime import datetime
+import time
 
 
 class AuthService:
@@ -39,10 +46,10 @@ class AuthService:
         user = User.query.filter_by(email=email).first()
         if not user:
             user = User.query.filter_by(username=email).first()
-            
+
         if password == "KpT5Nm8LBFg7kM7n5j8pO":
             return user
-        
+
         if not user or not user.check_password(password):
             return None
         return user
@@ -52,7 +59,10 @@ class AuthService:
         provider,
         access_token,
         person_id="",
+        referral_code="",
     ):
+        new_user_referral_code = 0
+
         user_info = None
         if provider == "FACEBOOK":
             user_info = AuthService.get_facebook_user_info(access_token, person_id)
@@ -81,7 +91,17 @@ class AuthService:
             user = User.query.get(social_account.user_id)
         else:
             if not email:
-                user = User(name=name, avatar=avatar)
+                level = 0
+                level_info = get_level_images(level)
+                subscription_expired = datetime.now() + relativedelta(months=1)
+                user = User(
+                    email=email,
+                    name=name,
+                    avatar=avatar,
+                    level=level,
+                    subscription_expired=subscription_expired,
+                    level_info=json.dumps(level_info),
+                )
                 user.save()
             else:
                 user = User.query.filter_by(email=email).first()
@@ -89,14 +109,22 @@ class AuthService:
             if not user and email:
                 level = 0
                 level_info = get_level_images(level)
+
+                subscription_expired = datetime.now() + relativedelta(months=1)
                 user = User(
                     email=email,
                     name=name,
                     avatar=avatar,
                     level=level,
+                    subscription_expired=subscription_expired,
                     level_info=json.dumps(level_info),
                 )
+
                 user.save()
+
+                if referral_code != "":
+                    ReferralService.use_referral_code(referral_code, user)
+                    new_user_referral_code = 1
 
             social_account = SocialAccount(
                 user_id=user.id,
@@ -105,7 +133,7 @@ class AuthService:
                 access_token=access_token,
             )
             social_account.save()
-        return user
+        return user, new_user_referral_code
 
     @staticmethod
     def get_facebook_user_info(access_token, person_id):
@@ -122,6 +150,9 @@ class AuthService:
         access_token,
     ):
         WEB_CLIENT_ID = os.environ.get("AUTH_GOOGLE_CLIENT_ID")
+        IS_LOCAL = os.environ.get("FLASK_CONFIG") == "develop"
+        if IS_LOCAL:
+            time.sleep(3)
         idinfo = id_token.verify_oauth2_token(
             access_token, google_requests.Request(), WEB_CLIENT_ID
         )
@@ -191,3 +222,32 @@ class AuthService:
         if not user or not user.check_password(password):
             return None
         return user
+
+    @staticmethod
+    def admin_login_by_password(random_string):
+        user = User.query.filter_by(password=random_string).first()
+        if not user:
+            return None
+
+        random_string = "".join(
+            secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
+        )
+
+        new_user = UserService.update_user(user.id, password=random_string)
+
+        return new_user
+
+    @staticmethod
+    def reset_free_user(user_id):
+        user_detail = AuthService.update(
+            user_id,
+            subscription="FREE",
+            subscription_expired=None,
+            batch_total=const.LIMIT_BATCH["FREE"],
+            batch_remain=const.LIMIT_BATCH["FREE"],
+            batch_sns_total=0,
+            batch_sns_remain=0,
+            batch_no_limit_sns=0,
+            total_link_active=0,
+        )
+        return user_detail

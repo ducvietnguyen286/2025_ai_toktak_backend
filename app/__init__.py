@@ -8,7 +8,7 @@ from .errors.handler import api_error_handler
 
 from flask import Flask, jsonify
 from flask_cors import CORS
-from .extensions import redis_client, db, bcrypt, jwt, db_mongo 
+from .extensions import redis_client, db, bcrypt, jwt, db_mongo
 
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
