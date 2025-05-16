@@ -29,9 +29,6 @@ gpu_semaphore = threading.Semaphore(2)
 multiprocessing.set_start_method("spawn", force=True)
 
 
-date_create = datetime.datetime.now().strftime("%Y_%m_%d")
-UPLOAD_FOLDER = os.path.join(os.getcwd(), f"uploads/{date_create}")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 FONT_FOLDER = os.path.join(os.getcwd(), "app/makers/fonts")
 CURRENT_DOMAIN = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
@@ -196,7 +193,8 @@ class ImageMaker:
 
     @staticmethod
     def get_only_beauty_images(images, batch_id=0):
-        output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
+        date_create, upload_folder = ImageMaker.get_current_date_str()
+        output_folder = f"{upload_folder}/{batch_id}"
 
         os.makedirs(output_folder, exist_ok=True)
 
@@ -267,13 +265,14 @@ class ImageMaker:
 
     @staticmethod
     def cut_out_long_height_images_by_sam(image_path, batch_id=0):
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
             return {
-                "image_urls": [image_url],
+                "image_urls": [image_path],
                 "is_cut_out": False,
             }
-        output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
+        output_folder = f"{upload_folder}/{batch_id}"
 
         timeout = 10
         start_time = time.time()
@@ -420,8 +419,9 @@ class ImageMaker:
 
     @staticmethod
     def cut_out_long_height_images_by_google(image_url, batch_id=0):
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         image_path = ImageMaker.save_image_url_get_path(image_url, batch_id=batch_id)
-        output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
+        output_folder = f"{upload_folder}/{batch_id}"
         print(f"Cut out long height images: {image_path}")
 
         while not os.path.exists(image_path):
@@ -526,7 +526,7 @@ class ImageMaker:
         target_size=(1080, 1350),
         is_avif=False,
     ):
-
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         image_path = ImageMaker.save_image_url_get_path(image_url, batch_id, is_avif)
         image_name = image_path.split("/")[-1]
 
@@ -640,6 +640,7 @@ class ImageMaker:
         target_size=(1080, 1350),
         is_avif=False,
     ):
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         image_path = ImageMaker.make_resize_image(
             first_image, target_size, batch_id, is_avif
         )
@@ -696,6 +697,7 @@ class ImageMaker:
         target_size=(1080, 1350),
         is_avif=False,
     ):
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         image_path = ImageMaker.make_resize_image(
             first_image, target_size, batch_id, is_avif
         )
@@ -742,6 +744,7 @@ class ImageMaker:
 
     @staticmethod
     def make_resize_image(image, target_size, batch_id=0, is_avif=False):
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         image_path = ImageMaker.save_image_url_get_path(image, batch_id, is_avif)
         image_name = image_path.split("/")[-1]
 
@@ -804,14 +807,15 @@ class ImageMaker:
         batch_id=0,
         target_size=(1080, 1350),
     ):
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
 
         image_name = f"{timestamp}_{unique_id}.jpg"
 
-        os.makedirs(f"{UPLOAD_FOLDER}/{batch_id}", exist_ok=True)
+        os.makedirs(f"{upload_folder}/{batch_id}", exist_ok=True)
 
-        image_path = f"{UPLOAD_FOLDER}/{batch_id}/{image_name}"
+        image_path = f"{upload_folder}/{batch_id}/{image_name}"
         image_width, image_height = target_size
 
         image = Image.new("RGB", (image_width, image_height), background_color)
@@ -855,7 +859,7 @@ class ImageMaker:
         stroke_width,
         bottom_margin,
     ):
-        print(f"Draw text to image: {margin}")
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         if type(margin) == str:
             margin = tuple(map(int, margin.strip("()").split(",")))
 
@@ -926,7 +930,7 @@ class ImageMaker:
         stroke_color,
         stroke_width,
     ):
-        print(f"Draw text to image: {margin}")
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         if type(margin) == str:
             margin = tuple(map(int, margin.strip("()").split(",")))
 
@@ -995,14 +999,15 @@ class ImageMaker:
 
     @staticmethod
     def save_image_from_request(file):
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
 
         file_name = file.filename
         file_ext = file_name.split(".")[-1]
 
-        file_save_name = f"{timestamp}_{unique_id}.{file_ext}"
-        file_path = f"{UPLOAD_FOLDER}/{file_save_name}"
+        file_save_name = f"download_{timestamp}_{unique_id}.{file_ext}"
+        file_path = f"{upload_folder}/{file_save_name}"
 
         file.save(file_path)
 
@@ -1011,13 +1016,14 @@ class ImageMaker:
 
     @staticmethod
     def save_image_url(image_url):
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
 
         image_ext = image_url.split(".")[-1]
-        image_name = f"{timestamp}_{unique_id}.{image_ext}"
+        image_name = f"download_{timestamp}_{unique_id}.{image_ext}"
 
-        image_path = f"{UPLOAD_FOLDER}/{image_name}"
+        image_path = f"{upload_folder}/{image_name}"
         with open(image_path, "wb") as image_file:
             image_file.write(requests.get(image_url).content)
         image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{image_name}"
@@ -1025,9 +1031,9 @@ class ImageMaker:
 
     @staticmethod
     def save_image_url_get_path(image_url, batch_id=0, is_avif=False):
-        new_folder = f"{UPLOAD_FOLDER}/{batch_id}"
+        date_create, upload_folder = ImageMaker.get_current_date_str()
+        new_folder = f"{upload_folder}/{batch_id}"
         os.makedirs(new_folder, exist_ok=True)
-        print(f"Downloading image from {image_url}")
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
 
@@ -1091,6 +1097,7 @@ class ImageMaker:
     def save_image_for_short_video(
         image_url, batch_id=0, target_size=(1080, 1920), is_avif=False
     ):
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         image_path = ImageMaker.save_image_url_get_path(image_url, batch_id, is_avif)
         image_name = image_path.split("/")[-1]
 
@@ -1137,6 +1144,7 @@ class ImageMaker:
         stroke_width=10,  # Độ dày viền
         target_size=(1080, 1350),
     ):
+        date_create, upload_folder = ImageMaker.get_current_date_str()
         image_path = ImageMaker.save_image_url_get_path(image_url)
         image_name = image_path.split("/")[-1]
 
@@ -1229,3 +1237,10 @@ class ImageMaker:
             "mime_type": mime_type,
             "image_url": image_url,
         }
+
+    @staticmethod
+    def get_current_date_str():
+        current_date = datetime.datetime.now().strftime("%Y_%m_%d")
+        upload_folder = os.path.join(os.getcwd(), f"uploads/{current_date}")
+        os.makedirs(upload_folder, exist_ok=True)
+        return current_date, upload_folder
