@@ -151,8 +151,6 @@ class NiceAuthService:
                 name_raw = NiceAuthService.get_value(plaindata, "NAME")
                 name = name_raw.encode("latin1").decode("euc-kr", errors="ignore")
 
-            logger.info(name)
-
             result_item = {
                 "user_id": user_id,
                 "requestnumber": NiceAuthService.get_value(plaindata, "REQ_SEQ"),
@@ -190,6 +188,10 @@ class NiceAuthService:
                 }
 
             mobileno = result_item["mobileno"]
+            # mobileno = "09999"
+            # name = "VIETNAME"
+            # user_data = UserService.find_user(user_id)
+
             verify_detail = UserService.check_phone_verify_nice(mobileno)
 
             if not verify_detail:
@@ -200,6 +202,7 @@ class NiceAuthService:
                     "is_auth_nice": 1,
                     "is_verify_email": 1,
                     "name": name,
+                    "password_certificate": "",
                     "gender": "M" if result_item["gender"] == "1" else "F",
                 }
                 UserService.update_user(user_id, **data_update)
@@ -209,23 +212,28 @@ class NiceAuthService:
                 )
                 # nếu có giới thiệu
                 if referral_history_detail:
-                    #kiểm tra tối đa số lần
+                    # kiểm tra tối đa số lần
                     referrer_user_id = referral_history_detail.referrer_user_id
-                    usage_count = ReferralService.find_by_referred_user_id_done(referrer_user_id)
+                    usage_count = ReferralService.find_by_referred_user_id_done(
+                        referrer_user_id
+                    )
                     if usage_count >= MAX_REFERRAL_USAGE:
-                        return {"code": 200, "message": "인증 성공", "data": result_item}
-        
-        
+                        return {
+                            "code": 200,
+                            "message": "인증 성공",
+                            "data": result_item,
+                        }
+
                     # người được giới thiệu =  user_id hiện tại
                     referred_user_id = referral_history_detail.referred_user_id
                     # Gia hạn 7 ngày cho người được mời
-                    basic_package = PACKAGE_CONFIG["BASIC"]
+                    basic_package = PACKAGE_CONFIG["INVITE_BASIC"]
                     reward_duration = relativedelta(days=7)
 
                     expire_date = datetime_now + reward_duration
                     referred_update_data = {
                         "subscription_expired": expire_date,
-                        "subscription": "BASIC",
+                        "subscription": "INVITE_BASIC",
                         "batch_total": min(
                             basic_package["batch_total"], user_data.batch_total
                         ),
@@ -270,23 +278,30 @@ class NiceAuthService:
                     referrer_user_data = UserService.find_user(referrer_user_id)
                     subscription = referrer_user_data.subscription
 
-                    if subscription in ["FREE", "BASIC"]:
-                        if subscription == "BASIC":
+                    if subscription in ["FREE", "BASIC", "INVITE_BASIC"]:
+                        if subscription == "INVITE_BASIC":
+                            object_start_time = referrer_user_data.subscription_expired
                             # Trường hợp người giới thiệu đang dùng gói BASIC
                             # Kiểm tra xem subscription_expired hiện tại còn hiệu lực hay đã hết hạn
                             if referrer_user_data.subscription_expired > datetime_now:
                                 # Nếu còn hiệu lực → cộng thêm reward_duration vào thời hạn cũ
+                                logger.info(
+                                    "referrer_user_data.subscription_expired > datetime_now"
+                                )
                                 old_exp = referrer_user_data.subscription_expired
                             else:
                                 # Nếu đã hết hạn hoặc không có → bắt đầu từ thời điểm hiện tại
+
+                                logger.info("datetime_now")
                                 old_exp = datetime_now
                             subscription_expired = old_exp + reward_duration
                         else:
                             subscription_expired = datetime_now + reward_duration
 
+                        logger.info(f"subscription_expired {subscription_expired}")
                         referrer_update_data = {
                             "subscription_expired": subscription_expired,
-                            "subscription": "BASIC",
+                            "subscription": "INVITE_BASIC",
                             "batch_total": min(
                                 basic_package["batch_total"],
                                 referrer_user_data.batch_total,
@@ -304,7 +319,7 @@ class NiceAuthService:
                             referrer_user_id, **referrer_update_data
                         )
 
-                        message = f"추천이 완료되었습니다. 계정이 BASIC 요금제로 업그레이드되었으며, 사용 기간은 {datetime_now.strftime('%Y-%m-%d')}부터 {expire_date.strftime('%Y-%m-%d')}까지입니다."
+                        message = f"추천이 완료되었습니다. 계정이 BASIC 요금제로 업그레이드되었으며, 사용 기간은 {object_start_time.strftime('%Y-%m-%d')}부터 {subscription_expired.strftime('%Y-%m-%d')}까지입니다."
                         NotificationServices.create_notification(
                             user_id=referrer_user_id,
                             title=message,
@@ -315,8 +330,8 @@ class NiceAuthService:
                             "user_id": referrer_user_id,
                             "type": "referral",
                             "object_id": referral_history_detail.id,
-                            "object_start_time": datetime_now,
-                            "object_end_time": expire_date,
+                            "object_start_time": object_start_time,
+                            "object_end_time": subscription_expired,
                             "title": basic_package["pack_name"],
                             "description": basic_package["pack_description"],
                             "value": basic_package["batch_total"],

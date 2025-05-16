@@ -2,6 +2,7 @@ from app.extensions import db
 from app.models.base import BaseModel
 from datetime import datetime
 import pytz
+import json
 
 
 class Post(db.Model, BaseModel):
@@ -49,7 +50,7 @@ class Post(db.Model, BaseModel):
             "batch_id": self.batch_id,
             "thumbnail": self.thumbnail,
             "captions": self.captions,
-            "images": self.images,
+            "images": json.loads(self.images),
             "title": self.title,
             "subtitle": self.subtitle,
             "content": self.content,
