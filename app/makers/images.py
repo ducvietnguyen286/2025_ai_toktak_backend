@@ -227,14 +227,9 @@ class ImageMaker:
         return downloaded_images
 
     @staticmethod
-<<<<<<< HEAD
     def get_only_beauty_images(images, batch_id=0, is_avif=False):
-        output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
-=======
-    def get_only_beauty_images(images, batch_id=0):
         date_create, upload_folder = ImageMaker.get_current_date_str()
         output_folder = f"{upload_folder}/{batch_id}"
->>>>>>> 2a5d585f7bcdcccef560f2407246d1e85b2a3c31
 
         os.makedirs(output_folder, exist_ok=True)
 
@@ -311,12 +306,7 @@ class ImageMaker:
 
     @staticmethod
     def cut_out_long_height_images_by_sam(image_path, batch_id=0):
-<<<<<<< HEAD
-        print(f"Cut out long height images: {image_path}")
-
-=======
         date_create, upload_folder = ImageMaker.get_current_date_str()
->>>>>>> 2a5d585f7bcdcccef560f2407246d1e85b2a3c31
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
             image_name = image_path.split("/")[-1]
@@ -490,13 +480,10 @@ class ImageMaker:
             }
 
     @staticmethod
-<<<<<<< HEAD
-    def cut_out_long_height_images_by_google(image_path, batch_id=0):
-        extension = image_path.split(".")[-1].lower()
-=======
     def cut_out_long_height_images_by_google(image_url, batch_id=0):
         date_create, upload_folder = ImageMaker.get_current_date_str()
         image_path = ImageMaker.save_image_url_get_path(image_url, batch_id=batch_id)
+        extension = image_path.split(".")[-1].lower()
         output_folder = f"{upload_folder}/{batch_id}"
         print(f"Cut out long height images: {image_path}")
 
@@ -576,7 +563,6 @@ class ImageMaker:
                     f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
                 )
                 return [image_url]
->>>>>>> 2a5d585f7bcdcccef560f2407246d1e85b2a3c31
 
         image_name = image_path.split("/")[-1]
         base_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
@@ -1313,8 +1299,6 @@ class ImageMaker:
     def save_image_for_short_video(
         image_url, batch_id=0, target_size=(1080, 1920), is_avif=False
     ):
-<<<<<<< HEAD
-=======
         date_create, upload_folder = ImageMaker.get_current_date_str()
         image_path = ImageMaker.save_image_url_get_path(image_url, batch_id, is_avif)
         image_name = image_path.split("/")[-1]
@@ -1322,7 +1306,6 @@ class ImageMaker:
         video_width, video_height = target_size
         video_ratio = video_width / video_height
 
->>>>>>> 2a5d585f7bcdcccef560f2407246d1e85b2a3c31
         try:
             image_path = ImageMaker.save_image_url_get_path(
                 image_url, batch_id, is_avif
