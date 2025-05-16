@@ -188,6 +188,7 @@ class NiceAuthService:
                 }
 
             mobileno = result_item["mobileno"]
+
             # mobileno = "09999"
             # name = "VIETNAME"
             # user_data = UserService.find_user(user_id)
@@ -203,7 +204,7 @@ class NiceAuthService:
                     "is_verify_email": 1,
                     "name": name,
                     "password_certificate": "",
-                    "gender": "M" if result_item["gender"] == "1" else "F",
+                    "gender": "M" if result_item.get("gender") == "1" else "F",
                 }
                 UserService.update_user(user_id, **data_update)
                 # Tìm theo người được giới thiệu khi xác thực thành công
@@ -278,8 +279,13 @@ class NiceAuthService:
                     referrer_user_data = UserService.find_user(referrer_user_id)
                     subscription = referrer_user_data.subscription
 
-                    if subscription in ["FREE", "BASIC", "INVITE_BASIC"]:
-                        if subscription == "INVITE_BASIC":
+                    if subscription in [
+                        "FREE",
+                        "BASIC",
+                        "INVITE_BASIC",
+                        "COUPON_STANDARD",
+                    ]:
+                        if subscription in ["INVITE_BASIC", "COUPON_STANDARD"]:
                             batch_total = referrer_user_data.batch_total
                             batch_remain = referrer_user_data.batch_remain
                             object_start_time = referrer_user_data.subscription_expired
