@@ -40,12 +40,14 @@ class APIUsedCoupon(Resource):
             ).to_dict()
         if coupon == "used":
             return Response(
-                message="사용된 쿠폰 번호입니다.<br/>쿠폰 번호를 확인해 주세요😭",
+                message="사용된 쿠폰 번호입니다.<br/>쿠폰 번호를Y 확인해 주세요😭",
+                message_en="Coupon is used",
                 code=201,
             ).to_dict()
         if coupon == "not_active":
             return Response(
                 message="쿠폰 코드가 사용 불가능합니다<br/>쿠폰 번호를 확인해 주세요😭",
+                message_en="Coupon is not active",
                 code=201,
             ).to_dict()
         if coupon == "expired":

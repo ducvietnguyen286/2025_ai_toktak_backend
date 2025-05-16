@@ -27,7 +27,7 @@ class PaymentService:
             return None
         payment.update(**kwargs)
         return payment
-    
+
     @staticmethod
     def can_upgrade(current_package: str, new_package: str) -> bool:
         """Kiểm tra xem việc nâng cấp có hợp lệ không (theo thứ tự gói)"""
@@ -38,7 +38,7 @@ class PaymentService:
 
     @staticmethod
     def has_active_subscription(user_id):
-        now = datetime.utcnow()
+        now = datetime.now()
         active_payment = (
             Payment.query.filter_by(user_id=user_id)
             .filter(Payment.end_date > now)
@@ -56,18 +56,18 @@ class PaymentService:
 
     @staticmethod
     def create_new_payment(current_user, package_name):
-        now = datetime.utcnow()
-        price = PACKAGE_CONFIG[package_name]["price"]
+        now = datetime.now()
+        origin_price = PACKAGE_CONFIG[package_name]["price"]
         start_date = now
         end_date = start_date + relativedelta(months=1)
         user_id = current_user.id
         payment = Payment(
             user_id=user_id,
             package_name=package_name,
-            amount=price,
+            amount=origin_price,
             customer_name=current_user.name or current_user.email,
             method="REQUEST",
-            price=price,
+            price=origin_price,
             requested_at=start_date,
             start_date=start_date,
             end_date=end_date,
@@ -81,7 +81,7 @@ class PaymentService:
     @staticmethod
     def upgrade_package(current_user, new_package):
         user_id = current_user.id
-        now = datetime.utcnow()
+        now = datetime.now()
         active_payment = PaymentService.has_active_subscription(user_id)
 
         if not active_payment:
@@ -92,14 +92,14 @@ class PaymentService:
         old_price_per_day = active_payment.price / PACKAGE_DURATION_DAYS
         remaining_value = round(old_price_per_day * remaining_days)
 
-        new_price = PACKAGE_CONFIG[new_package]["price"]
+        origin_price = PACKAGE_CONFIG[new_package]["price"]
 
-        final_price = max(0, new_price - remaining_value)
+        final_price = max(0, origin_price - remaining_value)
 
         new_payment = Payment(
             user_id=user_id,
             package_name=new_package,
-            amount=final_price,
+            amount=origin_price,
             customer_name=current_user.name or current_user.email,
             method="REQUEST_UPGRADE",
             price=final_price,
@@ -115,7 +115,7 @@ class PaymentService:
 
     @staticmethod
     def process_subscription_request(user, package_name: str) -> bool:
-        now = datetime.utcnow()
+        now = datetime.now()
         user_id = user.id
         active = PaymentService.get_last_subscription(user_id)
         logger.info(package_name)
