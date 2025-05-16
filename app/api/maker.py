@@ -961,21 +961,25 @@ class APIMakePost(Resource):
                     #         current_stt = index + 1
                     #         pre_content_cutout += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
 
-                    pre_content_cutout_sam = f"<br></br><h2>IMAGES CUTTED OUT BY SERVER: TOTAL - {len(cutout_by_sam_images)}</h2>"
-                    if len(cutout_by_sam_images) > 0:
-                        current_stt = 0
-                        for index, cutout_image in enumerate(cutout_by_sam_images):
-                            current_stt = index + 1
-                            pre_content_cutout_sam += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
+                    # BaoNC Comment to live 20250516
+                    # ------------------------------------------------
+                    # pre_content_cutout_sam = f"<br></br><h2>IMAGES CUTTED OUT BY SERVER: TOTAL - {len(cutout_by_sam_images)}</h2>"
+                    # if len(cutout_by_sam_images) > 0:
+                    #     current_stt = 0
+                    #     for index, cutout_image in enumerate(cutout_by_sam_images):
+                    #         current_stt = index + 1
+                    #         pre_content_cutout_sam += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
 
-                    pre_content = f"<br></br><h2>DESCRIPTION IMAGES: TOTAL - {len(description_images)}</h2>"
-                    if len(description_images) > 0:
-                        current_stt = 0
-                        for index, cleared_image in enumerate(description_images):
-                            current_stt = index + 1
-                            pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
+                    # pre_content = f"<br></br><h2>DESCRIPTION IMAGES: TOTAL - {len(description_images)}</h2>"
+                    # if len(description_images) > 0:
+                    #     current_stt = 0
+                    #     for index, cleared_image in enumerate(description_images):
+                    #         current_stt = index + 1
+                    #         pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
 
-                    content = pre_content_cutout_sam + pre_content + content
+                    # content = pre_content_cutout_sam + pre_content + content
+                    # ------------------------------------------------
+                    # BaoNC End Comment to live 20250516
 
                     for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
