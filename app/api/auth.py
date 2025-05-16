@@ -119,7 +119,7 @@ class APISocialLogin(Resource):
                 "expires_in": 7200,
                 "new_user_referral_code": new_user_referral_code,
             }
-        ) 
+        )
 
         return Response(
             data=tokens,
@@ -401,9 +401,12 @@ class APIUserProfile(Resource):
                     level=level,
                     level_info=json.dumps(level_info),
                 )
+
+            latest_coupon = UserService.get_latest_coupon(user_login.id)
             user_histories = UserService.get_all_user_history_by_user_id(user_login.id)
             user_dict = user_login._to_json()
             user_dict["user_histories"] = user_histories
+            user_dict["latest_coupon"] = latest_coupon
 
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)
