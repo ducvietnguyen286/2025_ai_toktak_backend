@@ -402,7 +402,7 @@ class APIUserProfile(Resource):
                     level_info=json.dumps(level_info),
                 )
 
-            latest_coupon = UserService.get_latest_coupon(user_login.id)
+            first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
             user_histories = UserService.get_all_user_history_by_user_id(user_login.id)
             user_dict = user_login._to_json()
             user_dict["user_histories"] = user_histories
