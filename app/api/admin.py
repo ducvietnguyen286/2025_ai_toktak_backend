@@ -267,7 +267,7 @@ class GetDetailLog(Resource):
                 "data": [post.to_dict() for post in billings.items],
             }, 200
 
-    @ns.route("/admin/delete_referral_history")
+    @ns.route("/delete_referral_history")
     class APIAdminDeleteReferralHistory(Resource):
         @jwt_required()
         @admin_required()
