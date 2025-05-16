@@ -4,6 +4,7 @@ import time
 import datetime
 import json
 import os
+import uuid
 from flask_restx import Namespace, Resource
 from app.ais.chatgpt import (
     call_chatgpt_clear_product_name,
@@ -1669,46 +1670,37 @@ class APIDownloadZip(Resource):
                     code=201,
                 ).to_dict()
 
+            images = json.loads(post.images)
+            file_list = []
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "https://api.toktak.ai"
+            upload_folder = os.path.join(os.getcwd(), f"uploads/")
+            for index, image_detail in enumerate(images):
+
+                image_detail_path = image_detail.replace(
+                    f"{current_domain}/files/", upload_folder
+                )
+                if os.path.exists(image_detail_path):
+                    file_list.append(image_detail_path)
+
+            if file_list:
+                zip_path, tmp_dir = _make_zip(file_list)
+                if request:
+                    after_this_request(
+                        lambda response: _cleanup_zip(zip_path, tmp_dir, response)
+                    )
+                return send_file(
+                    zip_path,
+                    mimetype="application/zip",
+                    as_attachment=True,
+                    download_name=f"post_{post_id}_images.zip",
+                )
+
             UPLOAD_BASE_PATH = "uploads"
             post_date = post.created_at.strftime("%Y_%m_%d")
             IMAGE_EXTENSIONS = ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp", "*.svg"]
             folder_path = os.path.join(UPLOAD_BASE_PATH, post_date, str(post.batch_id))
             if not os.path.exists(folder_path):
                 logger.error(f"API download-zip - Folder not found {folder_path}")
-                images = json.loads(post.images)
-                file_list = []
-                current_domain = (
-                        os.environ.get("CURRENT_DOMAIN") or "https://api.toktak.ai"
-                    )
-                upload_folder = os.path.join(os.getcwd(), f"uploads/")
-                for index, image_detail in enumerate(images):
-
-                    
-                    image_detail_path = image_detail.replace(
-                        f"{current_domain}/files/", upload_folder
-                    )
-                    if os.path.exists(image_detail_path):
-                        file_list.append(image_detail_path)
-
-                if file_list:
-                    tmp_dir = tempfile.mkdtemp()
-                    zip_path = os.path.join(tmp_dir, "images.zip")
-
-                    with ZipFile(zip_path, "w") as zipf:
-                        for file_path in file_list:
-                            filename = os.path.basename(file_path)
-                            zipf.write(file_path, arcname=filename)
-                    if request:
-                        after_this_request(
-                            lambda response: _cleanup_zip(zip_path, tmp_dir, response)
-                        )
-                    return send_file(
-                        zip_path,
-                        mimetype="application/zip",
-                        as_attachment=True,
-                        download_name=f"post_{post_id}_images.zip",
-                    )
-
                 return Response(
                     message=f"Folder not found {post_date}",
                     code=201,
@@ -1724,14 +1716,7 @@ class APIDownloadZip(Resource):
                     code=201,
                 ).to_dict()
 
-            tmp_dir = tempfile.mkdtemp()
-            zip_path = os.path.join(tmp_dir, "images.zip")
-
-            with ZipFile(zip_path, "w") as zipf:
-                for file_path in file_list:
-                    filename = os.path.basename(file_path)
-                    zipf.write(file_path, arcname=filename)
-
+            zip_path, tmp_dir = _make_zip(file_list)
             if request:
                 after_this_request(
                     lambda response: _cleanup_zip(zip_path, tmp_dir, response)
@@ -1761,3 +1746,15 @@ def _cleanup_zip(zip_path, tmp_dir, response):
     except Exception as e:
         logger.warning(f"Không thể xóa tệp tạm: {e}")
     return response
+
+
+def _make_zip(file_list):
+    unique_id = uuid.uuid4().hex
+    file_zip = f"{unique_id}_images.zip"
+    tmp_dir = tempfile.mkdtemp()
+    zip_path = os.path.join(tmp_dir, file_zip)
+    with ZipFile(zip_path, "w") as zipf:
+        for file_path in file_list:
+            filename = os.path.basename(file_path)
+            zipf.write(file_path, arcname=filename)
+    return zip_path, tmp_dir
