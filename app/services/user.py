@@ -10,7 +10,7 @@ from app.models.memberprofile import MemberProfile
 from app.models.referral_history import ReferralHistory
 from app.extensions import db
 from app.lib.logger import logger
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 import const
 from dateutil.relativedelta import relativedelta
 
@@ -379,3 +379,12 @@ class UserService:
             .all()
         )
         return [user_history._to_json() for user_history in user_histories]
+    
+    @staticmethod
+    def get_total_batch_remain(user_id):
+        batch_total = (
+            UserHistory.query.with_entities(func.sum(UserHistory.value))
+            .filter(UserHistory.user_id == user_id)
+            .scalar()
+        )
+        return batch_total or 0
