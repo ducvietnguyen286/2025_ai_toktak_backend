@@ -1836,7 +1836,7 @@ class APIGetReferUserSuccess(Resource):
 class APICheckActiveLinkSns(Resource):
     @jwt_required()
     def get(self):
-        current_user = AuthService.get_current_identity()
+        current_user = AuthService.get_current_identity(no_cache=True)
         total_user_links = UserService.get_total_link(current_user.id)
         total_link_active = current_user.total_link_active
         if total_user_links >= total_link_active:
