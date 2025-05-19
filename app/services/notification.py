@@ -1,9 +1,8 @@
+from bson import ObjectId
 from app.models.notification import Notification
-from app.models.user import User
-from app.extensions import db
 from datetime import datetime, timedelta
 import const
-from sqlalchemy import and_, func, or_
+from mongoengine import Q
 
 
 class NotificationServices:
@@ -16,198 +15,176 @@ class NotificationServices:
 
     @staticmethod
     def find(id):
-        return Notification.query.get(id)
+        return Notification.objects.get(id=ObjectId(id))
 
     @staticmethod
     def update_notification(id, *args, **kwargs):
-        notification = Notification.query.get(id)
+        notification = Notification.objects.get(id=ObjectId(id))
         notification.update(**kwargs)
         return notification
 
     @staticmethod
     def find_notification_sns(post_id, notification_type):
-        notification = Notification.query.filter(
-            Notification.post_id == post_id,
-            Notification.notification_type == notification_type,
+        notification = Notification.objects(
+            post_id=post_id,
+            notification_type=notification_type,
         ).first()
         return notification
 
     @staticmethod
     def delete(id):
-        return Notification.query.get(id).delete()
+        return Notification.objects.get(id=ObjectId(id)).delete()
 
     @staticmethod
     def update_notification_by_batch_id(batch_id, *args, **kwargs):
-        updated_rows = Notification.query.filter_by(batch_id=batch_id).update(
-            kwargs
-        )  # Cập nhật trực tiếp
-        db.session.commit()  # Lưu vào database
+        updated_rows = Notification.objects(batch_id=batch_id).update(**kwargs)
         return updated_rows
 
     @staticmethod
     def get_notifications(data_search):
-        # Query cơ bản với các điều kiện
-        query = Notification.query.filter(
-            Notification.user_id == data_search["user_id"],
-        )
+        query = Notification.objects(user_id=data_search["user_id"])
 
-        # Xử lý type_order
-        if data_search["type_order"] == "id_asc":
-            query = query.order_by(Notification.id.asc())
-        elif data_search["type_order"] == "id_desc":
-            query = query.order_by(Notification.id.desc())
+        tp = data_search.get("type_post")
+        if tp in ("video", "image", "blog"):
+            query = query.filter(type=tp)
+
+        tr = data_search.get("time_range")
+        if tr:
+            now = datetime.utcnow()
+            if tr == "today":
+                start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            elif tr == "last_week":
+                start = now - timedelta(days=7)
+            elif tr == "last_month":
+                start = now - timedelta(days=30)
+            elif tr == "last_year":
+                start = now - timedelta(days=365)
+            else:
+                start = None
+
+            if start:
+                query = query.filter(Q(created_at__gte=start))
+
+        order = data_search.get("type_order", "id_desc")
+        if order == "id_asc":
+            query = query.order_by("id")
         else:
-            query = query.order_by(Notification.id.desc())
+            query = query.order_by("-id")
 
-        # Xử lý type_post
-        if data_search["type_post"] == "video":
-            query = query.filter(Notification.type == "video")
-        elif data_search["type_post"] == "image":
-            query = query.filter(Notification.type == "image")
-        elif data_search["type_post"] == "blog":
-            query = query.filter(Notification.type == "blog")
+        page = max(int(data_search.get("page", 1)), 1)
+        per_page = max(int(data_search.get("per_page", 10)), 1)
+        skip = (page - 1) * per_page
 
-        time_range = data_search.get("time_range")  # Thêm biến time_range
-        # Lọc theo khoảng thời gian
-        if time_range == "today":
-            start_date = datetime.now().replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
-            query = query.filter(Notification.created_at >= start_date)
+        total = query.count()
+        items = query.skip(skip).limit(per_page)
 
-        elif time_range == "last_week":
-            start_date = datetime.now() - timedelta(days=7)
-            query = query.filter(Notification.created_at >= start_date)
-
-        elif time_range == "last_month":
-            start_date = datetime.now() - timedelta(days=30)
-            query = query.filter(Notification.created_at >= start_date)
-
-        elif time_range == "last_year":
-            start_date = datetime.now() - timedelta(days=365)
-            query = query.filter(Notification.created_at >= start_date)
-
-        pagination = query.paginate(
-            page=data_search["page"], per_page=data_search["per_page"], error_out=False
-        )
-        return pagination
+        return {
+            "items": list(items),
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": (total + per_page - 1) // per_page,
+        }
 
     @staticmethod
     def delete_posts_by_ids(post_ids):
         try:
-            Notification.query.filter(Notification.id.in_(post_ids)).delete(
-                synchronize_session=False
-            )
-            db.session.commit()
+            deleted_count = Notification.objects(id__in=post_ids).delete()
+            return deleted_count
         except Exception as ex:
-            db.session.rollback()
             return 0
-        return 1
 
     @staticmethod
     def getTotalNotification(data_search):
-        # Query cơ bản với các điều kiện
-        query = Notification.query.filter(
-            Notification.user_id == data_search["user_id"],
-        )
+        qs = Notification.objects(user_id=data_search["user_id"])
+        typ = data_search.get("type_read")
+        if typ == "0":
+            qs = qs.filter(is_read=False)
+        elif typ == "1":
+            qs = qs.filter(is_read=True)
 
-        type_read = data_search.get("type_read", "")
-
-        if type_read == "0":
-            query = query.filter(Notification.is_read == 0)
-        elif type_read == "1":
-            query = query.filter(Notification.is_read == 1)
-        total = query.count()
-        return total
+        return qs.count()
 
     @staticmethod
     def update_post_by_user_id(user_id, *args, **kwargs):
-        updated_rows = Notification.query.filter_by(user_id=user_id).update(kwargs)
-        db.session.commit()
-        return updated_rows
+        updates = {f"set__{field}": value for field, value in kwargs.items()}
+        updated_count = Notification.objects(user_id=user_id).update(**updates)
+        return updated_count
 
     @staticmethod
     def get_admin_notifications(data_search):
-        # Query cơ bản với các điều kiện
-        query = Notification.query
-        type_notification = int(data_search.get("type_notification", ""))
-        if type_notification == 0:
-            query = query.filter(Notification.status == const.NOTIFICATION_FALSE)
-        elif type_notification == 1:
-            query = query.filter(Notification.status == const.NOTIFICATION_SUCCESS)
+        qs = Notification.objects
 
-        search_key = data_search.get("search_key", "")
+        t_notif = data_search.get("type_notification")
+        if t_notif is not None and t_notif != "":
+            t_notif = int(t_notif)
+            if t_notif == 0:
+                qs = qs.filter(status=const.NOTIFICATION_FALSE)
+            elif t_notif == 1:
+                qs = qs.filter(status=const.NOTIFICATION_SUCCESS)
 
-        if search_key != "":
-            search_pattern = f"%{search_key}%"
-            query = query.filter(
-                or_(
-                    Notification.title.ilike(search_pattern),
-                    Notification.description.ilike(search_pattern),
-                    Notification.user.has(User.email.ilike(search_pattern)),
-                )
-            )
+        sk = data_search.get("search_key", "").strip()
+        if sk:
+            qs = qs.filter(Q(title__icontains=sk) | Q(description__icontains=sk))
 
-        # Xử lý type_order
-        if data_search["type_order"] == "id_asc":
-            query = query.order_by(Notification.id.asc())
-        elif data_search["type_order"] == "id_desc":
-            query = query.order_by(Notification.id.desc())
+        tp = data_search.get("type_post")
+        if tp in ("video", "image", "blog"):
+            qs = qs.filter(type=tp)
+
+        tr = data_search.get("time_range")
+        if tr:
+            now = datetime.utcnow()
+            if tr == "today":
+                start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            elif tr == "last_week":
+                start = now - timedelta(days=7)
+            elif tr == "last_month":
+                start = now - timedelta(days=30)
+            elif tr == "last_year":
+                start = now - timedelta(days=365)
+            else:
+                start = None
+
+            if start:
+                qs = qs.filter(created_at__gte=start)
+
+        order = data_search.get("type_order", "id_desc")
+        if order == "id_asc":
+            qs = qs.order_by("id")
         else:
-            query = query.order_by(Notification.id.desc())
+            qs = qs.order_by("-id")
 
-        # Xử lý type_post
-        if data_search["type_post"] == "video":
-            query = query.filter(Notification.type == "video")
-        elif data_search["type_post"] == "image":
-            query = query.filter(Notification.type == "image")
-        elif data_search["type_post"] == "blog":
-            query = query.filter(Notification.type == "blog")
+        page = max(int(data_search.get("page", 1)), 1)
+        per_page = max(int(data_search.get("per_page", 10)), 1)
+        skip = (page - 1) * per_page
+        total = qs.count()
+        items = qs.skip(skip).limit(per_page)
 
-        time_range = data_search.get("time_range")  # Thêm biến time_range
-        # Lọc theo khoảng thời gian
-        if time_range == "today":
-            start_date = datetime.now().replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
-            query = query.filter(Notification.created_at >= start_date)
-
-        elif time_range == "last_week":
-            start_date = datetime.now() - timedelta(days=7)
-            query = query.filter(Notification.created_at >= start_date)
-
-        elif time_range == "last_month":
-            start_date = datetime.now() - timedelta(days=30)
-            query = query.filter(Notification.created_at >= start_date)
-
-        elif time_range == "last_year":
-            start_date = datetime.now() - timedelta(days=365)
-            query = query.filter(Notification.created_at >= start_date)
-
-        pagination = query.paginate(
-            page=data_search["page"], per_page=data_search["per_page"], error_out=False
-        )
-        return pagination
+        return {
+            "items": list(items),
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": (total + per_page - 1) // per_page,
+        }
 
     @staticmethod
     def update_translated_notifications(translations: dict):
         if not translations:
-            return
+            return 0
 
-        notification_ids = list(translations.keys())
-        notifications_to_update = Notification.query.filter(
-            Notification.id.in_(notification_ids)
-        ).all()
+        ids = [
+            ObjectId(i) if not isinstance(i, ObjectId) else i
+            for i in translations.keys()
+        ]
 
-        if not notifications_to_update:
-            return
-        updated_count = 0
+        qs = Notification.objects(id__in=ids)
+        updated = 0
 
-        for notification_detail in notifications_to_update:
-            translated_text = translations.get(notification_detail.id)
-            if translated_text:
-                notification_detail.description_korea = translated_text
-                updated_count += 1
+        for notif in qs:
+            text = translations.get(str(notif.id)) or translations.get(notif.id)
+            if text:
+                notif.update(set__description_korea=text)
+                updated += 1
 
-        db.session.commit()
-        return updated_count
+        return updated

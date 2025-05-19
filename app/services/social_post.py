@@ -127,7 +127,7 @@ class SocialPostService:
                     post = post_dict.get(social_post.post_id)
                     if not post:
                         continue
-                    post = post._to_json()
+                    post = post.to_json()
                 link = link_dict.get(social_post.link_id)
 
                 post_social = {
