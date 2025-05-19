@@ -37,7 +37,7 @@ class APIEditPost(Resource):
     @parameters(
         type="object",
         properties={
-            "post_id": {"type": "integer"},
+            "post_id": {"type": "string"},
             "title": {"type": ["string", "null"]},
             "description": {"type": ["string", "null"]},
             "content": {"type": ["string", "null"]},

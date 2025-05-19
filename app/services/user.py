@@ -297,10 +297,9 @@ class UserService:
     @staticmethod
     def delete_users_by_ids(user_ids):
         try:
-            Post.objects(user_id__in=user_ids).delete(synchronize_session=False)
-            Batch.objcets(user_id__in=user_ids).delete(synchronize_session=False)
-
-            Notification.objects(user_id__in=user_ids).delete(synchronize_session=False)
+            Post.objects(user_id__in=user_ids).delete()
+            Batch.objects(user_id__in=user_ids).delete()
+            Notification.objects(user_id__in=user_ids).delete()
 
             SocialAccount.query.filter(SocialAccount.user_id.in_(user_ids)).delete(
                 synchronize_session=False
@@ -365,9 +364,7 @@ class UserService:
 
     @staticmethod
     def check_phone_verify_nice(mobileno):
-        return None
         user = User.query.filter(User.phone == mobileno, User.is_auth_nice == 1).first()
-
         return user
 
     @staticmethod
