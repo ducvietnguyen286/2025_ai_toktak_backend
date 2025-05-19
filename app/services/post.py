@@ -19,6 +19,7 @@ from app.lib.query import (
     select_with_filter_one,
 )
 from sqlalchemy import update, delete
+from sqlalchemy.orm import joinedload
 
 
 class PostService:
@@ -27,7 +28,12 @@ class PostService:
     def create_post(*args, **kwargs):
         post = Post(*args, **kwargs)
         post.save()
-        return post
+
+        post_data = select_with_filter_one(
+            Post, filters=[Post.id == post.id], eager_opts=[joinedload(Post.user)]
+        )
+
+        return post_data
 
     @staticmethod
     def find_post(id):

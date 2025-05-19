@@ -8,11 +8,14 @@ def select_with_filter(
     model: Type[DeclarativeMeta],
     filters: Optional[List[Any]] = None,
     order_by: Optional[List[Any]] = None,
+    eager_opts: Optional[List[Any]] = None,
 ):
     stmt = select(model)
     if filters:
         for cond in filters:
             stmt = stmt.where(cond)
+    if eager_opts:
+        stmt = stmt.options(*eager_opts)
     if order_by:
         stmt = stmt.order_by(*order_by)
     result = db.session.execute(stmt).scalars().all()
@@ -23,11 +26,14 @@ def select_with_filter_one(
     model: Type[DeclarativeMeta],
     filters: Optional[List[Any]] = None,
     order_by: Optional[List[Any]] = None,
+    eager_opts: Optional[List[Any]] = None,
 ):
     stmt = select(model)
     if filters:
         for cond in filters:
             stmt = stmt.where(cond)
+    if eager_opts:
+        stmt = stmt.options(*eager_opts)
     if order_by:
         stmt = stmt.order_by(*order_by)
     result = db.session.execute(stmt).scalars().first()
@@ -37,8 +43,14 @@ def select_with_filter_one(
 def select_by_id(
     model: Type[DeclarativeMeta],
     pk: Any,
+    eager_opts: Optional[List[Any]] = None,
 ):
-    return db.session.get(model, pk)
+    if eager_opts:
+        stmt = select(model).options(*eager_opts).where(model.id == pk)
+    else:
+        stmt = select(model).where(model.id == pk)
+    result = db.session.execute(stmt).scalars().first()
+    return result
 
 
 def select_with_pagination(
@@ -47,11 +59,14 @@ def select_with_pagination(
     per_page: int,
     filters: Optional[List[Any]] = None,
     order_by: Optional[List[Any]] = None,
+    eager_opts: Optional[List[Any]] = None,
 ) -> Dict[str, Any]:
     stmt = select(model)
     if filters:
         for cond in filters:
             stmt = stmt.where(cond)
+    if eager_opts:
+        stmt = stmt.options(*eager_opts)
     if order_by:
         stmt = stmt.order_by(*order_by)
 
