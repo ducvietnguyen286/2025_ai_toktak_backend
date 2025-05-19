@@ -106,7 +106,7 @@ class APINewLink(Resource):
     )
     def post(self, args):
         try:
-            current_user = AuthService.get_current_identity()
+            current_user = AuthService.get_current_identity(no_cache=True)
             link_id = args.get("link_id", 0)
             link = LinkService.find_link(link_id)
 
