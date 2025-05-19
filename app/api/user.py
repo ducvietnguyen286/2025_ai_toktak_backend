@@ -696,7 +696,7 @@ class APIPostToLinks(Resource):
                     {
                         "title": link.title,
                         "link_id": link_id,
-                        "post_id": post.id,
+                        "post_id": str(post.id),
                         "status": "PROCESSING",
                         "social_link": "",
                         "value": 0,
@@ -708,7 +708,7 @@ class APIPostToLinks(Resource):
                     "message": {
                         "sync_id": "",
                         "link_id": link_id,
-                        "post_id": post.id,
+                        "post_id": str(post.id),
                         "user_id": current_user.id,
                         "social_post_id": str(social_post.id),
                         "page_id": page_id,
