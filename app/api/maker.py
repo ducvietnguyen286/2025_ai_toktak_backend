@@ -523,7 +523,7 @@ class APIUpdateTemplateVideoUser(Resource):
     @parameters(
         type="object",
         properties={
-            "batch_id": {"type": "integer"},
+            "batch_id": {"type": "string"},
             "is_paid_advertisements": {"type": "integer"},
             "product_name": {"type": "string"},
             "is_product_name": {"type": "integer"},
@@ -544,7 +544,7 @@ class APIUpdateTemplateVideoUser(Resource):
     )
     def post(self, args):
         try:
-            batch_id = args.get("batch_id", 0)
+            batch_id = args.get("batch_id", "")
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
             product_name = args.get("product_name", "")
             is_product_name = args.get("is_product_name", 0)
