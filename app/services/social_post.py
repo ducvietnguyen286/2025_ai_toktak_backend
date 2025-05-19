@@ -119,25 +119,16 @@ class SocialPostService:
 
             post_ids = [ObjectId(post_id) for post_id in post_ids]
 
-            print("Post IDs:", post_ids)
-
             posts = Post.objects(id__in=post_ids)
 
-            logger.info(f"posts: {posts}")
-
             data = {}
-            post_dict = {post.id: post for post in posts}
-
-            logger.info(f"post_dict: {post_dict}")
+            post_dict = {str(post.id): post for post in posts}
 
             for social_post in social_posts:
                 post = post_dict.get(social_post.post_id)
                 if not post:
-                    post = post_dict.get(social_post.post_id)
-                    if not post:
-                        continue
-                    post = post.to_json()
-                    logger.info(f"post: {post}")
+                    continue
+                post = post.to_json()
                 link = link_dict.get(social_post.link_id)
 
                 post_social = {
@@ -147,7 +138,7 @@ class SocialPostService:
                     "social_link": social_post.social_link,
                     "link_id": social_post.link_id,
                     "link_type": link.type,
-                    "post_id": social_post.post_id,
+                    "post_id": str(social_post.post_id),
                     "session_key": social_post.session_key,
                     "process_number": social_post.process_number,
                     "error_message": social_post.error_message,
