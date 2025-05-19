@@ -30,7 +30,7 @@ class APIUsedCoupon(Resource):
         required=["code"],
     )
     def post(self, args):
-        current_user = AuthService.get_current_identity()
+        current_user = AuthService.get_current_identity(no_cache=True)
         code = args.get("code", "")
         coupon = CouponService.find_coupon_by_code(code)
         if coupon == "not_exist":

@@ -7,19 +7,6 @@ import pytz
 from sqlalchemy import inspect
 
 from app.extensions import db
-from contextlib import contextmanager
-
-
-@contextmanager
-def transactional_session():
-    try:
-        yield db.session
-        db.session.commit()
-    except:
-        db.session.rollback()
-        raise
-    finally:
-        db.session.remove()
 
 
 class BaseModel:
@@ -90,26 +77,25 @@ class BaseModel:
         }
 
     def save(self):
-        with transactional_session() as session:
-            session.add(self)
-            return self
+        db.session.add(self)
+        db.session.commit()
+        return self
 
     def expunge(self):
-        with transactional_session() as session:
-            session.expunge(self)
-            return self
+        db.session.expunge(self)
+        return self
 
     def update(self, **kwargs):
-        with transactional_session() as session:
-            for key, value in kwargs.items():
-                setattr(self, key, value)
-            return self
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        db.session.commit()
+        return self
 
     def delete(self):
-        with transactional_session() as session:
-            session.delete(self)
+        db.session.delete(self)
+        db.session.commit()
 
     def soft_delete(self):
-        with transactional_session() as session:
-            setattr(self, "deleted_at", datetime.now())
-            return self
+        setattr(self, "deleted_at", datetime.now())
+        db.session.commit()
+        return self
