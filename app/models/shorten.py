@@ -7,14 +7,14 @@ class ShortenURL(BaseDocument):
     meta = {
         "collection": "shorten_urls",
         "indexes": [
-            "original_url_hash",
-            "short_code",
+            {"fields": ["original_url_hash"], "name": "idx_original_url_hash_001"},
+            {"fields": ["short_code"], "name": "idx_short_code_001"},
         ],
     }
 
     original_url = StringField(required=True)
-    original_url_hash = StringField(required=True, max_length=100)
-    short_code = StringField(required=True, max_length=20, unique=True)
+    original_url_hash = StringField(required=True, max_length=100, default="")
+    short_code = StringField(required=True, max_length=20)
     status = IntField(default=1)
 
     def to_dict(self):
