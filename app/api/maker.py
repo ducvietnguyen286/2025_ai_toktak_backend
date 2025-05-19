@@ -196,7 +196,7 @@ class APICreateBatch(Resource):
         url = args.get("url", "")
         is_advance = args.get("is_advance", False)
         current_month = time.strftime("%Y-%m", time.localtime())
-        current_user = AuthService.get_current_identity() or None
+        current_user = AuthService.get_current_identity(no_cache=True) or None
 
         user_id_login = current_user.id if current_user else 0
 
@@ -212,7 +212,10 @@ class APICreateBatch(Resource):
 
                 if (
                     current_user.subscription != "FREE"
-                    and current_user.subscription_expired >= datetime.datetime.now()
+                    and datetime.datetime.strptime(
+                        current_user.subscription_expired, "%Y-%m-%d %H:%M:%S"
+                    )
+                    >= datetime.datetime.now()
                 ):
                     batch_type = const.TYPE_PRO
 
@@ -561,7 +564,7 @@ class APIUpdateTemplateVideoUser(Resource):
             hashtag = args.get("hashtag", [])
 
             user_id_login = 0
-            current_user = AuthService.get_current_identity() or None
+            current_user = AuthService.get_current_identity(no_cache=True) or None
             user_id_login = current_user.id
             user_template = PostService.get_template_video_by_user_id(user_id_login)
             if not user_template:

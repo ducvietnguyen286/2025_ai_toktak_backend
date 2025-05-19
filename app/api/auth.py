@@ -188,14 +188,12 @@ class APIMe(Resource):
     @jwt_required()
     def get(self):
         try:
-            login = AuthService.get_current_identity()
+            login = AuthService.get_current_identity(no_cache=True)
             if not login:
                 return Response(
                     status=401,
                     message="Can't User login",
                 ).to_dict()
-
-            user_login = UserService.find_user(user_login.id)
 
             if (
                 user_login.deleted_at
@@ -333,14 +331,12 @@ class APIMeUpdate(Resource):
         phone = args.get("phone")
         contact = args.get("contact")
         company_name = args.get("company_name")
-        user_login = AuthService.get_current_identity()
+        user_login = AuthService.get_current_identity(no_cache=True)
         if not user_login:
             return Response(
                 message="시스템에 로그인해주세요.",
                 code=201,
             ).to_dict()
-
-        user_login = UserService.find_user(user_login.id)
 
         update_data = {}
 
@@ -388,14 +384,12 @@ class APIUserProfile(Resource):
     @jwt_required()
     def get(self):
         try:
-            user_login = AuthService.get_current_identity()
+            user_login = AuthService.get_current_identity(no_cache=True)
             if not user_login:
                 return Response(
                     message="시스템에 로그인해주세요.",
                     code=201,
                 ).to_dict()
-
-            user_login = UserService.find_user(user_login.id)
 
             if (
                 user_login
