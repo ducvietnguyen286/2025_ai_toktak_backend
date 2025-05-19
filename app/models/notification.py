@@ -23,6 +23,7 @@ class Notification(BaseDocument):
     is_read = IntField(default=0)
     send_telegram = IntField(default=0)
     render_id = StringField(max_length=500)
+    email = StringField(max_length=500)
 
     social_sns_description = StringField(default="")
 
