@@ -1301,7 +1301,7 @@ class APIGetStatusUploadBySyncId(Resource):
             ).to_dict()
 
 
-@ns.route("/get-status-upload-with-batch-id/<int:id>")
+@ns.route("/get-status-upload-with-batch-id/<string:id>")
 class APIGetStatusUploadWithBatch(Resource):
 
     def get(self, id):
@@ -1429,7 +1429,7 @@ class APIGetStatusUploadWithBatch(Resource):
             ).to_dict()
 
 
-@ns.route("/save_draft_batch/<int:id>")
+@ns.route("/save_draft_batch/<string:id>")
 class APIUpdateStatusBatch(Resource):
 
     @jwt_required()
