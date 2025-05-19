@@ -22,8 +22,7 @@ from threading import Thread
 
 
 def __config_logging(app):
-    app.logger.setLevel(logging.DEBUG)
-    app.logger.info("Start TEST...")
+    print("Start TEST...")
 
 
 def __init_app(app):
@@ -57,7 +56,7 @@ def main():
 def migrate_from_mysql_to_mongo_batch_and_posts():
     app = create_app()
     with app.app_context():
-        app.logger.info("Start Script...")
+        print("Start Script...")
         offset = 0
         limit = 200
         while True:
@@ -130,13 +129,13 @@ def migrate_from_mysql_to_mongo_batch_and_posts():
                     PostService.create_post(**post_data)
 
             offset += limit
-        app.logger.info("End Script...")
+        print("End Script...")
 
 
 def migrate_from_mysql_to_mongo_shotenlink():
     app = create_app()
     with app.app_context():
-        app.logger.info("Start Script...")
+        print("Start Script...")
         offset = 0
         limit = 200
         while True:
@@ -162,13 +161,13 @@ def migrate_from_mysql_to_mongo_shotenlink():
                 shorten.save()
             offset += limit
 
-        app.logger.info("End Script...")
+        print("End Script...")
 
 
 def logout_x():
     app = create_app()
     with app.app_context():
-        app.logger.info("Start Script...")
+        print("Start Script...")
         users = UserService.all_users()
         links = LinkService.get_all_links()
         x_link = None
@@ -188,7 +187,7 @@ def logout_x():
                     description="🔗 계속 사용하시려면 X 계정을 다시 연결해 주세요. 😊",
                     description_korea="🔗 계속 사용하시려면 X 계정을 다시 연결해 주세요. 😊",
                 )
-        app.logger.info("End Script...")
+        print("End Script...")
 
 
 if __name__ == "__main__":
