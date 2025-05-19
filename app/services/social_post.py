@@ -1,4 +1,5 @@
 import traceback
+from app.lib.logger import logger
 from app.models.link import Link
 from app.models.post import Post
 from app.models.social_post import SocialPost
@@ -48,7 +49,7 @@ class SocialPostService:
                 "social_link": social_post.social_link,
                 "link_id": social_post.link_id,
                 "link_type": link.type,
-                "post_id": social_post.post_id,
+                "post_id": str(social_post.post_id),
                 "session_key": social_post.session_key,
                 "process_number": social_post.process_number,
                 "error_message": social_post.error_message,
@@ -106,6 +107,8 @@ class SocialPostService:
                 return {}
             social_posts = SocialPost.objects(sync_id=str(id))
 
+            print(f"social_posts: {type(id)}")
+
             post_ids = social_sync.post_ids
 
             user_links = UserLink.query.filter(
@@ -116,15 +119,18 @@ class SocialPostService:
             links = Link.query.filter(Link.id.in_(link_ids)).all()
             link_dict = {link.id: link for link in links}
 
-            posts = Post.query.filter(Post.id.in_(post_ids)).all()
+            post_ids = [ObjectId(post_id) for post_id in post_ids]
+
+            posts = Post.objects(id__in=post_ids)
 
             data = {}
-            post_dict = {post.id: post for post in posts}
+            post_dict = {str(post.id): post for post in posts}
 
             for social_post in social_posts:
-                post = data.get(social_post.post_id)
+                social_post_id = str(social_post.post_id)
+                post = data.get(social_post_id)
                 if not post:
-                    post = post_dict.get(social_post.post_id)
+                    post = post_dict.get(social_post_id)
                     if not post:
                         continue
                     post = post.to_json()
@@ -137,7 +143,7 @@ class SocialPostService:
                     "social_link": social_post.social_link,
                     "link_id": social_post.link_id,
                     "link_type": link.type,
-                    "post_id": social_post.post_id,
+                    "post_id": str(social_post.post_id),
                     "session_key": social_post.session_key,
                     "process_number": social_post.process_number,
                     "error_message": social_post.error_message,
@@ -146,7 +152,7 @@ class SocialPostService:
                 if "social_posts" not in post:
                     post["social_posts"] = []
                 post["social_posts"].append(post_social)
-                data[social_post.post_id] = post
+                data[str(social_post.post_id)] = post
 
             post_data = []
             for key in data:
@@ -157,6 +163,7 @@ class SocialPostService:
             return social_sync_data
         except Exception as e:
             traceback.print_exc()
+            logger.error(f"get_status_social_sycns__by_id: {e}")
             print(e)
             return {}
 

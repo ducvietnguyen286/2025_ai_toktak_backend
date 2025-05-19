@@ -9,6 +9,7 @@ from sqlalchemy import and_, func, or_
 from flask import jsonify
 from datetime import datetime, timedelta
 from sqlalchemy.orm import aliased
+from app.services.batch import BatchService
 from app.services.image_template import ImageTemplateService
 import os
 import json
@@ -146,7 +147,7 @@ class ProductService:
     @staticmethod
     def create_sns_product(user_id, batch_id):
         try:
-            batch_detail = Batch.query.get(batch_id)
+            batch_detail = BatchService.find_batch(batch_id)
             if not batch_detail:
                 logger.error(
                     f"Can't create Product   user_id :  {str(user_id)} , batch_id : {batch_id}"

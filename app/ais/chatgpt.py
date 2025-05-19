@@ -9,7 +9,7 @@ from app.lib.logger import logger
 chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
 
 
-def call_chatgpt_create_caption(images=[], data={}, post_id=0):
+def call_chatgpt_create_caption(images=[], data={}, post_id=""):
 
     prompt = """업로드된 이미지를 참고하여 제품을 홍보하는 숏폼(Shorts, TikTok) 스타일의 영상 콘텐츠를 제작하도록 지원해 드립니다.
 
@@ -176,7 +176,7 @@ def call_chatgpt_create_caption(images=[], data={}, post_id=0):
     return call_chatgpt(content, response_schema, post_id)
 
 
-def call_chatgpt_create_blog(images=[], data={}, post_id=0):
+def call_chatgpt_create_blog(images=[], data={}, post_id=""):
 
     prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 블로그 게시글을 작성해 주세요.
 
@@ -334,7 +334,7 @@ Note:
     return call_chatgpt(content, response_schema, post_id)
 
 
-def call_chatgpt_create_social(images=[], data={}, post_id=0):
+def call_chatgpt_create_social(images=[], data={}, post_id=""):
     prompt = """[역할]  
 당신은 SNS 바이럴 콘텐츠 제작 전문가입니다.  
 사용자의 Pain Point(불편함, 아쉬움, 고민 등)를 중심으로 문제를 제시하고,  
@@ -467,7 +467,7 @@ def call_chatgpt_clear_product_name(name):
 
 
 def call_chatgpt_get_main_text_and_color_for_image(
-    input_text, requested_fields, post_id=0
+    input_text, requested_fields, post_id=""
 ):
     prompt = """당신은 색상 디자인 전문가입니다. 다음 요구 사항을 충족하는 색상 팔레트를 만들어 주세요.
 
@@ -528,7 +528,7 @@ def replace_prompt_with_data(prompt, data):
 
 
 def call_chatgpt(
-    content, response_schema, post_id=0, base_prompt=None, temperature=0.9, retry=0
+    content, response_schema, post_id="", base_prompt=None, temperature=0.9, retry=0
 ):
     client = OpenAI(api_key=chatgpt_api_key)
     model = "gpt-4o-mini"

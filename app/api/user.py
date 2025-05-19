@@ -7,6 +7,7 @@ import time
 import traceback
 from urllib.parse import urlencode
 import uuid
+from bson import ObjectId
 from flask import redirect, request
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
@@ -208,7 +209,7 @@ class APISendPosts(Resource):
                 "items": {
                     "type": "object",
                     "properties": {
-                        "id": {"type": "integer"},
+                        "id": {"type": "string"},
                         "is_all": {"type": "integer"},
                         "link_ids": {
                             "type": "array",
@@ -290,7 +291,7 @@ class APISendPosts(Resource):
             count_images = 0
             count_videos = 0
             for post in posts:
-                post_ids.append(post.id)
+                post_ids.append(str(post.id))
                 if post.type == "image":
                     count_images += 1
                 if post.type == "video":
@@ -344,15 +345,17 @@ class APISendPosts(Resource):
 
             social_post_ids = []
             upload = []
+
             for post in posts:
-                batch_id = post.batch_id
+                post_id = str(post.id)
+                batch_id = str(post.batch_id)
                 timestamp = int(time.time())
                 unique_id = uuid.uuid4().hex
 
                 session_key = f"{timestamp}_{unique_id}"
 
-                check_is_all = is_all.get(post.id, 0)
-                check_links = link_ids.get(post.id, [])
+                check_is_all = is_all.get(post_id, 0)
+                check_links = link_ids.get(post_id, [])
 
                 if check_is_all == 1:
                     check_links = active_links
@@ -373,8 +376,8 @@ class APISendPosts(Resource):
                     social_post = SocialPostService.create_social_post(
                         link_id=link_id,
                         user_id=current_user.id,
-                        post_id=post.id,
-                        batch_id=batch_id,
+                        post_id=ObjectId(post.id),
+                        batch_id=ObjectId(batch_id),
                         session_key=session_key,
                         sync_id=sync_id,
                         status="PROCESSING",
@@ -391,7 +394,7 @@ class APISendPosts(Resource):
                         {
                             "title": link.title,
                             "link_id": link_id,
-                            "post_id": post.id,
+                            "post_id": post_id,
                             "status": "PROCESSING",
                             "social_link": "",
                             "value": 0,
@@ -404,7 +407,7 @@ class APISendPosts(Resource):
                         "message": {
                             "sync_id": sync_id,
                             "link_id": link_id,
-                            "post_id": post.id,
+                            "post_id": post_id,
                             "user_id": current_user.id,
                             "social_post_id": str(social_post.id),
                             "page_id": "",
@@ -480,7 +483,7 @@ class APIPostToLinks(Resource):
                 "items": {"type": "integer"},
                 "uniqueItems": True,
             },
-            "post_id": {"type": "integer"},
+            "post_id": {"type": "string"},
             "page_id": {"type": "string"},
             "disable_comment": {"type": "boolean"},
             "disable_duet": {"type": "boolean"},
@@ -599,7 +602,7 @@ class APIPostToLinks(Resource):
             # Update to Uploads
             PostService.update_post(post_id, status=const.DRAFT_STATUS)
 
-            batch_id = post.batch_id
+            batch_id = str(post.batch_id)
 
             batch_detail = BatchService.find_batch(batch_id)
             if batch_detail:
@@ -647,7 +650,7 @@ class APIPostToLinks(Resource):
 
             progress = {
                 "batch_id": batch_id,
-                "post_id": post.id,
+                "post_id": str(post.id),
                 "user_id": current_user.id,
                 "total_link": total_link,
                 "total_post": total_post,
@@ -693,7 +696,7 @@ class APIPostToLinks(Resource):
                     {
                         "title": link.title,
                         "link_id": link_id,
-                        "post_id": post.id,
+                        "post_id": str(post.id),
                         "status": "PROCESSING",
                         "social_link": "",
                         "value": 0,
@@ -705,7 +708,7 @@ class APIPostToLinks(Resource):
                     "message": {
                         "sync_id": "",
                         "link_id": link_id,
-                        "post_id": post.id,
+                        "post_id": str(post.id),
                         "user_id": current_user.id,
                         "social_post_id": str(social_post.id),
                         "page_id": page_id,
@@ -1476,7 +1479,7 @@ class APICheckSNSLink(Resource):
     def post(self, args):
         try:
             batchId = args.get("batchId", None)
-            current_user = AuthService.get_current_identity()
+            current_user = AuthService.get_current_identity(no_cache=True)
             if not current_user:
                 return Response(
                     message="로그인하여 계속 진행하십시오.",
@@ -1836,7 +1839,7 @@ class APIGetReferUserSuccess(Resource):
 class APICheckActiveLinkSns(Resource):
     @jwt_required()
     def get(self):
-        current_user = AuthService.get_current_identity()
+        current_user = AuthService.get_current_identity(no_cache=True)
         total_user_links = UserService.get_total_link(current_user.id)
         total_link_active = current_user.total_link_active
         if total_user_links >= total_link_active:

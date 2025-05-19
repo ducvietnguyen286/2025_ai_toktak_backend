@@ -212,7 +212,8 @@ class APICreateBatch(Resource):
 
                 if (
                     current_user.subscription != "FREE"
-                    and current_user.subscription_expired.date() >= datetime.date.today()
+                    and current_user.subscription_expired.date()
+                    >= datetime.date.today()
                 ):
                     batch_type = const.TYPE_PRO
 
@@ -958,21 +959,21 @@ class APIMakePost(Resource):
                     #         current_stt = index + 1
                     #         pre_content_cutout += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
 
-                    pre_content_cutout_sam = f"<br></br><h2>IMAGES CUTTED OUT BY SERVER: TOTAL - {len(cutout_by_sam_images)}</h2>"
-                    if len(cutout_by_sam_images) > 0:
-                        current_stt = 0
-                        for index, cutout_image in enumerate(cutout_by_sam_images):
-                            current_stt = index + 1
-                            pre_content_cutout_sam += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
+                    # pre_content_cutout_sam = f"<br></br><h2>IMAGES CUTTED OUT BY SERVER: TOTAL - {len(cutout_by_sam_images)}</h2>"
+                    # if len(cutout_by_sam_images) > 0:
+                    #     current_stt = 0
+                    #     for index, cutout_image in enumerate(cutout_by_sam_images):
+                    #         current_stt = index + 1
+                    #         pre_content_cutout_sam += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
 
-                    pre_content = f"<br></br><h2>DESCRIPTION IMAGES: TOTAL - {len(description_images)}</h2>"
-                    if len(description_images) > 0:
-                        current_stt = 0
-                        for index, cleared_image in enumerate(description_images):
-                            current_stt = index + 1
-                            pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
+                    # pre_content = f"<br></br><h2>DESCRIPTION IMAGES: TOTAL - {len(description_images)}</h2>"
+                    # if len(description_images) > 0:
+                    #     current_stt = 0
+                    #     for index, cleared_image in enumerate(description_images):
+                    #         current_stt = index + 1
+                    #         pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
 
-                    content = pre_content_cutout_sam + pre_content + content
+                    # content = pre_content_cutout_sam + pre_content + content
 
                     for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
@@ -1410,6 +1411,7 @@ class APIGetStatusUploadWithBatch(Resource):
                     show_posts.append(post_detail)
 
                 except Exception as e:
+                    traceback.print_exc()
                     logger.error(f"Lỗi xử lý post {post_id}: {e}", exc_info=True)
 
             batch_res = batch.to_json()
@@ -1463,7 +1465,7 @@ class APIUpdateStatusBatch(Resource):
             )
 
             return Response(
-                data=batch_detail.to_dict(),
+                data=batch_detail.to_json(),
                 message=message,
                 code=200,
             ).to_dict()
@@ -1480,44 +1482,53 @@ class APIUpdateStatusBatch(Resource):
 class APIHistories(Resource):
     @jwt_required()
     def get(self):
-        current_user = AuthService.get_current_identity()
-        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
-        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
-        status = request.args.get("status", const.UPLOADED, type=int)
-        type_order = request.args.get("type_order", "", type=str)
-        type_post = request.args.get("type_post", "", type=str)
-        time_range = request.args.get("time_range", "", type=str)
-        data_search = {
-            "page": page,
-            "per_page": per_page,
-            "status": status,
-            "type_order": type_order,
-            "type_post": type_post,
-            "time_range": time_range,
-            "user_id": current_user.id,
-        }
-        posts = PostService.get_posts_upload(data_search)
-        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+        try:
+            current_user = AuthService.get_current_identity()
+            page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+            per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+            status = request.args.get("status", const.UPLOADED, type=int)
+            type_order = request.args.get("type_order", "", type=str)
+            type_post = request.args.get("type_post", "", type=str)
+            time_range = request.args.get("time_range", "", type=str)
+            data_search = {
+                "page": page,
+                "per_page": per_page,
+                "status": status,
+                "type_order": type_order,
+                "type_post": type_post,
+                "time_range": time_range,
+                "user_id": current_user.id,
+            }
+            posts = PostService.get_posts_upload(data_search)
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
-        return {
-            "current_user": current_user.id,
-            "status": True,
-            "message": "Success",
-            "total": posts.total,
-            "page": posts.page,
-            "per_page": posts.per_page,
-            "total_pages": posts.pages,
-            "data": [
-                {
-                    **post_json,
-                    "video_path": convert_video_path(
-                        post_json.get("video_path", ""), current_domain
-                    ),
-                }
-                for post in posts.items
-                if (post_json := post.to_json())
-            ],
-        }, 200
+            return {
+                "current_user": current_user.id,
+                "status": True,
+                "message": "Success",
+                "total": posts.get("total", 0),
+                "page": posts.get("page", 1),
+                "per_page": posts.get("per_page", 10),
+                "total_pages": posts.get("pages", 1),
+                "data": [
+                    {
+                        **post_json,
+                        "video_path": convert_video_path(
+                            post_json.get("video_path", ""), current_domain
+                        ),
+                    }
+                    for post in posts.get("items", [])
+                    if (post_json := post.to_json())
+                ],
+            }, 200
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Exception: get histories fail  :  {str(e)}")
+            return Response(
+                message="Lấy lịch sử thất bại",
+                status=200,
+                code=201,
+            ).to_dict()
 
 
 @ns.route("/delete_post")
@@ -1684,11 +1695,11 @@ class APIAdminHistories(Resource):
             "current_user": current_user.id,
             "status": True,
             "message": "Success",
-            "total": posts.total,
-            "page": posts.page,
-            "per_page": posts.per_page,
-            "total_pages": posts.pages,
-            "data": [post.to_dict() for post in posts.items],
+            "total": posts.get("total", 0),
+            "page": posts.get("page", 1),
+            "per_page": posts.get("per_page", 10),
+            "total_pages": posts.get("pages", 1),
+            "data": [post.to_dict() for post in posts.get("items", [])],
         }, 200
 
 

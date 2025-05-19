@@ -7,8 +7,8 @@ class Batch(BaseDocument):
     meta = {"collection": "batchs"}
 
     user_id = IntField(required=True, default=0)
-    url = StringField(required=True, max_length=500)
-    shorten_link = StringField(required=True, max_length=200)
+    url = StringField(required=True)
+    shorten_link = StringField(required=True, max_length=200, default="")
     thumbnail = StringField(max_length=500)
     thumbnails = StringField()
     content = StringField()
