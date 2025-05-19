@@ -7,6 +7,7 @@ import time
 import traceback
 from urllib.parse import urlencode
 import uuid
+from bson import ObjectId
 from flask import redirect, request
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
@@ -345,7 +346,7 @@ class APISendPosts(Resource):
             social_post_ids = []
             upload = []
             for post in posts:
-                batch_id = post.batch_id
+                batch_id = str(post.batch_id)
                 timestamp = int(time.time())
                 unique_id = uuid.uuid4().hex
 
@@ -373,8 +374,8 @@ class APISendPosts(Resource):
                     social_post = SocialPostService.create_social_post(
                         link_id=link_id,
                         user_id=current_user.id,
-                        post_id=post.id,
-                        batch_id=batch_id,
+                        post_id=ObjectId(post.id),
+                        batch_id=ObjectId(batch_id),
                         session_key=session_key,
                         sync_id=sync_id,
                         status="PROCESSING",
