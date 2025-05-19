@@ -1122,26 +1122,35 @@ class APIMakePost(Resource):
 class APIGetBatch(Resource):
     @jwt_required()
     def get(self, id):
-        batch = BatchService.find_batch(id)
-        if not batch:
+        try:
+            batch = BatchService.find_batch(id)
+            if not batch:
+                return Response(
+                    message="Batch không tồn tại",
+                    status=404,
+                ).to_dict()
+
+            posts = PostService.get_posts_by_batch_id(batch.id)
+
+            batch_res = batch._to_json()
+            batch_res["posts"] = posts
+
+            user_login = AuthService.get_current_identity()
+            user_info = UserService.get_user_info_detail(user_login.id)
+            batch_res["user_info"] = user_info
+
             return Response(
-                message="Batch không tồn tại",
-                status=404,
+                data=batch_res,
+                message="Lấy batch thành công",
             ).to_dict()
-
-        posts = PostService.get_posts_by_batch_id(batch.id)
-
-        batch_res = batch._to_json()
-        batch_res["posts"] = posts
-
-        user_login = AuthService.get_current_identity()
-        user_info = UserService.get_user_info_detail(user_login.id)
-        batch_res["user_info"] = user_info
-
-        return Response(
-            data=batch_res,
-            message="Lấy batch thành công",
-        ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Exception: get batch fail  :  {str(e)}")
+            return Response(
+                message="Lấy batch thất bại",
+                status=200,
+                code=201,
+            ).to_dict()
 
 
 @ns.route("/batchs")
