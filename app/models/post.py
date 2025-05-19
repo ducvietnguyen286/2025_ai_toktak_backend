@@ -1,7 +1,7 @@
 import json
 from app.models.base_mongo import BaseDocument
 import pytz
-from mongoengine import StringField, IntField, ObjectIdField
+from mongoengine import StringField, IntField, ObjectIdField, DateTimeField
 
 
 class Post(BaseDocument):
@@ -30,7 +30,7 @@ class Post(BaseDocument):
     video_path = StringField(default="")
 
     social_sns_description = StringField(default="")
-    schedule_date = StringField(default="")
+    schedule_date = DateTimeField()
 
     to_json_parse = "images"
     to_json_filter = "captions"
