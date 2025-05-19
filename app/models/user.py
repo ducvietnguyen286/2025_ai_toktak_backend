@@ -29,14 +29,16 @@ class User(db.Model, BaseModel):
 
     batch_no_limit_sns = db.Column(db.Integer, default=0)
     batch_sns_total = db.Column(db.Integer, default=0)
+    total_link_active = db.Column(db.Integer, default=0)
     batch_sns_remain = db.Column(db.Integer, default=0)
     batch_of_month = db.Column(db.String(50), default="")
 
     level = db.Column(db.Integer, default=0)
     level_info = db.Column(db.Text, nullable=False)
-    
+
     is_auth_nice = db.Column(db.Integer, default=0)
     is_verify_email = db.Column(db.Integer, default=0)
+    referrer_user_id = db.Column(db.Integer, default=0)
     auth_nice_result = db.Column(db.Text, nullable=False)
     gender = db.Column(db.String(255), nullable=False, default="")
     password_certificate = db.Column(db.String(255), nullable=False, default="")
@@ -72,6 +74,9 @@ class User(db.Model, BaseModel):
             "level": self.level,
             "level_info": self.level_info,
             "company_name": self.company_name,
+            "batch_sns_total": self.batch_sns_total,
+            "is_auth_nice": self.is_auth_nice,
+            "referrer_user_id": self.referrer_user_id,
             "subscription_expired": (
                 self.subscription_expired.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.subscription_expired
@@ -95,4 +100,9 @@ class User(db.Model, BaseModel):
         }
 
     def generate_referral_code(self):
-        self.referral_code = str(uuid.uuid4())[:8]
+        self.referral_code = str(uuid.uuid4())[:8].upper()
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.referral_code:
+            self.generate_referral_code()

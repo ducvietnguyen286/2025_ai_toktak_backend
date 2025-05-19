@@ -5,7 +5,7 @@ import logging
 import shutil
 from datetime import datetime
 from logging import DEBUG
-from logging.handlers import RotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -30,6 +30,7 @@ from app.extensions import redis_client, db, db_mongo
 from app.models.batch import Batch
 from app.models.post import Post
 from app.models.notification import Notification
+from app.services.user import UserService
 from pytz import timezone
 import requests
 
@@ -69,16 +70,20 @@ def create_app():
 
 
 def configure_logging(app):
-    """Cấu hình logging của Flask với file log theo ngày"""
+    """Cấu hình logging để tự động ghi log theo ngày (hàng ngày tạo file mới)"""
     if not os.path.exists(LOG_DIR):
         os.makedirs(LOG_DIR)
 
     log_filename = os.path.join(
-        LOG_DIR, f"schedule_tasks-{datetime.now().strftime('%Y-%m-%d')}.log"
-    )
+        LOG_DIR, "schedule_tasks.log"
+    )  # Không cần ghi ngày ở đây
 
-    file_handler = RotatingFileHandler(
-        log_filename, maxBytes=10 * 1024 * 1024, backupCount=5
+    file_handler = TimedRotatingFileHandler(
+        log_filename,
+        when="midnight",  # Reset mỗi đêm
+        interval=1,  # Mỗi 1 ngày
+        backupCount=7,  # Giữ tối đa 7 bản log cũ
+        encoding="utf-8",
     )
     file_handler.setLevel(DEBUG)
     file_handler.setFormatter(
@@ -318,6 +323,15 @@ def check_urls_health(app):
     else:
         app.logger.info("✅ All URLs are healthy.")
 
+def auto_extend_subscription_task(app):
+    app.logger.info("Start auto_extend_subscription_task...")
+    with app.app_context():
+        try:
+            count = UserService.auto_extend_free_subscriptions()
+            app.logger.info(f"✓ Auto-extended {count} FREE users")
+        except Exception as e:
+            app.logger.error(f"Error in auto_extend_subscription_task: {str(e)}")
+
 
 def create_notification_task():
     try:
@@ -339,6 +353,8 @@ def start_scheduler(app):
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
     four_am_kst_trigger = CronTrigger(hour=4, minute=0, timezone=kst)
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
+
+    twelve_oh_one_trigger = CronTrigger(hour=0, minute=1, timezone=kst)
 
     every_3_hours_trigger = CronTrigger(hour="*/3", minute=0, timezone=kst)
 
@@ -387,6 +403,14 @@ def start_scheduler(app):
         trigger=four_am_kst_trigger,
         id="exchange_thread_token",
     )
+    
+    
+    scheduler.add_job(
+        func=lambda: auto_extend_subscription_task(app),
+        trigger=twelve_oh_one_trigger,
+        id="auto_extend_subscription_task",
+    )
+
 
     atexit.register(lambda: scheduler.shutdown(wait=False))
     scheduler.start()
