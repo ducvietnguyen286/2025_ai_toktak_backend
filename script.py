@@ -8,6 +8,7 @@ from werkzeug.exceptions import default_exceptions
 from app.services.link import LinkService
 from app.services.notification import NotificationServices
 from app.services.user import UserService
+from app.models.shorten import ShortenURL
 import const
 
 load_dotenv(override=False)
@@ -47,6 +48,28 @@ def create_app():
 
 
 def main():
+    migrate_from_mysql_to_mongo_shotenlink()
+
+
+def migrate_from_mysql_to_mongo_shotenlink():
+    app = create_app()
+    with app.app_context():
+        app.logger.info("Start Script...")
+        mysql_shorten_links = db.session.execute(
+            "SELECT * FROM shorten_links"
+        ).fetchall()
+
+        for link in mysql_shorten_links:
+            ShortenURL.create(
+                original_url=link.original_url,
+                shortened_url=link.shortened_url,
+                user_id=link.user_id,
+            )
+
+        app.logger.info("End Script...")
+
+
+def logout_x():
     app = create_app()
     with app.app_context():
         app.logger.info("Start Script...")
