@@ -94,7 +94,7 @@ class APIUsers(Resource):
             "page": users.page,
             "per_page": users.per_page,
             "total_pages": users.pages,
-            "data": [post.to_json() for post in users.items],
+            "data": [user_detail._to_json() for user_detail in users.items],
         }, 200
 
 
