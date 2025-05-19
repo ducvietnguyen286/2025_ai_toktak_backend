@@ -132,6 +132,14 @@ class APINewLink(Resource):
                     status=400,
                 ).to_dict()
 
+            total_user_links = UserService.get_total_link(current_user.id)
+            total_link_active = current_user.total_link_active
+            if total_user_links >= total_link_active:
+                return Response(
+                    message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
+                    status=201,
+                ).to_dict()
+
             user_link = UserService.find_user_link_exist(link_id, current_user.id)
             is_active = True
             if not user_link:
@@ -976,6 +984,21 @@ class APIGetCallbackTiktok(Resource):
             link_id = payload.get("link_id")
             int_user_id = int(user_id)
             int_link_id = int(link_id)
+
+            current_user = UserService.find_user(int_user_id)
+            if not current_user:
+                return Response(
+                    message="로그인해주세요.",
+                    status=201,
+                ).to_dict()
+            total_user_links = UserService.get_total_link(current_user.id)
+            total_link_active = current_user.total_link_active
+            if total_user_links >= total_link_active:
+                return redirect(
+                    PAGE_PROFILE
+                    + f"?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=최대 {total_link_active}개의 채널만 설정할 수 있습니다."
+                )
+
             user_link = UserService.find_user_link_exist(int_link_id, int_user_id)
 
             RequestSocialLogService.create_request_social_log(
@@ -1130,7 +1153,7 @@ class APIYoutubeLogin(Resource):
 
             if not client:
                 PAGE_PROFILE = (
-                    os.environ.get("TIKTOK_REDIRECT_TO_PROFILE")
+                    os.environ.get("FACEBOOK_APP_REDIRECT_TO_PROFILE")
                     or "https://toktak.ai/profile"
                 )
 
@@ -1194,7 +1217,7 @@ class APIGetCallbackYoutube(Resource):
             code = args.get("code")
             state = args.get("state")
             PAGE_PROFILE = (
-                os.environ.get("TIKTOK_REDIRECT_TO_PROFILE")
+                os.environ.get("YOUTUBE_APP_REDIRECT_TO_PROFILE")
                 or "https://toktak.ai/profile"
             )
 
@@ -1218,6 +1241,20 @@ class APIGetCallbackYoutube(Resource):
             link_id = payload.get("link_id")
             int_user_id = int(user_id)
             int_link_id = int(link_id)
+
+            current_user = UserService.find_user(int_user_id)
+            if not current_user:
+                return Response(
+                    message="로그인해주세요.",
+                    status=201,
+                ).to_dict()
+            total_user_links = UserService.get_total_link(current_user.id)
+            total_link_active = current_user.total_link_active
+            if total_user_links >= total_link_active:
+                return redirect(
+                    PAGE_PROFILE
+                    + f"?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=최대 {total_link_active}개의 채널만 설정할 수 있습니다."
+                )
 
             if not client:
                 NotificationServices.create_notification(
@@ -1789,8 +1826,80 @@ class APIGetReferUserSuccess(Resource):
 
         current_user = AuthService.get_current_identity()
         user_id = current_user.id
-        
-        refer = ReferralService.get_by_user_id (user_id)
 
+        refer = ReferralService.get_by_user_id(user_id)
 
         return Response(data=refer, message="refer return.").to_dict()
+
+
+@ns.route("/check_active_link_sns")
+class APICheckActiveLinkSns(Resource):
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        total_user_links = UserService.get_total_link(current_user.id)
+        total_link_active = current_user.total_link_active
+        if total_user_links >= total_link_active:
+            return Response(
+                data={},
+                message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
+                code=201,
+            ).to_dict()
+
+        return Response(
+            data={
+                "total_user_links": total_user_links,
+                "total_link_active": total_link_active,
+            },
+            message="You can add active new link",
+        ).to_dict()
+
+
+@ns.route("/check_refer_code")
+class APICheckReferCode(Resource):
+    @jwt_required(optional=True)
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        login_user_id = current_user.id if current_user else None
+        is_auth_nice = current_user.is_auth_nice if current_user else 0
+        referral_code = request.args.get("referral_code")
+
+        user_detail = UserService.find_user_by_referral_code(referral_code)
+        if not user_detail:
+            return Response(
+                code=201,
+                data={
+                    "error_message_title": "⚠️ 초대하기 URL에 문제가 있어요!",
+                    "error_message": "입력하신 URL을 다시 한 번 확인해 주세요. 😊",
+                    "referral_code": referral_code,
+                },
+                message="Not found user",
+            ).to_dict()
+        else:
+            refer_id = user_detail.id
+            if refer_id == login_user_id:
+                return Response(
+                    code=202,
+                    data={
+                        "referral_code": referral_code,
+                    },
+                    message="Same user",
+                ).to_dict()
+
+            if is_auth_nice == 1:
+                return Response(
+                    code=203,
+                    data={
+                        "error_message_title": "🔔 이미 가입된 회원입니다!",
+                        "error_message": "초대 수락은 신규 가입 계정만 가능해요. 😊",
+                        "referral_code": referral_code,
+                    },
+                    message="User Is Nice Authentication",
+                ).to_dict()
+
+        return Response(
+            data={
+                "referral_code": referral_code,
+            },
+            message="You can add active new link",
+        ).to_dict()

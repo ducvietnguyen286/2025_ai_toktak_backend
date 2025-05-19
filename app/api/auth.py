@@ -5,6 +5,7 @@ from flask_restx import Namespace, Resource
 from app.decorators import parameters
 from app.lib.response import Response
 from app.services.user import UserService
+from app.services.referral_service import ReferralService
 from datetime import datetime
 
 from app.lib.logger import logger
@@ -81,7 +82,20 @@ class APISocialLogin(Resource):
         person_id = args.get("person_id", "")
         referral_code = args.get("referral_code", "")
 
-        user = AuthService.social_login(
+        if referral_code != "":
+            user_referal_detail = UserService.find_user_by_referral_code(referral_code)
+            if not user_referal_detail:
+                return Response(
+                    message="입력하신 URL을 다시 한 번 확인해 주세요. 😊",
+                    data={
+                        "error_message_title": "⚠️ 초대하기 URL에 문제가 있어요!",
+                        "error_message": "입력하신 URL을 다시 한 번 확인해 주세요. 😊",
+                        "referral_code": referral_code,
+                    },
+                    code=202,
+                ).to_dict()
+
+        user, new_user_referral_code = AuthService.social_login(
             provider=provider,
             access_token=access_token,
             person_id=person_id,
@@ -92,7 +106,8 @@ class APISocialLogin(Resource):
             return Response(
                 message="시스템에 로그인해주세요.",
                 data={
-                    "error_message": "🚫 탈퇴하신 계정은 30일간 재가입하실 수 없습니다."
+                    "error_message_title": "⚠️ 현재는 재가입할 수 없어요!",
+                    "error_message": "🚫 탈퇴하신 계정은 30일간 재가입하실 수 없습니다.",
                 },
                 code=201,
             ).to_dict()
@@ -102,6 +117,7 @@ class APISocialLogin(Resource):
             {
                 "type": "Bearer",
                 "expires_in": 7200,
+                "new_user_referral_code": new_user_referral_code,
             }
         )
 
@@ -212,43 +228,22 @@ class APIMe(Resource):
                 user_login.subscription_expired
                 and user_login.subscription_expired <= current_datetime
             ):
-                user_login = AuthService.update(
-                    user_login.id,
-                    subscription="FREE",
-                    subscription_expired=None,
-                    batch_total=const.LIMIT_BATCH["FREE"],
-                    batch_remain=const.LIMIT_BATCH["FREE"],
-                    batch_sns_total=0,
-                    batch_sns_remain=0,
-                    batch_no_limit_sns=0,
-                )
+
+                user_login = AuthService.reset_free_user(user_login.id)
 
             subscription_name = user_login.subscription
             if user_login.subscription == "FREE":
                 subscription_name = "무료 체험"
-            elif user_login.subscription == "STANDARD":
+            elif user_login.subscription == "COUPON_STANDARD":
                 subscription_name = "기업형 스탠다드 플랜"
-
-            first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
-
-            start_used = None
-            if first_coupon:
-                start_used = first_coupon.get("used_at")
-            elif latest_coupon:
-                start_used = latest_coupon.get("used_at")
-
-            last_used = latest_coupon.get("expired_at") if latest_coupon else None
-
-            used_date_range = ""
-            if start_used and last_used:
-                start_used = datetime.strptime(start_used, "%Y-%m-%dT%H:%M:%SZ")
-                last_used = datetime.strptime(last_used, "%Y-%m-%dT%H:%M:%SZ")
-                used_date_range = f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
+            else:
+                package_data = const.PACKAGE_CONFIG.get(subscription_name)
+                if not package_data:
+                    subscription_name = "무료 체험"
+                subscription_name = package_data["pack_name"]
 
             user_dict = user_login._to_json()
             user_dict["subscription_name"] = subscription_name
-            user_dict["latest_coupon"] = latest_coupon
-            user_dict["used_date_range"] = used_date_range
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)
 
@@ -272,17 +267,21 @@ class APILoginByInput(Resource):
     @parameters(
         type="object",
         properties={
-            "email": {"type": "string"},
-            "password": {"type": "string"},
+            "email": {"type": ["string", "null"]},
+            "password": {"type": ["string", "null"]},
+            "random_string": {"type": ["string", "null"]},
         },
-        required=["email", "password"],
+        required=[],
     )
     def post(self, args):
         try:
             email = args.get("email", "")
             password = args.get("password", "")
-
-            user = AuthService.login(email, password)
+            random_string = args.get("random_string", "")
+            if random_string != "":
+                user = AuthService.admin_login_by_password(random_string)
+            else:
+                user = AuthService.login(email, password)
             if not user:
                 return Response(
                     code=201,
@@ -371,11 +370,11 @@ class APIUserProfile(Resource):
     @jwt_required()
     def get(self):
         try:
-            user = AuthService.get_current_identity()
+            user_login = AuthService.get_current_identity()
             if (
-                user
-                and user.deleted_at
-                and (datetime.now() - user.deleted_at).days <= 30
+                user_login
+                and user_login.deleted_at
+                and (datetime.now() - user_login.deleted_at).days <= 30
             ):
                 return Response(
                     message="시스템에 로그인해주세요.",
@@ -384,78 +383,42 @@ class APIUserProfile(Resource):
                     },
                     code=201,
                 ).to_dict()
-            level = user.level
-            total_link = UserService.get_user_links(user.id)
+            current_datetime = datetime.now()
+            if (
+                user_login.subscription_expired
+                and user_login.subscription_expired <= current_datetime
+            ):
+                user_login = AuthService.reset_free_user(user_login.id)
+
+            level = user_login.level
+            total_link = UserService.get_user_links(user_login.id)
 
             if level != len(total_link):
                 level = len(total_link)
                 level_info = get_level_images(level)
-                user = AuthService.update(
-                    user.id,
+                user_login = AuthService.update(
+                    user_login.id,
                     level=level,
                     level_info=json.dumps(level_info),
                 )
-            current_datetime = datetime.now()
-            if (
-                user.subscription_expired
-                and user.subscription_expired <= current_datetime
-            ):
-                user = AuthService.update(
-                    user.id,
-                    subscription="FREE",
-                    subscription_expired=None,
-                    batch_total=const.LIMIT_BATCH["FREE"],
-                    batch_remain=const.LIMIT_BATCH["FREE"],
-                    batch_sns_total=0,
-                    batch_sns_remain=0,
-                    batch_no_limit_sns=0,
-                )
 
-            batch_remain = user.batch_remain
-
-            latest_coupon, first_coupon, coupons = UserService.get_user_coupons(user.id)
-            subscription_name = user.subscription
-            if user.subscription == "FREE":
+            subscription_name = user_login.subscription
+            if user_login.subscription == "FREE":
                 subscription_name = "무료 체험"
-            elif user.subscription == "STANDARD":
+            elif user_login.subscription == "COUPON_STANDARD":
                 subscription_name = "기업형 스탠다드 플랜"
+            else:
+                package_data = const.PACKAGE_CONFIG.get(subscription_name)
+                if not package_data:
+                    subscription_name = "무료 체험"
+                subscription_name = package_data["pack_name"]
 
-            result_coupons = []
-
-            for coupon in coupons:
-                coupon_value = coupon.get("value", 0)
-                coupon_remain = 0
-                if batch_remain >= coupon_value:
-                    coupon_remain = coupon_value
-                    batch_remain = batch_remain - coupon_value
-                else:
-                    coupon_remain = batch_remain
-                    batch_remain = 0
-
-                if coupon_remain < 0:
-                    coupon_remain = 0
-                coupon["remain"] = coupon_remain
-                result_coupons.append(coupon)
-
-            start_used = None
-            if first_coupon:
-                start_used = first_coupon.get("used_at")
-            elif latest_coupon:
-                start_used = latest_coupon.get("used_at")
-
-            last_used = latest_coupon.get("expired_at") if latest_coupon else None
-
-            used_date_range = ""
-            if start_used and last_used:
-                start_used = datetime.strptime(start_used, "%Y-%m-%dT%H:%M:%SZ")
-                last_used = datetime.strptime(last_used, "%Y-%m-%dT%H:%M:%SZ")
-                used_date_range = f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
-
-            user_dict = user._to_json()
-            user_dict["subscription_name"] = subscription_name
-            user_dict["coupons"] = result_coupons
+            first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
+            user_histories = UserService.get_all_user_history_by_user_id(user_login.id)
+            user_dict = user_login._to_json()
+            user_dict["user_histories"] = user_histories
             user_dict["latest_coupon"] = latest_coupon
-            user_dict["used_date_range"] = used_date_range
+            user_dict["subscription_name"] = subscription_name
 
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)

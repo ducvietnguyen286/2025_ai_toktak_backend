@@ -3,12 +3,16 @@ import subprocess
 import os
 from app.services.user import UserService
 from app.services.referral_service import ReferralService
+from app.services.notification import NotificationServices
 import re
 import base64
-import datetime
+from datetime import datetime
 import json
 import urllib.parse
 import traceback
+
+from dateutil.relativedelta import relativedelta
+from const import PACKAGE_CONFIG, MAX_REFERRAL_USAGE
 
 
 class NiceAuthService:
@@ -147,8 +151,6 @@ class NiceAuthService:
                 name_raw = NiceAuthService.get_value(plaindata, "NAME")
                 name = name_raw.encode("latin1").decode("euc-kr", errors="ignore")
 
-            logger.info(name)
-
             result_item = {
                 "user_id": user_id,
                 "requestnumber": NiceAuthService.get_value(plaindata, "REQ_SEQ"),
@@ -186,21 +188,161 @@ class NiceAuthService:
                 }
 
             mobileno = result_item["mobileno"]
+
+            # mobileno = "09999"
+            # name = "VIETNAME"
+            # user_data = UserService.find_user(user_id)
+
             verify_detail = UserService.check_phone_verify_nice(mobileno)
 
             if not verify_detail:
+                datetime_now = datetime.now()
                 data_update = {
                     "phone": mobileno,
                     "auth_nice_result": json.dumps(result_item),
                     "is_auth_nice": 1,
                     "is_verify_email": 1,
                     "name": name,
-                    "gender": "M" if result_item["gender"] == "1" else "F",
+                    "password_certificate": "",
+                    "gender": "M" if result_item.get("gender") == "1" else "F",
                 }
                 UserService.update_user(user_id, **data_update)
+                # Tìm theo người được giới thiệu khi xác thực thành công
+                referral_history_detail = ReferralService.find_by_referred_user_id(
+                    user_id
+                )
+                # nếu có giới thiệu
+                if referral_history_detail:
+                    reward_duration = relativedelta(days=7)
+                    # kiểm tra tối đa số lần của người mời
+                    referrer_user_id = referral_history_detail.referrer_user_id
+                    usage_count = ReferralService.find_by_referred_user_id_done(
+                        referrer_user_id
+                    )
+                    if usage_count >= MAX_REFERRAL_USAGE:
+                        return {
+                            "code": 200,
+                            "message": "인증 성공",
+                            "data": result_item,
+                        }
 
-                data_update_referral = {"status": "DONE"}
-                ReferralService.update_nice(user_id, **data_update_referral)
+                    # người được giới thiệu =  user_id hiện tại
+                    referred_user_id = referral_history_detail.referred_user_id
+                    # Gia hạn 7 ngày cho người được mời
+                    basic_package = PACKAGE_CONFIG["INVITE_BASIC"]
+                    expire_date = datetime_now + reward_duration
+                    referred_update_data = {
+                        "subscription_expired": expire_date,
+                        "subscription": "INVITE_BASIC",
+                        "batch_total": basic_package["batch_total"],
+                        "batch_remain": basic_package["batch_remain"],
+                        "total_link_active": basic_package["total_link_active"],
+                    }
+
+                    UserService.update_user(referred_user_id, **referred_update_data)
+
+                    message = f"링크 초대로 가입이 완료되었습니다. 계정이 BASIC 요금제로 업그레이드되었으며, 사용 기간은 {datetime_now.strftime('%Y-%m-%d')}부터 {expire_date.strftime('%Y-%m-%d')}까지입니다."
+                    NotificationServices.create_notification(
+                        user_id=referred_user_id,
+                        title=message,
+                        notification_type="referral",
+                    )
+
+                    # Ghi Log History
+                    data_user_history = {
+                        "user_id": referred_user_id,
+                        "type": "referral",
+                        "object_id": referral_history_detail.id,
+                        "object_start_time": datetime_now,
+                        "object_end_time": expire_date,
+                        "title": basic_package["pack_name"],
+                        "description": basic_package["pack_description"],
+                        "value": basic_package["batch_total"],
+                        "num_days": basic_package["batch_remain"],
+                    }
+                    UserService.create_user_history(**data_user_history)
+
+                    # -------------------------------
+                    # 3. Cập nhật cho người giới thiệu
+                    # -------------------------------
+
+                    # người giới thiệu
+                    referrer_user_id = referral_history_detail.referrer_user_id
+                    referrer_user_data = UserService.find_user(referrer_user_id)
+                    subscription = referrer_user_data.subscription
+
+                    if subscription in [
+                        "FREE",
+                        "BASIC",
+                        "INVITE_BASIC",
+                        "COUPON_STANDARD",
+                    ]:
+                        if subscription in ["INVITE_BASIC", "COUPON_STANDARD"]:
+                            batch_remain = referrer_user_data.batch_remain
+                            object_start_time = referrer_user_data.subscription_expired
+                            # Trường hợp người giới thiệu đang dùng gói BASIC
+                            # Kiểm tra xem subscription_expired hiện tại còn hiệu lực hay đã hết hạn
+                            if referrer_user_data.subscription_expired > datetime_now:
+                                # Nếu còn hiệu lực → cộng thêm reward_duration vào thời hạn cũ
+                                old_exp = referrer_user_data.subscription_expired
+                            else:
+                                # Nếu đã hết hạn hoặc không có → bắt đầu từ thời điểm hiện tại
+                                old_exp = datetime_now
+                            subscription_expired = old_exp + reward_duration
+                        else:
+                            subscription_expired = datetime_now + reward_duration
+
+                        new_batch_remain = batch_remain + basic_package["batch_remain"]
+                        old_batch_total = UserService.get_total_batch_remain(
+                            referrer_user_id
+                        )
+                        new_batch_total = basic_package["batch_total"] + old_batch_total
+
+                        referrer_update_data = {
+                            "subscription_expired": subscription_expired,
+                            "subscription": "INVITE_BASIC",
+                            "batch_total": min(
+                                new_batch_total,
+                                90,
+                            ),
+                            "batch_remain": min(
+                                new_batch_remain,
+                                90,
+                            ),
+                            "total_link_active": max(
+                                basic_package["total_link_active"],
+                                referrer_user_data.total_link_active,
+                            ),
+                        }
+                        UserService.update_user(
+                            referrer_user_id, **referrer_update_data
+                        )
+
+                        message = f"추천이 완료되었습니다. 계정이 BASIC 요금제로 업그레이드되었으며, 사용 기간은 {object_start_time.strftime('%Y-%m-%d')}부터 {subscription_expired.strftime('%Y-%m-%d')}까지입니다."
+                        NotificationServices.create_notification(
+                            user_id=referrer_user_id,
+                            title=message,
+                            notification_type="referral",
+                        )
+
+                        data_user_history = {
+                            "user_id": referrer_user_id,
+                            "type": "referral",
+                            "object_id": referral_history_detail.id,
+                            "object_start_time": object_start_time,
+                            "object_end_time": subscription_expired,
+                            "title": basic_package["pack_name"],
+                            "description": basic_package["pack_description"],
+                            "value": basic_package["batch_total"],
+                            "num_days": basic_package["batch_remain"],
+                        }
+                        UserService.create_user_history(**data_user_history)
+
+                    referral_history_detail.expired_at = datetime_now + relativedelta(
+                        days=7
+                    )
+                    referral_history_detail.status = "DONE"
+                    referral_history_detail.save()
 
                 return {"code": 200, "message": "인증 성공", "data": result_item}
             else:
