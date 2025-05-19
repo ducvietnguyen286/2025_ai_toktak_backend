@@ -105,6 +105,7 @@ class TiktokTokenService:
                         if refresh_done_str == "failled":
                             return False
                         return True
+
                     time.sleep(1)
 
             redis_client.set(redis_key_check, 1, ex=300)

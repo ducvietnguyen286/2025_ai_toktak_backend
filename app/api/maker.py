@@ -4,6 +4,7 @@ import time
 import datetime
 import json
 import os
+import uuid
 from flask_restx import Namespace, Resource
 from app.ais.chatgpt import (
     call_chatgpt_clear_product_name,
@@ -957,21 +958,25 @@ class APIMakePost(Resource):
                     #         current_stt = index + 1
                     #         pre_content_cutout += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
 
-                    pre_content_cutout_sam = f"<br></br><h2>IMAGES CUTTED OUT BY SERVER: TOTAL - {len(cutout_by_sam_images)}</h2>"
-                    if len(cutout_by_sam_images) > 0:
-                        current_stt = 0
-                        for index, cutout_image in enumerate(cutout_by_sam_images):
-                            current_stt = index + 1
-                            pre_content_cutout_sam += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
+                    # BaoNC Comment to live 20250516
+                    # ------------------------------------------------
+                    # pre_content_cutout_sam = f"<br></br><h2>IMAGES CUTTED OUT BY SERVER: TOTAL - {len(cutout_by_sam_images)}</h2>"
+                    # if len(cutout_by_sam_images) > 0:
+                    #     current_stt = 0
+                    #     for index, cutout_image in enumerate(cutout_by_sam_images):
+                    #         current_stt = index + 1
+                    #         pre_content_cutout_sam += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
 
-                    pre_content = f"<br></br><h2>DESCRIPTION IMAGES: TOTAL - {len(description_images)}</h2>"
-                    if len(description_images) > 0:
-                        current_stt = 0
-                        for index, cleared_image in enumerate(description_images):
-                            current_stt = index + 1
-                            pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
+                    # pre_content = f"<br></br><h2>DESCRIPTION IMAGES: TOTAL - {len(description_images)}</h2>"
+                    # if len(description_images) > 0:
+                    #     current_stt = 0
+                    #     for index, cleared_image in enumerate(description_images):
+                    #         current_stt = index + 1
+                    #         pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
 
-                    content = pre_content_cutout_sam + pre_content + content
+                    # content = pre_content_cutout_sam + pre_content + content
+                    # ------------------------------------------------
+                    # BaoNC End Comment to live 20250516
 
                     for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
@@ -1760,13 +1765,39 @@ class APIDownloadZip(Resource):
                     code=201,
                 ).to_dict()
 
+            images = json.loads(post.images)
+            file_list = []
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "https://api.toktak.ai"
+            upload_folder = os.path.join(os.getcwd(), f"uploads/")
+            for index, image_detail in enumerate(images):
+
+                image_detail_path = image_detail.replace(
+                    f"{current_domain}/files/", upload_folder
+                )
+                if os.path.exists(image_detail_path):
+                    file_list.append(image_detail_path)
+
+            if file_list:
+                zip_path, tmp_dir = _make_zip(file_list)
+                if request:
+                    after_this_request(
+                        lambda response: _cleanup_zip(zip_path, tmp_dir, response)
+                    )
+                return send_file(
+                    zip_path,
+                    mimetype="application/zip",
+                    as_attachment=True,
+                    download_name=f"post_{post_id}_images.zip",
+                )
+
             UPLOAD_BASE_PATH = "uploads"
             post_date = post.created_at.strftime("%Y_%m_%d")
             IMAGE_EXTENSIONS = ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp", "*.svg"]
             folder_path = os.path.join(UPLOAD_BASE_PATH, post_date, str(post.batch_id))
             if not os.path.exists(folder_path):
+                logger.error(f"API download-zip - Folder not found {folder_path}")
                 return Response(
-                    message="Folder not found",
+                    message=f"Folder not found {post_date}",
                     code=201,
                 ).to_dict()
 
@@ -1780,14 +1811,7 @@ class APIDownloadZip(Resource):
                     code=201,
                 ).to_dict()
 
-            tmp_dir = tempfile.mkdtemp()
-            zip_path = os.path.join(tmp_dir, "images.zip")
-
-            with ZipFile(zip_path, "w") as zipf:
-                for file_path in file_list:
-                    filename = os.path.basename(file_path)
-                    zipf.write(file_path, arcname=filename)
-
+            zip_path, tmp_dir = _make_zip(file_list)
             if request:
                 after_this_request(
                     lambda response: _cleanup_zip(zip_path, tmp_dir, response)
@@ -1845,3 +1869,15 @@ def _cleanup_zip(zip_path, tmp_dir, response):
     except Exception as e:
         logger.warning(f"Không thể xóa tệp tạm: {e}")
     return response
+
+
+def _make_zip(file_list):
+    unique_id = uuid.uuid4().hex
+    file_zip = f"{unique_id}_images.zip"
+    tmp_dir = tempfile.mkdtemp()
+    zip_path = os.path.join(tmp_dir, file_zip)
+    with ZipFile(zip_path, "w") as zipf:
+        for file_path in file_list:
+            filename = os.path.basename(file_path)
+            zipf.write(file_path, arcname=filename)
+    return zip_path, tmp_dir

@@ -6,11 +6,15 @@ import json
 from app.services.auth import AuthService
 from app.services.payment_services import PaymentService
 from app.services.notification import NotificationServices
+from app.services.user import UserService
 from app.decorators import parameters, admin_required
 from app.services.post import PostService
 from app.lib.response import Response
 from app.lib.logger import logger
 import const
+
+import datetime
+from dateutil.relativedelta import relativedelta
 
 ns = Namespace("payment", description="Payment API")
 
@@ -119,3 +123,52 @@ class APICreateNewPayment(Resource):
                 "total_pages": billings.pages,
                 "data": [post.to_dict() for post in billings.items],
             }, 200
+
+
+@ns.route("/admin/approval")
+class APIPaymentApproval(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        payment_id = data.get("payment_id")
+
+        payment = PaymentService.update_payment(payment_id, status="PAID")
+        if payment:
+            user_id = payment.user_id
+            package_name = payment.package_name
+            package_data = const.PACKAGE_CONFIG.get(package_name)
+            if not package_data:
+                return Response(
+                    message="유효하지 않은 패키지입니다.", code=201
+                ).to_dict()
+
+            subscription_expired = payment.end_date
+
+            data_update = {
+                "subscription": package_name,
+                "subscription_expired": subscription_expired,
+                "batch_total": package_data["batch_total"],
+                "batch_remain": package_data["batch_remain"],
+                "total_link_active": package_data["total_link_active"],
+            }
+
+            UserService.update_user(user_id, **data_update)
+            data_user_history = {
+                "user_id": user_id,
+                "type": "payment",
+                "object_id": payment.id,
+                "object_start_time": payment.start_date,
+                "object_end_time": subscription_expired,
+                "title": package_data["pack_name"],
+                "description": package_data["pack_description"],
+                "value": package_data["batch_total"],
+                "num_days": package_data["batch_remain"],
+            }
+            UserService.create_user_history(**data_user_history)
+
+        message = "승인이 완료되었습니다."
+        return Response(
+            message=message,
+            data={"payment": payment._to_json()},
+            code=200,
+        ).to_dict()
