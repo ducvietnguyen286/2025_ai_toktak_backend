@@ -128,7 +128,8 @@ class SocialPostService:
             logger.info(f"data: {data}")
 
             for social_post in social_posts:
-                post = post_dict.get(str(social_post.post_id))
+                logger.info(f"social_post.post_id: {str(social_post.post_id)}")
+                post = data.get(str(social_post.post_id))
                 if not post:
                     post = post_dict.get(str(social_post.post_id))
                     if not post:
@@ -167,6 +168,7 @@ class SocialPostService:
             return social_sync_data
         except Exception as e:
             traceback.print_exc()
+            logger.error(f"get_status_social_sycns__by_id: {e}")
             print(e)
             return {}
 
