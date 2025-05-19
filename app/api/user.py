@@ -290,7 +290,7 @@ class APISendPosts(Resource):
             count_images = 0
             count_videos = 0
             for post in posts:
-                post_ids.append(post.id)
+                post_ids.append(str(post.id))
                 if post.type == "image":
                     count_images += 1
                 if post.type == "video":
@@ -599,7 +599,7 @@ class APIPostToLinks(Resource):
             # Update to Uploads
             PostService.update_post(post_id, status=const.DRAFT_STATUS)
 
-            batch_id = post.batch_id
+            batch_id = str(post.batch_id)
 
             batch_detail = BatchService.find_batch(batch_id)
             if batch_detail:
@@ -647,7 +647,7 @@ class APIPostToLinks(Resource):
 
             progress = {
                 "batch_id": batch_id,
-                "post_id": post.id,
+                "post_id": str(post.id),
                 "user_id": current_user.id,
                 "total_link": total_link,
                 "total_post": total_post,
