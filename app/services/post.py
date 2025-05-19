@@ -12,7 +12,12 @@ from app.services.image_template import ImageTemplateService
 import os
 import json
 import const
-from app.lib.query import select_with_filter, select_by_id, select_with_pagination
+from app.lib.query import (
+    select_with_filter,
+    select_by_id,
+    select_with_pagination,
+    select_with_filter_one,
+)
 from sqlalchemy import update, delete
 
 
@@ -244,7 +249,7 @@ class PostService:
     @staticmethod
     def get_template_video_by_user_id(user_id):
         try:
-            user_template = select_with_filter(
+            user_template = select_with_filter_one(
                 UserVideoTemplates,
                 filters=[UserVideoTemplates.user_id == user_id],
                 order_by=[UserVideoTemplates.id.desc()],
