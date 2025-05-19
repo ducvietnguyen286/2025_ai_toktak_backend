@@ -355,9 +355,7 @@ class UserService:
 
     @staticmethod
     def check_phone_verify_nice(mobileno):
-        return None
         user = User.query.filter(User.phone == mobileno, User.is_auth_nice == 1).first()
-
         return user
 
     @staticmethod
