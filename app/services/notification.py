@@ -10,12 +10,12 @@ class NotificationServices:
 
     @staticmethod
     def create_notification(*args, **kwargs):
-        user_id = kwargs.get("user_id")
-        if user_id:
-            current_user = UserService.find_user(user_id)
-            email = current_user.email if current_user else None
-            if email:
-                kwargs["email"] = email
+        # user_id = kwargs.get("user_id")
+        # if user_id:
+        #     current_user = UserService.find_user(user_id)
+        #     email = current_user.email if current_user else None
+        #     if email:
+        #         kwargs["email"] = email
         notification = Notification(*args, **kwargs)
         notification.save()
         return notification
