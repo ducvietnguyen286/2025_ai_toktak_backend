@@ -1410,6 +1410,7 @@ class APIGetStatusUploadWithBatch(Resource):
                     show_posts.append(post_detail)
 
                 except Exception as e:
+                    traceback.print_exc()
                     logger.error(f"Lỗi xử lý post {post_id}: {e}", exc_info=True)
 
             batch_res = batch.to_json()
