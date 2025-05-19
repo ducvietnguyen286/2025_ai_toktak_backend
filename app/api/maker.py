@@ -1504,10 +1504,10 @@ class APIHistories(Resource):
                 "current_user": current_user.id,
                 "status": True,
                 "message": "Success",
-                "total": posts.total,
-                "page": posts.page,
-                "per_page": posts.per_page,
-                "total_pages": posts.pages,
+                "total": posts.get("total", 0),
+                "page": posts.get("page", 1),
+                "per_page": posts.get("per_page", 10),
+                "total_pages": posts.get("pages", 1),
                 "data": [
                     {
                         **post_json,
@@ -1515,7 +1515,7 @@ class APIHistories(Resource):
                             post_json.get("video_path", ""), current_domain
                         ),
                     }
-                    for post in posts.items
+                    for post in posts.get("items", [])
                     if (post_json := post.to_json())
                 ],
             }, 200
@@ -1693,11 +1693,11 @@ class APIAdminHistories(Resource):
             "current_user": current_user.id,
             "status": True,
             "message": "Success",
-            "total": posts.total,
-            "page": posts.page,
-            "per_page": posts.per_page,
-            "total_pages": posts.pages,
-            "data": [post.to_dict() for post in posts.items],
+            "total": posts.get("total", 0),
+            "page": posts.get("page", 1),
+            "per_page": posts.get("per_page", 10),
+            "total_pages": posts.get("pages", 1),
+            "data": [post.to_dict() for post in posts.get("items", [])],
         }, 200
 
 
