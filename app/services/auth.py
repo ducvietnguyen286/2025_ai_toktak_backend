@@ -182,7 +182,7 @@ class AuthService:
         return {"access_token": access_token}
 
     @staticmethod
-    def get_current_identity(no_cache=False):
+    def get_current_identity(no_cache=True):
         try:
             subject = get_jwt_identity()
             if subject is None:
