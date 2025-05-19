@@ -10,7 +10,7 @@ from app.models.memberprofile import MemberProfile
 from app.models.referral_history import ReferralHistory
 from app.extensions import db
 from app.lib.logger import logger
-from sqlalchemy import select, update, delete, or_ , func
+from sqlalchemy import select, update, delete, or_, func
 from app.lib.query import (
     select_with_filter,
     select_by_id,
@@ -288,16 +288,10 @@ class UserService:
     @staticmethod
     def delete_users_by_ids(user_ids):
         try:
-            Post.query.filter(Post.user_id.in_(user_ids)).delete(
-                synchronize_session=False
-            )
-            Batch.query.filter(Batch.user_id.in_(user_ids)).delete(
-                synchronize_session=False
-            )
+            Post.objects(user_id__in=user_ids).delete(synchronize_session=False)
+            Batch.objcets(user_id__in=user_ids).delete(synchronize_session=False)
 
-            Notification.query.filter(Notification.user_id.in_(user_ids)).delete(
-                synchronize_session=False
-            )
+            Notification.objects(user_id__in=user_ids).delete(synchronize_session=False)
 
             SocialAccount.query.filter(SocialAccount.user_id.in_(user_ids)).delete(
                 synchronize_session=False
@@ -405,7 +399,7 @@ class UserService:
             .all()
         )
         return [user_history._to_json() for user_history in user_histories]
-    
+
     @staticmethod
     def get_total_batch_remain(user_id):
         batch_total = (
