@@ -297,7 +297,7 @@ class UserService:
         return 1
 
     def get_user_info_detail(user_id):
-        user_login = User.query.get(user_id)
+        user_login = select_by_id(User, user_id)
         if not user_login:
             return None
 
