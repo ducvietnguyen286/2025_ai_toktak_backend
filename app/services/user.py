@@ -10,7 +10,7 @@ from app.models.memberprofile import MemberProfile
 from app.models.referral_history import ReferralHistory
 from app.extensions import db
 from app.lib.logger import logger
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, or_
 from app.lib.query import (
     select_with_filter,
     select_by_id,
