@@ -12,6 +12,13 @@ from app.services.image_template import ImageTemplateService
 import os
 import json
 import const
+from app.lib.query import (
+    select_with_filter,
+    select_by_id,
+    select_with_pagination,
+    select_with_filter_one,
+)
+from sqlalchemy import update, delete
 
 
 class PostService:
@@ -24,33 +31,43 @@ class PostService:
 
     @staticmethod
     def find_post(id):
-        return Post.query.get(id)
+        post = select_by_id(Post, id)
+        return post
 
     @staticmethod
     def get_posts():
-        posts = Post.query.where(Post.status == 1).all()
+        posts = select_with_filter(
+            Post, order_by=[Post.id.desc()], filters=[Post.status == 1]
+        )
         return [post._to_json() for post in posts]
 
     @staticmethod
     def get_posts__by_ids(ids):
-        posts = (
-            Post.query.filter(Post.id.in_(ids)).filter(Post.status.in_([1, 99])).all()
+        posts = select_with_filter(
+            Post,
+            order_by=[Post.id.desc()],
+            filters=[Post.id.in_(ids), Post.status.in_([1, 99])],
         )
         return posts
 
     @staticmethod
     def update_posts_by_ids(ids, *args, **kwargs):
-        updated_rows = Post.query.filter(Post.id.in_(ids)).update(kwargs)
+        stmt = update(Post).where(Post.id.in_(ids)).values(**kwargs)
+        db.session.execute(stmt)
         db.session.commit()
-        return updated_rows
+        return True
 
     def get_posts_by_batch(batch_id):
-        posts = Post.query.where(Post.batch_id == batch_id).all()
+        posts = select_with_filter(
+            Post,
+            order_by=[Post.id.desc()],
+            filters=[Post.batch_id == batch_id],
+        )
         return posts
 
     @staticmethod
     def update_post(id, *args, **kwargs):
-        post = Post.query.get(id)
+        post = select_by_id(Post, id)
         if not post:
             return None
         post.update(**kwargs)
@@ -58,25 +75,36 @@ class PostService:
 
     @staticmethod
     def delete_post(id):
-        return Post.query.get(id).delete()
+        post = select_by_id(Post, id)
+        if not post:
+            return None
+        post.delete()
+        return True
 
     @staticmethod
     def get_posts_by_batch_id(batch_id):
-        posts = Post.query.where(Post.batch_id == batch_id).all()
+        posts = select_with_filter(
+            Post,
+            order_by=[Post.id.desc()],
+            filters=[Post.batch_id == batch_id],
+        )
         return [post._to_json() for post in posts]
 
     @staticmethod
     def get_posts__by_batch_id(batch_id):
-        posts = Post.query.where(Post.batch_id == batch_id).all()
+        posts = select_with_filter(
+            Post,
+            order_by=[Post.id.desc()],
+            filters=[Post.batch_id == batch_id],
+        )
         return posts
 
     @staticmethod
     def update_post_by_batch_id(batch_id, *args, **kwargs):
-        updated_rows = Post.query.filter_by(batch_id=batch_id).update(
-            kwargs
-        )  # Cập nhật trực tiếp
-        db.session.commit()  # Lưu vào database
-        return updated_rows
+        stmt = update(Post).where(Post.batch_id == batch_id).values(**kwargs)
+        db.session.execute(stmt)
+        db.session.commit()
+        return True
 
     @staticmethod
     def get_latest_social_post_by_post_ids(post_ids):
@@ -132,41 +160,51 @@ class PostService:
 
     @staticmethod
     def get_posts_upload(data_search):
-        # Query cơ bản với các điều kiện
-        query = Post.query.filter(
+        filters = [
             Post.user_id == data_search["user_id"],
-        )
-
-        # NHững thằng bắn lên SNS thì có status_sns = 1
+        ]
         if data_search["status"] == 1:
-            # query = query.filter(Post.status_sns == 1)
-            query = query.filter(
-                (Post.social_sns_description.like("%PUBLISHED%"))
-                | (Post.status_sns == 1)
+            filters.append(
+                or_(
+                    Post.social_sns_description.like("%PUBLISHED%"),
+                    Post.status_sns == 1,
+                )
             )
         elif data_search["status"] == 99:
-            # query = query.filter(Post.status == 99)
-            query = query.filter(
-                (Post.social_sns_description.like("%ERRORED%"))
-                | (Post.status == const.DRAFT_STATUS)
+            filters.append(
+                or_(
+                    Post.social_sns_description.like("%ERRORED%"),
+                    Post.status == const.DRAFT_STATUS,
+                )
             )
-        # Xử lý type_order
+
+        search_text = data_search.get("search_text", "")
+        if search_text != "":
+            search_pattern = f"%{search_text}%"
+            filters.append(
+                or_(
+                    Post.title.ilike(search_pattern),
+                    Post.description.ilike(search_pattern),
+                    Post.user.has(User.email.ilike(search_pattern)),
+                )
+            )
+
         if data_search["type_order"] == "id_asc":
-            query = query.order_by(Post.id.asc())
+            order_by = Post.id.asc()
         elif data_search["type_order"] == "id_desc":
-            query = query.order_by(Post.id.desc())
+            order_by = Post.id.desc()
         else:
-            query = query.order_by(Post.id.desc())
+            order_by = Post.id.desc()
 
         # Xử lý type_post
         if data_search["type_post"] == "video":
-            query = query.filter(Post.type == "video")
+            filters.append(Post.type == "video")
         elif data_search["type_post"] == "image":
-            query = query.filter(Post.type == "image")
+            filters.append(Post.type == "image")
         elif data_search["type_post"] == "blog":
-            query = query.filter(Post.type == "blog")
+            filters.append(Post.type == "blog")
         elif data_search["type_post"] == "error_blog":
-            query = query.filter(Post.social_sns_description.like("%ERRORED%"))
+            filters.append(Post.social_sns_description.like("%ERRORED%"))
 
         time_range = data_search.get("time_range")  # Thêm biến time_range
         # Lọc theo khoảng thời gian
@@ -174,29 +212,34 @@ class PostService:
             start_date = datetime.now().replace(
                 hour=0, minute=0, second=0, microsecond=0
             )
-            query = query.filter(Post.created_at >= start_date)
+            filters.append(Post.created_at >= start_date)
 
         elif time_range == "last_week":
             start_date = datetime.now() - timedelta(days=7)
-            query = query.filter(Post.created_at >= start_date)
+            filters.append(Post.created_at >= start_date)
 
         elif time_range == "last_month":
             start_date = datetime.now() - timedelta(days=30)
-            query = query.filter(Post.created_at >= start_date)
+            filters.append(Post.created_at >= start_date)
 
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
-            query = query.filter(Post.created_at >= start_date)
+            filters.append(Post.created_at >= start_date)
 
-        pagination = query.paginate(
-            page=data_search["page"], per_page=data_search["per_page"], error_out=False
+        pagination = select_with_pagination(
+            Post,
+            page=data_search["page"],
+            per_page=data_search["per_page"],
+            filters=filters,
+            order_by=[order_by],
         )
         return pagination
 
     @staticmethod
     def delete_posts_by_ids(post_ids):
         try:
-            Post.query.filter(Post.id.in_(post_ids)).delete(synchronize_session=False)
+            delete_stmt = delete(Post).where(Post.id.in_(post_ids))
+            db.session.execute(delete_stmt)
             db.session.commit()
         except Exception as ex:
             db.session.rollback()
@@ -206,9 +249,11 @@ class PostService:
     @staticmethod
     def get_template_video_by_user_id(user_id):
         try:
-            user_template = UserVideoTemplates.query.filter(
-                UserVideoTemplates.user_id == user_id
-            ).first()
+            user_template = select_with_filter_one(
+                UserVideoTemplates,
+                filters=[UserVideoTemplates.user_id == user_id],
+                order_by=[UserVideoTemplates.id.desc()],
+            )
         except Exception as ex:
             return None
         return user_template
@@ -221,7 +266,7 @@ class PostService:
 
     @staticmethod
     def update_template(id, *args, **kwargs):
-        user_template = UserVideoTemplates.query.get(id)
+        user_template = select_by_id(UserVideoTemplates, id)
         user_template.update(**kwargs)
         return user_template
 

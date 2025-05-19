@@ -8,7 +8,7 @@ from .errors.handler import api_error_handler
 
 from flask import Flask, jsonify
 from flask_cors import CORS
-from .extensions import redis_client, db, bcrypt, jwt, db_mongo
+from .extensions import redis_client, db, bcrypt, jwt, db_mongo, make_celery
 
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
@@ -25,6 +25,24 @@ def create_app(config_app):
     __config_logging(app)
     __register_blueprint(app)
     __config_error_handlers(app)
+
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db.session.remove()
+
+    @app.route("/admin/persistence/on")
+    def persistence_on():
+        redis_client.config_set("appendonly", "yes")
+        redis_client.config_set("appendfsync", "everysec")
+        redis_client.config_set("save", "900 1 300 10 60 10000")
+        return jsonify(status="persistence enabled")
+
+    @app.route("/admin/persistence/off")
+    def persistence_off():
+        # Tắt hoàn toàn persistence (cẩn trọng!)
+        redis_client.config_set("appendonly", "no")
+        redis_client.config_set("save", "")
+        return jsonify(status="persistence disabled")
 
     return app
 
@@ -47,6 +65,9 @@ def __init_app(app):
     jwt.init_app(app)
     db_mongo.init_app(app)
     # init_sam_model(app)
+
+    celery = make_celery(app)
+    app.extensions["celery"] = celery
 
     app.logger.info("Initial app...")
 

@@ -10,7 +10,14 @@ from app.models.memberprofile import MemberProfile
 from app.models.referral_history import ReferralHistory
 from app.extensions import db
 from app.lib.logger import logger
-from sqlalchemy import or_, func
+from sqlalchemy import select, update, delete, or_ , func
+from app.lib.query import (
+    select_with_filter,
+    select_by_id,
+    select_with_pagination,
+    select_with_filter_one,
+    update_by_id,
+)
 import const
 from dateutil.relativedelta import relativedelta
 
@@ -27,12 +34,10 @@ class UserService:
 
     @staticmethod
     def get_user_coupons(user_id):
-        list_coupons = (
-            CouponCode.query.filter(
-                CouponCode.is_active == 1, CouponCode.used_by == user_id
-            )
-            .order_by(CouponCode.used_at.desc())
-            .all()
+        list_coupons = select_with_filter(
+            CouponCode,
+            [CouponCode.is_active == 1, CouponCode.used_by == user_id],
+            [CouponCode.used_at.desc()],
         )
         coupons = []
         for coupon in list_coupons:
@@ -42,25 +47,26 @@ class UserService:
             coupon_code["type"] = "coupon"
             coupons.append(coupon_code)
 
-        first_coupon = (
-            CouponCode.query.filter(
+        first_coupon = select_with_filter_one(
+            CouponCode,
+            [
                 CouponCode.is_active == 1,
                 CouponCode.used_by == user_id,
                 CouponCode.expired_at >= datetime.now(),
-            )
-            .order_by(CouponCode.used_at.asc())
-            .first()
+            ],
+            [CouponCode.used_at.asc()],
         )
 
-        latest_coupon = (
-            CouponCode.query.filter(
+        latest_coupon = select_with_filter_one(
+            CouponCode,
+            [
                 CouponCode.is_active == 1,
                 CouponCode.used_by == user_id,
                 CouponCode.expired_at >= datetime.now(),
-            )
-            .order_by(CouponCode.used_at.desc())
-            .first()
+            ],
+            [CouponCode.used_at.desc()],
         )
+
         coupon = latest_coupon.coupon._to_json() if latest_coupon else None
         latest_coupon = latest_coupon._to_json() if latest_coupon else None
         first_coupon = first_coupon._to_json() if first_coupon else None
@@ -70,24 +76,25 @@ class UserService:
 
     @staticmethod
     def get_latest_coupon(user_id):
-        first_coupon = (
-            CouponCode.query.filter(
+        first_coupon = select_with_filter_one(
+            CouponCode,
+            [
                 CouponCode.is_active == 1,
                 CouponCode.used_by == user_id,
                 CouponCode.expired_at >= datetime.now(),
-            )
-            .order_by(CouponCode.used_at.asc())
-            .first()
+            ],
+            [CouponCode.used_at.asc()],
         )
-        latest_coupon = (
-            CouponCode.query.filter(
+        latest_coupon = select_with_filter_one(
+            CouponCode,
+            [
                 CouponCode.is_active == 1,
                 CouponCode.used_by == user_id,
                 CouponCode.expired_at >= datetime.now(),
-            )
-            .order_by(CouponCode.used_at.desc())
-            .first()
+            ],
+            [CouponCode.used_at.desc()],
         )
+
         coupon = latest_coupon.coupon._to_json() if latest_coupon else None
         latest_coupon = latest_coupon._to_json() if latest_coupon else None
         first_coupon = first_coupon._to_json() if first_coupon else None
@@ -97,29 +104,47 @@ class UserService:
 
     @staticmethod
     def find_user(id):
-        return User.query.get(id)
+        user = select_by_id(User, id)
+        return user
 
     @staticmethod
     def get_users():
-        users = User.query.where(User.status == 1).all()
+        users = select_with_filter(
+            User,
+            [User.status == 1],
+            [User.created_at.desc()],
+        )
         return [user._to_json() for user in users]
 
     @staticmethod
     def all_users():
-        users = User.query.all()
+        users = select_with_filter(
+            User,
+            [],
+            [User.created_at.desc()],
+        )
         return [user._to_json() for user in users]
 
     @staticmethod
     def update_user(id, *args, **kwargs):
-        user = User.query.get(id)
-        if not user:
-            return None
-        user.update(**kwargs)
+        user = update_by_id(User, id, **kwargs)
+        return user
+
+    @staticmethod
+    def update_user_by_id__session(id, *args, **kwargs):
+        user = update_by_id(User, id, **kwargs)
         return user
 
     @staticmethod
     def delete_user(id):
-        return User.query.get(id).delete()
+        try:
+            delete_stmt = delete(User).where(User.id == id)
+            db.session.execute(delete_stmt)
+            db.session.commit()
+        except Exception as ex:
+            db.session.rollback()
+            return 0
+        return 1
 
     @staticmethod
     def create_user_link(*args, **kwargs):
@@ -300,7 +325,7 @@ class UserService:
         return 1
 
     def get_user_info_detail(user_id):
-        user_login = User.query.get(user_id)
+        user_login = select_by_id(User, user_id)
         if not user_login:
             return None
 

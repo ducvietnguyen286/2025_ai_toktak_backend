@@ -1,4 +1,5 @@
 from app.models.batch import Batch
+from app.lib.query import select_with_filter, select_by_id, select_with_pagination
 
 
 class BatchService:
@@ -11,11 +12,14 @@ class BatchService:
 
     @staticmethod
     def find_batch(id):
-        return Batch.query.get(id)
+        batch = select_by_id(Batch, id)
+        return batch
 
     @staticmethod
     def get_batchs():
-        batchs = Batch.query.where(Batch.status == 1).all()
+        batchs = select_with_filter(
+            Batch, order_by=[Batch.id.desc()], filters=[Batch.status == 1]
+        )
         return [batch._to_json() for batch in batchs]
 
     @staticmethod
@@ -26,17 +30,24 @@ class BatchService:
 
     @staticmethod
     def delete_batch(id):
-        return Batch.query.get(id).delete()
+        batch = select_by_id(Batch, id)
+        if not batch:
+            return None
+        batch.delete()
+        return True
 
     @staticmethod
     def get_all_batches(page, per_page, user_id=None):
-
-        query = Batch.query
-        query = query.filter(Batch.user_id > 0)
+        filters = [
+            Batch.user_id > 0,
+        ]
         if user_id is not None:
-            query = query.filter(Batch.user_id == user_id)
-
-        pagination = query.order_by(Batch.id.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
+            filters.append(Batch.user_id == user_id)
+        pagination = select_with_pagination(
+            Batch,
+            page=page,
+            per_page=per_page,
+            filters=filters,
+            order_by=[Batch.id.desc()],
         )
         return pagination
