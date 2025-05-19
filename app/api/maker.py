@@ -1709,7 +1709,7 @@ class APICopyBlog(Resource):
     @parameters(
         type="object",
         properties={
-            "blog_id": {"type": "integer"},
+            "blog_id": {"type": "string"},
         },
         required=["blog_id"],
     )
