@@ -123,8 +123,11 @@ class AuthService:
                 user.save()
 
                 if referral_code != "":
-                    ReferralService.use_referral_code(referral_code, user)
-                    new_user_referral_code = 1
+                    user_history = ReferralService.use_referral_code(
+                        referral_code, user
+                    )
+                    if user_history:
+                        new_user_referral_code = 1
 
             social_account = SocialAccount(
                 user_id=user.id,
@@ -169,6 +172,8 @@ class AuthService:
             "access_token": access_token,
             "refresh_token": refresh_token,
             "user_level": user.level,
+            "referrer_user_id": user.referrer_user_id,
+            "is_auth_nice": user.is_auth_nice,
         }
 
     @staticmethod
