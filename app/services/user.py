@@ -127,12 +127,13 @@ class UserService:
 
     @staticmethod
     def update_user(id, *args, **kwargs):
-        user = update_by_id(User, id, **kwargs)
+        user = update_by_id(User, id, data=kwargs)
         return user
 
     @staticmethod
     def update_user_by_id__session(id, *args, **kwargs):
-        user = update_by_id(User, id, **kwargs)
+        user = update_by_id(User, id, data=kwargs)
+        # user = update_by_id(User, id, **kwargs)
         return user
 
     @staticmethod
