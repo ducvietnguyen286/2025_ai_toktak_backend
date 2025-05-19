@@ -145,14 +145,19 @@ class PostService:
 
         page = data_search.get("page", 1)
         per_page = data_search.get("per_page", 10)
-        pagination = query.paginate(page=page, per_page=per_page)
+        skip = (page - 1) * per_page
+
+        total = query.count()
+        items = query.skip(skip).limit(per_page)
+
+        total_pages = (total + per_page - 1) // per_page
 
         return {
-            "total": pagination.total,
-            "page": pagination.page,
-            "per_page": pagination.per_page,
-            "pages": pagination.pages,
-            "items": list(pagination.items),
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": total_pages,
+            "items": list(items),
         }
 
     @staticmethod
@@ -221,14 +226,19 @@ class PostService:
 
         page = data_search.get("page", 1)
         per_page = data_search.get("per_page", 10)
-        pagination = query.paginate(page=page, per_page=per_page)
+        skip = (page - 1) * per_page
+
+        total = query.count()
+        items = query.skip(skip).limit(per_page)
+
+        total_pages = (total + per_page - 1) // per_page
 
         return {
-            "total": pagination.total,
-            "page": pagination.page,
-            "per_page": pagination.per_page,
-            "pages": pagination.pages,
-            "items": list(pagination.items),
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": total_pages,
+            "items": list(items),
         }
 
     @staticmethod
