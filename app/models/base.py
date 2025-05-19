@@ -77,30 +77,25 @@ class BaseModel:
         }
 
     def save(self):
-        with db.session.begin():
-            if not self.id:
-                db.session.add(self)
-            else:
-                db.session.merge(self)
+        if not self.id:
+            db.session.add(self)
+        else:
+            db.session.merge(self)
         return self
 
     def expunge(self):
-        with db.session.begin():
-            db.session.expunge(self)
+        db.session.expunge(self)
         return self
 
     def update(self, **kwargs):
-        with db.session.begin():
-            for key, value in kwargs.items():
-                if hasattr(self, key):
-                    setattr(self, key, value)
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
         return self
 
     def delete(self):
-        with db.session.begin():
-            db.session.delete(self)
+        db.session.delete(self)
 
     def soft_delete(self):
-        with db.session.begin():
-            setattr(self, "deleted_at", datetime.now())
+        setattr(self, "deleted_at", datetime.now())
         return self
