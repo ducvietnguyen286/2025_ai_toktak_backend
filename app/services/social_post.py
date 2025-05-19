@@ -105,7 +105,7 @@ class SocialPostService:
             social_sync = SocialSync.objects.get(id=id)
             if not social_sync:
                 return {}
-            social_posts = SocialPost.objects(sync_id=str(id))
+            social_posts = SocialPost.objects(sync_id=ObjectId(id))
 
             post_ids = social_sync.post_ids
 
