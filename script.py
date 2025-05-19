@@ -5,11 +5,13 @@ import logging
 from flask import Flask
 from werkzeug.exceptions import default_exceptions
 
+from app.services.batch import BatchService
 from app.services.link import LinkService
 from app.services.notification import NotificationServices
+from app.services.post import PostService
 from app.services.user import UserService
 from app.models.shorten import ShortenURL
-import const
+from sqlalchemy import text
 
 load_dotenv(override=False)
 
@@ -49,22 +51,111 @@ def create_app():
 
 def main():
     migrate_from_mysql_to_mongo_shotenlink()
+    migrate_from_mysql_to_mongo_batch_and_posts()
+
+
+def migrate_from_mysql_to_mongo_batch_and_posts():
+    app = create_app()
+    with app.app_context():
+        app.logger.info("Start Script...")
+        offset = 0
+        limit = 200
+        while True:
+            print("Batch and Posts")
+            print("=====================================")
+            print(f"offset: {offset}")
+            print(f"limit: {limit}")
+            mysql_batchs = db.session.execute(
+                text("SELECT * FROM batchs LIMIT :limit OFFSET :offset"),
+                {"limit": limit, "offset": offset},
+            ).fetchall()
+            if not mysql_batchs:
+                break
+            for batch in mysql_batchs:
+                batch_id = batch.id
+                batch_data = {
+                    "user_id": batch.user_id,
+                    "url": batch.url,
+                    "shorten_link": batch.shorten_link,
+                    "thumbnail": batch.thumbnail,
+                    "thumbnails": batch.thumbnails,
+                    "content": batch.content,
+                    "type": batch.type,
+                    "count_post": batch.count_post,
+                    "done_post": batch.done_post,
+                    "status": batch.status,
+                    "process_status": batch.process_status,
+                    "voice_google": batch.voice_google,
+                    "is_paid_advertisements": batch.is_paid_advertisements,
+                    "template_info": batch.template_info,
+                    "created_at": batch.created_at,
+                    "updated_at": batch.updated_at,
+                }
+                new_batch = BatchService.create_batch(**batch_data)
+                posts = db.session.execute(
+                    text("SELECT * FROM posts WHERE batch_id = :batch_id"),
+                    {"batch_id": batch_id},
+                ).fetchall()
+                for post in posts:
+                    post_data = {
+                        "user_id": post.user_id,
+                        "batch_id": new_batch.id,
+                        "thumbnail": post.thumbnail,
+                        "captions": post.captions,
+                        "images": post.images,
+                        "title": post.title,
+                        "subtitle": post.subtitle,
+                        "content": post.content,
+                        "description": post.description,
+                        "hashtag": post.hashtag,
+                        "video_url": post.video_url,
+                        "docx_url": post.docx_url,
+                        "file_size": (
+                            int(post.file_size)
+                            if post.file_size and post.file_size != ""
+                            else 0
+                        ),
+                        "mime_type": post.mime_type,
+                        "type": post.type,
+                        "status": post.status,
+                        "status_sns": post.status_sns,
+                        "process_number": post.process_number,
+                        "render_id": post.render_id,
+                        "video_path": post.video_path,
+                    }
+                    PostService.create_post(**post_data)
+            offset += limit
+        app.logger.info("End Script...")
 
 
 def migrate_from_mysql_to_mongo_shotenlink():
     app = create_app()
     with app.app_context():
         app.logger.info("Start Script...")
-        mysql_shorten_links = db.session.execute(
-            "SELECT * FROM shorten_links"
-        ).fetchall()
+        offset = 0
+        limit = 200
+        while True:
+            print("Shorten Links")
+            print("=====================================")
+            print(f"offset: {offset}")
+            print(f"limit: {limit}")
+            mysql_shorten_links = db.session.execute(
+                text("SELECT * FROM shorten_url LIMIT :limit OFFSET :offset"),
+                {"limit": limit, "offset": offset},
+            ).fetchall()
 
-        for link in mysql_shorten_links:
-            ShortenURL.create(
-                original_url=link.original_url,
-                shortened_url=link.shortened_url,
-                user_id=link.user_id,
-            )
+            if not mysql_shorten_links:
+                break
+
+            for link in mysql_shorten_links:
+                shorten = ShortenURL(
+                    original_url=link.original_url,
+                    original_url_hash=link.original_url_hash or "",
+                    short_code=link.short_code,
+                    status=link.status,
+                )
+                shorten.save()
+            offset += limit
 
         app.logger.info("End Script...")
 
