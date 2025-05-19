@@ -212,7 +212,8 @@ class APICreateBatch(Resource):
 
                 if (
                     current_user.subscription != "FREE"
-                    and current_user.subscription_expired >= datetime.datetime.now()
+                    and current_user.subscription_expired.date()
+                    >= datetime.date.today()
                 ):
                     batch_type = const.TYPE_PRO
 
