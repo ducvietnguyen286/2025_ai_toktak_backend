@@ -161,15 +161,15 @@ class APIAdminNotificationHistories(Resource):
             "type_notification": type_notification,
             "search_key": search_key,
         }
-        notifications = NotificationServices.get_admin_notifications(data_search)
+        result = NotificationServices.get_admin_notifications(data_search)
         return {
             "status": True,
             "message": "Success",
-            "total": notifications.total,
-            "page": notifications.page,
-            "per_page": notifications.per_page,
-            "total_pages": notifications.pages,
-            "data": [post.to_dict() for post in notifications.items],
+            "total": result["total"],
+            "page": result["page"],
+            "per_page": result["per_page"],
+            "total_pages": result["pages"],
+            "data": [item.to_dict() for item in result["items"]],
         }, 200
 
 
