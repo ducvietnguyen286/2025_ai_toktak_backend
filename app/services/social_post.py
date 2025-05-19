@@ -105,7 +105,7 @@ class SocialPostService:
             social_sync = SocialSync.objects.get(id=id)
             if not social_sync:
                 return {}
-            social_posts = SocialPost.objects(sync_id=ObjectId(id))
+            social_posts = SocialPost.objects(sync_id=id)
 
             post_ids = social_sync.post_ids
 
@@ -124,21 +124,14 @@ class SocialPostService:
             data = {}
             post_dict = {str(post.id): post for post in posts}
 
-            logger.info(f"post_dict: {post_dict}")
-            logger.info(f"data: {data}")
-            logger.info(f"social_posts: {social_posts}")
-
             for social_post in social_posts:
                 social_post_id = str(social_post.post_id)
-                logger.info(f"social_post.post_id: {social_post_id}")
                 post = data.get(social_post_id)
                 if not post:
                     post = post_dict.get(social_post_id)
                     if not post:
                         continue
                     post = post.to_json()
-
-                logger.info(f"post: {post}")
                 link = link_dict.get(social_post.link_id)
 
                 post_social = {
@@ -158,8 +151,6 @@ class SocialPostService:
                     post["social_posts"] = []
                 post["social_posts"].append(post_social)
                 data[str(social_post.post_id)] = post
-
-            logger.info(f"data: {data}")
 
             post_data = []
             for key in data:
