@@ -1597,6 +1597,8 @@ class APITemplateVideo(Resource):
             ).to_dict()
         except Exception as e:
             traceback.print_exc()
+            trace = traceback.format_exc()
+            logger.error(trace)
             logger.error(f"Exception: get template video fail  :  {str(e)}")
             return Response(
                 message="Lấy template video thất bại",
