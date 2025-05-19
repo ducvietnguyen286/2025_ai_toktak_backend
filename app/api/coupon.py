@@ -94,9 +94,18 @@ class APIUsedCoupon(Resource):
 
         result = None
 
-        coupon.expunge()
-        coupon_code.expunge()
-        current_user.expunge()
+        try:
+            coupon.expunge()
+            coupon_code.expunge()
+            current_user.expunge()
+        except Exception as e:
+            traceback.print_exc()
+            print(f"Error: {e}")
+            logger.error(f"Error: {e}")
+            return Response(
+                message="Có lỗi xảy ra khi sử dụng coupon",
+                status=400,
+            ).to_dict()
 
         with Session(bind=db.engine) as session:
             try:
