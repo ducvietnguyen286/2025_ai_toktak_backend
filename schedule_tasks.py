@@ -121,10 +121,11 @@ def split_message(text, max_length=4000):
     return [text[i : i + max_length] for i in range(0, len(text), max_length)]
 
 
-def format_notification_message(notification_detail, fe_current_domain):
+def format_notification_message(notification_detail, fe_current_domain, user=None):
+    email = user.email if user else ""
     return (
         f"[Toktak Notification {fe_current_domain}]\n"
-        f"- User Email: {notification_detail.get('email')}\n"
+        f"- User Email: {email}\n"
         f"- Notification ID: {notification_detail.get('id')}\n"
         f"- Batch ID: {notification_detail.get('batch_id')}\n"
         f"- Title: {notification_detail.get('title')}\n"
@@ -162,8 +163,10 @@ def send_telegram_notifications(app):
             for notification in notifications:
                 try:
                     notification_detail = notification.to_dict()
+                    user_id = notification.user_id
+                    user = UserService.find_user(user_id)
                     message = format_notification_message(
-                        notification_detail, fe_current_domain
+                        notification_detail, fe_current_domain, user=user
                     )
 
                     # Tự chia nhỏ nếu tin nhắn quá dài
