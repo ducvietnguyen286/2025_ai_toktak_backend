@@ -1463,7 +1463,7 @@ class APIUpdateStatusBatch(Resource):
             )
 
             return Response(
-                data=batch_detail.to_dict(),
+                data=batch_detail.to_json(),
                 message=message,
                 code=200,
             ).to_dict()
