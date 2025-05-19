@@ -30,7 +30,7 @@ def select_with_filter_one(
             stmt = stmt.where(cond)
     if order_by:
         stmt = stmt.order_by(*order_by)
-    result = db.session.execute(stmt).scalars().one_or_none()
+    result = db.session.execute(stmt).scalars().first()
     return result
 
 
