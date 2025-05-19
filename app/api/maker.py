@@ -113,10 +113,8 @@ def validater_create_batch(current_user, is_advance, url=""):
                 and current_user.batch_of_month
                 and current_month != current_user.batch_of_month
             ):
-                current_user.batch_total += const.LIMIT_BATCH[current_user.subscription]
-                current_user.batch_remain += const.LIMIT_BATCH[
-                    current_user.subscription
-                ]
+                current_user.batch_total = const.LIMIT_BATCH[current_user.subscription]
+                current_user.batch_remain = const.LIMIT_BATCH[current_user.subscription]
                 current_user.batch_of_month = current_month
                 current_user.save()
             else:
@@ -203,8 +201,6 @@ class APICreateBatch(Resource):
         user_id_login = current_user.id if current_user else 0
 
         try:
-            user_id_login = 0
-            current_user = AuthService.get_current_identity() or None
             batch_type = const.TYPE_NORMAL
 
             errors = validater_create_batch(current_user, is_advance, url)
@@ -224,16 +220,17 @@ class APICreateBatch(Resource):
                 redis_client.set(
                     redis_user_batch_key, current_user.batch_remain - 1, ex=180
                 )
-                current_user.batch_of_month = current_month
-                current_user.save()
+                if current_user.batch_of_month != current_month:
+                    UserService.update_user(
+                        user_id_login,
+                        batch_of_month=current_month,
+                    )
 
             voice = args.get("voice", 1)
             narration = args.get("narration", "female")
             if narration == "female":
-                # voice = random.randint(3, 4)
                 voice = 3
             else:
-                # voice = random.randint(1, 2)
                 voice = 2
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
