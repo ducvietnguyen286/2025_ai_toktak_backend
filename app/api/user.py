@@ -345,15 +345,17 @@ class APISendPosts(Resource):
 
             social_post_ids = []
             upload = []
+
             for post in posts:
+                post_id = str(post.id)
                 batch_id = str(post.batch_id)
                 timestamp = int(time.time())
                 unique_id = uuid.uuid4().hex
 
                 session_key = f"{timestamp}_{unique_id}"
 
-                check_is_all = is_all.get(post.id, 0)
-                check_links = link_ids.get(post.id, [])
+                check_is_all = is_all.get(post_id, 0)
+                check_links = link_ids.get(post_id, [])
 
                 if check_is_all == 1:
                     check_links = active_links
@@ -392,7 +394,7 @@ class APISendPosts(Resource):
                         {
                             "title": link.title,
                             "link_id": link_id,
-                            "post_id": post.id,
+                            "post_id": post_id,
                             "status": "PROCESSING",
                             "social_link": "",
                             "value": 0,
@@ -405,7 +407,7 @@ class APISendPosts(Resource):
                         "message": {
                             "sync_id": sync_id,
                             "link_id": link_id,
-                            "post_id": post.id,
+                            "post_id": post_id,
                             "user_id": current_user.id,
                             "social_post_id": str(social_post.id),
                             "page_id": "",
