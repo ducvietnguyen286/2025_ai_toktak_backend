@@ -1574,26 +1574,35 @@ class APITemplateVideo(Resource):
 
     @jwt_required()
     def get(self):
-        batch_id = request.args.get("batch_id")
-        current_user = AuthService.get_current_identity()
-        user_template = PostService.get_template_video_by_user_id(current_user.id)
+        try:
+            batch_id = request.args.get("batch_id")
+            current_user = AuthService.get_current_identity()
+            user_template = PostService.get_template_video_by_user_id(current_user.id)
 
-        if not user_template:
-            user_template = PostService.create_user_template_make_video(
-                user_id=current_user.id
-            )
-        user_template_data = user_template.to_dict()
+            if not user_template:
+                user_template = PostService.create_user_template_make_video(
+                    user_id=current_user.id
+                )
+            user_template_data = user_template.to_dict()
 
-        batch_info = BatchService.find_batch(batch_id)
-        if batch_info:
-            content_batch = json.loads(batch_info.content)
-            user_template_data["product_name_full"] = content_batch.get("name", "")
-            user_template_data["product_name"] = content_batch.get("name", "")[:10]
+            batch_info = BatchService.find_batch(batch_id)
+            if batch_info:
+                content_batch = json.loads(batch_info.content)
+                user_template_data["product_name_full"] = content_batch.get("name", "")
+                user_template_data["product_name"] = content_batch.get("name", "")[:10]
 
-        return Response(
-            data=user_template_data,
-            code=200,
-        ).to_dict()
+            return Response(
+                data=user_template_data,
+                code=200,
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Exception: get template video fail  :  {str(e)}")
+            return Response(
+                message="Lấy template video thất bại",
+                status=200,
+                code=201,
+            ).to_dict()
 
 
 def get_template_info(is_advance, is_paid_advertisements):
