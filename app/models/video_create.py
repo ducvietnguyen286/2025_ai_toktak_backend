@@ -8,7 +8,7 @@ class VideoCreate(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=False)  # ID người dùng
-    post_id = db.Column(db.Integer, nullable=False)  # ID Port
+    post_id = db.Column(db.String(200), nullable=False)  # ID Port
     product_name = db.Column(db.String(500), nullable=False)  # Tên sản phẩm
     video_url = db.Column(db.String(500), nullable=False)
     google_driver_url = db.Column(db.String(500), nullable=False)
