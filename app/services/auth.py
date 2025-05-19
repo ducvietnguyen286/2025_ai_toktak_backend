@@ -25,6 +25,7 @@ import string
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 import time
+from app.extensions import redis_client
 
 
 class AuthService:
@@ -188,8 +189,22 @@ class AuthService:
                 return None
 
             user_id = int(subject)
+
+            user_cache = redis_client.get(f"toktak:current_user:{user_id}")
+            if user_cache:
+                user = json.loads(user_cache)
+                return User(**user)
+
             stmt = select(User).filter_by(id=user_id)
             user = db.session.execute(stmt).scalar_one_or_none()
+
+            if user:
+                user_dict = user.to_dict()
+                redis_client.set(
+                    f"toktak:current_user:{user_id}",
+                    json.dumps(user_dict),
+                    ex=const.REDIS_EXPIRE_TIME,
+                )
 
             return user if user else None
 
