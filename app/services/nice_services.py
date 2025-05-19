@@ -213,7 +213,8 @@ class NiceAuthService:
                 )
                 # nếu có giới thiệu
                 if referral_history_detail:
-                    # kiểm tra tối đa số lần
+                    reward_duration = relativedelta(days=7)
+                    # kiểm tra tối đa số lần của người mời
                     referrer_user_id = referral_history_detail.referrer_user_id
                     usage_count = ReferralService.find_by_referred_user_id_done(
                         referrer_user_id
@@ -228,24 +229,14 @@ class NiceAuthService:
                     # người được giới thiệu =  user_id hiện tại
                     referred_user_id = referral_history_detail.referred_user_id
                     # Gia hạn 7 ngày cho người được mời
-                    old_batch_total = UserService.get_total_batch_remain(referred_user_id)
                     basic_package = PACKAGE_CONFIG["INVITE_BASIC"]
-                    
-                    new_batch_total = basic_package["batch_total"] + old_batch_total
-                    reward_duration = relativedelta(days=7)
-
                     expire_date = datetime_now + reward_duration
                     referred_update_data = {
                         "subscription_expired": expire_date,
                         "subscription": "INVITE_BASIC",
-                        "batch_total": new_batch_total,
-                        "batch_remain": min(
-                            basic_package["batch_remain"], user_data.batch_remain
-                        ),
-                        "total_link_active": max(
-                            basic_package["total_link_active"],
-                            user_data.total_link_active,
-                        ),
+                        "batch_total": basic_package["batch_total"],
+                        "batch_remain": basic_package["batch_remain"],
+                        "total_link_active": basic_package["total_link_active"],
                     }
 
                     UserService.update_user(referred_user_id, **referred_update_data)
@@ -287,7 +278,6 @@ class NiceAuthService:
                         "COUPON_STANDARD",
                     ]:
                         if subscription in ["INVITE_BASIC", "COUPON_STANDARD"]:
-                            batch_total = referrer_user_data.batch_total
                             batch_remain = referrer_user_data.batch_remain
                             object_start_time = referrer_user_data.subscription_expired
                             # Trường hợp người giới thiệu đang dùng gói BASIC
@@ -301,8 +291,13 @@ class NiceAuthService:
                             subscription_expired = old_exp + reward_duration
                         else:
                             subscription_expired = datetime_now + reward_duration
-                        new_batch_total = batch_total + basic_package["batch_total"]
+
                         new_batch_remain = batch_remain + basic_package["batch_remain"]
+                        old_batch_total = UserService.get_total_batch_remain(
+                            referrer_user_id
+                        )
+                        new_batch_total = basic_package["batch_total"] + old_batch_total
+
                         referrer_update_data = {
                             "subscription_expired": subscription_expired,
                             "subscription": "INVITE_BASIC",
