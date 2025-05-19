@@ -36,17 +36,18 @@ class APINotificationHistories(Resource):
             "time_range": time_range,
             "user_id": current_user.id,
         }
-        posts = NotificationServices.get_notifications(data_search)
+        result = NotificationServices.get_notifications(data_search)
         return {
             "current_user": current_user.id,
             "status": True,
             "message": "Success",
-            "total": posts.total,
-            "page": posts.page,
-            "per_page": posts.per_page,
-            "total_pages": posts.pages,
-            "data": [post.to_json() for post in posts.items],
+            "total": result["total"],
+            "page": result["page"],
+            "per_page": result["per_page"],
+            "total_pages": result["pages"],
+            "data": [item.to_dict() for item in result["items"]],
         }, 200
+        
 
 
 @ns.route("/delete_notification")
