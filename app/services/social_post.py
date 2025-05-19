@@ -116,6 +116,8 @@ class SocialPostService:
             links = Link.query.filter(Link.id.in_(link_ids)).all()
             link_dict = {link.id: link for link in links}
 
+            post_ids = [ObjectId(post_id) for post_id in post_ids]
+
             posts = Post.objects(id__in=post_ids)
 
             data = {}
