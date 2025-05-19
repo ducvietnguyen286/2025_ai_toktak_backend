@@ -122,8 +122,13 @@ def migrate_from_mysql_to_mongo_batch_and_posts():
                         "process_number": post.process_number,
                         "render_id": post.render_id,
                         "video_path": post.video_path,
+                        "created_at": post.created_at,
+                        "updated_at": post.updated_at,
+                        "schedule_date": post.schedule_date,
+                        "social_sns_description": post.social_sns_description,
                     }
                     PostService.create_post(**post_data)
+
             offset += limit
         app.logger.info("End Script...")
 
