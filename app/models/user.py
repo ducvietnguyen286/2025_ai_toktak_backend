@@ -76,6 +76,7 @@ class User(db.Model, BaseModel):
             "company_name": self.company_name,
             "batch_sns_total": self.batch_sns_total,
             "is_auth_nice": self.is_auth_nice,
+            "user_type": self.user_type,
             "referrer_user_id": self.referrer_user_id,
             "subscription_expired": (
                 self.subscription_expired.strftime("%Y-%m-%dT%H:%M:%SZ")
