@@ -31,7 +31,7 @@ class Notification(BaseDocument):
 
     def to_dict(self):
         return {
-            "email": self.user.email if self.user else None,
+            # "email": self.user.email if self.user else None,
             "id": self.id,
             "notification_type": self.notification_type,
             "user_id": self.user_id,
