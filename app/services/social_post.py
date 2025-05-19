@@ -128,13 +128,16 @@ class SocialPostService:
             data = {}
             post_dict = {post.id: post for post in posts}
 
+            logger.info(f"post_dict: {post_dict}")
+
             for social_post in social_posts:
-                post = data.get(social_post.post_id)
+                post = post_dict.get(social_post.post_id)
                 if not post:
                     post = post_dict.get(social_post.post_id)
                     if not post:
                         continue
                     post = post.to_json()
+                    logger.info(f"post: {post}")
                 link = link_dict.get(social_post.link_id)
 
                 post_social = {
