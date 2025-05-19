@@ -11,7 +11,7 @@ from celery import Celery
 
 
 redis_client = FlaskRedis()
-db = SQLAlchemy()
+db = SQLAlchemy(session_options={"expire_on_commit": False})
 
 bcrypt = Bcrypt()
 jwt = JWTManager()
