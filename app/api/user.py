@@ -208,7 +208,7 @@ class APISendPosts(Resource):
                 "items": {
                     "type": "object",
                     "properties": {
-                        "id": {"type": "integer"},
+                        "id": {"type": "string"},
                         "is_all": {"type": "integer"},
                         "link_ids": {
                             "type": "array",
@@ -480,7 +480,7 @@ class APIPostToLinks(Resource):
                 "items": {"type": "integer"},
                 "uniqueItems": True,
             },
-            "post_id": {"type": "integer"},
+            "post_id": {"type": "string"},
             "page_id": {"type": "string"},
             "disable_comment": {"type": "boolean"},
             "disable_duet": {"type": "boolean"},
