@@ -1479,7 +1479,7 @@ class APICheckSNSLink(Resource):
     def post(self, args):
         try:
             batchId = args.get("batchId", None)
-            current_user = AuthService.get_current_identity()
+            current_user = AuthService.get_current_identity(no_cache=True)
             if not current_user:
                 return Response(
                     message="로그인하여 계속 진행하십시오.",
