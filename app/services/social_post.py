@@ -1,4 +1,5 @@
 import traceback
+from app.lib.logger import logger
 from app.models.link import Link
 from app.models.post import Post
 from app.models.social_post import SocialPost
@@ -118,7 +119,11 @@ class SocialPostService:
 
             post_ids = [ObjectId(post_id) for post_id in post_ids]
 
+            print("Post IDs:", post_ids)
+
             posts = Post.objects(id__in=post_ids)
+
+            logger.info(f"posts: {posts}")
 
             data = {}
             post_dict = {post.id: post for post in posts}
