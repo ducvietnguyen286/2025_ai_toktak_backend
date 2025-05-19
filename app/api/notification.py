@@ -36,16 +36,16 @@ class APINotificationHistories(Resource):
             "time_range": time_range,
             "user_id": current_user.id,
         }
-        posts = NotificationServices.get_notifications(data_search)
+        result = NotificationServices.get_notifications(data_search)
         return {
             "current_user": current_user.id,
             "status": True,
             "message": "Success",
-            "total": posts.get("total", 0),
-            "page": posts.get("page", 0),
-            "per_page": posts.get("per_page", 0),
-            "total_pages": posts.get("pages", 0),
-            "data": [post.to_json() for post in posts.get("items", [])],
+            "total": result.get("total", 0),
+            "page": result.get("page", 0),
+            "per_page": result.get("per_page", 0),
+            "total_pages": result.get("pages", 0),
+            "data": [post.to_json() for post in result.get("items", [])],
         }, 200
 
 
