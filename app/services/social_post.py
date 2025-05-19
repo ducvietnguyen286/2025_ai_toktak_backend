@@ -125,10 +125,12 @@ class SocialPostService:
             post_dict = {str(post.id): post for post in posts}
 
             for social_post in social_posts:
-                post = post_dict.get(social_post.post_id)
+                post = post_dict.get(str(social_post.post_id))
                 if not post:
-                    continue
-                post = post.to_json()
+                    post = post_dict.get(str(social_post.post_id))
+                    if not post:
+                        continue
+                    post = post.to_json()
                 link = link_dict.get(social_post.link_id)
 
                 post_social = {
@@ -147,7 +149,7 @@ class SocialPostService:
                 if "social_posts" not in post:
                     post["social_posts"] = []
                 post["social_posts"].append(post_social)
-                data[social_post.post_id] = post
+                data[str(social_post.post_id)] = post
 
             post_data = []
             for key in data:
