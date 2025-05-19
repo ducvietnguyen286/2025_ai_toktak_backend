@@ -1,5 +1,6 @@
 from http.cookiejar import CookieJar
 import json
+import random
 import traceback
 from app.lib.header import generate_desktop_user_agent, generate_user_agent
 from app.lib.logger import logger
@@ -24,16 +25,21 @@ class CoupangScraper:
 
     def proxies(self):
         auth = "dyhnvzbd:ikzxkk88sckd"
+        proxy_list = [
+            f"http://{auth}@198.23.239.134:6540",
+            f"http://{auth}@107.172.163.27:6543",
+            f"http://{auth}@64.137.42.112:5157",
+            f"http://{auth}@86.38.234.176:6630",
+            f"http://{auth}@173.211.0.148:6641",
+            f"http://{auth}@216.10.27.159:6837",
+            f"http://{auth}@154.36.110.199:6853",
+            f"http://{auth}@45.151.162.198:6600",
+            f"http://{auth}@188.74.210.21:6100",
+        ]
+        selected_proxy = random.choice(proxy_list)
         return {
-            "http": f"http://{auth}@198.23.239.134:6540",
-            "http": f"http://{auth}@107.172.163.27:6543",
-            "http": f"http://{auth}@64.137.42.112:5157",
-            "http": f"http://{auth}@86.38.234.176:6630",
-            "http": f"http://{auth}@173.211.0.148:6641",
-            "http": f"http://{auth}@216.10.27.159:6837",
-            "http": f"http://{auth}@154.36.110.199:6853",
-            "http": f"http://{auth}@45.151.162.198:6600",
-            "http": f"http://{auth}@188.74.210.21:6100",
+            "http": selected_proxy,
+            "https": selected_proxy,
         }
 
     def run_fire_crawler(self):
