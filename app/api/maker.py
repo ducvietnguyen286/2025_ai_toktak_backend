@@ -1480,44 +1480,53 @@ class APIUpdateStatusBatch(Resource):
 class APIHistories(Resource):
     @jwt_required()
     def get(self):
-        current_user = AuthService.get_current_identity()
-        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
-        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
-        status = request.args.get("status", const.UPLOADED, type=int)
-        type_order = request.args.get("type_order", "", type=str)
-        type_post = request.args.get("type_post", "", type=str)
-        time_range = request.args.get("time_range", "", type=str)
-        data_search = {
-            "page": page,
-            "per_page": per_page,
-            "status": status,
-            "type_order": type_order,
-            "type_post": type_post,
-            "time_range": time_range,
-            "user_id": current_user.id,
-        }
-        posts = PostService.get_posts_upload(data_search)
-        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+        try:
+            current_user = AuthService.get_current_identity()
+            page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+            per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+            status = request.args.get("status", const.UPLOADED, type=int)
+            type_order = request.args.get("type_order", "", type=str)
+            type_post = request.args.get("type_post", "", type=str)
+            time_range = request.args.get("time_range", "", type=str)
+            data_search = {
+                "page": page,
+                "per_page": per_page,
+                "status": status,
+                "type_order": type_order,
+                "type_post": type_post,
+                "time_range": time_range,
+                "user_id": current_user.id,
+            }
+            posts = PostService.get_posts_upload(data_search)
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
-        return {
-            "current_user": current_user.id,
-            "status": True,
-            "message": "Success",
-            "total": posts.total,
-            "page": posts.page,
-            "per_page": posts.per_page,
-            "total_pages": posts.pages,
-            "data": [
-                {
-                    **post_json,
-                    "video_path": convert_video_path(
-                        post_json.get("video_path", ""), current_domain
-                    ),
-                }
-                for post in posts.items
-                if (post_json := post.to_json())
-            ],
-        }, 200
+            return {
+                "current_user": current_user.id,
+                "status": True,
+                "message": "Success",
+                "total": posts.total,
+                "page": posts.page,
+                "per_page": posts.per_page,
+                "total_pages": posts.pages,
+                "data": [
+                    {
+                        **post_json,
+                        "video_path": convert_video_path(
+                            post_json.get("video_path", ""), current_domain
+                        ),
+                    }
+                    for post in posts.items
+                    if (post_json := post.to_json())
+                ],
+            }, 200
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Exception: get histories fail  :  {str(e)}")
+            return Response(
+                message="Lấy lịch sử thất bại",
+                status=200,
+                code=201,
+            ).to_dict()
 
 
 @ns.route("/delete_post")
