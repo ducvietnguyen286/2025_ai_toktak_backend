@@ -182,13 +182,24 @@ class AuthService:
         return {"access_token": access_token}
 
     @staticmethod
-    def get_current_identity():
+    def get_current_identity(no_cache=False):
         try:
             subject = get_jwt_identity()
             if subject is None:
                 return None
 
             user_id = int(subject)
+
+            if no_cache:
+                user = User.query.get(user_id)
+                if user:
+                    user_dict = user.to_dict()
+                    redis_client.set(
+                        f"toktak:current_user:{user_id}",
+                        json.dumps(user_dict),
+                        ex=const.REDIS_EXPIRE_TIME,
+                    )
+                return user if user else None
 
             user_cache = redis_client.get(f"toktak:current_user:{user_id}")
             if user_cache:
