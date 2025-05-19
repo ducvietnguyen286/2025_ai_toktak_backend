@@ -77,10 +77,8 @@ class BaseModel:
         }
 
     def save(self):
-        if not self.id:
-            db.session.add(self)
-        else:
-            db.session.merge(self)
+        db.session.add(self)
+        db.session.commit()
         return self
 
     def expunge(self):
@@ -89,13 +87,15 @@ class BaseModel:
 
     def update(self, **kwargs):
         for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
+            setattr(self, key, value)
+        db.session.commit()
         return self
 
     def delete(self):
         db.session.delete(self)
+        db.session.commit()
 
     def soft_delete(self):
         setattr(self, "deleted_at", datetime.now())
+        db.session.commit()
         return self
