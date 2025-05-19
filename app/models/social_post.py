@@ -1,5 +1,5 @@
 from app.models.base_mongo import BaseDocument
-from mongoengine import StringField, IntField, BooleanField
+from mongoengine import StringField, IntField, BooleanField, ObjectIdField
 
 
 class SocialPost(BaseDocument):
@@ -10,8 +10,8 @@ class SocialPost(BaseDocument):
 
     user_id = IntField(required=True, default=0)
     link_id = IntField(required=True, default=0)
-    post_id = IntField(required=True, default=0)
-    batch_id = IntField(required=True, default=0)
+    post_id = ObjectIdField(required=True)
+    batch_id = ObjectIdField(required=True)
     session_key = StringField(required=True, max_length=100)
     sync_id = StringField(required=False, max_length=100)
     social_link = StringField(max_length=700, default="")

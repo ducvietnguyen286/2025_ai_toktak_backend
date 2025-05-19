@@ -15,6 +15,7 @@ from app.services.auth import AuthService
 from app.services.notification import NotificationServices
 from app.lib.string import get_level_images
 import const
+from app.extensions import redis_client
 
 ns = Namespace(name="auth", description="Auth API")
 
@@ -187,8 +188,8 @@ class APIMe(Resource):
     @jwt_required()
     def get(self):
         try:
-            user_login = AuthService.get_current_identity()
-            if not user_login:
+            login = AuthService.get_current_identity(no_cache=True)
+            if not login:
                 return Response(
                     status=401,
                     message="Can't User login",
@@ -330,7 +331,12 @@ class APIMeUpdate(Resource):
         phone = args.get("phone")
         contact = args.get("contact")
         company_name = args.get("company_name")
-        user_login = AuthService.get_current_identity()
+        user_login = AuthService.get_current_identity(no_cache=True)
+        if not user_login:
+            return Response(
+                message="시스템에 로그인해주세요.",
+                code=201,
+            ).to_dict()
 
         update_data = {}
 
@@ -358,6 +364,14 @@ class APIMeUpdate(Resource):
 
             user_login = AuthService.update(user_login.id, **update_data)
 
+            user_dict = user_login.to_dict()
+
+            redis_client.set(
+                f"toktak:current_user:{user_login.id}",
+                json.dumps(user_dict),
+                ex=const.REDIS_EXPIRE_TIME,
+            )
+
         return Response(
             data=user_login._to_json(),
             message="Update thông tin thành công",
@@ -370,7 +384,13 @@ class APIUserProfile(Resource):
     @jwt_required()
     def get(self):
         try:
-            user_login = AuthService.get_current_identity()
+            user_login = AuthService.get_current_identity(no_cache=True)
+            if not user_login:
+                return Response(
+                    message="시스템에 로그인해주세요.",
+                    code=201,
+                ).to_dict()
+
             if (
                 user_login
                 and user_login.deleted_at
@@ -452,6 +472,8 @@ class APIDeleteAccount(Resource):
             ).to_dict()
 
         AuthService.deleteAccount(user_login.id)
+
+        redis_client.delete(f"toktak:current_user:{user_login.id}")
 
         return Response(
             data={},

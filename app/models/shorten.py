@@ -1,24 +1,25 @@
-from app.extensions import db
 import datetime
-from app.models.base import BaseModel
+from app.models.base_mongo import BaseDocument
+from mongoengine import StringField, IntField
 
 
-class ShortenURL(db.Model, BaseModel):
-    __tablename__ = "shorten_url"
+class ShortenURL(BaseDocument):
+    meta = {
+        "collection": "shorten_urls",
+        "indexes": [
+            "original_url_hash",
+            "short_code",
+        ],
+    }
 
-    id = db.Column(db.Integer, primary_key=True)
-    original_url = db.Column(db.String(2048), nullable=False)
-    original_url_hash = db.Column(db.String(100), nullable=False, index=True)
-    short_code = db.Column(db.String(10), unique=True, nullable=False)
-    status = db.Column(db.Integer, default=1)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    updated_at = db.Column(
-        db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
-    )
+    original_url = StringField(required=True)
+    original_url_hash = StringField(required=True, max_length=100)
+    short_code = StringField(required=True, max_length=20, unique=True)
+    status = IntField(default=1)
 
     def to_dict(self):
         return {
-            "id": self.id,
+            "id": self._id,
             "original_url": self.original_url,
             "short_code": self.short_code,
             "status": self.status,

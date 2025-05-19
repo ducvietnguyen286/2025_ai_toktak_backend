@@ -4,10 +4,6 @@ from app.errors.exceptions import BadRequest
 from app.lib.logger import logger
 from app.models.social_account import SocialAccount
 from app.models.user import User
-from app.models.post import Post
-from app.models.batch import Batch
-from app.models.user_link import UserLink
-from app.models.user_video_templates import UserVideoTemplates
 from app.services.referral_service import ReferralService
 from app.services.user import UserService
 from flask_jwt_extended import (
@@ -22,11 +18,14 @@ from google.auth.transport import requests as google_requests
 from app.lib.string import get_level_images
 import json
 import const
+from sqlalchemy import select
+from app.extensions import db
 import secrets
 import string
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 import time
+from app.extensions import redis_client
 
 
 class AuthService:
@@ -123,8 +122,11 @@ class AuthService:
                 user.save()
 
                 if referral_code != "":
-                    ReferralService.use_referral_code(referral_code, user)
-                    new_user_referral_code = 1
+                    user_history = ReferralService.use_referral_code(
+                        referral_code, user
+                    )
+                    if user_history:
+                        new_user_referral_code = 1
 
             social_account = SocialAccount(
                 user_id=user.id,
@@ -169,6 +171,8 @@ class AuthService:
             "access_token": access_token,
             "refresh_token": refresh_token,
             "user_level": user.level,
+            "referrer_user_id": user.referrer_user_id,
+            "is_auth_nice": user.is_auth_nice,
         }
 
     @staticmethod
@@ -178,23 +182,44 @@ class AuthService:
         return {"access_token": access_token}
 
     @staticmethod
-    def get_current_identity():
+    def get_current_identity(no_cache=False):
         try:
-            # Lấy JWT identity
             subject = get_jwt_identity()
-            # Nếu không có identity (chưa login), trả về None
             if subject is None:
                 return None
 
-            # Convert sang integer và lấy user
             user_id = int(subject)
-            user = User.query.get(user_id)
 
-            # Trả về user nếu tồn tại, None nếu không tìm thấy
+            if no_cache:
+                user = User.query.get(user_id)
+                if user:
+                    user_dict = user.to_dict()
+                    redis_client.set(
+                        f"toktak:current_user:{user_id}",
+                        json.dumps(user_dict),
+                        ex=const.REDIS_EXPIRE_TIME,
+                    )
+                return user if user else None
+
+            user_cache = redis_client.get(f"toktak:current_user:{user_id}")
+            if user_cache:
+                user = json.loads(user_cache)
+                return User(**user)
+
+            stmt = select(User).filter_by(id=user_id)
+            user = db.session.execute(stmt).scalar_one_or_none()
+
+            if user:
+                user_dict = user.to_dict()
+                redis_client.set(
+                    f"toktak:current_user:{user_id}",
+                    json.dumps(user_dict),
+                    ex=const.REDIS_EXPIRE_TIME,
+                )
+
             return user if user else None
 
         except Exception as ex:
-            # Xử lý các lỗi khác (ví dụ: token không hợp lệ)
             logger.exception(f"get_current_identity : {ex}")
             return None
 

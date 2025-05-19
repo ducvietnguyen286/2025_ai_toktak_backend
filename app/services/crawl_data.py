@@ -1,5 +1,5 @@
 from app.models.crawl_data import CrawlData
-
+from app.lib.query import select_with_filter_one
 
 
 class CrawlDataService:
@@ -12,6 +12,7 @@ class CrawlDataService:
 
     @staticmethod
     def find_crawl_data(hash):
-        return CrawlData.query.filter_by(crawl_url_hash=hash).first()
-    
-    
+        crawl_data = select_with_filter_one(
+            CrawlData, filters=[CrawlData.crawl_url_hash == hash]
+        )
+        return crawl_data

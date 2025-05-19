@@ -32,6 +32,11 @@ class ReferralService:
         if not user:
             return False
 
+        # check xem đã có history chưa
+        user_history = ReferralService.find_by_referred_user_id(login_user.id)
+        if user_history:
+            return False
+
         referrer_user_id = user.id
         usage_count = ReferralService.find_by_referred_user_id_done(referrer_user_id)
         if usage_count >= MAX_REFERRAL_USAGE:

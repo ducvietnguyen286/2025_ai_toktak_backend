@@ -4,7 +4,6 @@ import time
 import datetime
 import json
 import os
-import uuid
 from flask_restx import Namespace, Resource
 from app.ais.chatgpt import (
     call_chatgpt_clear_product_name,
@@ -114,10 +113,8 @@ def validater_create_batch(current_user, is_advance, url=""):
                 and current_user.batch_of_month
                 and current_month != current_user.batch_of_month
             ):
-                current_user.batch_total += const.LIMIT_BATCH[current_user.subscription]
-                current_user.batch_remain += const.LIMIT_BATCH[
-                    current_user.subscription
-                ]
+                current_user.batch_total = const.LIMIT_BATCH[current_user.subscription]
+                current_user.batch_remain = const.LIMIT_BATCH[current_user.subscription]
                 current_user.batch_of_month = current_month
                 current_user.save()
             else:
@@ -199,13 +196,11 @@ class APICreateBatch(Resource):
         url = args.get("url", "")
         is_advance = args.get("is_advance", False)
         current_month = time.strftime("%Y-%m", time.localtime())
-        current_user = AuthService.get_current_identity() or None
+        current_user = AuthService.get_current_identity(no_cache=True) or None
 
         user_id_login = current_user.id if current_user else 0
 
         try:
-            user_id_login = 0
-            current_user = AuthService.get_current_identity() or None
             batch_type = const.TYPE_NORMAL
 
             errors = validater_create_batch(current_user, is_advance, url)
@@ -217,7 +212,10 @@ class APICreateBatch(Resource):
 
                 if (
                     current_user.subscription != "FREE"
-                    and current_user.subscription_expired >= datetime.datetime.now()
+                    and datetime.datetime.strptime(
+                        current_user.subscription_expired, "%Y-%m-%d %H:%M:%S"
+                    )
+                    >= datetime.datetime.now()
                 ):
                     batch_type = const.TYPE_PRO
 
@@ -225,16 +223,17 @@ class APICreateBatch(Resource):
                 redis_client.set(
                     redis_user_batch_key, current_user.batch_remain - 1, ex=180
                 )
-                current_user.batch_of_month = current_month
-                current_user.save()
+                if current_user.batch_of_month != current_month:
+                    UserService.update_user(
+                        user_id_login,
+                        batch_of_month=current_month,
+                    )
 
             voice = args.get("voice", 1)
             narration = args.get("narration", "female")
             if narration == "female":
-                # voice = random.randint(3, 4)
                 voice = 3
             else:
-                # voice = random.randint(1, 2)
                 voice = 2
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
@@ -313,18 +312,19 @@ class APICreateBatch(Resource):
                     status=0,
                 )
 
-                post_res = post.to_dict()
+                post_res = post.to_json()
                 post_res["url_run"] = (
                     f"{current_domain}/api/v1/maker/make-post/{post.id}"
                 )
                 posts.append(post_res)
 
-            batch_res = batch._to_json()
+            batch_res = batch.to_json()
             batch_res["posts"] = posts
 
             # Save batch for batch-make-image
             batch_id = batch.id
             redis_key = f"batch_info_{batch_id}"
+            print(posts)
             redis_client.set(redis_key, json.dumps(posts), ex=3600)
 
             if current_user:
@@ -405,7 +405,7 @@ class APIBatchMakeImage(Resource):
     @parameters(
         type="object",
         properties={
-            "batch_id": {"type": "integer"},
+            "batch_id": {"type": "string"},
         },
         required=["batch_id"],
     )
@@ -564,7 +564,7 @@ class APIUpdateTemplateVideoUser(Resource):
             hashtag = args.get("hashtag", [])
 
             user_id_login = 0
-            current_user = AuthService.get_current_identity() or None
+            current_user = AuthService.get_current_identity(no_cache=True) or None
             user_id_login = current_user.id
             user_template = PostService.get_template_video_by_user_id(user_id_login)
             if not user_template:
@@ -653,7 +653,7 @@ class APIUpdateTemplateVideoUser(Resource):
             ).to_dict()
 
 
-@ns.route("/make-post/<int:id>")
+@ns.route("/make-post/<id>")
 class APIMakePost(Resource):
 
     @parameters(
@@ -961,25 +961,21 @@ class APIMakePost(Resource):
                     #         current_stt = index + 1
                     #         pre_content_cutout += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
 
-                    # BaoNC Comment to live 20250516
-                    # ------------------------------------------------
-                    # pre_content_cutout_sam = f"<br></br><h2>IMAGES CUTTED OUT BY SERVER: TOTAL - {len(cutout_by_sam_images)}</h2>"
-                    # if len(cutout_by_sam_images) > 0:
-                    #     current_stt = 0
-                    #     for index, cutout_image in enumerate(cutout_by_sam_images):
-                    #         current_stt = index + 1
-                    #         pre_content_cutout_sam += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
+                    pre_content_cutout_sam = f"<br></br><h2>IMAGES CUTTED OUT BY SERVER: TOTAL - {len(cutout_by_sam_images)}</h2>"
+                    if len(cutout_by_sam_images) > 0:
+                        current_stt = 0
+                        for index, cutout_image in enumerate(cutout_by_sam_images):
+                            current_stt = index + 1
+                            pre_content_cutout_sam += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cutout_image}" /></p>'
 
-                    # pre_content = f"<br></br><h2>DESCRIPTION IMAGES: TOTAL - {len(description_images)}</h2>"
-                    # if len(description_images) > 0:
-                    #     current_stt = 0
-                    #     for index, cleared_image in enumerate(description_images):
-                    #         current_stt = index + 1
-                    #         pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
+                    pre_content = f"<br></br><h2>DESCRIPTION IMAGES: TOTAL - {len(description_images)}</h2>"
+                    if len(description_images) > 0:
+                        current_stt = 0
+                        for index, cleared_image in enumerate(description_images):
+                            current_stt = index + 1
+                            pre_content += f'<p><h2>IMAGE NUM: {current_stt}</h2><img src="{cleared_image}" /></p>'
 
-                    # content = pre_content_cutout_sam + pre_content + content
-                    # ------------------------------------------------
-                    # BaoNC End Comment to live 20250516
+                    content = pre_content_cutout_sam + pre_content + content
 
                     for index, image_url in enumerate(process_images):
                         content = content.replace(f"IMAGE_URL_{index}", image_url)
@@ -1079,8 +1075,11 @@ class APIMakePost(Resource):
                     notification_type="blog",
                 )
             logger.info(f"END NOTIFICATION DATA: {type}")
+
+            post = PostService.find_post(post.id)
+
             return Response(
-                data=post._to_json(),
+                data=post.to_json(),
                 message=message,
             ).to_dict()
         except Exception as e:
@@ -1121,30 +1120,39 @@ class APIMakePost(Resource):
             ).to_dict()
 
 
-@ns.route("/get-batch/<int:id>")
+@ns.route("/get-batch/<id>")
 class APIGetBatch(Resource):
     @jwt_required()
     def get(self, id):
-        batch = BatchService.find_batch(id)
-        if not batch:
+        try:
+            batch = BatchService.find_batch(id)
+            if not batch:
+                return Response(
+                    message="Batch không tồn tại",
+                    status=404,
+                ).to_dict()
+
+            posts = PostService.get_posts_by_batch_id(batch.id)
+
+            batch_res = batch.to_json()
+            batch_res["posts"] = posts
+
+            user_login = AuthService.get_current_identity()
+            user_info = UserService.get_user_info_detail(user_login.id)
+            batch_res["user_info"] = user_info
+
             return Response(
-                message="Batch không tồn tại",
-                status=404,
+                data=batch_res,
+                message="Lấy batch thành công",
             ).to_dict()
-
-        posts = PostService.get_posts_by_batch_id(batch.id)
-
-        batch_res = batch._to_json()
-        batch_res["posts"] = posts
-
-        user_login = AuthService.get_current_identity()
-        user_info = UserService.get_user_info_detail(user_login.id)
-        batch_res["user_info"] = user_info
-
-        return Response(
-            data=batch_res,
-            message="Lấy batch thành công",
-        ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Exception: get batch fail  :  {str(e)}")
+            return Response(
+                message="Lấy batch thất bại",
+                status=200,
+                code=201,
+            ).to_dict()
 
 
 @ns.route("/batchs")
@@ -1296,7 +1304,7 @@ class APIGetStatusUploadBySyncId(Resource):
             ).to_dict()
 
 
-@ns.route("/get-status-upload-with-batch-id/<int:id>")
+@ns.route("/get-status-upload-with-batch-id/<string:id>")
 class APIGetStatusUploadWithBatch(Resource):
 
     def get(self, id):
@@ -1407,7 +1415,7 @@ class APIGetStatusUploadWithBatch(Resource):
                 except Exception as e:
                     logger.error(f"Lỗi xử lý post {post_id}: {e}", exc_info=True)
 
-            batch_res = batch._to_json()
+            batch_res = batch.to_json()
             batch_res["posts"] = show_posts
 
             return Response(
@@ -1424,7 +1432,7 @@ class APIGetStatusUploadWithBatch(Resource):
             ).to_dict()
 
 
-@ns.route("/save_draft_batch/<int:id>")
+@ns.route("/save_draft_batch/<string:id>")
 class APIUpdateStatusBatch(Resource):
 
     @jwt_required()
@@ -1510,7 +1518,7 @@ class APIHistories(Resource):
                     ),
                 }
                 for post in posts.items
-                if (post_json := post._to_json())
+                if (post_json := post.to_json())
             ],
         }, 200
 
@@ -1569,26 +1577,42 @@ class APITemplateVideo(Resource):
 
     @jwt_required()
     def get(self):
-        batch_id = request.args.get("batch_id")
-        current_user = AuthService.get_current_identity()
-        user_template = PostService.get_template_video_by_user_id(current_user.id)
+        try:
+            batch_id = request.args.get("batch_id")
+            current_user = AuthService.get_current_identity()
+            user_template = PostService.get_template_video_by_user_id(current_user.id)
 
-        if not user_template:
-            user_template = PostService.create_user_template_make_video(
-                user_id=current_user.id
-            )
-        user_template_data = user_template.to_dict()
+            if not user_template:
+                user_template = PostService.create_user_template_make_video(
+                    user_id=current_user.id
+                )
+            user_template_data = user_template.to_dict()
 
-        batch_info = BatchService.find_batch(batch_id)
-        if batch_info:
-            content_batch = json.loads(batch_info.content)
-            user_template_data["product_name_full"] = content_batch.get("name", "")
-            user_template_data["product_name"] = content_batch.get("name", "")[:10]
+            if batch_id:
+                batch_info = BatchService.find_batch(batch_id)
+                if batch_info:
+                    content_batch = json.loads(batch_info.content)
+                    user_template_data["product_name_full"] = content_batch.get(
+                        "name", ""
+                    )
+                    user_template_data["product_name"] = content_batch.get("name", "")[
+                        :10
+                    ]
 
-        return Response(
-            data=user_template_data,
-            code=200,
-        ).to_dict()
+            return Response(
+                data=user_template_data,
+                code=200,
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            trace = traceback.format_exc()
+            logger.error(trace)
+            logger.error(f"Exception: get template video fail  :  {str(e)}")
+            return Response(
+                message="Lấy template video thất bại",
+                status=200,
+                code=201,
+            ).to_dict()
 
 
 def get_template_info(is_advance, is_paid_advertisements):
@@ -1768,39 +1792,13 @@ class APIDownloadZip(Resource):
                     code=201,
                 ).to_dict()
 
-            images = json.loads(post.images)
-            file_list = []
-            current_domain = os.environ.get("CURRENT_DOMAIN") or "https://api.toktak.ai"
-            upload_folder = os.path.join(os.getcwd(), f"uploads/")
-            for index, image_detail in enumerate(images):
-
-                image_detail_path = image_detail.replace(
-                    f"{current_domain}/files/", upload_folder
-                )
-                if os.path.exists(image_detail_path):
-                    file_list.append(image_detail_path)
-
-            if file_list:
-                zip_path, tmp_dir = _make_zip(file_list)
-                if request:
-                    after_this_request(
-                        lambda response: _cleanup_zip(zip_path, tmp_dir, response)
-                    )
-                return send_file(
-                    zip_path,
-                    mimetype="application/zip",
-                    as_attachment=True,
-                    download_name=f"post_{post_id}_images.zip",
-                )
-
             UPLOAD_BASE_PATH = "uploads"
             post_date = post.created_at.strftime("%Y_%m_%d")
             IMAGE_EXTENSIONS = ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp", "*.svg"]
             folder_path = os.path.join(UPLOAD_BASE_PATH, post_date, str(post.batch_id))
             if not os.path.exists(folder_path):
-                logger.error(f"API download-zip - Folder not found {folder_path}")
                 return Response(
-                    message=f"Folder not found {post_date}",
+                    message="Folder not found",
                     code=201,
                 ).to_dict()
 
@@ -1814,7 +1812,14 @@ class APIDownloadZip(Resource):
                     code=201,
                 ).to_dict()
 
-            zip_path, tmp_dir = _make_zip(file_list)
+            tmp_dir = tempfile.mkdtemp()
+            zip_path = os.path.join(tmp_dir, "images.zip")
+
+            with ZipFile(zip_path, "w") as zipf:
+                for file_path in file_list:
+                    filename = os.path.basename(file_path)
+                    zipf.write(file_path, arcname=filename)
+
             if request:
                 after_this_request(
                     lambda response: _cleanup_zip(zip_path, tmp_dir, response)
@@ -1872,15 +1877,3 @@ def _cleanup_zip(zip_path, tmp_dir, response):
     except Exception as e:
         logger.warning(f"Không thể xóa tệp tạm: {e}")
     return response
-
-
-def _make_zip(file_list):
-    unique_id = uuid.uuid4().hex
-    file_zip = f"{unique_id}_images.zip"
-    tmp_dir = tempfile.mkdtemp()
-    zip_path = os.path.join(tmp_dir, file_zip)
-    with ZipFile(zip_path, "w") as zipf:
-        for file_path in file_list:
-            filename = os.path.basename(file_path)
-            zipf.write(file_path, arcname=filename)
-    return zip_path, tmp_dir
