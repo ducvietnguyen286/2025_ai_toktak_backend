@@ -108,6 +108,15 @@ class UserService:
         return user
 
     @staticmethod
+    def find_users(ids):
+        users = select_with_filter(
+            User,
+            [User.id.in_(ids)],
+            [],
+        )
+        return users
+
+    @staticmethod
     def get_users():
         users = select_with_filter(
             User,

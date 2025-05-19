@@ -160,11 +160,15 @@ def send_telegram_notifications(app):
 
             fe_current_domain = os.environ.get("FE_DOMAIN") or "http://localhost:5000"
 
+            user_ids = [notification.user_id for notification in notifications]
+            users = UserService.find_users(user_ids)
+            user_dict = {user.id: user for user in users}
+
             for notification in notifications:
                 try:
                     notification_detail = notification.to_dict()
                     user_id = notification.user_id
-                    user = UserService.find_user(user_id)
+                    user = user_dict.get(user_id)
                     message = format_notification_message(
                         notification_detail, fe_current_domain, user=user
                     )
