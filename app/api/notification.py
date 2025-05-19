@@ -45,7 +45,7 @@ class APINotificationHistories(Resource):
             "page": posts.page,
             "per_page": posts.per_page,
             "total_pages": posts.pages,
-            "data": [post._to_json() for post in posts.items],
+            "data": [post.to_json() for post in posts.items],
         }, 200
 
 
@@ -171,7 +171,8 @@ class APIAdminNotificationHistories(Resource):
             "total_pages": notifications.pages,
             "data": [post.to_dict() for post in notifications.items],
         }, 200
-        
+
+
 @ns.route("/admin/delete_notification")
 class APIAdminDeleteNotification(Resource):
     @jwt_required()

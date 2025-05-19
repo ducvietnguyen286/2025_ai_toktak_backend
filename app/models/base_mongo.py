@@ -1,4 +1,6 @@
 from datetime import datetime
+
+from bson import ObjectId
 from app.extensions import db_mongo
 from mongoengine import DateTimeField
 
@@ -30,7 +32,11 @@ class BaseDocument(db_mongo.Document):
                 continue
             if column == "_id":
                 response["id"] = str(value)
-            elif column == "created_at" or column == "updated_at":
+            elif type(value) == ObjectId:
+                response[column] = str(value)
+            elif type(value) == datetime and (
+                column == "created_at" or column == "updated_at"
+            ):
                 response[column] = value.strftime("%Y-%m-%d %H:%M:%S")
             else:
                 response[column] = value

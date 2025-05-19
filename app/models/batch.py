@@ -1,28 +1,27 @@
 from app.extensions import db
-from app.models.base import BaseModel
-from datetime import datetime
+from app.models.base_mongo import BaseDocument
+from mongoengine import StringField, IntField
 
 
-class Batch(db.Model, BaseModel):
-    __tablename__ = "batchs"
+class Batch(BaseDocument):
+    meta = {"collection": "batchs"}
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, nullable=False)
-    url = db.Column(db.String(500), nullable=False)
-    shorten_link = db.Column(db.String(200), nullable=True)
-    thumbnail = db.Column(db.String(500), nullable=True, default="")
-    thumbnails = db.Column(db.Text)
-    content = db.Column(db.Text, nullable=True)
+    user_id = IntField(required=True, default=0)
+    url = StringField(required=True, max_length=500)
+    shorten_link = StringField(required=True, max_length=200)
+    thumbnail = StringField(max_length=500)
+    thumbnails = StringField()
+    content = StringField()
 
-    type = db.Column(db.Integer, default=1)
-    count_post = db.Column(db.Integer, default=0)
-    done_post = db.Column(db.Integer, default=0)
-    status = db.Column(db.Integer, default=1)
-    is_paid_advertisements = db.Column(db.Integer, default=0)
-    is_advance = db.Column(db.Integer, default=0)
-    voice_google = db.Column(db.Integer, default=1)
-    process_status = db.Column(db.String(50), default="PENDING")
-    template_info = db.Column(db.Text, nullable=True)
+    type = IntField(required=False, default=1)
+    count_post = IntField(required=False, default=0)
+    done_post = IntField(required=False, default=0)
+    status = IntField(required=False, default=1)
+    is_paid_advertisements = IntField(required=False, default=0)
+    is_advance = IntField(required=False, default=0)
+    voice_google = IntField(required=False, default=1)
+    process_status = StringField(max_length=50, default="PENDING")
+    template_info = StringField()
 
     to_json_filter = ("content", "thumbnails")
 
