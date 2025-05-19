@@ -126,6 +126,7 @@ class SocialPostService:
 
             logger.info(f"post_dict: {post_dict}")
             logger.info(f"data: {data}")
+            logger.info(f"social_posts: {social_posts}")
 
             for social_post in social_posts:
                 social_post_id = str(social_post.post_id)
