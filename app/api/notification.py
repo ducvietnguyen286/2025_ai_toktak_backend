@@ -41,11 +41,11 @@ class APINotificationHistories(Resource):
             "current_user": current_user.id,
             "status": True,
             "message": "Success",
-            "total": posts.total,
-            "page": posts.page,
-            "per_page": posts.per_page,
-            "total_pages": posts.pages,
-            "data": [post.to_json() for post in posts.items],
+            "total": posts.get("total", 0),
+            "page": posts.get("page", 0),
+            "per_page": posts.get("per_page", 0),
+            "total_pages": posts.get("pages", 0),
+            "data": [post.to_json() for post in posts.get("items", [])],
         }, 200
 
 
@@ -169,7 +169,7 @@ class APIAdminNotificationHistories(Resource):
             "page": result["page"],
             "per_page": result["per_page"],
             "total_pages": result["pages"],
-            "data": [item.to_dict() for item in result["items"]],
+            "data": [item for item in result["items"]],
         }, 200
 
 
