@@ -85,7 +85,7 @@ class APISocialLogin(Resource):
 
         if referral_code != "":
             user_referal_detail = UserService.find_user_by_referral_code(referral_code)
-            if not user_referal_detail:
+            if user_referal_detail:
                 return Response(
                     message="입력하신 URL을 다시 한 번 확인해 주세요. 😊",
                     data={
