@@ -132,17 +132,15 @@ def format_notification_message(notification_detail, fe_current_domain, user=Non
         f"- Description: {notification_detail.get('description')}\n"
         f"{notification_detail.get('description_korea')}\n"
     )
-
-
 def send_telegram_notifications(app):
     """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
-    app.logger.info("Start send_telegram_notifications...")
+    app.logger.info("🔔 Start send_telegram_notifications...")
 
     telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
 
     if not telegram_token or not chat_id:
-        app.logger.error("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env")
+        app.logger.error("❌ Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env")
         return
 
     telegram_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
@@ -158,17 +156,23 @@ def send_telegram_notifications(app):
                 .limit(10)
             )
 
+            if not notifications:
+                app.logger.info("✅ No pending notifications to send.")
+                return
+
             fe_current_domain = os.environ.get("FE_DOMAIN") or "http://localhost:5000"
 
-            user_ids = [notification.user_id for notification in notifications]
+            user_ids = [n.user_id for n in notifications]
             users = UserService.find_users(user_ids)
             user_dict = {user.id: user for user in users}
+
+            sent_ids = []
 
             for notification in notifications:
                 try:
                     notification_detail = notification.to_dict()
-                    user_id = notification.user_id
-                    user = user_dict.get(user_id)
+                    user = user_dict.get(notification.user_id)
+
                     message = format_notification_message(
                         notification_detail, fe_current_domain, user=user
                     )
@@ -184,26 +188,29 @@ def send_telegram_notifications(app):
 
                         if response.status_code == 200:
                             app.logger.info(
-                                f"Sent part {idx+1}/{len(message_parts)} for notification ID {notification.id}"
+                                f"✅ Sent part {idx+1}/{len(message_parts)} for notification ID {notification.id}"
                             )
                         else:
                             app.logger.warning(
-                                f"Failed to send part {idx+1} of notification ID {notification.id}. Response: {response.text}"
+                                f"⚠️ Failed to send part {idx+1} of notification ID {notification.id}. Response: {response.text}"
                             )
 
-                    notification.send_telegram = 1
+                    sent_ids.append(notification.id)
 
                 except Exception as single_error:
                     app.logger.error(
-                        f"Error sending notification ID {notification.id}: {str(single_error)}"
+                        f"❌ Error sending notification ID {notification.id}: {str(single_error)}"
                     )
 
-            db.session.commit()
+            # Đánh dấu đã gửi
+            if sent_ids:
+                Notification.objects(id__in=sent_ids).update(set__send_telegram=1)
+                app.logger.info(f"📦 Marked {len(sent_ids)} notification(s) as sent.")
 
         except Exception as e:
-            app.logger.error(f"Error in send_telegram_notifications: {str(e)}")
+            app.logger.exception(f"❌ Error in send_telegram_notifications: {str(e)}")
 
-
+ 
 def translate_notification(app):
     """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
     app.logger.info("Start translate_notification...")
