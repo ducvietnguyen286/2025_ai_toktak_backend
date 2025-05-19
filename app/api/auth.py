@@ -297,6 +297,7 @@ class APILoginByInput(Resource):
                     "user": user._to_json(),
                 }
             )
+            redis_client.delete(f"toktak:current_user:{user.id}")
 
             return Response(
                 data=tokens,
