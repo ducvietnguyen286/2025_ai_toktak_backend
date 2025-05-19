@@ -191,7 +191,8 @@ class AuthService:
             user_id = int(subject)
 
             if no_cache:
-                user = User.query.get(user_id)
+                stmt = select(User).filter_by(id=user_id)
+                user = db.session.execute(stmt).scalar_one_or_none()
                 if user:
                     user_dict = user.to_dict()
                     redis_client.set(
