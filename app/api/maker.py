@@ -1585,11 +1585,16 @@ class APITemplateVideo(Resource):
                 )
             user_template_data = user_template.to_dict()
 
-            batch_info = BatchService.find_batch(batch_id)
-            if batch_info:
-                content_batch = json.loads(batch_info.content)
-                user_template_data["product_name_full"] = content_batch.get("name", "")
-                user_template_data["product_name"] = content_batch.get("name", "")[:10]
+            if batch_id:
+                batch_info = BatchService.find_batch(batch_id)
+                if batch_info:
+                    content_batch = json.loads(batch_info.content)
+                    user_template_data["product_name_full"] = content_batch.get(
+                        "name", ""
+                    )
+                    user_template_data["product_name"] = content_batch.get("name", "")[
+                        :10
+                    ]
 
             return Response(
                 data=user_template_data,
