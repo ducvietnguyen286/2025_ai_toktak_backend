@@ -6,6 +6,7 @@ import shutil
 from datetime import datetime
 from logging import DEBUG
 from logging.handlers import TimedRotatingFileHandler
+from mongoengine import Q
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -148,13 +149,12 @@ def send_telegram_notifications(app):
     with app.app_context():
         try:
             notifications = (
-                Notification.query.filter(
-                    Notification.send_telegram == 0,
-                    Notification.status == const.NOTIFICATION_FALSE,
+                Notification.objects(
+                    send_telegram=0,
+                    status=const.NOTIFICATION_FALSE,
                 )
-                .order_by(Notification.created_at.asc())
+                .order_by("created_at")
                 .limit(10)
-                .all()
             )
 
             fe_current_domain = os.environ.get("FE_DOMAIN") or "http://localhost:5000"
@@ -204,17 +204,18 @@ def translate_notification(app):
     with app.app_context():
         try:
             notifications = (
-                Notification.query.filter(
-                    Notification.status == const.NOTIFICATION_FALSE,
-                    Notification.description != "",
-                    or_(
-                        Notification.description_korea == None,
-                        Notification.description_korea == "",
-                    ),
+                Notification.objects(
+                    status=const.NOTIFICATION_FALSE,  # status bằng giá trị constant
+                    description__ne="",  # description khác chuỗi rỗng
                 )
-                .order_by(Notification.id.desc())
-                .limit(10)
-                .all()
+                .filter(
+                    Q(
+                        description_korea__exists=False
+                    )  # description_korea không tồn tại
+                    | Q(description_korea__eq="")  # hoặc bằng chuỗi rỗng
+                )
+                .order_by("-id")  # sort theo id giảm dần
+                .limit(10)  # giới hạn 10 kết quả
             )
 
             if not notifications:
@@ -241,9 +242,7 @@ def cleanup_pending_batches(app):
 
             while has_more_batches:
                 with db.session.begin():
-                    batches = (
-                        Batch.query.filter_by(process_status="PENDING").limit(100).all()
-                    )
+                    batches = Batch.objects(process_status="PENDING").limit(100)
                     has_more_batches = bool(batches)
 
                     deleted_batch_ids = []
@@ -252,7 +251,7 @@ def cleanup_pending_batches(app):
                         try:
                             batch_date = batch.created_at.strftime("%Y_%m_%d")
 
-                            Post.query.filter_by(batch_id=batch.id).delete()
+                            Post.objects(batch_id=batch.id).delete()
                             db.session.delete(batch)
                             deleted_batch_ids.append(batch.id)
 
@@ -322,6 +321,7 @@ def check_urls_health(app):
         send_telegram_message(message, app, parse_mode="Markdown")
     else:
         app.logger.info("✅ All URLs are healthy.")
+
 
 def auto_extend_subscription_task(app):
     app.logger.info("Start auto_extend_subscription_task...")
@@ -403,14 +403,12 @@ def start_scheduler(app):
         trigger=four_am_kst_trigger,
         id="exchange_thread_token",
     )
-    
-    
+
     scheduler.add_job(
         func=lambda: auto_extend_subscription_task(app),
         trigger=twelve_oh_one_trigger,
         id="auto_extend_subscription_task",
     )
-
 
     atexit.register(lambda: scheduler.shutdown(wait=False))
     scheduler.start()
