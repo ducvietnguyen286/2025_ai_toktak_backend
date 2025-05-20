@@ -254,12 +254,10 @@ class PostService:
 
         total_pages = (total + per_page - 1) // per_page
 
-        # 👉 Join user info
         user_ids = list({n.user_id for n in items if n.user_id})  # tránh trùng user_id
         users = UserService.find_users(user_ids)  # Trả về list user
         user_dict = {user.id: user for user in users}
 
-        # 👉 Thêm user_email vào từng item
         post_items = []
         for item in items:
             item_dict = item.to_json()
