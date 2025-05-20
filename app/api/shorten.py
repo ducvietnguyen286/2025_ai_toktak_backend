@@ -84,12 +84,30 @@ class ApiRedirectURLShorten(Resource):
         # Kiểm tra trong Redis cache trước
         original_url = redis_client.get(short_code)
         if original_url:
-            return redirect(original_url.decode("utf-8"))
+            return Response(
+                message="URL을 잘못 입력했습니다.",
+                data={
+                    "original_url": original_url.decode("utf-8"),
+                },
+                code=200,
+            ).to_dict()
+            
 
         # Nếu không có trong cache, kiểm tra DB
-        url_entry = ShortenURL.query.filter_by(short_code=short_code).first()
+        url_entry = ShortenURL.objects(short_code=short_code).first()
         if url_entry:
             redis_client.set(short_code, url_entry.original_url, ex=86400)  # Cache lại
-            return redirect(url_entry.original_url)
-
-        return {"message": "Shortened URL not found"}, 404
+            return Response(
+                message="URL을 잘못 입력했습니다.",
+                data={
+                    "original_url": url_entry.original_url,
+                },
+                code=200,
+            ).to_dict()
+        return Response(
+                message="NOT FOUND URL",
+                data={
+                    "original_url": "",
+                },
+                code=201,
+            ).to_dict()
