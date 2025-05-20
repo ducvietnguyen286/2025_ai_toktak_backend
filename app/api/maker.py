@@ -308,6 +308,7 @@ class APICreateBatch(Resource):
                     batch_id=batch.id,
                     type=post_type,
                     status=0,
+                    schedule_date=datetime.datetime.now(),
                 )
 
                 post_res = post.to_json()
