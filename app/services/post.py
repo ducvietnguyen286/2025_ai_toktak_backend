@@ -22,6 +22,9 @@ class PostService:
         try:
             post = Post(*args, **kwargs)
             post.save()
+            logger.info(
+                f"Saved Post id={post.id} vào collection: {post._get_collection_name()}"
+            )
             return post
         except Exception as ex:
             logger.error(f"Error creating post: {ex}")
