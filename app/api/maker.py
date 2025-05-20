@@ -311,6 +311,8 @@ class APICreateBatch(Resource):
                     schedule_date=datetime.datetime.now(),
                 )
 
+                logger.info(f"POST: {post}")
+
                 post_res = post.to_json()
                 post_res["url_run"] = (
                     f"{current_domain}/api/v1/maker/make-post/{post.id}"
@@ -412,7 +414,7 @@ class APIBatchMakeImage(Resource):
         try:
             batch_id = args.get("batch_id", 0)
             posts = []
-            if os.environ.get("USE_CUT_OUT_IMAGE") == "true" and 1 != 1:
+            if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
 
                 batch_detail = BatchService.find_batch(batch_id)
                 if not batch_detail:
