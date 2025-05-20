@@ -311,9 +311,9 @@ class APICreateBatch(Resource):
                     schedule_date=datetime.datetime.now(),
                 )
 
-                logger.info(f"POST: {post}")
-
                 post_res = post.to_json()
+
+                logger.info(f"POST: {post_res}")
                 post_res["url_run"] = (
                     f"{current_domain}/api/v1/maker/make-post/{post.id}"
                 )
