@@ -20,8 +20,7 @@ class PostService:
     @staticmethod
     def create_post(*args, **kwargs):
         try:
-            post = Post(*args, **kwargs)
-            post.save()
+            post = Post.objects.creeate(*args, **kwargs)
             logger.info(
                 f"Saved Post id={post.id} vào collection: {post._get_collection_name()}"
             )
