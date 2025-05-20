@@ -29,9 +29,9 @@ def create_app(config_app):
     __register_blueprint(app)
     __config_error_handlers(app)
 
-    @app.teardown_appcontext
-    def shutdown_session(exception=None):
-        db.session.remove()
+    # @app.teardown_appcontext
+    # def shutdown_session(exception=None):
+    #     db.session.remove()
 
     @app.route("/admin/persistence/on")
     def persistence_on():

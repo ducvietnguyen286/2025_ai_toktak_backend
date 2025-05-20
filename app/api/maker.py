@@ -307,6 +307,8 @@ class APICreateBatch(Resource):
                     user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
                 )
 
+                post.save()
+
                 post_res = post.to_json()
 
                 logger.info(f"POST: {post_res}")
