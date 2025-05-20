@@ -434,7 +434,7 @@ class APIBatchMakeImage(Resource):
                     )
                 else:
                     images = ImageMaker.save_normal_images(
-                        base_images, batch_id=batch_id
+                        base_images, batch_id=batch_id, is_avif=is_avif
                     )
 
                 description_images = []
@@ -488,6 +488,42 @@ class APIBatchMakeImage(Resource):
                     "content": json.dumps(content),
                 }
                 BatchService.update_batch(batch_id, **data_update_batch)
+            else:
+                batch_detail = BatchService.find_batch(batch_id)
+                if not batch_detail:
+                    return Response(
+                        message="Batch không tồn tại",
+                        code=201,
+                    ).to_dict()
+
+                crawl_url = content["url_crawl"] or ""
+
+                if "domeggook" in crawl_url:
+                    content = json.loads(batch_detail.content)
+
+                    base_images = content["images"] or []
+                    batch_thumbails = batch_detail.thumbnails
+                    base_thumbnails = (
+                        json.loads(batch_thumbails) if batch_thumbails else []
+                    )
+                    images = []
+                    thumbnails = []
+
+                    is_avif = True if "aliexpress" in crawl_url else False
+                    images = ImageMaker.save_normal_images(
+                        base_images, batch_id=batch_id, is_avif=is_avif
+                    )
+                    thumbnails = ImageMaker.save_normal_images(
+                        base_thumbnails, batch_id=batch_id, is_avif=is_avif
+                    )
+
+                    content["images"] = images
+
+                    data_update_batch = {
+                        "thumbnails": json.dumps(thumbnails),
+                        "content": json.dumps(content),
+                    }
+                    BatchService.update_batch(batch_id, **data_update_batch)
 
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             redis_key = f"batch_info_{batch_id}"

@@ -214,15 +214,29 @@ class ImageMaker:
         return url
 
     @staticmethod
-    def save_normal_images(images, batch_id=0):
+    def get_image_path_from_url(image_url):
+        if not image_url:
+            return None
+        parsed_url = urlparse(image_url)
+        path_parts = parsed_url.path.split("/")
+        if len(path_parts) < 5:
+            return None
+        image_name = path_parts[-1]
+        image_batch_id = path_parts[-2]
+        image_date_create = path_parts[-3]
+        image_path = f"uploads/{image_date_create}/{image_batch_id}/{image_name}"
+        return image_path
+
+    @staticmethod
+    def save_normal_images(images, batch_id=0, is_avif=False):
         downloaded_images = []
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            downloaded_images = list(
-                executor.map(
-                    lambda url: ImageMaker.save_image_url_get_path(url, batch_id),
-                    images,
-                )
+        for image_url in images:
+            image_path = ImageMaker.save_image_url_get_path(
+                image_url, batch_id, is_avif=is_avif
             )
+            if not image_path:
+                continue
+            downloaded_images.append(image_path)
 
         return downloaded_images
 
@@ -483,6 +497,11 @@ class ImageMaker:
     def cut_out_long_height_images_by_google(image_url, batch_id=0):
         date_create, upload_folder = ImageMaker.get_current_date_str()
         image_path = ImageMaker.save_image_url_get_path(image_url, batch_id=batch_id)
+        if not image_path:
+            return {
+                "image_urls": [],
+                "is_cut_out": False,
+            }
         extension = image_path.split(".")[-1].lower()
         output_folder = f"{upload_folder}/{batch_id}"
         print(f"Cut out long height images: {image_path}")
@@ -1233,6 +1252,8 @@ class ImageMaker:
 
     @staticmethod
     def save_image_url_get_path(image_url, batch_id=0, is_avif=False):
+        if "toktak.ai" in image_url:
+            return ImageMaker.get_image_path_from_url(image_url)
         date_create, upload_folder = ImageMaker.get_current_date_str()
         new_folder = f"{upload_folder}/{batch_id}"
         os.makedirs(new_folder, exist_ok=True)
@@ -1263,10 +1284,14 @@ class ImageMaker:
         if not is_avif:
             with open(image_path, "wb") as image_file:
                 response = ImageMaker.request_content_image(image_url)
+                if response is None:
+                    return None
                 image_file.write(response)
         else:
             with open(image_temp_path, "wb") as temp_avif:
                 response = ImageMaker.request_content_image(image_url)
+                if response is None:
+                    return None
                 temp_avif.write(response)
 
             with Image.open(image_temp_path) as temp_image:
