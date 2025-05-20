@@ -695,45 +695,44 @@ class APIMakePost(Resource):
         required=[],
     )
     def post(self, id, **kwargs):
+        args = kwargs.get("req_args", False)
+        verify_jwt_in_request(optional=True)
+        current_user_id = 0
+        current_user = AuthService.get_current_identity() or None
+        if current_user:
+            current_user_id = current_user.id
+
+        message = "Tạo post thành công"
+        post = PostService.find_post(id)
+        if not post:
+            return Response(
+                message="Post không tồn tại",
+                status=201,
+            ).to_dict()
+        batch = BatchService.find_batch(post.batch_id)
+        if not batch:
+            return Response(
+                message="Batch không tồn tại",
+                status=201,
+            ).to_dict()
+
+        if batch.status == 1 or post.status == 1:
+            return Response(
+                message="Post đã được tạo",
+                status=201,
+            ).to_dict()
+
+        batch_id = batch.id
+        is_paid_advertisements = batch.is_paid_advertisements
+        template_info = json.loads(batch.template_info)
+
+        data = json.loads(batch.content)
+        images = data.get("images", [])
+        thumbnails = batch.thumbnails
+        url = batch.url
+
+        type = post.type
         try:
-            args = kwargs.get("req_args", False)
-            verify_jwt_in_request(optional=True)
-            current_user_id = 0
-            current_user = AuthService.get_current_identity() or None
-            if current_user:
-                current_user_id = current_user.id
-
-            message = "Tạo post thành công"
-            post = PostService.find_post(id)
-            if not post:
-                return Response(
-                    message="Post không tồn tại",
-                    status=201,
-                ).to_dict()
-            batch = BatchService.find_batch(post.batch_id)
-            if not batch:
-                return Response(
-                    message="Batch không tồn tại",
-                    status=201,
-                ).to_dict()
-
-            if batch.status == 1 or post.status == 1:
-                return Response(
-                    message="Post đã được tạo",
-                    status=201,
-                ).to_dict()
-
-            batch_id = batch.id
-            is_paid_advertisements = batch.is_paid_advertisements
-            template_info = json.loads(batch.template_info)
-
-            data = json.loads(batch.content)
-            images = data.get("images", [])
-            thumbnails = batch.thumbnails
-            url = batch.url
-
-            type = post.type
-
             need_count = 10 if type == "video" else 5
             cleared_images = data.get("cleared_images", [])
 
