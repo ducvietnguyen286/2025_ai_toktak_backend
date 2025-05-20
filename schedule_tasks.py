@@ -263,9 +263,21 @@ def cleanup_pending_batches(app):
                             app.logger.info(
                                 f"Deleting batch {batch.id} with process_status 'PENDING'"
                             )
-                            Post.objects(batch_id=batch.id).delete()
-                            db.session.delete(batch)
-                            deleted_batch_ids.append(batch.id)
+
+                            # Delete related posts
+                            posts = Post.objects(batch_id=batch.id)
+                            for post in posts:
+                                try:
+                                    app.logger.info(
+                                        f"Deleting post {post.id} related to batch {batch.id}"
+                                    )
+                                    post.delete()
+                                except Exception as post_error:
+                                    app.logger.error(
+                                        f"Error deleting post {post.id}: {str(post_error)}"
+                                    )
+
+                            batch.delete()
 
                             upload_folder = os.path.join(
                                 UPLOAD_BASE_PATH, batch_date, str(batch.id)
@@ -280,8 +292,6 @@ def cleanup_pending_batches(app):
                             app.logger.error(
                                 f"Error processing batch {batch.id}: {str(batch_error)}"
                             )
-
-                db.session.commit()
 
             if deleted_batch_ids:
                 app.logger.info(
