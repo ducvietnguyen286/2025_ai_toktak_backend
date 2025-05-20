@@ -765,6 +765,8 @@ class ImageMaker:
         image_path = ImageMaker.save_image_url_get_path(image_url, batch_id, is_avif)
         image_name = image_path.split("/")[-1]
 
+        logger.info(f"Image path: {image_path}")
+
         while not os.path.exists(image_path):
             time.sleep(0.5)
 
@@ -847,13 +849,18 @@ class ImageMaker:
             or image_path.lower().endswith(".jpeg")
             or image_path.lower().endswith(".webp")
         ):
+            logger.info(f"Image path: {image_path}")
             os.remove(image_path)
 
             image_name = image_name.rsplit(".", 1)[0] + ".jpg"
             image_path = image_path.rsplit(".", 1)[0] + ".jpg"
         image.save(image_path)
 
+        logger.info(f"Image saved: {image_path}")
+
         image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+
+        logger.info(f"Image URL: {image_url}")
 
         file_size = os.path.getsize(image_path)
         mime_type = "image/jpeg"
