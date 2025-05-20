@@ -412,7 +412,7 @@ class APIBatchMakeImage(Resource):
         try:
             batch_id = args.get("batch_id", 0)
             posts = []
-            if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
+            if os.environ.get("USE_CUT_OUT_IMAGE") == "true" and 1 != 1:
 
                 batch_detail = BatchService.find_batch(batch_id)
                 if not batch_detail:
@@ -515,6 +515,9 @@ class APIBatchMakeImage(Resource):
                     thumbnails = ImageMaker.save_normal_images(
                         base_thumbnails, batch_id=batch_id, is_avif=is_avif
                     )
+
+                    images = ImageMaker.get_multiple_image_url_from_path(images)
+                    thumbnails = ImageMaker.get_multiple_image_url_from_path(thumbnails)
 
                     content["images"] = images
 

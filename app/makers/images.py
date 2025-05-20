@@ -228,6 +228,20 @@ class ImageMaker:
         return image_path
 
     @staticmethod
+    def get_multiple_image_url_from_path(image_paths):
+        image_urls = []
+        for image_path in image_paths:
+            if not os.path.exists(image_path):
+                continue
+            split_path = image_path.split("/")
+            image_name = split_path[-1]
+            image_batch_id = split_path[-2]
+            image_date_create = split_path[-3]
+            url = f"{CURRENT_DOMAIN}/files/{image_date_create}/{image_batch_id}/{image_name}"
+            image_urls.append(url)
+        return image_urls
+
+    @staticmethod
     def save_normal_images(images, batch_id=0, is_avif=False):
         downloaded_images = []
         for image_url in images:

@@ -24,7 +24,10 @@ class PostService:
 
     @staticmethod
     def find_post(id):
-        return Post.objects.get(id=ObjectId(id))
+        try:
+            return Post.objects.get(id=ObjectId(id))
+        except Post.DoesNotExist:
+            return None
 
     @staticmethod
     def get_posts():
