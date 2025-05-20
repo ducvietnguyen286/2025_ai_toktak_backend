@@ -132,6 +132,8 @@ def format_notification_message(notification_detail, fe_current_domain, user=Non
         f"- Description: {notification_detail.get('description')}\n"
         f"{notification_detail.get('description_korea')}\n"
     )
+
+
 def send_telegram_notifications(app):
     """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
     app.logger.info("🔔 Start send_telegram_notifications...")
@@ -166,8 +168,6 @@ def send_telegram_notifications(app):
             users = UserService.find_users(user_ids)
             user_dict = {user.id: user for user in users}
 
-            sent_ids = []
-
             for notification in notifications:
                 try:
                     notification_detail = notification.to_dict()
@@ -195,22 +195,18 @@ def send_telegram_notifications(app):
                                 f"⚠️ Failed to send part {idx+1} of notification ID {notification.id}. Response: {response.text}"
                             )
 
-                    sent_ids.append(notification.id)
+                    notification.send_telegram = 1
+                    notification.save()
 
                 except Exception as single_error:
                     app.logger.error(
                         f"❌ Error sending notification ID {notification.id}: {str(single_error)}"
                     )
 
-            # Đánh dấu đã gửi
-            if sent_ids:
-                Notification.objects(id__in=sent_ids).update(set__send_telegram=1)
-                app.logger.info(f"📦 Marked {len(sent_ids)} notification(s) as sent.")
-
         except Exception as e:
             app.logger.exception(f"❌ Error in send_telegram_notifications: {str(e)}")
 
- 
+
 def translate_notification(app):
     """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
     app.logger.info("Start translate_notification...")
