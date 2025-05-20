@@ -2,18 +2,19 @@ import json
 from app.models.base_mongo import BaseDocument
 import pytz
 from mongoengine import StringField, IntField, ObjectIdField, DateTimeField
-from datetime import timezone , datetime
+from datetime import timezone, datetime
+
 
 class Post(BaseDocument):
     meta = {"collection": "posts"}
 
     user_id = IntField(required=True, default=0)
     batch_id = ObjectIdField(required=True)
-    thumbnail = StringField(required=True, default="")
+    thumbnail = StringField(default="")
     captions = StringField()
     images = StringField()
-    title = StringField(required=True, default="")
-    subtitle = StringField(required=True, default="")
+    title = StringField(default="")
+    subtitle = StringField(default="")
     content = StringField()
     description = StringField()
     hashtag = StringField()
@@ -22,8 +23,8 @@ class Post(BaseDocument):
     docx_url = StringField(default="")
     file_size = IntField(default=0)
     mime_type = StringField(default="")
-    type = StringField(required=True, default="video")
-    status = IntField(required=True, default=1)
+    type = StringField(default="video")
+    status = IntField(default=1)
     status_sns = IntField(default=0)
     process_number = IntField(default=0)
     render_id = StringField(default="")

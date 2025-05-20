@@ -20,8 +20,13 @@ class PostService:
     @staticmethod
     def create_post(*args, **kwargs):
         try:
+            batch_id = kwargs.get("batch_id")
+            logger.info(f"batch_id: {batch_id}")
+            before_count = Post.objects.count()
             post = Post(*args, **kwargs)
             post.save()
+            after_count = Post.objects.count()
+            logger.info(f"Post count before: {before_count}, after: {after_count}")
             logger.info(
                 f"Saved Post id={post.id} vào collection: {post._get_collection_name()}"
             )

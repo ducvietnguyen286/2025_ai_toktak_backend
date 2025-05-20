@@ -304,11 +304,7 @@ class APICreateBatch(Resource):
             posts = []
             for post_type in post_types:
                 post = PostService.create_post(
-                    user_id=user_id_login,
-                    batch_id=batch.id,
-                    type=post_type,
-                    status=0,
-                    # schedule_date=datetime.datetime.now(),
+                    user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
                 )
 
                 post_res = post.to_json()
