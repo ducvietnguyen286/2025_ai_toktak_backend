@@ -260,7 +260,9 @@ def cleanup_pending_batches(app):
                     for batch in batches:
                         try:
                             batch_date = batch.created_at.strftime("%Y_%m_%d")
-
+                            app.logger.info(
+                                f"Deleting batch {batch.id} with process_status 'PENDING'"
+                            )
                             Post.objects(batch_id=batch.id).delete()
                             db.session.delete(batch)
                             deleted_batch_ids.append(batch.id)
