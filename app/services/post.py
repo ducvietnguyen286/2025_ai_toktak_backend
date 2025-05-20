@@ -5,6 +5,7 @@ from app.models.user_video_templates import UserVideoTemplates
 from app.extensions import db
 from datetime import datetime, timedelta
 from app.services.image_template import ImageTemplateService
+from app.services.user import UserService
 import os
 import json
 import const
@@ -187,8 +188,9 @@ class PostService:
 
     @staticmethod
     def admin_get_posts_upload(data_search):
-        query = Post.objects(user_id=data_search["user_id"])
+        query = Post.objects()
 
+        # Lọc theo status
         status = data_search.get("status")
         if status == 1:
             query = query.filter(
@@ -200,27 +202,29 @@ class PostService:
                 | Q(status=const.DRAFT_STATUS)
             )
 
+        # Lọc theo search text
         search_text = data_search.get("search_text", "")
         if search_text:
             query = query.filter(
                 Q(title__icontains=search_text)
                 | Q(description__icontains=search_text)
-                | Q(user__email__icontains=search_text)
+                | Q(
+                    user_email__icontains=search_text
+                )  # hoặc user__email nếu dùng ReferenceField
             )
 
+        # Lọc theo loại bài viết
         type_post = data_search.get("type_post")
-        if type_post == "video":
-            query = query.filter(type="video")
-        elif type_post == "image":
-            query = query.filter(type="image")
-        elif type_post == "blog":
-            query = query.filter(type="blog")
+        if type_post in ["video", "image", "blog"]:
+            query = query.filter(type=type_post)
         elif type_post == "error_blog":
             query = query.filter(social_sns_description__icontains="ERRORED")
 
+        # Lọc theo thời gian
         time_range = data_search.get("time_range")
         if time_range:
             now = datetime.now()
+            start_date = None
             if time_range == "today":
                 start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
             elif time_range == "last_week":
@@ -229,20 +233,20 @@ class PostService:
                 start_date = now - timedelta(days=30)
             elif time_range == "last_year":
                 start_date = now - timedelta(days=365)
-            else:
-                start_date = None
 
             if start_date:
                 query = query.filter(created_at__gte=start_date)
 
-        type_order = data_search.get("type_order", "id_desc")
-        if type_order == "id_asc":
-            query = query.order_by("id")
+        # Sắp xếp
+        type_order = data_search.get("type_order", "created_desc")
+        if type_order == "created_asc":
+            query = query.order_by("created_at")
         else:
-            query = query.order_by("-id")
+            query = query.order_by("-created_at")
 
-        page = data_search.get("page", 1)
-        per_page = data_search.get("per_page", 10)
+        # Phân trang
+        page = int(data_search.get("page", 1))
+        per_page = int(data_search.get("per_page", 10))
         skip = (page - 1) * per_page
 
         total = query.count()
@@ -250,12 +254,24 @@ class PostService:
 
         total_pages = (total + per_page - 1) // per_page
 
+        # 👉 Join user info
+        user_ids = list({n.user_id for n in items if n.user_id})  # tránh trùng user_id
+        users = UserService.find_users(user_ids)  # Trả về list user
+        user_dict = {user.id: user for user in users}
+
+        # 👉 Thêm user_email vào từng item
+        post_items = []
+        for item in items:
+            item_dict = item.to_json()
+            user = user_dict.get(item.user_id)
+            item_dict["user_email"] = user.email if user else ""
+            post_items.append(item_dict)
         return {
             "total": total,
             "page": page,
             "per_page": per_page,
             "pages": total_pages,
-            "items": list(items),
+            "items": post_items,
         }
 
     @staticmethod
@@ -275,7 +291,7 @@ class PostService:
 
         posts = Post.objects(filters)
 
-        return [post.to_mongo().to_dict() for post in posts]
+        return [post.to_json() for post in posts]
 
     @staticmethod
     def get_template_video_by_user_id(user_id):

@@ -71,11 +71,19 @@ def validater_create_batch(current_user, is_advance, url=""):
             "domeggook.com",
         ]
         if url and url != "":
-            if not any(domain in url for domain in allowed_domains):
+            if (
+                not any(domain in url for domain in allowed_domains)
+                or "https://www.aliexpress.com/ssr" in url
+            ):
                 return Response(
                     message=MessageError.INVALID_URL.value["message"],
                     data={
-                        "error_message": MessageError.INVALID_URL.value["error_message"]
+                        "error_message": MessageError.INVALID_URL.value[
+                            "error_message"
+                        ],
+                        "error_message_en": MessageError.INVALID_URL.value[
+                            "error_message_en"
+                        ],
                     },
                     code=201,
                 ).to_dict()
@@ -88,7 +96,10 @@ def validater_create_batch(current_user, is_advance, url=""):
                     data={
                         "error_message": MessageError.REQUIRED_COUPON.value[
                             "error_message"
-                        ]
+                        ],
+                        "error_message_en": MessageError.REQUIRED_COUPON.value[
+                            "error_message_en"
+                        ],
                     },
                     code=201,
                 ).to_dict()
@@ -100,7 +111,10 @@ def validater_create_batch(current_user, is_advance, url=""):
                     data={
                         "error_message": MessageError.WAIT_TOMORROW.value[
                             "error_message"
-                        ]
+                        ],
+                        "error_message_en": MessageError.WAIT_TOMORROW.value[
+                            "error_message_en"
+                        ],
                     },
                     code=201,
                 ).to_dict()
@@ -123,7 +137,10 @@ def validater_create_batch(current_user, is_advance, url=""):
                     data={
                         "error_message": MessageError.NO_BATCH_REMAINING.value[
                             "error_message"
-                        ]
+                        ],
+                        "error_message_en": MessageError.NO_BATCH_REMAINING.value[
+                            "error_message_en"
+                        ],
                     },
                     code=201,
                 ).to_dict()
@@ -139,7 +156,10 @@ def validater_create_batch(current_user, is_advance, url=""):
                     data={
                         "error_message": MessageError.NO_BATCH_REMAINING.value[
                             "error_message"
-                        ]
+                        ],
+                        "error_message_en": MessageError.NO_BATCH_REMAINING.value[
+                            "error_message_en"
+                        ],
                     },
                     code=201,
                 ).to_dict()
@@ -149,7 +169,12 @@ def validater_create_batch(current_user, is_advance, url=""):
         logger.error("Exception: {0}".format(str(e)))
         return Response(
             message=MessageError.NO_ANALYZE_URL.value["message"],
-            data={"error_message": MessageError.NO_ANALYZE_URL.value["error_message"]},
+            data={
+                "error_message": MessageError.NO_ANALYZE_URL.value["error_message"],
+                "error_message_en": MessageError.NO_ANALYZE_URL.value[
+                    "error_message_en"
+                ],
+            },
             code=201,
         ).to_dict()
 
@@ -1735,7 +1760,7 @@ class APIAdminHistories(Resource):
             "page": posts.get("page", 1),
             "per_page": posts.get("per_page", 10),
             "total_pages": posts.get("pages", 1),
-            "data": [post.to_dict() for post in posts.get("items", [])],
+            "data": posts.get("items", []),
         }, 200
 
 
