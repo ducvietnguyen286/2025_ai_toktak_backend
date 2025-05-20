@@ -116,6 +116,7 @@ class DocxMaker:
                 check_image[image_url] = True
             else:
                 check_image[image_url] = False
+            image_downloads.append(image_path)
 
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             # 🔍 Thêm file TXT nếu tồn tại
