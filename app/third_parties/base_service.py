@@ -14,8 +14,10 @@ from app.lib.logger import (
     log_twitter_message,
     log_tiktok_message,
 )
+from app.services.notification import NotificationServices
 from app.services.post import PostService
 from app.services.request_social_log import RequestSocialLogService
+import const
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
@@ -26,6 +28,7 @@ class BaseService:
         self.batch_id = None
         self.link_id = None
         self.post_id = None
+        self.user_id = None
         self.social_post = None
         self.service = None
         self.key_log = ""
@@ -101,6 +104,30 @@ class BaseService:
                 f"POST {self.key_log} SEND POST MEDIA - GET MEDIA URL: {str(e)}",
             )
             return False
+
+    def send_notification(self, message="", description=""):
+        type = self.service
+        notification = NotificationServices.find_notification_sns(
+            post_id=self.post_id, notification_type=type
+        )
+        if not notification:
+            notification = NotificationServices.create_notification(
+                user_id=self.user_id,
+                batch_id=self.batch_id,
+                post_id=self.post_id,
+                notification_type=type,
+                title=message,
+                description=description,
+                description_korea=description,
+            )
+        else:
+            NotificationServices.update_notification(
+                notification.id,
+                status=const.NOTIFICATION_SUCCESS,
+                title=message,
+                description=description,
+                description_korea=description,
+            )
 
     def save_request_log(self, type, request, response):
         RequestSocialLogService.create_request_social_log(

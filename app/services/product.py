@@ -16,6 +16,7 @@ import const
 import hashlib
 from app.models.batch import Batch
 from app.lib.logger import logger
+from app.services.profileservices import ProfileServices
 
 
 class ProductService:
@@ -147,7 +148,9 @@ class ProductService:
         try:
             batch_detail = Batch.query.get(batch_id)
             if not batch_detail:
-                logger.error(f"Can't create Product   user_id :  {str(user_id)} , batch_id : {batch_id}")
+                logger.error(
+                    f"Can't create Product   user_id :  {str(user_id)} , batch_id : {batch_id}"
+                )
                 return
             product_url = batch_detail.url
             product_url_hash = hashlib.sha1(product_url.encode()).hexdigest()
@@ -155,14 +158,24 @@ class ProductService:
             is_product_exist = ProductService.is_product_exist(
                 user_id, product_url_hash
             )
+            show_price = 1
             if not is_product_exist:
+                profile = ProfileServices.profile_by_user_id(user_id)
+                if profile:
+                    try:
+                        design_settings = json.loads(profile.design_settings)
+                        if isinstance(design_settings, dict):
+                            show_price = design_settings.get("show_price", 1)
+                    except Exception as e:
+                        show_price = 1
+
                 data_content = json.loads(batch_detail.content)
                 ProductService.create_product(
                     user_id=user_id,
                     product_name=data_content.get("name", ""),
                     description=data_content.get("description", ""),
                     shorten_link=data_content.get("shorten_link", ""),
-                    price=data_content.get("price", ""),
+                    price=data_content.get("price", "") if show_price == 1 else "",
                     product_url=batch_detail.url,
                     product_image=batch_detail.thumbnail,
                     product_url_hash=product_url_hash,

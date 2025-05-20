@@ -1,5 +1,6 @@
 # coding: utf8
 from logging import DEBUG
+import os
 
 from werkzeug.exceptions import default_exceptions
 
@@ -7,7 +8,7 @@ from .errors.handler import api_error_handler
 
 from flask import Flask, jsonify
 from flask_cors import CORS
-from .extensions import redis_client, db, bcrypt, jwt, db_mongo, init_sam_model
+from .extensions import redis_client, db, bcrypt, jwt, db_mongo 
 
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
@@ -15,7 +16,10 @@ from flask_jwt_extended.exceptions import NoAuthorizationError
 def create_app(config_app):
     app = Flask(__name__)
     # CORS(app)
-    CORS(app, resources={r"/*": {"origins": "*"}})
+
+    cors_scheme = os.environ.get("CORS_SCHEME") or "*"
+
+    CORS(app, resources={r"/*": {"origins": cors_scheme}})
     app.config.from_object(config_app)
     __init_app(app)
     __config_logging(app)
@@ -42,7 +46,7 @@ def __init_app(app):
     bcrypt.init_app(app)
     jwt.init_app(app)
     db_mongo.init_app(app)
-    init_sam_model(app)
+    # init_sam_model(app)
 
     app.logger.info("Initial app...")
 

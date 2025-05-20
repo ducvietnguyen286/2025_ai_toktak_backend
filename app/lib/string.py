@@ -5,6 +5,7 @@ import re
 import hashlib
 import base64
 import string
+from app.lib.logger import logger
 
 
 def is_json(data):
@@ -289,3 +290,32 @@ def split_toktak_url(line):
         result.append(after)
 
     return result
+
+
+def format_price_show(price_text):
+    try:
+        if price_text:
+            price_show_no_comma = price_text.replace(",", "")
+            if not price_show_no_comma.isdigit():
+                return price_text
+
+            if len(price_show_no_comma) > 2:
+                price_text = price_show_no_comma[:2] + "," + price_show_no_comma[2:]
+
+            if not price_text.startswith("₩"):
+                price_text = f"₩{price_text}"
+    except Exception as e:
+        return ""
+
+    return price_text
+
+
+def convert_video_path(path: str, domain: str):
+    try:
+        path = path or ""
+        return path.replace("static/", f"{domain}/").replace(
+            "/mnt/", f"{domain}/voice/"
+        )
+    except Exception as e:
+        logger.error(f"[convert_video_path] Failed for path: {path} — Error: {e}")
+        return ""

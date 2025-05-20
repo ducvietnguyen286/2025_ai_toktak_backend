@@ -5,13 +5,7 @@ from mongoengine import StringField, IntField
 class SocialPostCreated(BaseDocument):
     meta = {
         "collection": "social_post_created",
-        "indexes": [
-            {
-                "fields": ["user_id", "social", "day"],
-                "unique": True,
-                "sparse": True,
-            }
-        ],
+        "indexes": [{"fields": ["user_id"]}],
     }
 
     social = StringField(required=True, max_length=50)

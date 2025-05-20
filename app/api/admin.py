@@ -13,10 +13,14 @@ from app.services.auth import AuthService
 from app.services.notification import NotificationServices
 from app.lib.string import get_level_images
 import const
+import os
 
 from app.services.social_post import SocialPostService
 
 ns = Namespace(name="admin", description="Admin API")
+
+
+LOG_DIR = "logs"
 
 
 @ns.route("/login")
@@ -153,3 +157,76 @@ class APISocialPost(Resource):
         data = SocialPostService.getTotalRunning(filters)
 
         return Response(message="", code=200, data=data).to_dict()
+
+
+@ns.route("/logs")
+class GetListFileLogs(Resource):
+    def get(self):
+        try:
+            log_files = []
+            for idx, f in enumerate(os.listdir(LOG_DIR), start=1):
+                file_path = os.path.join(LOG_DIR, f)
+                if os.path.isfile(file_path):
+                    modified_time = os.path.getmtime(file_path)
+                    log_files.append(
+                        {
+                            "id": idx,
+                            "filename": f,
+                            "modified": datetime.fromtimestamp(modified_time).strftime(
+                                "%Y-%m-%d %H:%M:%S"
+                            ),
+                        }
+                    )
+
+            # Sắp xếp theo thời gian cập nhật giảm dần
+            log_files.sort(key=lambda x: x["modified"], reverse=True)
+
+            # Cập nhật lại id sau sort
+            for i, item in enumerate(log_files, start=1):
+                item["id"] = i
+
+            return {
+                "status": True,
+                "message": "Success",
+                "total": len(log_files),
+                "page": 1,
+                "per_page": 100,
+                "total_pages": 1,
+                "data": log_files,
+            }, 200
+
+        except Exception as e:
+            return Response(message=str(e), code=500).to_dict()
+
+
+@ns.route("/logs/<path:filename>")
+class GetDetailLog(Resource):
+    def get(self, filename):
+        try:
+            file_path = os.path.join(LOG_DIR, filename)
+
+            if not os.path.abspath(file_path).startswith(os.path.abspath(LOG_DIR)):
+                return Response(
+                    message="Không được phép truy cập file ngoài thư mục logs", code=403
+                ).to_dict()
+
+            if not os.path.isfile(file_path):
+                return Response(message="File không tồn tại", code=404).to_dict()
+
+            # Optional: hỗ trợ query param ?tail=100
+            tail_lines = request.args.get("tail", default=None, type=int)
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                if tail_lines:
+                    # Đọc dòng cuối file
+                    from collections import deque
+
+                    lines = deque(f, maxlen=tail_lines)
+                    content = "".join(lines)
+                else:
+                    content = f.read()
+
+            return content, 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+        except Exception as e:
+            return Response(message=str(e), code=500).to_dict()
