@@ -8,6 +8,7 @@ from app.services.schedule_services import ScheduleService
 from app.services.post import PostService
 from app.lib.response import Response
 from app.lib.logger import logger
+from app.decorators import parameters, admin_required
 
 ns = Namespace("schedule", description="Schedule API")
 
@@ -87,6 +88,7 @@ class APIDeleteScheduleDetail(Resource):
 @ns.route("/admin_get_schedule")
 class APIAdminGetSchedules(Resource):
     @jwt_required()
+    @admin_required()
     def get(self):
         user_id_login = 0
         current_user = AuthService.get_current_identity() or None
