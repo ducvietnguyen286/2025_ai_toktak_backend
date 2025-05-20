@@ -250,7 +250,7 @@ def log_mongo_database(message):
     custom_handler.setLevel(logging.INFO)
     custom_handler.setFormatter(formatter)
 
-    custom_logger = logging.getLogger("YoutubeLogger")
+    custom_logger = logging.getLogger("MongoQueryLogger")
     custom_logger.setLevel(logging.INFO)
     custom_logger.addHandler(custom_handler)
 
