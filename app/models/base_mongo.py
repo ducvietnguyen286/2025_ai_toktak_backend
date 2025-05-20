@@ -1,9 +1,11 @@
 from datetime import datetime
+from datetime import timezone
 
 from bson import ObjectId
 from app.extensions import db_mongo
 from mongoengine import DateTimeField
 
+from app.lib.logger import logger
 
 class BaseDocument(db_mongo.Document):
     meta = {
@@ -34,11 +36,16 @@ class BaseDocument(db_mongo.Document):
                 response["id"] = str(value)
             elif type(value) == ObjectId:
                 response[column] = str(value)
-            elif type(value) == datetime and (
-                column == "created_at" or column == "updated_at"
-            ):
-                response[column] = value.strftime("%Y-%m-%d %H:%M:%S")
+            elif isinstance(value, datetime):
+                new_value = self.format_utc_datetime(value)
+                response[column] = new_value
             else:
                 response[column] = value
 
         return response
+    
+    @staticmethod
+    def format_utc_datetime(dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

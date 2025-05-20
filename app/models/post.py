@@ -2,7 +2,7 @@ import json
 from app.models.base_mongo import BaseDocument
 import pytz
 from mongoengine import StringField, IntField, ObjectIdField, DateTimeField
-
+from datetime import timezone , datetime
 
 class Post(BaseDocument):
     meta = {"collection": "posts"}
@@ -30,7 +30,7 @@ class Post(BaseDocument):
     video_path = StringField(default="")
 
     social_sns_description = StringField(default="")
-    schedule_date = DateTimeField()
+    schedule_date = DateTimeField(default=datetime.utcnow)
 
     to_json_parse = "images"
     to_json_filter = "captions"
@@ -60,19 +60,7 @@ class Post(BaseDocument):
             "video_path": self.video_path,
             "social_sns_description": self.social_sns_description,
             "user_email": None,  # Lấy email từ user
-            "schedule_date": (
-                pytz.utc.localize(self.schedule_date).strftime("%Y-%m-%dT%H:%M:%SZ")
-                if self.schedule_date
-                else None
-            ),
-            "created_at": (
-                self.created_at.strftime("%Y-%m-%d %H:%M:%S")
-                if self.created_at
-                else None
-            ),
-            "updated_at": (
-                self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
-                if self.updated_at
-                else None
-            ),
+            "schedule_date": self.schedule_date,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
         }
