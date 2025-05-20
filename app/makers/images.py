@@ -1296,16 +1296,16 @@ class ImageMaker:
         image_path = f"{new_folder}/{image_name}"
         image_temp_path = f"{new_folder}/{temp_image}"
         if not is_avif:
+            response = ImageMaker.request_content_image(image_url)
+            if response is None:
+                return None
             with open(image_path, "wb") as image_file:
-                response = ImageMaker.request_content_image(image_url)
-                if response is None:
-                    return None
                 image_file.write(response)
         else:
+            response = ImageMaker.request_content_image(image_url)
+            if response is None:
+                return None
             with open(image_temp_path, "wb") as temp_avif:
-                response = ImageMaker.request_content_image(image_url)
-                if response is None:
-                    return None
                 temp_avif.write(response)
 
             with Image.open(image_temp_path) as temp_image:
