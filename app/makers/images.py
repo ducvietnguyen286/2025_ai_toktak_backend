@@ -862,11 +862,15 @@ class ImageMaker:
 
             image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
         else:
+            logger.info(f"Old image path: {image_path}")
             timestamp = int(time.time())
             unique_id = uuid.uuid4().hex
             new_image_name = f"{timestamp}_{unique_id}.jpg"
-            image_path = f"{new_folder}/{new_image_name}"
-            image.save(image_path)
+            new_image_path = f"{new_folder}/{new_image_name}"
+            image.save(new_image_path)
+
+            image_path = new_image_path
+            logger.info(f"New image path: {image_path}")
 
             image_url = (
                 f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_image_name}"
@@ -1395,14 +1399,17 @@ class ImageMaker:
                     f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
                 )
             else:
+                logger.info(f"Old image path: {image_path}")
                 timestamp = int(time.time())
                 unique_id = uuid.uuid4().hex
                 new_image_name = f"{timestamp}_{unique_id}.jpg"
-                image_path = f"{upload_folder}/{batch_id}/{new_image_name}"
-                image.save(image_path)
+                new_image_path = f"{upload_folder}/{batch_id}/{new_image_name}"
+                image.save(new_image_path)
                 image_url = (
                     f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_image_name}"
                 )
+                image_path = new_image_path
+                logger.info(f"New image path: {image_path}")
 
             return image_url
         except Exception as e:
