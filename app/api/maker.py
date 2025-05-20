@@ -496,12 +496,10 @@ class APIBatchMakeImage(Resource):
                         message="Batch không tồn tại",
                         code=201,
                     ).to_dict()
-
+                content = json.loads(batch_detail.content)
                 crawl_url = content["url_crawl"] or ""
 
                 if "domeggook" in crawl_url:
-                    content = json.loads(batch_detail.content)
-
                     base_images = content["images"] or []
                     batch_thumbails = batch_detail.thumbnails
                     base_thumbnails = (
