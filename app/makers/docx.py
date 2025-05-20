@@ -113,9 +113,9 @@ class DocxMaker:
             if not image_path:
                 continue
             if "toktak.ai" in image_path:
-                check_image[image_url] = True
+                check_image[image_path] = True
             else:
-                check_image[image_url] = False
+                check_image[image_path] = False
             image_downloads.append(image_path)
 
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
