@@ -3,7 +3,7 @@ from datetime import timezone
 
 from bson import ObjectId
 from app.extensions import db_mongo
-from mongoengine import DateTimeField
+from mongoengine import DateTimeField, get_db
 
 from app.lib.logger import logger
 
@@ -20,8 +20,10 @@ class BaseDocument(db_mongo.Document):
 
     def save(self, *args, **kwargs):
         try:
-            self.updated_at = datetime.utcnow()
-            return super(BaseDocument, self).save(*args, **kwargs)
+            with get_db().client.start_session() as session:
+                with session.start_transaction():
+                    self.updated_at = datetime.utcnow()
+                    return super(BaseDocument, self).save(*args, **kwargs)
         except Exception as e:
             logger.error(f"Error saving document: {e}")
             raise
