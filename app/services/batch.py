@@ -14,7 +14,10 @@ class BatchService:
 
     @staticmethod
     def find_batch(id):
-        return Batch.objects.get(id=ObjectId(id))
+        try:
+            return Batch.objects.get(id=ObjectId(id))
+        except Batch.DoesNotExist:
+            return None
 
     @staticmethod
     def get_batchs():

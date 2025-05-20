@@ -222,7 +222,7 @@ def translate_notification(app):
                     Q(
                         description_korea__exists=False
                     )  # description_korea không tồn tại
-                    | Q(description_korea__eq="")  # hoặc bằng chuỗi rỗng
+                    | Q(description_korea="")  # hoặc bằng chuỗi rỗng
                 )
                 .order_by("-id")  # sort theo id giảm dần
                 .limit(10)  # giới hạn 10 kết quả
@@ -260,10 +260,24 @@ def cleanup_pending_batches(app):
                     for batch in batches:
                         try:
                             batch_date = batch.created_at.strftime("%Y_%m_%d")
+                            app.logger.info(
+                                f"Deleting batch {batch.id} with process_status 'PENDING'"
+                            )
 
-                            Post.objects(batch_id=batch.id).delete()
-                            db.session.delete(batch)
-                            deleted_batch_ids.append(batch.id)
+                            # Delete related posts
+                            posts = Post.objects(batch_id=batch.id)
+                            for post in posts:
+                                try:
+                                    app.logger.info(
+                                        f"Deleting post {post.id} related to batch {batch.id}"
+                                    )
+                                    post.delete()
+                                except Exception as post_error:
+                                    app.logger.error(
+                                        f"Error deleting post {post.id}: {str(post_error)}"
+                                    )
+
+                            batch.delete()
 
                             upload_folder = os.path.join(
                                 UPLOAD_BASE_PATH, batch_date, str(batch.id)
@@ -278,8 +292,6 @@ def cleanup_pending_batches(app):
                             app.logger.error(
                                 f"Error processing batch {batch.id}: {str(batch_error)}"
                             )
-
-                db.session.commit()
 
             if deleted_batch_ids:
                 app.logger.info(

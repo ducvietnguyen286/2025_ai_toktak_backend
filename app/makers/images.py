@@ -214,15 +214,43 @@ class ImageMaker:
         return url
 
     @staticmethod
-    def save_normal_images(images, batch_id=0):
+    def get_image_path_from_url(image_url):
+        if not image_url:
+            return None
+        parsed_url = urlparse(image_url)
+        path_parts = parsed_url.path.split("/")
+        if len(path_parts) < 5:
+            return None
+        image_name = path_parts[-1]
+        image_batch_id = path_parts[-2]
+        image_date_create = path_parts[-3]
+        image_path = f"uploads/{image_date_create}/{image_batch_id}/{image_name}"
+        return image_path
+
+    @staticmethod
+    def get_multiple_image_url_from_path(image_paths):
+        image_urls = []
+        for image_path in image_paths:
+            if not os.path.exists(image_path):
+                continue
+            split_path = image_path.split("/")
+            image_name = split_path[-1]
+            image_batch_id = split_path[-2]
+            image_date_create = split_path[-3]
+            url = f"{CURRENT_DOMAIN}/files/{image_date_create}/{image_batch_id}/{image_name}"
+            image_urls.append(url)
+        return image_urls
+
+    @staticmethod
+    def save_normal_images(images, batch_id=0, is_avif=False):
         downloaded_images = []
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            downloaded_images = list(
-                executor.map(
-                    lambda url: ImageMaker.save_image_url_get_path(url, batch_id),
-                    images,
-                )
+        for image_url in images:
+            image_path = ImageMaker.save_image_url_get_path(
+                image_url, batch_id, is_avif=is_avif
             )
+            if not image_path:
+                continue
+            downloaded_images.append(image_path)
 
         return downloaded_images
 
@@ -483,6 +511,11 @@ class ImageMaker:
     def cut_out_long_height_images_by_google(image_url, batch_id=0):
         date_create, upload_folder = ImageMaker.get_current_date_str()
         image_path = ImageMaker.save_image_url_get_path(image_url, batch_id=batch_id)
+        if not image_path:
+            return {
+                "image_urls": [],
+                "is_cut_out": False,
+            }
         extension = image_path.split(".")[-1].lower()
         output_folder = f"{upload_folder}/{batch_id}"
         print(f"Cut out long height images: {image_path}")
@@ -729,6 +762,12 @@ class ImageMaker:
         is_avif=False,
     ):
         date_create, upload_folder = ImageMaker.get_current_date_str()
+        is_toktak_link = False
+        if "toktak.ai" in image_url:
+            is_toktak_link = True
+
+        new_folder = f"{upload_folder}/{batch_id}"
+
         image_path = ImageMaker.save_image_url_get_path(image_url, batch_id, is_avif)
         image_name = image_path.split("/")[-1]
 
@@ -809,18 +848,33 @@ class ImageMaker:
             align="center",
         )
 
-        if not (
-            image_path.lower().endswith(".jpg")
-            or image_path.lower().endswith(".jpeg")
-            or image_path.lower().endswith(".webp")
-        ):
-            os.remove(image_path)
+        if not is_toktak_link:
+            if not (
+                image_path.lower().endswith(".jpg")
+                or image_path.lower().endswith(".jpeg")
+                or image_path.lower().endswith(".webp")
+            ):
+                os.remove(image_path)
 
-            image_name = image_name.rsplit(".", 1)[0] + ".jpg"
-            image_path = image_path.rsplit(".", 1)[0] + ".jpg"
-        image.save(image_path)
+                image_name = image_name.rsplit(".", 1)[0] + ".jpg"
+                image_path = image_path.rsplit(".", 1)[0] + ".jpg"
+            image.save(image_path)
 
-        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+            image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+        else:
+            logger.info(f"Old image path: {image_path}")
+            timestamp = int(time.time())
+            unique_id = uuid.uuid4().hex
+            new_image_name = f"{timestamp}_{unique_id}.jpg"
+            new_image_path = f"{new_folder}/{new_image_name}"
+            image.save(new_image_path)
+
+            image_path = new_image_path
+            logger.info(f"New image path: {image_path}")
+
+            image_url = (
+                f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_image_name}"
+            )
 
         file_size = os.path.getsize(image_path)
         mime_type = "image/jpeg"
@@ -1233,6 +1287,8 @@ class ImageMaker:
 
     @staticmethod
     def save_image_url_get_path(image_url, batch_id=0, is_avif=False):
+        if "toktak.ai" in image_url:
+            return ImageMaker.get_image_path_from_url(image_url)
         date_create, upload_folder = ImageMaker.get_current_date_str()
         new_folder = f"{upload_folder}/{batch_id}"
         os.makedirs(new_folder, exist_ok=True)
@@ -1261,12 +1317,16 @@ class ImageMaker:
         image_path = f"{new_folder}/{image_name}"
         image_temp_path = f"{new_folder}/{temp_image}"
         if not is_avif:
+            response = ImageMaker.request_content_image(image_url)
+            if response is None:
+                return None
             with open(image_path, "wb") as image_file:
-                response = ImageMaker.request_content_image(image_url)
                 image_file.write(response)
         else:
+            response = ImageMaker.request_content_image(image_url)
+            if response is None:
+                return None
             with open(image_temp_path, "wb") as temp_avif:
-                response = ImageMaker.request_content_image(image_url)
                 temp_avif.write(response)
 
             with Image.open(image_temp_path) as temp_image:
@@ -1303,15 +1363,10 @@ class ImageMaker:
         image_path = ImageMaker.save_image_url_get_path(image_url, batch_id, is_avif)
         image_name = image_path.split("/")[-1]
 
-        video_width, video_height = target_size
-        video_ratio = video_width / video_height
-
+        is_toktak_link = False
+        if "toktak.ai" in image_url:
+            is_toktak_link = True
         try:
-            image_path = ImageMaker.save_image_url_get_path(
-                image_url, batch_id, is_avif
-            )
-            image_name = image_path.split("/")[-1]
-
             video_width, video_height = target_size
             video_ratio = video_width / video_height
 
@@ -1338,9 +1393,23 @@ class ImageMaker:
                 image = background
                 image = image.convert("RGB")
 
-            image.save(image_path)
-
-            image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+            if not is_toktak_link:
+                image.save(image_path)
+                image_url = (
+                    f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+                )
+            else:
+                logger.info(f"Old image path: {image_path}")
+                timestamp = int(time.time())
+                unique_id = uuid.uuid4().hex
+                new_image_name = f"{timestamp}_{unique_id}.jpg"
+                new_image_path = f"{upload_folder}/{batch_id}/{new_image_name}"
+                image.save(new_image_path)
+                image_url = (
+                    f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_image_name}"
+                )
+                image_path = new_image_path
+                logger.info(f"New image path: {image_path}")
 
             return image_url
         except Exception as e:

@@ -329,12 +329,10 @@ class APICreateBatch(Resource):
             posts = []
             for post_type in post_types:
                 post = PostService.create_post(
-                    user_id=user_id_login,
-                    batch_id=batch.id,
-                    type=post_type,
-                    status=0,
-                    schedule_date=datetime.datetime.now(),
+                    user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
                 )
+
+                post.save()
 
                 post_res = post.to_json()
                 post_res["url_run"] = (
@@ -460,7 +458,7 @@ class APIBatchMakeImage(Resource):
                     )
                 else:
                     images = ImageMaker.save_normal_images(
-                        base_images, batch_id=batch_id
+                        base_images, batch_id=batch_id, is_avif=is_avif
                     )
 
                 description_images = []
@@ -514,10 +512,48 @@ class APIBatchMakeImage(Resource):
                     "content": json.dumps(content),
                 }
                 BatchService.update_batch(batch_id, **data_update_batch)
+            else:
+                batch_detail = BatchService.find_batch(batch_id)
+                if not batch_detail:
+                    return Response(
+                        message="Batch không tồn tại",
+                        code=201,
+                    ).to_dict()
+                content = json.loads(batch_detail.content)
+                crawl_url = content["url_crawl"] or ""
+
+                if "domeggook" in crawl_url:
+                    base_images = content["images"] or []
+                    batch_thumbails = batch_detail.thumbnails
+                    base_thumbnails = (
+                        json.loads(batch_thumbails) if batch_thumbails else []
+                    )
+                    images = []
+                    thumbnails = []
+
+                    is_avif = True if "aliexpress" in crawl_url else False
+                    images = ImageMaker.save_normal_images(
+                        base_images, batch_id=batch_id, is_avif=is_avif
+                    )
+                    thumbnails = ImageMaker.save_normal_images(
+                        base_thumbnails, batch_id=batch_id, is_avif=is_avif
+                    )
+
+                    images = ImageMaker.get_multiple_image_url_from_path(images)
+                    thumbnails = ImageMaker.get_multiple_image_url_from_path(thumbnails)
+
+                    content["images"] = images
+
+                    data_update_batch = {
+                        "thumbnails": json.dumps(thumbnails),
+                        "content": json.dumps(content),
+                    }
+                    BatchService.update_batch(batch_id, **data_update_batch)
 
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             redis_key = f"batch_info_{batch_id}"
             batch_info = redis_client.get(redis_key)
+
             if batch_info:
                 posts = json.loads(batch_info)
             else:
@@ -686,45 +722,44 @@ class APIMakePost(Resource):
         required=[],
     )
     def post(self, id, **kwargs):
+        args = kwargs.get("req_args", False)
+        verify_jwt_in_request(optional=True)
+        current_user_id = 0
+        current_user = AuthService.get_current_identity() or None
+        if current_user:
+            current_user_id = current_user.id
+
+        message = "Tạo post thành công"
+        post = PostService.find_post(id)
+        if not post:
+            return Response(
+                message="Post không tồn tại",
+                status=201,
+            ).to_dict()
+        batch = BatchService.find_batch(post.batch_id)
+        if not batch:
+            return Response(
+                message="Batch không tồn tại",
+                status=201,
+            ).to_dict()
+
+        if batch.status == 1 or post.status == 1:
+            return Response(
+                message="Post đã được tạo",
+                status=201,
+            ).to_dict()
+
+        batch_id = batch.id
+        is_paid_advertisements = batch.is_paid_advertisements
+        template_info = json.loads(batch.template_info)
+
+        data = json.loads(batch.content)
+        images = data.get("images", [])
+        thumbnails = batch.thumbnails
+        url = batch.url
+
+        type = post.type
         try:
-            args = kwargs.get("req_args", False)
-            verify_jwt_in_request(optional=True)
-            current_user_id = 0
-            current_user = AuthService.get_current_identity() or None
-            if current_user:
-                current_user_id = current_user.id
-
-            message = "Tạo post thành công"
-            post = PostService.find_post(id)
-            if not post:
-                return Response(
-                    message="Post không tồn tại",
-                    status=201,
-                ).to_dict()
-            batch = BatchService.find_batch(post.batch_id)
-            if not batch:
-                return Response(
-                    message="Batch không tồn tại",
-                    status=201,
-                ).to_dict()
-
-            if batch.status == 1 or post.status == 1:
-                return Response(
-                    message="Post đã được tạo",
-                    status=201,
-                ).to_dict()
-
-            batch_id = batch.id
-            is_paid_advertisements = batch.is_paid_advertisements
-            template_info = json.loads(batch.template_info)
-
-            data = json.loads(batch.content)
-            images = data.get("images", [])
-            thumbnails = batch.thumbnails
-            url = batch.url
-
-            type = post.type
-
             need_count = 10 if type == "video" else 5
             cleared_images = data.get("cleared_images", [])
 
@@ -899,16 +934,16 @@ class APIMakePost(Resource):
                 logger.info(f"RESPONSE PROCESS IMAGES: {response}")
             elif type == "blog":
                 logger.info(f"START PROCESS BLOG: {post}")
-                blog_images = images
-                if blog_images and len(blog_images) < need_count:
-                    current_length = len(blog_images)
-                    need_length = need_count - current_length
-                    blog_images = blog_images + process_images[:need_length]
-                elif blog_images and len(blog_images) >= need_count:
-                    blog_images = blog_images[:need_count]
-                else:
-                    blog_images = process_images
-                    blog_images = blog_images[:need_count]
+                # blog_images = images
+                # if blog_images and len(blog_images) < need_count:
+                #     current_length = len(blog_images)
+                #     need_length = need_count - current_length
+                #     blog_images = blog_images + process_images[:need_length]
+                # elif blog_images and len(blog_images) >= need_count:
+                #     blog_images = blog_images[:need_count]
+                # else:
+                #     blog_images = process_images
+                #     blog_images = blog_images[:need_count]
 
                 response = call_chatgpt_create_blog(process_images, data, post.id)
                 if response:
@@ -932,9 +967,9 @@ class APIMakePost(Resource):
                         process_images,
                         batch_id=batch_id,
                     )
-                    images = ImageMaker.save_normal_images(
-                        process_images, batch_id=batch_id
-                    )
+                    # images = ImageMaker.save_normal_images(
+                    #     process_images, batch_id=batch_id
+                    # )
 
                     txt_path = res_txt.get("txt_path", "")
                     docx_url = res_txt.get("docx_url", "")

@@ -237,3 +237,23 @@ def log_celery_worker_message(message):
     custom_logger.info(message)
     custom_logger.removeHandler(custom_handler)
     custom_handler.close()
+
+
+def log_mongo_database(message):
+    now_date = datetime.datetime.now()
+    new_filename = now_date.strftime("%d-%m-%Y")
+    custom_handler = handlers.RotatingFileHandler(
+        "logs/mongo_queries-{0}.log".format(new_filename),
+        backupCount=14,
+        encoding="utf-8",
+    )
+    custom_handler.setLevel(logging.INFO)
+    custom_handler.setFormatter(formatter)
+
+    custom_logger = logging.getLogger("MongoQueryLogger")
+    custom_logger.setLevel(logging.INFO)
+    custom_logger.addHandler(custom_handler)
+
+    custom_logger.info(message)
+    custom_logger.removeHandler(custom_handler)
+    custom_handler.close()
