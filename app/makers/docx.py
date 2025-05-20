@@ -112,7 +112,7 @@ class DocxMaker:
             image_path = ImageMaker.save_image_url_get_path(image_url, batch_id)
             if not image_path:
                 continue
-            if "toktak.ai" in image_path:
+            if "toktak.ai" in image_url:
                 check_image[image_path] = True
             else:
                 check_image[image_path] = False
