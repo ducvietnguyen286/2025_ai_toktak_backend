@@ -320,9 +320,6 @@ class APICreateBatch(Resource):
             batch_res = batch.to_json()
             batch_res["posts"] = posts
 
-            total_post = PostService.count_total_post()
-            logger.info(f"TOTAL POST 1: {total_post}")
-
             # Save batch for batch-make-image
             batch_id = batch.id
             redis_key = f"batch_info_{batch_id}"
@@ -377,9 +374,6 @@ class APICreateBatch(Resource):
             batch_res["batch_remain"] = current_user.batch_remain if current_user else 0
             batch_res["batch_total"] = current_user.batch_total if current_user else 0
 
-            total_post = PostService.count_total_post()
-            logger.info(f"TOTAL POST 2: {total_post}")
-
             return Response(
                 data=batch_res,
                 message=MessageSuccess.CREATE_BATCH.value,
@@ -418,8 +412,6 @@ class APIBatchMakeImage(Resource):
         try:
             batch_id = args.get("batch_id", 0)
             posts = []
-            total_post = PostService.count_total_post()
-            logger.info(f"TOTAL POST 3: {total_post}")
             if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
 
                 batch_detail = BatchService.find_batch(batch_id)
@@ -539,9 +531,6 @@ class APIBatchMakeImage(Resource):
             redis_key = f"batch_info_{batch_id}"
             batch_info = redis_client.get(redis_key)
 
-            total_post = PostService.count_total_post()
-            logger.info(f"TOTAL POST 4: {total_post}")
-
             if batch_info:
                 posts = json.loads(batch_info)
             else:
@@ -552,9 +541,6 @@ class APIBatchMakeImage(Resource):
                     )
 
                 redis_client.set(redis_key, json.dumps(posts), ex=3600)
-
-            total_post = PostService.count_total_post()
-            logger.info(f"TOTAL POST 5: {total_post}")
 
             return Response(
                 data=posts,
@@ -719,9 +705,6 @@ class APIMakePost(Resource):
         current_user = AuthService.get_current_identity() or None
         if current_user:
             current_user_id = current_user.id
-
-        total_post = PostService.count_total_post()
-        logger.info(f"TOTAL POST 6: {total_post}")
 
         message = "Tạo post thành công"
         post = PostService.find_post(id)
