@@ -222,7 +222,7 @@ def translate_notification(app):
                     Q(
                         description_korea__exists=False
                     )  # description_korea không tồn tại
-                    | Q(description_korea__eq="")  # hoặc bằng chuỗi rỗng
+                    | Q(description_korea="")  # hoặc bằng chuỗi rỗng
                 )
                 .order_by("-id")  # sort theo id giảm dần
                 .limit(10)  # giới hạn 10 kết quả
