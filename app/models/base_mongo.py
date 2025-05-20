@@ -7,6 +7,7 @@ from mongoengine import DateTimeField
 
 from app.lib.logger import logger
 
+
 class BaseDocument(db_mongo.Document):
     meta = {
         "abstract": True,  # Model này không tạo collection riêng
@@ -18,8 +19,12 @@ class BaseDocument(db_mongo.Document):
     to_json_filter = ()
 
     def save(self, *args, **kwargs):
-        self.updated_at = datetime.utcnow()
-        return super(BaseDocument, self).save(*args, **kwargs)
+        try:
+            self.updated_at = datetime.utcnow()
+            return super(BaseDocument, self).save(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error saving document: {e}")
+            raise
 
     def update(self, **kwargs):
         return super().update(**kwargs)
@@ -43,7 +48,7 @@ class BaseDocument(db_mongo.Document):
                 response[column] = value
 
         return response
-    
+
     @staticmethod
     def format_utc_datetime(dt: datetime) -> str:
         if dt.tzinfo is None:

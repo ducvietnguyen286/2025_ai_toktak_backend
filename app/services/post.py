@@ -1,4 +1,5 @@
 from bson import ObjectId
+from app.lib.logger import logger
 from app.models.post import Post
 from app.models.user_video_templates import UserVideoTemplates
 from app.extensions import db
@@ -18,9 +19,13 @@ class PostService:
 
     @staticmethod
     def create_post(*args, **kwargs):
-        post = Post(*args, **kwargs)
-        post.save()
-        return post
+        try:
+            post = Post(*args, **kwargs)
+            post.save()
+            return post
+        except Exception as ex:
+            logger.error(f"Error creating post: {ex}")
+            return None
 
     @staticmethod
     def find_post(id):
