@@ -106,7 +106,16 @@ class DocxMaker:
         with open(txt_path, "w", encoding="utf-8") as f:
             f.writelines(txt_lines)
 
-        image_downloads = ImageMaker.save_normal_images(images, batch_id=batch_id)
+        image_downloads = []
+        check_image = {}
+        for image_url in images:
+            image_path = ImageMaker.save_image_url_get_path(image_url, batch_id)
+            if not image_path:
+                continue
+            if "toktak.ai" in image_path:
+                check_image[image_url] = True
+            else:
+                check_image[image_url] = False
 
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             # 🔍 Thêm file TXT nếu tồn tại
@@ -120,7 +129,10 @@ class DocxMaker:
         try:
             if os.path.isfile(txt_path):
                 os.remove(txt_path)
+
             for img_path in image_downloads:
+                if check_image.get(img_path):
+                    continue
                 if os.path.isfile(img_path):
                     os.remove(img_path)
 
