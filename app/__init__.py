@@ -4,11 +4,14 @@ import os
 
 from werkzeug.exceptions import default_exceptions
 
+from app.lib.logger import log_mongo_database
+
 from .errors.handler import api_error_handler
 
 from flask import Flask, jsonify
 from flask_cors import CORS
 from .extensions import redis_client, db, bcrypt, jwt, db_mongo, make_celery
+from pymongo import monitoring
 
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
@@ -59,6 +62,8 @@ def __register_blueprint(app):
 
 
 def __init_app(app):
+    monitoring.register(CommandLogger())
+
     db.init_app(app)
     redis_client.init_app(app)
     bcrypt.init_app(app)
@@ -104,4 +109,22 @@ def __config_error_handlers(app):
                 {"status": 401, "sub_status": 44, "msg": "Missing Authorization Header"}
             ),
             401,
+        )
+
+
+class CommandLogger(monitoring.CommandListener):
+    def started(self, event):
+        log_mongo_database(
+            f"Started command: {event.command_name} with request id {event.request_id} on server {event.connection_id}"
+        )
+        log_mongo_database(f"Command: {event.command}")
+
+    def succeeded(self, event):
+        log_mongo_database(
+            f"Succeeded command: {event.command_name} with request id {event.request_id} on server {event.connection_id} in {event.duration_micros}μs"
+        )
+
+    def failed(self, event):
+        log_mongo_database(
+            f"Failed command: {event.command_name} with request id {event.request_id} on server {event.connection_id} with error: {event.failure}"
         )
