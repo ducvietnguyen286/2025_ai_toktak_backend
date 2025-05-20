@@ -36,6 +36,15 @@ class PostService:
             return None
 
     @staticmethod
+    def count_total_post():
+        try:
+            total = Post.objects.count()
+            return total
+        except Exception as ex:
+            logger.error(f"Error counting posts: {ex}")
+            return 0
+
+    @staticmethod
     def find_post(id):
         try:
             return Post.objects.get(id=ObjectId(id))
