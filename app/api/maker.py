@@ -909,16 +909,16 @@ class APIMakePost(Resource):
                 logger.info(f"RESPONSE PROCESS IMAGES: {response}")
             elif type == "blog":
                 logger.info(f"START PROCESS BLOG: {post}")
-                blog_images = images
-                if blog_images and len(blog_images) < need_count:
-                    current_length = len(blog_images)
-                    need_length = need_count - current_length
-                    blog_images = blog_images + process_images[:need_length]
-                elif blog_images and len(blog_images) >= need_count:
-                    blog_images = blog_images[:need_count]
-                else:
-                    blog_images = process_images
-                    blog_images = blog_images[:need_count]
+                # blog_images = images
+                # if blog_images and len(blog_images) < need_count:
+                #     current_length = len(blog_images)
+                #     need_length = need_count - current_length
+                #     blog_images = blog_images + process_images[:need_length]
+                # elif blog_images and len(blog_images) >= need_count:
+                #     blog_images = blog_images[:need_count]
+                # else:
+                #     blog_images = process_images
+                #     blog_images = blog_images[:need_count]
 
                 response = call_chatgpt_create_blog(process_images, data, post.id)
                 if response:
@@ -942,9 +942,9 @@ class APIMakePost(Resource):
                         process_images,
                         batch_id=batch_id,
                     )
-                    images = ImageMaker.save_normal_images(
-                        process_images, batch_id=batch_id
-                    )
+                    # images = ImageMaker.save_normal_images(
+                    #     process_images, batch_id=batch_id
+                    # )
 
                     txt_path = res_txt.get("txt_path", "")
                     docx_url = res_txt.get("docx_url", "")

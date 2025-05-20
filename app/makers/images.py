@@ -1362,16 +1362,7 @@ class ImageMaker:
         is_toktak_link = False
         if "toktak.ai" in image_url:
             is_toktak_link = True
-
-        video_width, video_height = target_size
-        video_ratio = video_width / video_height
-
         try:
-            image_path = ImageMaker.save_image_url_get_path(
-                image_url, batch_id, is_avif
-            )
-            image_name = image_path.split("/")[-1]
-
             video_width, video_height = target_size
             video_ratio = video_width / video_height
 
