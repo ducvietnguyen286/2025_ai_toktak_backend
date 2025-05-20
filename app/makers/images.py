@@ -1348,7 +1348,7 @@ class ImageMaker:
                 "Accept-Language": "en,vi;q=0.9,es;q=0.8,vi-VN;q=0.7,fr-FR;q=0.6,fr;q=0.5,en-US;q=0.4",
             }
 
-            response = requests.get(image_url, headers=headers).content
+            response = requests.get(image_url, headers=headers, timeout=30).content
             return response
         except Exception as e:
             print(f"Error: {e}")
