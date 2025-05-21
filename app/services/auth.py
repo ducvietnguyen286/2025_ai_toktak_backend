@@ -112,8 +112,8 @@ class AuthService:
                     "object_id": user.id,
                     "object_start_time": object_start_time,
                     "object_end_time": subscription_expired,
-                    "title": "신규 가입을 환영합니다!",
-                    "description": "신규 가입을 환영합니다!",
+                    "title": "신규 가입 선물",
+                    "description": "신규 가입 선물",
                     "value": 30,
                     "num_days": 30,
                 }
@@ -152,8 +152,8 @@ class AuthService:
                     "object_id": user.id,
                     "object_start_time": object_start_time,
                     "object_end_time": subscription_expired,
-                    "title": "신규 가입을 환영합니다!",
-                    "description": "신규 가입을 환영합니다!",
+                    "title": "신규 가입 선물",
+                    "description": "신규 가입 선물",
                     "value": 30,
                     "num_days": 30,
                 }

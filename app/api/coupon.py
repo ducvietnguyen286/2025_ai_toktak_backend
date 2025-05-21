@@ -146,6 +146,10 @@ class APIUsedCoupon(Resource):
                             current_user.batch_total += value_coupon
                             current_user.batch_remain += value_coupon
 
+                        login_subscription_expired = (
+                            login_subscription_expired + datetime.timedelta(days=1)
+                        )
+
                         current_user.batch_no_limit_sns = 1
                         # tong so luong kenh co the lien ket
                         current_user.total_link_active = 7
