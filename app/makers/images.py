@@ -358,8 +358,6 @@ class ImageMaker:
         except IOError:
             logger.error(f"Cannot identify image file {image_path}")
             print(f"Cannot identify image file {image_path}")
-            if os.path.exists(image_path):
-                os.remove(image_path)
             return {
                 "image_urls": [],
                 "is_cut_out": False,
