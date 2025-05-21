@@ -481,6 +481,7 @@ class APIBatchMakeImage(Resource):
                     sam_cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
                     )
+                    logger.info(f"sam_cuted_image: {sam_cuted_image}")
                     if not sam_cuted_image or (
                         sam_cuted_image and "is_cut_out" not in sam_cuted_image
                     ):
