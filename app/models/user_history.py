@@ -7,6 +7,7 @@ class UserHistory(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(500))
+    type_2 = db.Column(db.String(500))
     object_id = db.Column(db.Integer, default=0)
     object_start_time = db.Column(db.DateTime)
     object_end_time = db.Column(db.DateTime)
