@@ -436,21 +436,23 @@ class APIBatchMakeImage(Resource):
         try:
             batch_id = args.get("batch_id", 0)
             posts = []
+
+            batch_detail = BatchService.find_batch(batch_id)
+            if not batch_detail:
+                return Response(
+                    message="Batch không tồn tại",
+                    code=201,
+                ).to_dict()
+
+            content = json.loads(batch_detail.content)
+            batch_thumbails = batch_detail.thumbnails
+            crawl_url = content["url_crawl"] or ""
+            base_images = content["images"] or []
+            base_thumbnails = json.loads(batch_thumbails) if batch_thumbails else []
+            images = []
+            thumbnails = []
+
             if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
-
-                batch_detail = BatchService.find_batch(batch_id)
-                if not batch_detail:
-                    return Response(
-                        message="Batch không tồn tại",
-                        code=201,
-                    ).to_dict()
-
-                content = json.loads(batch_detail.content)
-
-                base_images = content["images"] or []
-                images = []
-
-                crawl_url = content["url_crawl"] or ""
 
                 is_avif = True if "aliexpress" in crawl_url else False
                 if os.environ.get("USE_OCR") == "true":
@@ -466,26 +468,21 @@ class APIBatchMakeImage(Resource):
                 # cutout_images = []
                 cutout_by_sam_images = []
 
-                for image in images:
-                    # has_google_cut_out = False
-                    # has_sam_cut_out = False
-                    # cuted_image = ImageMaker.cut_out_long_height_images_by_google(
-                    #     image, batch_id=batch_id
-                    # )
-                    # if not cuted_image or (
-                    #     cuted_image and "is_cut_out" not in cuted_image
-                    # ):
-                    #     continue
-                    # elif cuted_image:
-                    #     is_cut_out = cuted_image.get("is_cut_out", False)
-                    #     image_urls = cuted_image.get("image_urls", [])
-                    #     if is_cut_out:
-                    #         cutout_images.extend(image_urls)
-                    #         has_google_cut_out = True
+                if "domeggook" in crawl_url:
+                    thumbnails = ImageMaker.save_normal_images(
+                        base_thumbnails, batch_id=batch_id, is_avif=is_avif
+                    )
 
+                    thumbnails = ImageMaker.get_multiple_image_url_from_path(thumbnails)
+                else:
+                    thumbnails = base_thumbnails
+
+                logger.info(f"images: {images}")
+                for image in images:
                     sam_cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
                     )
+                    logger.info(f"sam_cuted_image: {sam_cuted_image}")
                     if not sam_cuted_image or (
                         sam_cuted_image and "is_cut_out" not in sam_cuted_image
                     ):
@@ -499,39 +496,22 @@ class APIBatchMakeImage(Resource):
                             description_images.extend(sam_image_urls)
 
                 merge_cleared_images = []
-                # if len(cutout_images) > 0:
-                #     merge_cleared_images.extend(cutout_images)
                 if len(cutout_by_sam_images) > 0:
                     merge_cleared_images.extend(cutout_by_sam_images)
                 if len(description_images) > 0:
                     merge_cleared_images.extend(description_images)
                 content["cleared_images"] = merge_cleared_images
-                # content["cutout_images"] = cutout_images
+                content["images"] = []
                 content["sam_cutout_images"] = cutout_by_sam_images
                 content["description_images"] = description_images
+
                 data_update_batch = {
+                    "thumbnails": json.dumps(thumbnails),
                     "content": json.dumps(content),
                 }
                 BatchService.update_batch(batch_id, **data_update_batch)
             else:
-                batch_detail = BatchService.find_batch(batch_id)
-                if not batch_detail:
-                    return Response(
-                        message="Batch không tồn tại",
-                        code=201,
-                    ).to_dict()
-                content = json.loads(batch_detail.content)
-                crawl_url = content["url_crawl"] or ""
-
                 if "domeggook" in crawl_url:
-                    base_images = content["images"] or []
-                    batch_thumbails = batch_detail.thumbnails
-                    base_thumbnails = (
-                        json.loads(batch_thumbails) if batch_thumbails else []
-                    )
-                    images = []
-                    thumbnails = []
-
                     is_avif = True if "aliexpress" in crawl_url else False
                     images = ImageMaker.save_normal_images(
                         base_images, batch_id=batch_id, is_avif=is_avif
@@ -1927,7 +1907,6 @@ class APIDownloadZip(Resource):
                 message="상품 정보를 불러올 수 없어요.(Error code : )",
                 code=201,
             ).to_dict()
-
 
 
 @ns.route("/schedule_batch")
