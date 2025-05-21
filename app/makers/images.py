@@ -380,6 +380,7 @@ class ImageMaker:
             json_response = response.json()
 
             logger.info(f"Response from SAM: {json_response}")
+            logger.info(f"IMAGE PATH: {image_path}")
 
             results = json_response.get("images", [])
 
