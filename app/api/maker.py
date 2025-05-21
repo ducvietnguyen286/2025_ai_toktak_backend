@@ -1929,7 +1929,6 @@ class APIDownloadZip(Resource):
             ).to_dict()
 
 
-
 @ns.route("/schedule_batch")
 class ApiScheduleBatch(Resource):
     def post(self):

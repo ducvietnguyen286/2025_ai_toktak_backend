@@ -378,6 +378,9 @@ class ImageMaker:
                 SAM_CHECK_IMAGE_URL, json={"image_path": image_path}
             )
             json_response = response.json()
+
+            logger.info(f"Response from SAM: {json_response}")
+
             results = json_response.get("images", [])
 
             image_cv = cv2.imread(image_path)
