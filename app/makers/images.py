@@ -127,6 +127,10 @@ def process_beauty_image(image_path):
                 image_path, width, height
             )
 
+            logger.info(
+                f"Full text: {full_text}, Ratio: {ratio}, Length labels: {length_labels}"
+            )
+
             if not full_text:
                 return {
                     "image_path": image_path,
