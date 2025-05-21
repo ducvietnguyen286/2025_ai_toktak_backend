@@ -372,7 +372,11 @@ class UserService:
         today = datetime.today().date()
 
         expired_users = User.query.filter(
+<<<<<<< HEAD
             User.subscription == "FREE", func.date(User.subscription_expired) < today
+=======
+            User.subscription == "FREE", func.date(User.subscription_expired) <= today
+>>>>>>> c4a940f6b005be807547de60332330a143435cb5
         ).all()
 
         extended = 0

@@ -96,7 +96,11 @@ class APISocialLogin(Resource):
                     code=202,
                 ).to_dict()
 
+<<<<<<< HEAD
         user, new_user_referral_code, is_new_user = AuthService.social_login(
+=======
+        user, new_user_referral_code , is_new_user = AuthService.social_login(
+>>>>>>> c4a940f6b005be807547de60332330a143435cb5
             provider=provider,
             access_token=access_token,
             person_id=person_id,
@@ -234,7 +238,22 @@ class APIMe(Resource):
             if expired_date and expired_date < current_date:
                 user_login = AuthService.reset_free_user(user_login.id)
 
+<<<<<<< HEAD
             subscription_name = get_subscription_name(user_login.subscription)
+=======
+            subscription_name = user_login.subscription
+            if user_login.subscription == "FREE":
+                subscription_name = "무료 체험"
+            elif user_login.subscription == "COUPON_STANDARD":
+                subscription_name = "기업형 스탠다드 플랜"
+            elif user_login.subscription == "NEW_USER":
+                subscription_name = "무료 체험"
+            else:
+                package_data = const.PACKAGE_CONFIG.get(subscription_name)
+                if not package_data:
+                    subscription_name = "무료 체험"
+                subscription_name = package_data["pack_name"]
+>>>>>>> c4a940f6b005be807547de60332330a143435cb5
 
             user_dict = user_login._to_json()
             user_dict["subscription_name"] = subscription_name
@@ -418,7 +437,22 @@ class APIUserProfile(Resource):
                     level_info=json.dumps(level_info),
                 )
 
+<<<<<<< HEAD
             subscription_name = get_subscription_name(user_login.subscription)
+=======
+            subscription_name = user_login.subscription
+            if user_login.subscription == "FREE":
+                subscription_name = "무료 체험"
+            elif user_login.subscription == "NEW_USER":
+                subscription_name = "무료 체험"
+            elif user_login.subscription == "COUPON_STANDARD":
+                subscription_name = "기업형 스탠다드 플랜"
+            else:
+                package_data = const.PACKAGE_CONFIG.get(subscription_name)
+                if not package_data:
+                    subscription_name = "무료 체험"
+                subscription_name = package_data["pack_name"]
+>>>>>>> c4a940f6b005be807547de60332330a143435cb5
 
             first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
             user_histories = UserService.get_all_user_history_by_user_id(user_login.id)
