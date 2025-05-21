@@ -477,6 +477,7 @@ class APIBatchMakeImage(Resource):
                 else:
                     thumbnails = base_thumbnails
 
+                logger.info(f"images: {images}")
                 for image in images:
                     sam_cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
