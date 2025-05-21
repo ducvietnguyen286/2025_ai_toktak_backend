@@ -20,33 +20,40 @@ ns = Namespace(name="notification", description="Notification API")
 class APINotificationHistories(Resource):
     @jwt_required()
     def get(self):
-        current_user = AuthService.get_current_identity()
-        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
-        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
-        status = request.args.get("status", const.UPLOADED, type=int)
-        type_order = request.args.get("type_order", "", type=str)
-        type_post = request.args.get("type_post", "", type=str)
-        time_range = request.args.get("time_range", "", type=str)
-        data_search = {
-            "page": page,
-            "per_page": per_page,
-            "status": status,
-            "type_order": type_order,
-            "type_post": type_post,
-            "time_range": time_range,
-            "user_id": current_user.id,
-        }
-        posts = NotificationServices.get_notifications(data_search)
-        return {
-            "current_user": current_user.id,
-            "status": True,
-            "message": "Success",
-            "total": posts.total,
-            "page": posts.page,
-            "per_page": posts.per_page,
-            "total_pages": posts.pages,
-            "data": [post._to_json() for post in posts.items],
-        }, 200
+        try:
+            current_user = AuthService.get_current_identity()
+            page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+            per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+            status = request.args.get("status", const.UPLOADED, type=int)
+            type_order = request.args.get("type_order", "", type=str)
+            type_post = request.args.get("type_post", "", type=str)
+            time_range = request.args.get("time_range", "", type=str)
+            data_search = {
+                "page": page,
+                "per_page": per_page,
+                "status": status,
+                "type_order": type_order,
+                "type_post": type_post,
+                "time_range": time_range,
+                "user_id": current_user.id,
+            }
+            result = NotificationServices.get_notifications(data_search)
+            return {
+                "current_user": current_user.id,
+                "status": True,
+                "message": "Success",
+                "total": result.get("total", 0),
+                "page": result.get("page", 0),
+                "per_page": result.get("per_page", 0),
+                "total_pages": result.get("pages", 0),
+                "data": [post.to_json() for post in result.get("items", [])],
+            }, 200
+        except Exception as e:
+            logger.error(f"Exception: Get Notification Fail  :  {str(e)}")
+            return Response(
+                message="Get Notification Fail",
+                code=201,
+            ).to_dict()
 
 
 @ns.route("/delete_notification")
@@ -161,17 +168,18 @@ class APIAdminNotificationHistories(Resource):
             "type_notification": type_notification,
             "search_key": search_key,
         }
-        notifications = NotificationServices.get_admin_notifications(data_search)
+        result = NotificationServices.get_admin_notifications(data_search)
         return {
             "status": True,
             "message": "Success",
-            "total": notifications.total,
-            "page": notifications.page,
-            "per_page": notifications.per_page,
-            "total_pages": notifications.pages,
-            "data": [post.to_dict() for post in notifications.items],
+            "total": result["total"],
+            "page": result["page"],
+            "per_page": result["per_page"],
+            "total_pages": result["pages"],
+            "data": [item for item in result["items"]],
         }, 200
-        
+
+
 @ns.route("/admin/delete_notification")
 class APIAdminDeleteNotification(Resource):
     @jwt_required()

@@ -30,8 +30,16 @@ class UserVideoTemplates(db.Model, BaseModel):
     subscribe_video = db.Column(db.Text, nullable=False, default="")
     link_sns = db.Column(db.Text, nullable=False, default='{"video": [], "image": []}')
 
+    is_comment = db.Column(db.Integer, default=0, nullable=False)
+    comment = db.Column(db.String(255), default="", nullable=False)
+
+    is_hashtag = db.Column(db.Integer, default=0, nullable=False)
+    hashtag = db.Column(db.Text, nullable=False, default="[]")
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     def to_dict(self):
         return {
@@ -53,6 +61,10 @@ class UserVideoTemplates(db.Model, BaseModel):
             "video_hooks": json.loads(self.video_hooks),
             "viral_messages": json.loads(self.viral_messages),
             "link_sns": json.loads(self.link_sns),
+            "comment": self.comment,
+            "is_comment": self.is_comment,
+            "is_hashtag": self.is_hashtag,
+            "hashtag": json.loads(self.hashtag),
             "subscribe_video": self.subscribe_video,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),

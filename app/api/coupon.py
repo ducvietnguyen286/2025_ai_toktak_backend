@@ -9,6 +9,7 @@ from app.lib.response import Response
 
 from app.services.auth import AuthService
 from app.services.coupon import CouponService
+from app.services.user import UserService
 
 ns = Namespace(name="coupon", description="User API")
 from app.extensions import db, redis_client
@@ -29,7 +30,7 @@ class APIUsedCoupon(Resource):
         required=["code"],
     )
     def post(self, args):
-        current_user = AuthService.get_current_identity()
+        current_user = AuthService.get_current_identity(no_cache=True)
         code = args.get("code", "")
         coupon = CouponService.find_coupon_by_code(code)
         if coupon == "not_exist":
@@ -39,17 +40,20 @@ class APIUsedCoupon(Resource):
             ).to_dict()
         if coupon == "used":
             return Response(
-                message="사용된 쿠폰 번호입니다.<br/>쿠폰 번호를 확인해 주세요😭",
+                message="사용된 쿠폰 번호입니다.<br/>쿠폰 번호를Y 확인해 주세요😭",
+                message_en="Coupon is used",
                 code=201,
             ).to_dict()
         if coupon == "not_active":
             return Response(
                 message="쿠폰 코드가 사용 불가능합니다<br/>쿠폰 번호를 확인해 주세요😭",
+                message_en="Coupon is not active",
                 code=201,
             ).to_dict()
         if coupon == "expired":
             return Response(
                 message="쿠폰 코드가 만료되었습니다<br/>쿠폰 번호를 확인해 주세요😭",
+                message_en="Mã đã hết hạn expired",
                 code=201,
             ).to_dict()
 
@@ -119,6 +123,8 @@ class APIUsedCoupon(Resource):
 
                             # if coupon.type == "SUB_STANDARD_2":
                         current_user.batch_no_limit_sns = 1
+                        # tong so luong kenh co the lien ket
+                        current_user.total_link_active = 7
                         # else:
                         #     if current_user.subscription == "FREE":
                         #         current_user.batch_sns_remain = value_coupon * 2
@@ -127,7 +133,7 @@ class APIUsedCoupon(Resource):
                         #         current_user.batch_sns_remain += value_coupon * 2
                         #         current_user.batch_sns_total += value_coupon * 2
 
-                        current_user.subscription = "STANDARD"
+                        current_user.subscription = "COUPON_STANDARD"
                         expired_at = datetime.datetime.now() + datetime.timedelta(
                             days=coupon_code.num_days
                         )
@@ -157,6 +163,21 @@ class APIUsedCoupon(Resource):
                     current_user = session.merge(current_user)
 
                     result = coupon_code._to_json()
+
+                    # Ghi Log History
+                    data_user_history = {
+                        "user_id": current_user_id,
+                        "type": "USED_COUPON",
+                        "object_id": coupon_code.id,
+                        "object_start_time": coupon_code.used_at,
+                        "object_end_time": coupon_code.expired_at,
+                        "title": coupon_code.coupon.name,
+                        "description": coupon_code.code,
+                        "value": coupon_code.value,
+                        "num_days": coupon_code.num_days,
+                    }
+
+                    UserService.create_user_history(**data_user_history)
 
             except Exception as e:
                 traceback.print_exc()

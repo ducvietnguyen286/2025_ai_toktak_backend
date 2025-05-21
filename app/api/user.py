@@ -7,7 +7,8 @@ import time
 import traceback
 from urllib.parse import urlencode
 import uuid
-from flask import redirect
+from bson import ObjectId
+from flask import redirect, request
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
 import jwt
@@ -45,6 +46,9 @@ from app.rabbitmq.producer import (
 )
 from app.third_parties.youtube import YoutubeTokenService
 import const
+
+from app.services.nice_services import NiceAuthService
+from app.services.referral_service import ReferralService
 
 ns = Namespace(name="user", description="User API")
 
@@ -102,7 +106,7 @@ class APINewLink(Resource):
     )
     def post(self, args):
         try:
-            current_user = AuthService.get_current_identity()
+            current_user = AuthService.get_current_identity(no_cache=True)
             link_id = args.get("link_id", 0)
             link = LinkService.find_link(link_id)
 
@@ -127,6 +131,14 @@ class APINewLink(Resource):
                 return Response(
                     message="Link chưa setup thông tin cần thiết",
                     status=400,
+                ).to_dict()
+
+            total_user_links = UserService.get_total_link(current_user.id)
+            total_link_active = current_user.total_link_active
+            if total_user_links >= total_link_active:
+                return Response(
+                    message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
+                    status=201,
                 ).to_dict()
 
             user_link = UserService.find_user_link_exist(link_id, current_user.id)
@@ -197,7 +209,7 @@ class APISendPosts(Resource):
                 "items": {
                     "type": "object",
                     "properties": {
-                        "id": {"type": "integer"},
+                        "id": {"type": "string"},
                         "is_all": {"type": "integer"},
                         "link_ids": {
                             "type": "array",
@@ -279,7 +291,7 @@ class APISendPosts(Resource):
             count_images = 0
             count_videos = 0
             for post in posts:
-                post_ids.append(post.id)
+                post_ids.append(str(post.id))
                 if post.type == "image":
                     count_images += 1
                 if post.type == "video":
@@ -333,15 +345,17 @@ class APISendPosts(Resource):
 
             social_post_ids = []
             upload = []
+
             for post in posts:
-                batch_id = post.batch_id
+                post_id = str(post.id)
+                batch_id = str(post.batch_id)
                 timestamp = int(time.time())
                 unique_id = uuid.uuid4().hex
 
                 session_key = f"{timestamp}_{unique_id}"
 
-                check_is_all = is_all.get(post.id, 0)
-                check_links = link_ids.get(post.id, [])
+                check_is_all = is_all.get(post_id, 0)
+                check_links = link_ids.get(post_id, [])
 
                 if check_is_all == 1:
                     check_links = active_links
@@ -362,8 +376,8 @@ class APISendPosts(Resource):
                     social_post = SocialPostService.create_social_post(
                         link_id=link_id,
                         user_id=current_user.id,
-                        post_id=post.id,
-                        batch_id=batch_id,
+                        post_id=ObjectId(post.id),
+                        batch_id=ObjectId(batch_id),
                         session_key=session_key,
                         sync_id=sync_id,
                         status="PROCESSING",
@@ -380,7 +394,7 @@ class APISendPosts(Resource):
                         {
                             "title": link.title,
                             "link_id": link_id,
-                            "post_id": post.id,
+                            "post_id": post_id,
                             "status": "PROCESSING",
                             "social_link": "",
                             "value": 0,
@@ -393,7 +407,7 @@ class APISendPosts(Resource):
                         "message": {
                             "sync_id": sync_id,
                             "link_id": link_id,
-                            "post_id": post.id,
+                            "post_id": post_id,
                             "user_id": current_user.id,
                             "social_post_id": str(social_post.id),
                             "page_id": "",
@@ -469,7 +483,7 @@ class APIPostToLinks(Resource):
                 "items": {"type": "integer"},
                 "uniqueItems": True,
             },
-            "post_id": {"type": "integer"},
+            "post_id": {"type": "string"},
             "page_id": {"type": "string"},
             "disable_comment": {"type": "boolean"},
             "disable_duet": {"type": "boolean"},
@@ -588,7 +602,7 @@ class APIPostToLinks(Resource):
             # Update to Uploads
             PostService.update_post(post_id, status=const.DRAFT_STATUS)
 
-            batch_id = post.batch_id
+            batch_id = str(post.batch_id)
 
             batch_detail = BatchService.find_batch(batch_id)
             if batch_detail:
@@ -636,7 +650,7 @@ class APIPostToLinks(Resource):
 
             progress = {
                 "batch_id": batch_id,
-                "post_id": post.id,
+                "post_id": str(post.id),
                 "user_id": current_user.id,
                 "total_link": total_link,
                 "total_post": total_post,
@@ -682,7 +696,7 @@ class APIPostToLinks(Resource):
                     {
                         "title": link.title,
                         "link_id": link_id,
-                        "post_id": post.id,
+                        "post_id": str(post.id),
                         "status": "PROCESSING",
                         "social_link": "",
                         "value": 0,
@@ -694,7 +708,7 @@ class APIPostToLinks(Resource):
                     "message": {
                         "sync_id": "",
                         "link_id": link_id,
-                        "post_id": post.id,
+                        "post_id": str(post.id),
                         "user_id": current_user.id,
                         "social_post_id": str(social_post.id),
                         "page_id": page_id,
@@ -779,12 +793,67 @@ class APIGetFacebookPage(Resource):
                         "id": page.get("id"),
                         "name": page.get("name"),
                         "picture": page.get("picture"),
+                        "tasks": page.get("tasks"),
                     }
                 )
         return Response(
             data=list_pages,
             message="Lấy link Facebook thành công",
         ).to_dict()
+
+
+@ns.route("/select-facebook-page")
+class APISelectFacebookPage(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "page_id": {"type": "string"},
+        },
+        required=["page_id"],
+    )
+    def post(self, args):
+        try:
+            current_user = AuthService.get_current_identity()
+            link = LinkService.find_link_by_type("FACEBOOK")
+            if not link:
+                return Response(
+                    message="Không tìm thấy link Facebook",
+                    status=400,
+                ).to_dict()
+            page_id = args.get("page_id")
+            user_link = UserService.find_user_link(link.id, current_user.id)
+            if not user_link:
+                return Response(
+                    message="Không tìm thấy link Facebook",
+                    status=400,
+                ).to_dict()
+            select_page = FacebookTokenService().get_page_info_by_id(page_id, user_link)
+            if not select_page:
+                return Response(
+                    message="Không tìm thấy trang Facebook",
+                    status=400,
+                ).to_dict()
+            page_info = FacebookTokenService().get_info_page(select_page)
+            if not page_info:
+                return Response(
+                    message="Không tìm thấy thông tin trang Facebook",
+                    status=400,
+                ).to_dict()
+
+            UserLinkService.update_info_user_link(user_link=user_link, info=page_info)
+
+            return Response(
+                message="Lưu trang Facebook thành công",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
 
 
 TIKTOK_REDIRECT_URL = (
@@ -918,6 +987,21 @@ class APIGetCallbackTiktok(Resource):
             link_id = payload.get("link_id")
             int_user_id = int(user_id)
             int_link_id = int(link_id)
+
+            current_user = UserService.find_user(int_user_id)
+            if not current_user:
+                return Response(
+                    message="로그인해주세요.",
+                    status=201,
+                ).to_dict()
+            total_user_links = UserService.get_total_link(current_user.id)
+            total_link_active = current_user.total_link_active
+            if total_user_links >= total_link_active:
+                return redirect(
+                    PAGE_PROFILE
+                    + f"?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=최대 {total_link_active}개의 채널만 설정할 수 있습니다."
+                )
+
             user_link = UserService.find_user_link_exist(int_link_id, int_user_id)
 
             RequestSocialLogService.create_request_social_log(
@@ -1072,7 +1156,7 @@ class APIYoutubeLogin(Resource):
 
             if not client:
                 PAGE_PROFILE = (
-                    os.environ.get("TIKTOK_REDIRECT_TO_PROFILE")
+                    os.environ.get("FACEBOOK_APP_REDIRECT_TO_PROFILE")
                     or "https://toktak.ai/profile"
                 )
 
@@ -1136,7 +1220,7 @@ class APIGetCallbackYoutube(Resource):
             code = args.get("code")
             state = args.get("state")
             PAGE_PROFILE = (
-                os.environ.get("TIKTOK_REDIRECT_TO_PROFILE")
+                os.environ.get("YOUTUBE_APP_REDIRECT_TO_PROFILE")
                 or "https://toktak.ai/profile"
             )
 
@@ -1160,6 +1244,20 @@ class APIGetCallbackYoutube(Resource):
             link_id = payload.get("link_id")
             int_user_id = int(user_id)
             int_link_id = int(link_id)
+
+            current_user = UserService.find_user(int_user_id)
+            if not current_user:
+                return Response(
+                    message="로그인해주세요.",
+                    status=201,
+                ).to_dict()
+            total_user_links = UserService.get_total_link(current_user.id)
+            total_link_active = current_user.total_link_active
+            if total_user_links >= total_link_active:
+                return redirect(
+                    PAGE_PROFILE
+                    + f"?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=최대 {total_link_active}개의 채널만 설정할 수 있습니다."
+                )
 
             if not client:
                 NotificationServices.create_notification(
@@ -1381,7 +1479,7 @@ class APICheckSNSLink(Resource):
     def post(self, args):
         try:
             batchId = args.get("batchId", None)
-            current_user = AuthService.get_current_identity()
+            current_user = AuthService.get_current_identity(no_cache=True)
             if not current_user:
                 return Response(
                     message="로그인하여 계속 진행하십시오.",
@@ -1400,7 +1498,7 @@ class APICheckSNSLink(Resource):
                 ).to_dict()
 
             if batchId:
-                
+
                 # if current_user.batch_remain == 0:
                 #     return Response(
                 #         message=MessageError.NO_BATCH_REMAINING.value["message"],
@@ -1676,4 +1774,135 @@ class APIUpdateUserLinkTemplate(Resource):
 
         return Response(
             data={}, message="링크 선택이 성공적으로 업데이트되었습니다."
+        ).to_dict()
+
+
+@ns.route("/nice_auth")
+class APINiceAuth(Resource):
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+
+        data_nice = NiceAuthService.get_nice_auth(user_id)
+        return data_nice
+        # return Response(data=data_nice, message="Nice return.").to_dict()
+
+
+@ns.route("/checkplus_success")
+class APINiceAuthSuccess(Resource):
+    @jwt_required()
+    def get(self):
+        enc_data = request.args.get("EncodeData")  # <-- lấy từ request.args
+        result_item = {
+            "EncodeData": enc_data,
+        }
+
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+
+        data_nice = NiceAuthService.checkplus_success(user_id, result_item)
+        return data_nice
+
+
+@ns.route("/checkplus_fail")
+class APINiceAuthSuccess(Resource):
+    @jwt_required()
+    def get(self, args):
+        enc_data = args.get("EncodeData")
+        result_item = {
+            "EncodeData": enc_data,
+        }
+
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+
+        data_nice = NiceAuthService.checkplus_success(user_id, result_item)
+
+        return Response(data=data_nice, message="Nice return.").to_dict()
+
+
+@ns.route("/get_refer_user")
+class APIGetReferUserSuccess(Resource):
+    @jwt_required()
+    def get(self):
+
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+
+        refer = ReferralService.get_by_user_id(user_id)
+
+        return Response(data=refer, message="refer return.").to_dict()
+
+
+@ns.route("/check_active_link_sns")
+class APICheckActiveLinkSns(Resource):
+    @jwt_required()
+    def get(self):
+        current_user = AuthService.get_current_identity(no_cache=True)
+        total_user_links = UserService.get_total_link(current_user.id)
+        total_link_active = current_user.total_link_active
+        if total_user_links >= total_link_active:
+            return Response(
+                data={},
+                message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
+                code=201,
+            ).to_dict()
+
+        return Response(
+            data={
+                "total_user_links": total_user_links,
+                "total_link_active": total_link_active,
+            },
+            message="You can add active new link",
+        ).to_dict()
+
+
+@ns.route("/check_refer_code")
+class APICheckReferCode(Resource):
+    @jwt_required(optional=True)
+    def get(self):
+        current_user = AuthService.get_current_identity()
+        login_user_id = current_user.id if current_user else None
+        is_auth_nice = current_user.is_auth_nice if current_user else 0
+        referral_code = request.args.get("referral_code")
+
+        user_detail = UserService.find_user_by_referral_code(referral_code)
+        if not user_detail:
+            return Response(
+                code=201,
+                data={
+                    "error_message_title": "⚠️ 초대하기 URL에 문제가 있어요!",
+                    "error_message": "입력하신 URL을 다시 한 번 확인해 주세요. 😊",
+                    "referral_code": referral_code,
+                },
+                message="Not found user",
+            ).to_dict()
+        else:
+            refer_id = user_detail.id
+            if refer_id == login_user_id:
+                return Response(
+                    code=202,
+                    data={
+                        "referral_code": referral_code,
+                    },
+                    message="Same user",
+                ).to_dict()
+
+            if is_auth_nice == 1:
+                return Response(
+                    code=203,
+                    data={
+                        "error_message_title": "🔔 이미 가입된 회원입니다!",
+                        "error_message": "초대 수락은 신규 가입 계정만 가능해요. 😊",
+                        "referral_code": referral_code,
+                    },
+                    message="User Is Nice Authentication",
+                ).to_dict()
+
+        return Response(
+            data={
+                "referral_code": referral_code,
+            },
+            message="You can add active new link",
         ).to_dict()

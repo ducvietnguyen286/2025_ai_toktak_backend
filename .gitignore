@@ -44,10 +44,9 @@ static/voice/
 env/
 app/ais/models/*
 google-cloud-vision.json
-paddleocr_venv
-paddleocr-venv
+paddleocr_venv 
 entry-point.sh
 paddleocr.sh
 run_with_watchdog.sh
-run_sam.sh
-sam-venv
+sam-venv 
+run_sam.sh 

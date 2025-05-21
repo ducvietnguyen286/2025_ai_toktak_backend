@@ -7,49 +7,66 @@ from app.models.batch import Batch
 from app.models.social_account import SocialAccount
 from app.models.notification import Notification
 from app.models.memberprofile import MemberProfile
+from app.models.referral_history import ReferralHistory
 from app.extensions import db
 from app.lib.logger import logger
-from sqlalchemy import or_
+from sqlalchemy import select, update, delete, or_, func
+from app.lib.query import (
+    select_with_filter,
+    select_by_id,
+    select_with_pagination,
+    select_with_filter_one,
+    update_by_id,
+)
 import const
+from dateutil.relativedelta import relativedelta
+
+from app.models.user_history import UserHistory
 
 
 class UserService:
 
     @staticmethod
+    def create_user(*args, **kwargs):
+        user_detail = User(*args, **kwargs)
+        user_detail.save()
+        return user_detail
+
+    @staticmethod
     def get_user_coupons(user_id):
-        list_coupons = (
-            CouponCode.query.filter(
-                CouponCode.is_active == 1, CouponCode.used_by == user_id
-            )
-            .order_by(CouponCode.used_at.desc())
-            .all()
+        list_coupons = select_with_filter(
+            CouponCode,
+            [CouponCode.is_active == 1, CouponCode.used_by == user_id],
+            [CouponCode.used_at.desc()],
         )
         coupons = []
         for coupon in list_coupons:
             coupon_dict = coupon.coupon._to_json()
             coupon_code = coupon._to_json()
             coupon_code["coupon_name"] = coupon_dict["name"]
+            coupon_code["type"] = "coupon"
             coupons.append(coupon_code)
 
-        first_coupon = (
-            CouponCode.query.filter(
+        first_coupon = select_with_filter_one(
+            CouponCode,
+            [
                 CouponCode.is_active == 1,
                 CouponCode.used_by == user_id,
                 CouponCode.expired_at >= datetime.now(),
-            )
-            .order_by(CouponCode.used_at.asc())
-            .first()
+            ],
+            [CouponCode.used_at.asc()],
         )
 
-        latest_coupon = (
-            CouponCode.query.filter(
+        latest_coupon = select_with_filter_one(
+            CouponCode,
+            [
                 CouponCode.is_active == 1,
                 CouponCode.used_by == user_id,
                 CouponCode.expired_at >= datetime.now(),
-            )
-            .order_by(CouponCode.used_at.desc())
-            .first()
+            ],
+            [CouponCode.used_at.desc()],
         )
+
         coupon = latest_coupon.coupon._to_json() if latest_coupon else None
         latest_coupon = latest_coupon._to_json() if latest_coupon else None
         first_coupon = first_coupon._to_json() if first_coupon else None
@@ -59,24 +76,25 @@ class UserService:
 
     @staticmethod
     def get_latest_coupon(user_id):
-        first_coupon = (
-            CouponCode.query.filter(
+        first_coupon = select_with_filter_one(
+            CouponCode,
+            [
                 CouponCode.is_active == 1,
                 CouponCode.used_by == user_id,
                 CouponCode.expired_at >= datetime.now(),
-            )
-            .order_by(CouponCode.used_at.asc())
-            .first()
+            ],
+            [CouponCode.used_at.asc()],
         )
-        latest_coupon = (
-            CouponCode.query.filter(
+        latest_coupon = select_with_filter_one(
+            CouponCode,
+            [
                 CouponCode.is_active == 1,
                 CouponCode.used_by == user_id,
                 CouponCode.expired_at >= datetime.now(),
-            )
-            .order_by(CouponCode.used_at.desc())
-            .first()
+            ],
+            [CouponCode.used_at.desc()],
         )
+
         coupon = latest_coupon.coupon._to_json() if latest_coupon else None
         latest_coupon = latest_coupon._to_json() if latest_coupon else None
         first_coupon = first_coupon._to_json() if first_coupon else None
@@ -86,29 +104,57 @@ class UserService:
 
     @staticmethod
     def find_user(id):
-        return User.query.get(id)
+        user = select_by_id(User, id)
+        return user
+
+    @staticmethod
+    def find_users(ids):
+        users = select_with_filter(
+            User,
+            [User.id.in_(ids)],
+            [],
+        )
+        return users
 
     @staticmethod
     def get_users():
-        users = User.query.where(User.status == 1).all()
+        users = select_with_filter(
+            User,
+            [User.status == 1],
+            [User.created_at.desc()],
+        )
         return [user._to_json() for user in users]
 
     @staticmethod
     def all_users():
-        users = User.query.all()
+        users = select_with_filter(
+            User,
+            [],
+            [User.created_at.desc()],
+        )
         return [user._to_json() for user in users]
 
     @staticmethod
     def update_user(id, *args, **kwargs):
-        user = User.query.get(id)
-        if not user:
-            return None
-        user.update(**kwargs)
+        user = update_by_id(User, id, data=kwargs)
+        return user
+
+    @staticmethod
+    def update_user_by_id__session(id, *args, **kwargs):
+        user = update_by_id(User, id, data=kwargs)
+        # user = update_by_id(User, id, **kwargs)
         return user
 
     @staticmethod
     def delete_user(id):
-        return User.query.get(id).delete()
+        try:
+            delete_stmt = delete(User).where(User.id == id)
+            db.session.execute(delete_stmt)
+            db.session.commit()
+        except Exception as ex:
+            db.session.rollback()
+            return 0
+        return 1
 
     @staticmethod
     def create_user_link(*args, **kwargs):
@@ -168,6 +214,16 @@ class UserService:
         return [user_link._to_json() for user_link in user_links]
 
     @staticmethod
+    def get_total_link(user_id, with_out_link=const.NAVER_LINK_BLOG):
+        count = (
+            UserLink.query.where(UserLink.status == 1)
+            .where(UserLink.user_id == user_id)
+            .where(UserLink.link_id != with_out_link)
+            .count()
+        )
+        return count
+
+    @staticmethod
     def get_original_user_links(user_id=0):
         user_links = (
             UserLink.query.where(UserLink.status == 1)
@@ -192,7 +248,15 @@ class UserService:
         if "search" in data_search and data_search["search"]:
             search_term = f"%{data_search['search']}%"
             query = query.filter(
-                or_(User.email.ilike(search_term), User.name.ilike(search_term))
+                or_(
+                    User.email.ilike(search_term),
+                    User.name.ilike(search_term),
+                    User.username.ilike(search_term),
+                    User.phone.ilike(search_term),
+                    User.contact.ilike(search_term),
+                    User.company_name.ilike(search_term),
+                    User.referral_code.ilike(search_term),
+                )
             )
         if "member_type" in data_search and data_search["member_type"]:
             query = query.filter(User.subscription == data_search["member_type"])
@@ -233,16 +297,9 @@ class UserService:
     @staticmethod
     def delete_users_by_ids(user_ids):
         try:
-            Post.query.filter(Post.user_id.in_(user_ids)).delete(
-                synchronize_session=False
-            )
-            Batch.query.filter(Batch.user_id.in_(user_ids)).delete(
-                synchronize_session=False
-            )
-
-            Notification.query.filter(Notification.user_id.in_(user_ids)).delete(
-                synchronize_session=False
-            )
+            Post.objects(user_id__in=user_ids).delete()
+            Batch.objects(user_id__in=user_ids).delete()
+            Notification.objects(user_id__in=user_ids).delete()
 
             SocialAccount.query.filter(SocialAccount.user_id.in_(user_ids)).delete(
                 synchronize_session=False
@@ -254,6 +311,12 @@ class UserService:
             MemberProfile.query.filter(MemberProfile.user_id.in_(user_ids)).delete(
                 synchronize_session=False
             )
+            ReferralHistory.query.filter(
+                ReferralHistory.referrer_user_id.in_(user_ids)
+            ).delete(synchronize_session=False)
+            ReferralHistory.query.filter(
+                ReferralHistory.referred_user_id.in_(user_ids)
+            ).delete(synchronize_session=False)
 
             User.query.filter(User.id.in_(user_ids)).delete(synchronize_session=False)
 
@@ -265,7 +328,7 @@ class UserService:
         return 1
 
     def get_user_info_detail(user_id):
-        user_login = User.query.get(user_id)
+        user_login = select_by_id(User, user_id)
         if not user_login:
             return None
 
@@ -298,3 +361,56 @@ class UserService:
         user_dict["latest_coupon"] = latest_coupon
         user_dict["used_date_range"] = used_date_range
         return user_dict
+
+    @staticmethod
+    def check_phone_verify_nice(mobileno):
+        user = User.query.filter(User.phone == mobileno, User.is_auth_nice == 1).first()
+        return user
+
+    @staticmethod
+    def auto_extend_free_subscriptions():
+        now = datetime.now()
+
+        expired_users = User.query.filter(
+            User.subscription == "FREE", User.subscription_expired <= now
+        ).all()
+
+        extended = 0
+        for user in expired_users:
+            new_expiry = now + relativedelta(months=1)
+            user.subscription_expired = new_expiry
+            user.batch_total = 10
+            user.batch_remain = 10
+            extended += 1
+
+        db.session.commit()
+        return extended
+
+    @staticmethod
+    def find_user_by_referral_code(referral_code):
+        user = User.query.filter(User.referral_code == referral_code).first()
+        return user
+
+    @staticmethod
+    def create_user_history(*args, **kwargs):
+        user_history_detail = UserHistory(*args, **kwargs)
+        user_history_detail.save()
+        return user_history_detail
+
+    @staticmethod
+    def get_all_user_history_by_user_id(user_id):
+        user_histories = (
+            UserHistory.query.filter(UserHistory.user_id == user_id)
+            .order_by(UserHistory.id.desc())
+            .all()
+        )
+        return [user_history._to_json() for user_history in user_histories]
+
+    @staticmethod
+    def get_total_batch_remain(user_id):
+        batch_total = (
+            UserHistory.query.with_entities(func.sum(UserHistory.value))
+            .filter(UserHistory.user_id == user_id)
+            .scalar()
+        )
+        return batch_total or 0

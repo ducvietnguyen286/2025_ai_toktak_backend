@@ -1,214 +1,304 @@
-from app.models.user import User
+from bson import ObjectId
+from app.lib.logger import logger
 from app.models.post import Post
 from app.models.user_video_templates import UserVideoTemplates
-from app.models.link import Link
-from app.models.social_post import SocialPost
 from app.extensions import db
-from sqlalchemy import and_, func, or_
-from flask import jsonify
 from datetime import datetime, timedelta
-from sqlalchemy.orm import aliased
 from app.services.image_template import ImageTemplateService
+from app.services.user import UserService
 import os
 import json
 import const
+from app.lib.query import (
+    select_by_id,
+    select_with_filter_one,
+)
+from mongoengine import Q
 
 
 class PostService:
 
     @staticmethod
     def create_post(*args, **kwargs):
-        post = Post(*args, **kwargs)
-        post.save()
-        return post
+        try:
+            post = Post(*args, **kwargs)
+            post.save()
+            return post
+        except Exception as ex:
+            logger.error(f"Error creating post: {ex}")
+            return None
+
+    @staticmethod
+    def count_total_post():
+        try:
+            total = Post.objects.count()
+            return total
+        except Exception as ex:
+            logger.error(f"Error counting posts: {ex}")
+            return 0
 
     @staticmethod
     def find_post(id):
-        return Post.query.get(id)
+        try:
+            return Post.objects.get(id=ObjectId(id))
+        except Post.DoesNotExist:
+            return None
 
     @staticmethod
     def get_posts():
-        posts = Post.query.where(Post.status == 1).all()
-        return [post._to_json() for post in posts]
+        posts = Post.objects(status=1)
+        return posts
 
     @staticmethod
     def get_posts__by_ids(ids):
-        posts = (
-            Post.query.filter(Post.id.in_(ids)).filter(Post.status.in_([1, 99])).all()
-        )
+        posts = Post.objects(id__in=ids, status__in=[1, 99])
         return posts
 
     @staticmethod
     def update_posts_by_ids(ids, *args, **kwargs):
-        updated_rows = Post.query.filter(Post.id.in_(ids)).update(kwargs)
-        db.session.commit()
-        return updated_rows
+        posts = Post.objects(id__in=ids)
+        for post in posts:
+            for key, value in kwargs.items():
+                setattr(post, key, value)
+            post.save()
+
+        return True
 
     def get_posts_by_batch(batch_id):
-        posts = Post.query.where(Post.batch_id == batch_id).all()
+        posts = Post.objects(
+            batch_id=ObjectId(batch_id),
+            status__in=[1, 99],
+        )
         return posts
 
     @staticmethod
     def update_post(id, *args, **kwargs):
-        post = Post.query.get(id)
-        if not post:
-            return None
+        post = Post.objects.get(id=ObjectId(id))
         post.update(**kwargs)
         return post
 
     @staticmethod
     def delete_post(id):
-        return Post.query.get(id).delete()
+        return Post.objects.get(id=ObjectId(id)).delete()
 
     @staticmethod
     def get_posts_by_batch_id(batch_id):
-        posts = Post.query.where(Post.batch_id == batch_id).all()
-        return [post._to_json() for post in posts]
+        posts = Post.objects(
+            batch_id=ObjectId(batch_id),
+        )
+        return [post.to_json() for post in posts]
 
     @staticmethod
     def get_posts__by_batch_id(batch_id):
-        posts = Post.query.where(Post.batch_id == batch_id).all()
+        posts = Post.objects(
+            batch_id=ObjectId(batch_id),
+        )
         return posts
 
     @staticmethod
     def update_post_by_batch_id(batch_id, *args, **kwargs):
-        updated_rows = Post.query.filter_by(batch_id=batch_id).update(
-            kwargs
-        )  # Cập nhật trực tiếp
-        db.session.commit()  # Lưu vào database
-        return updated_rows
+        posts = Post.objects(batch_id=ObjectId(batch_id))
+        for post in posts:
+            for key, value in kwargs.items():
+                setattr(post, key, value)
+            post.save()
 
-    @staticmethod
-    def get_latest_social_post_by_post_ids(post_ids):
-        subq = (
-            db.session.query(func.max(SocialPost.created_at).label("max_created"))
-            .filter(SocialPost.post_id.in_(post_ids))
-            .group_by(SocialPost.post_id)
-            .subquery()
-        )
-        query = db.session.query(SocialPost).join(
-            subq,
-            and_(
-                SocialPost.post_id == subq.c.post_id,
-                SocialPost.created_at == subq.c.max_created,
-            ),
-        )
-        results = query.all()
-        return results
-
-    @staticmethod
-    def get_social_post(post_id):
-
-        results = (
-            db.session.query(SocialPost, Link.title)
-            .select_from(Link)
-            .outerjoin(
-                SocialPost,
-                and_(SocialPost.link_id == Link.id, SocialPost.post_id == post_id),
-            )
-            .all()
-        )
-
-        # Chuyển đổi kết quả thành danh sách dict
-        data = []
-        for social_post, title in results:
-            # Nếu không có SocialPost tương ứng thì social_post sẽ là None
-            post_data = (
-                {
-                    "id": social_post.id,
-                    "title": title,
-                    "status": social_post.status,
-                    "link_id": social_post.link_id,
-                    "post_id": social_post.post_id,
-                    "process_number": social_post.process_number,
-                }
-                if social_post
-                else None
-            )
-
-            data.append(post_data)
-
-        return data
+        return True
 
     @staticmethod
     def get_posts_upload(data_search):
-        # Query cơ bản với các điều kiện
-        query = Post.query.filter(
-            Post.user_id == data_search["user_id"],
-        )
+        query = Post.objects(user_id=data_search["user_id"])
 
-        # NHững thằng bắn lên SNS thì có status_sns = 1
-        if data_search["status"] == 1:
-            # query = query.filter(Post.status_sns == 1)
+        status = data_search.get("status")
+        if status == 1:
             query = query.filter(
-                (Post.social_sns_description.like("%PUBLISHED%"))
-                | (Post.status_sns == 1)
+                Q(social_sns_description__icontains="PUBLISHED") | Q(status_sns=1)
             )
-        elif data_search["status"] == 99:
-            # query = query.filter(Post.status == 99)
+        elif status == 99:
             query = query.filter(
-                (Post.social_sns_description.like("%ERRORED%"))
-                | (Post.status == const.DRAFT_STATUS)
+                Q(social_sns_description__icontains="ERRORED")
+                | Q(status=const.DRAFT_STATUS)
             )
-        # Xử lý type_order
-        if data_search["type_order"] == "id_asc":
-            query = query.order_by(Post.id.asc())
-        elif data_search["type_order"] == "id_desc":
-            query = query.order_by(Post.id.desc())
+
+        search_text = data_search.get("search_text", "")
+        if search_text:
+            query = query.filter(
+                Q(title__icontains=search_text)
+                | Q(description__icontains=search_text)
+                | Q(user__email__icontains=search_text)
+            )
+
+        type_post = data_search.get("type_post")
+        if type_post == "video":
+            query = query.filter(type="video")
+        elif type_post == "image":
+            query = query.filter(type="image")
+        elif type_post == "blog":
+            query = query.filter(type="blog")
+        elif type_post == "error_blog":
+            query = query.filter(social_sns_description__icontains="ERRORED")
+
+        time_range = data_search.get("time_range")
+        if time_range:
+            now = datetime.now()
+            if time_range == "today":
+                start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            elif time_range == "last_week":
+                start_date = now - timedelta(days=7)
+            elif time_range == "last_month":
+                start_date = now - timedelta(days=30)
+            elif time_range == "last_year":
+                start_date = now - timedelta(days=365)
+            else:
+                start_date = None
+
+            if start_date:
+                query = query.filter(created_at__gte=start_date)
+
+        type_order = data_search.get("type_order", "id_desc")
+        if type_order == "id_asc":
+            query = query.order_by("id")
         else:
-            query = query.order_by(Post.id.desc())
+            query = query.order_by("-id")
 
-        # Xử lý type_post
-        if data_search["type_post"] == "video":
-            query = query.filter(Post.type == "video")
-        elif data_search["type_post"] == "image":
-            query = query.filter(Post.type == "image")
-        elif data_search["type_post"] == "blog":
-            query = query.filter(Post.type == "blog")
-        elif data_search["type_post"] == "error_blog":
-            query = query.filter(Post.social_sns_description.like("%ERRORED%"))
+        page = data_search.get("page", 1)
+        per_page = data_search.get("per_page", 10)
+        skip = (page - 1) * per_page
 
-        time_range = data_search.get("time_range")  # Thêm biến time_range
-        # Lọc theo khoảng thời gian
-        if time_range == "today":
-            start_date = datetime.now().replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
-            query = query.filter(Post.created_at >= start_date)
+        total = query.count()
+        items = query.skip(skip).limit(per_page)
 
-        elif time_range == "last_week":
-            start_date = datetime.now() - timedelta(days=7)
-            query = query.filter(Post.created_at >= start_date)
+        total_pages = (total + per_page - 1) // per_page
 
-        elif time_range == "last_month":
-            start_date = datetime.now() - timedelta(days=30)
-            query = query.filter(Post.created_at >= start_date)
-
-        elif time_range == "last_year":
-            start_date = datetime.now() - timedelta(days=365)
-            query = query.filter(Post.created_at >= start_date)
-
-        pagination = query.paginate(
-            page=data_search["page"], per_page=data_search["per_page"], error_out=False
-        )
-        return pagination
+        return {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": total_pages,
+            "items": list(items),
+        }
 
     @staticmethod
     def delete_posts_by_ids(post_ids):
         try:
-            Post.query.filter(Post.id.in_(post_ids)).delete(synchronize_session=False)
-            db.session.commit()
+            deleted_count = Post.objects(id__in=post_ids).delete()
+            return deleted_count
         except Exception as ex:
-            db.session.rollback()
             return 0
-        return 1
+
+    @staticmethod
+    def admin_get_posts_upload(data_search):
+        query = Post.objects()
+
+        # Lọc theo status
+        status = data_search.get("status")
+        if status == 1:
+            query = query.filter(
+                Q(social_sns_description__icontains="PUBLISHED") | Q(status_sns=1)
+            )
+        elif status == 99:
+            query = query.filter(
+                Q(social_sns_description__icontains="ERRORED")
+                | Q(status=const.DRAFT_STATUS)
+            )
+
+        # Lọc theo search text
+        search_text = data_search.get("search_text", "")
+        if search_text:
+            query = query.filter(
+                Q(title__icontains=search_text)
+                | Q(description__icontains=search_text)
+                | Q(
+                    user_email__icontains=search_text
+                )  # hoặc user__email nếu dùng ReferenceField
+            )
+
+        # Lọc theo loại bài viết
+        type_post = data_search.get("type_post")
+        if type_post in ["video", "image", "blog"]:
+            query = query.filter(type=type_post)
+        elif type_post == "error_blog":
+            query = query.filter(social_sns_description__icontains="ERRORED")
+
+        # Lọc theo thời gian
+        time_range = data_search.get("time_range")
+        if time_range:
+            now = datetime.now()
+            start_date = None
+            if time_range == "today":
+                start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            elif time_range == "last_week":
+                start_date = now - timedelta(days=7)
+            elif time_range == "last_month":
+                start_date = now - timedelta(days=30)
+            elif time_range == "last_year":
+                start_date = now - timedelta(days=365)
+
+            if start_date:
+                query = query.filter(created_at__gte=start_date)
+
+        # Sắp xếp
+        type_order = data_search.get("type_order", "created_desc")
+        if type_order == "created_asc":
+            query = query.order_by("created_at")
+        else:
+            query = query.order_by("-created_at")
+
+        # Phân trang
+        page = int(data_search.get("page", 1))
+        per_page = int(data_search.get("per_page", 10))
+        skip = (page - 1) * per_page
+
+        total = query.count()
+        items = query.skip(skip).limit(per_page)
+
+        total_pages = (total + per_page - 1) // per_page
+
+        user_ids = list({n.user_id for n in items if n.user_id})  # tránh trùng user_id
+        users = UserService.find_users(user_ids)  # Trả về list user
+        user_dict = {user.id: user for user in users}
+
+        post_items = []
+        for item in items:
+            item_dict = item.to_json()
+            user = user_dict.get(item.user_id)
+            item_dict["user_email"] = user.email if user else ""
+            post_items.append(item_dict)
+        return {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": total_pages,
+            "items": post_items,
+        }
+
+    @staticmethod
+    def get_post_schedule(data_search):
+        filters = Q(type__ne="blog")
+        if data_search.get("user_id"):
+            filters &= Q(user_id=data_search["user_id"])
+
+        if data_search.get("start_date"):
+            filters &= Q(schedule_date__gte=data_search["start_date"])
+
+        if data_search.get("end_date"):
+            filters &= Q(schedule_date__lte=data_search["end_date"])
+
+        if data_search.get("status") is not None:
+            filters &= Q(status=data_search["status"])
+
+        posts = Post.objects(filters)
+
+        return [post.to_json() for post in posts]
 
     @staticmethod
     def get_template_video_by_user_id(user_id):
         try:
-            user_template = UserVideoTemplates.query.filter(
-                UserVideoTemplates.user_id == user_id
-            ).first()
+            user_template = select_with_filter_one(
+                UserVideoTemplates,
+                filters=[UserVideoTemplates.user_id == user_id],
+                order_by=[UserVideoTemplates.id.desc()],
+            )
         except Exception as ex:
             return None
         return user_template
@@ -221,85 +311,9 @@ class PostService:
 
     @staticmethod
     def update_template(id, *args, **kwargs):
-        user_template = UserVideoTemplates.query.get(id)
+        user_template = select_by_id(UserVideoTemplates, id)
         user_template.update(**kwargs)
         return user_template
-
-    @staticmethod
-    def admin_get_posts_upload(data_search):
-        # Query cơ bản với các điều kiện
-        # Aliases for the User table to include email
-        query = Post.query.filter(
-            Post.status == data_search["status"],
-        )
-
-        if data_search["status"] == 1:
-            # query = query.filter(Post.status_sns == 1)
-            query = query.filter(
-                (Post.social_sns_description.like("%PUBLISHED%"))
-                | (Post.status_sns == data_search["status"])
-            )
-        elif data_search["status"] == 99:
-            query = query.filter(
-                (Post.social_sns_description.like("%ERRORED%"))
-                | (Post.status == data_search["status"])
-            )
-
-        search_text = data_search.get("search_text", "")
-
-        if search_text != "":
-            search_pattern = f"%{search_text}%"
-            query = query.filter(
-                or_(
-                    Post.title.ilike(search_pattern),
-                    Post.description.ilike(search_pattern),
-                    Post.user.has(User.email.ilike(search_pattern)),
-                )
-            )
-
-        # Xử lý type_order
-        if data_search["type_order"] == "id_asc":
-            query = query.order_by(Post.id.asc())
-        elif data_search["type_order"] == "id_desc":
-            query = query.order_by(Post.id.desc())
-        else:
-            query = query.order_by(Post.id.desc())
-
-        # Xử lý type_post
-        if data_search["type_post"] == "video":
-            query = query.filter(Post.type == "video")
-        elif data_search["type_post"] == "image":
-            query = query.filter(Post.type == "image")
-        elif data_search["type_post"] == "blog":
-            query = query.filter(Post.type == "blog")
-
-        elif data_search["type_post"] == "error_blog":
-            query = query.filter(Post.social_sns_description.like("%ERRORED%"))
-
-        time_range = data_search.get("time_range")  # Thêm biến time_range
-        # Lọc theo khoảng thời gian
-        if time_range == "today":
-            start_date = datetime.now().replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
-            query = query.filter(Post.created_at >= start_date)
-
-        elif time_range == "last_week":
-            start_date = datetime.now() - timedelta(days=7)
-            query = query.filter(Post.created_at >= start_date)
-
-        elif time_range == "last_month":
-            start_date = datetime.now() - timedelta(days=30)
-            query = query.filter(Post.created_at >= start_date)
-
-        elif time_range == "last_year":
-            start_date = datetime.now() - timedelta(days=365)
-            query = query.filter(Post.created_at >= start_date)
-
-        pagination = query.paginate(
-            page=data_search["page"], per_page=data_search["per_page"], error_out=False
-        )
-        return pagination
 
     @staticmethod
     def create_user_template_make_video(user_id):
@@ -366,7 +380,7 @@ class PostService:
     @staticmethod
     def update_default_template(user_id, link_id):
         try:
-            link_id=  int(link_id)
+            link_id = int(link_id)
             user_template = PostService.get_template_video_by_user_id(user_id)
 
             if user_template:
@@ -379,13 +393,12 @@ class PostService:
                     or "image" not in link_sns
                 ):
                     link_sns = {"video": [], "image": []}
-                    
+
                 if link_id not in link_sns["video"]:
                     link_sns["video"].append(link_id)
 
                 if link_id not in link_sns["image"]:
                     link_sns["image"].append(link_id)
-
 
                 data_update_template = {
                     "link_sns": json.dumps(link_sns),

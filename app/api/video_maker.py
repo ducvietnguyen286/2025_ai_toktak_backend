@@ -18,7 +18,8 @@ from pathlib import Path
 from app.services.user import UserService
 from app.services.product import ProductService
 import const
-from app.extensions import redis_client 
+from app.extensions import redis_client
+
 ns = Namespace(name="video_maker", description="Video Maker API")
 
 
@@ -127,8 +128,6 @@ class VideoList(Resource):
     def get(self):
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
-        print("page", page)
-        print("per_page", per_page)
 
         videos = VideoService.get_videos(page, per_page)
 
@@ -184,7 +183,6 @@ class ShortstackWebhook(Resource):
                                 batch_id=post_detail.batch_id,
                                 status=const.NOTIFICATION_FALSE,
                                 title="⚠️ 비디오 생성에 실패했습니다. 다시 시도해주세요.",
-                                
                                 description=f"AI Shotstack  {str(error)}",
                             )
                         else:
@@ -204,7 +202,7 @@ class ShortstackWebhook(Resource):
                         video_path=file_path,
                     )
 
-                    check_and_update_user_batch_remain(user_id , batch_id)
+                    check_and_update_user_batch_remain(user_id, batch_id)
 
             return {
                 "message": "Webhook received successfully",
@@ -212,7 +210,7 @@ class ShortstackWebhook(Resource):
                 "render": render,
                 "status": status,
                 "video_url": video_url,
-                "batch_id": batch_id,
+                "batch_id": str(batch_id),
                 # "post_detail" : post_detail.to_dict(),
                 # "create_video_detail" : create_video_detail.to_dict(),
             }, 200
@@ -313,7 +311,7 @@ def download_video(video_url, batch_id):
 
 def check_and_update_user_batch_remain(user_id: int, batch_id: int):
     redis_key = f"user_batch_remain_updated:{user_id}:{batch_id}"
-    
+
     try:
         # Nếu đã cập nhật rồi trong 5 phút, thì không làm gì
         if redis_client.exists(redis_key):
@@ -322,12 +320,14 @@ def check_and_update_user_batch_remain(user_id: int, batch_id: int):
         current_user = UserService.find_user(user_id)
         if not current_user:
             return False  # Không tìm thấy user
-        
+
         batch_remain = current_user.batch_remain
         new_batch_remain = max(current_user.batch_remain - 1, 0)
-        
-        log_webhook_message(f"[Cap Nhat batch_remain  ] user_id={user_id}, batch_id={batch_id}, batch_remain={batch_remain}, new_batch_remain={new_batch_remain}")
-        
+
+        log_webhook_message(
+            f"[Cap Nhat batch_remain  ] user_id={user_id}, batch_id={batch_id}, batch_remain={batch_remain}, new_batch_remain={new_batch_remain}"
+        )
+
         UserService.update_user(user_id, batch_remain=new_batch_remain)
 
         # Đặt key trong Redis với TTL là 5 phút (300 giây)
@@ -336,5 +336,7 @@ def check_and_update_user_batch_remain(user_id: int, batch_id: int):
 
     except Exception as e:
         # Log lỗi nếu cần
-        log_webhook_message(f"[Redis/UserService Error] user_id={user_id}, batch_id={batch_id}, error={str(e)}")
+        log_webhook_message(
+            f"[Redis/UserService Error] user_id={user_id}, batch_id={batch_id}, error={str(e)}"
+        )
         return False  # Báo lỗi chung

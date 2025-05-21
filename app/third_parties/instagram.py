@@ -255,8 +255,8 @@ class InstagramService(BaseService):
         self.access_token = self.meta.get("access_token")
         self.social_post = SocialPostService.find_social_post(social_post_id)
         self.link_id = link.id
-        self.post_id = post.id
-        self.batch_id = post.batch_id
+        self.post_id = str(post.id)
+        self.batch_id = str(post.batch_id)
         self.social_post_id = str(self.social_post.id)
         self.istagram_user_id = self.user_link.social_id
         self.key_log = f"{self.post_id} - {self.social_post.session_key}"
@@ -264,7 +264,7 @@ class InstagramService(BaseService):
         try:
             self.save_uploading(0)
             log_instagram_message(
-                f"------------ READY TO SEND POST: {post._to_json()} ----------------"
+                f"------------ READY TO SEND POST: {post.to_json()} ----------------"
             )
 
             if post.type == "image":

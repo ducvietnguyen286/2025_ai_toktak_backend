@@ -1,32 +1,40 @@
 # coding: utf8
 import os
+from flask import Flask
 from flask_redis import FlaskRedis
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO
 from flask_mongoengine import MongoEngine
-import torch
-from ultralytics import FastSAM
+from celery import Celery
 
 
 redis_client = FlaskRedis()
 db = SQLAlchemy()
+
 bcrypt = Bcrypt()
 jwt = JWTManager()
 socketio = SocketIO(async_mode="gevent", cors_allowed_origins="*")
 db_mongo = MongoEngine()
-sam_model = None
+
+celery = None
 
 
-def init_sam_model(app):
-    global sam_model
+def make_celery(app: Flask) -> Celery:
+    global celery
 
-    model_path = os.path.join(os.getcwd(), "app/ais/models")
-    fast_sam_path = os.path.join(model_path, "FastSAM-x.pt")
-    # yolo_path = os.path.join(model_path, "yolov8s-seg.pt")
+    celery = Celery(
+        app.import_name,
+        broker=app.config["CELERY_BROKER_URL"],
+        backend=app.config["CELERY_RESULT_BACKEND"],
+    )
+    celery.conf.update(app.config)
 
-    with app.app_context():
-        if sam_model is None:
-            sam_model = FastSAM(fast_sam_path)
-    return sam_model
+    class ContextTask(celery.Task):
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return self.run(*args, **kwargs)
+
+    celery.Task = ContextTask
+    return celery

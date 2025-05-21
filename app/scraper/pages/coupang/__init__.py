@@ -1,5 +1,6 @@
 from http.cookiejar import CookieJar
 import json
+import random
 import traceback
 from app.lib.header import generate_desktop_user_agent, generate_user_agent
 from app.lib.logger import logger
@@ -21,6 +22,25 @@ class CoupangScraper:
 
     def run(self):
         return self.run_crawler()
+
+    def proxies(self):
+        auth = "dyhnvzbd:ikzxkk88sckd"
+        proxy_list = [
+            f"http://{auth}@198.23.239.134:6540",
+            f"http://{auth}@107.172.163.27:6543",
+            f"http://{auth}@64.137.42.112:5157",
+            f"http://{auth}@86.38.234.176:6630",
+            f"http://{auth}@173.211.0.148:6641",
+            f"http://{auth}@216.10.27.159:6837",
+            f"http://{auth}@154.36.110.199:6853",
+            f"http://{auth}@45.151.162.198:6600",
+            f"http://{auth}@188.74.210.21:6100",
+        ]
+        selected_proxy = random.choice(proxy_list)
+        return {
+            "http": selected_proxy,
+            "https": selected_proxy,
+        }
 
     def run_fire_crawler(self):
         try:
@@ -323,7 +343,7 @@ class CoupangScraper:
             coupang_data = self.get_page_html(real_url, 0, added_headers)
 
             if not coupang_data:
-                return {}
+                return None
             html = coupang_data["html"]
             url = coupang_data["url"]
             headers = coupang_data["headers"]
@@ -348,7 +368,7 @@ class CoupangScraper:
         except Exception as e:
             logger.error("Exception: {0}".format(str(e)))
             traceback.print_exc()
-            return {}
+            return None
 
     def get_coupang_btf_content(self, meta_url, headers, retry=0):
         try:
@@ -364,8 +384,10 @@ class CoupangScraper:
                 product_id, item_id[0] or "", vendor_item_id[0] or ""
             )
 
+            proxies = self.proxies()
+
             session = requests.Session()
-            response = session.get(btf_url, headers=headers, timeout=5)
+            response = session.get(btf_url, headers=headers, timeout=5, proxies=proxies)
             btf_content = response.json()
             r_data = btf_content.get("rData")
 
@@ -515,9 +537,9 @@ class CoupangScraper:
             mobile_user_agent = generate_user_agent()
             headers.update({"user-agent": mobile_user_agent})
 
-            print("headers", headers)
+            proxies = self.proxies()
 
-            response = session.get(url, headers=headers, timeout=5)
+            response = session.get(url, headers=headers, timeout=5, proxies=proxies)
             info = response.content
             html = BeautifulSoup(info, "html.parser")
             # file_html = open("demo.html", "w", encoding="utf-8")

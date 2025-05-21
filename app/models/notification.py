@@ -1,45 +1,38 @@
-from app.extensions import db
-from app.models.base import BaseModel
-from datetime import datetime
+from app.models.base_mongo import BaseDocument
+from mongoengine import StringField, IntField, ObjectIdField
 
 
-class Notification(db.Model, BaseModel):
-    __tablename__ = "notifications"
+class Notification(BaseDocument):
+    meta = {"collection": "notifications"}
 
-    id = db.Column(db.Integer, primary_key=True)
-    notification_type = db.Column(db.String(500), nullable=False, default="video")
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    batch_id = db.Column(db.Integer, nullable=False)
-    post_id = db.Column(db.Integer, nullable=False)
-    thumbnail = db.Column(db.String(500), nullable=False, default="")
-    images = db.Column(db.Text, nullable=True)
-    captions = db.Column(db.Text, nullable=True)
-    title = db.Column(db.String(500), nullable=False, default="")
-    content = db.Column(db.Text, nullable=False, default="")
-    description = db.Column(db.Text, default="")
-    description_korea = db.Column(db.Text, default="")
-    hashtag = db.Column(db.Text, nullable=True)
-    video_url = db.Column(db.String(255), nullable=False, default="")
-    status = db.Column(db.Integer, default=1)
-    status_sns = db.Column(db.Integer, default=0)
-    is_read = db.Column(db.Integer, default=0)
-    send_telegram = db.Column(db.Integer, default=0)
-    render_id = db.Column(db.String(500), nullable=False, default="")
+    notification_type = StringField(default="video")
+    user_id = IntField(required=True, default=0)
+    batch_id = ObjectIdField()
+    post_id = ObjectIdField()
+    thumbnail = StringField()
+    images = StringField()
+    captions = StringField()
+    title = StringField()
+    content = StringField()
+    description = StringField()
+    description_korea = StringField()
+    hashtag = StringField()
+    video_url = StringField()
+    status = IntField(default=1)
+    status_sns = IntField(default=0)
+    is_read = IntField(default=0)
+    send_telegram = IntField(default=0)
+    render_id = StringField()
+    email = StringField()
 
-    social_sns_description = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
-    updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )  #
-
-    user = db.relationship("User", lazy="joined")
+    social_sns_description = StringField(default="")
 
     to_json_parse = "images"
     to_json_filter = "captions"
 
     def to_dict(self):
         return {
-            "email": self.user.email if self.user else None,
+            # "email": self.user.email if self.user else None,
             "id": self.id,
             "notification_type": self.notification_type,
             "user_id": self.user_id,

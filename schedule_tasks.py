@@ -5,7 +5,8 @@ import logging
 import shutil
 from datetime import datetime
 from logging import DEBUG
-from logging.handlers import RotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
+from mongoengine import Q
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -30,6 +31,7 @@ from app.extensions import redis_client, db, db_mongo
 from app.models.batch import Batch
 from app.models.post import Post
 from app.models.notification import Notification
+from app.services.user import UserService
 from pytz import timezone
 import requests
 
@@ -69,16 +71,20 @@ def create_app():
 
 
 def configure_logging(app):
-    """Cấu hình logging của Flask với file log theo ngày"""
+    """Cấu hình logging để tự động ghi log theo ngày (hàng ngày tạo file mới)"""
     if not os.path.exists(LOG_DIR):
         os.makedirs(LOG_DIR)
 
     log_filename = os.path.join(
-        LOG_DIR, f"schedule_tasks-{datetime.now().strftime('%Y-%m-%d')}.log"
-    )
+        LOG_DIR, "schedule_tasks.log"
+    )  # Không cần ghi ngày ở đây
 
-    file_handler = RotatingFileHandler(
-        log_filename, maxBytes=10 * 1024 * 1024, backupCount=5
+    file_handler = TimedRotatingFileHandler(
+        log_filename,
+        when="midnight",  # Reset mỗi đêm
+        interval=1,  # Mỗi 1 ngày
+        backupCount=7,  # Giữ tối đa 7 bản log cũ
+        encoding="utf-8",
     )
     file_handler.setLevel(DEBUG)
     file_handler.setFormatter(
@@ -115,10 +121,11 @@ def split_message(text, max_length=4000):
     return [text[i : i + max_length] for i in range(0, len(text), max_length)]
 
 
-def format_notification_message(notification_detail, fe_current_domain):
+def format_notification_message(notification_detail, fe_current_domain, user=None):
+    email = user.email if user else ""
     return (
         f"[Toktak Notification {fe_current_domain}]\n"
-        f"- User Email: {notification_detail.get('email')}\n"
+        f"- User Email: {email}\n"
         f"- Notification ID: {notification_detail.get('id')}\n"
         f"- Batch ID: {notification_detail.get('batch_id')}\n"
         f"- Title: {notification_detail.get('title')}\n"
@@ -129,13 +136,13 @@ def format_notification_message(notification_detail, fe_current_domain):
 
 def send_telegram_notifications(app):
     """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
-    app.logger.info("Start send_telegram_notifications...")
+    app.logger.info("🔔 Start send_telegram_notifications...")
 
     telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
 
     if not telegram_token or not chat_id:
-        app.logger.error("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env")
+        app.logger.error("❌ Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env")
         return
 
     telegram_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
@@ -143,22 +150,31 @@ def send_telegram_notifications(app):
     with app.app_context():
         try:
             notifications = (
-                Notification.query.filter(
-                    Notification.send_telegram == 0,
-                    Notification.status == const.NOTIFICATION_FALSE,
+                Notification.objects(
+                    send_telegram=0,
+                    status=const.NOTIFICATION_FALSE,
                 )
-                .order_by(Notification.created_at.asc())
+                .order_by("created_at")
                 .limit(10)
-                .all()
             )
 
+            if not notifications:
+                app.logger.info("✅ No pending notifications to send.")
+                return
+
             fe_current_domain = os.environ.get("FE_DOMAIN") or "http://localhost:5000"
+
+            user_ids = [n.user_id for n in notifications]
+            users = UserService.find_users(user_ids)
+            user_dict = {user.id: user for user in users}
 
             for notification in notifications:
                 try:
                     notification_detail = notification.to_dict()
+                    user = user_dict.get(notification.user_id)
+
                     message = format_notification_message(
-                        notification_detail, fe_current_domain
+                        notification_detail, fe_current_domain, user=user
                     )
 
                     # Tự chia nhỏ nếu tin nhắn quá dài
@@ -172,24 +188,23 @@ def send_telegram_notifications(app):
 
                         if response.status_code == 200:
                             app.logger.info(
-                                f"Sent part {idx+1}/{len(message_parts)} for notification ID {notification.id}"
+                                f"✅ Sent part {idx+1}/{len(message_parts)} for notification ID {notification.id}"
                             )
                         else:
                             app.logger.warning(
-                                f"Failed to send part {idx+1} of notification ID {notification.id}. Response: {response.text}"
+                                f"⚠️ Failed to send part {idx+1} of notification ID {notification.id}. Response: {response.text}"
                             )
 
                     notification.send_telegram = 1
+                    notification.save()
 
                 except Exception as single_error:
                     app.logger.error(
-                        f"Error sending notification ID {notification.id}: {str(single_error)}"
+                        f"❌ Error sending notification ID {notification.id}: {str(single_error)}"
                     )
 
-            db.session.commit()
-
         except Exception as e:
-            app.logger.error(f"Error in send_telegram_notifications: {str(e)}")
+            app.logger.exception(f"❌ Error in send_telegram_notifications: {str(e)}")
 
 
 def translate_notification(app):
@@ -199,17 +214,18 @@ def translate_notification(app):
     with app.app_context():
         try:
             notifications = (
-                Notification.query.filter(
-                    Notification.status == const.NOTIFICATION_FALSE,
-                    Notification.description != "",
-                    or_(
-                        Notification.description_korea == None,
-                        Notification.description_korea == "",
-                    ),
+                Notification.objects(
+                    status=const.NOTIFICATION_FALSE,  # status bằng giá trị constant
+                    description__ne="",  # description khác chuỗi rỗng
                 )
-                .order_by(Notification.id.desc())
-                .limit(10)
-                .all()
+                .filter(
+                    Q(
+                        description_korea__exists=False
+                    )  # description_korea không tồn tại
+                    | Q(description_korea="")  # hoặc bằng chuỗi rỗng
+                )
+                .order_by("-id")  # sort theo id giảm dần
+                .limit(10)  # giới hạn 10 kết quả
             )
 
             if not notifications:
@@ -236,9 +252,7 @@ def cleanup_pending_batches(app):
 
             while has_more_batches:
                 with db.session.begin():
-                    batches = (
-                        Batch.query.filter_by(process_status="PENDING").limit(100).all()
-                    )
+                    batches = Batch.objects(process_status="PENDING").limit(100)
                     has_more_batches = bool(batches)
 
                     deleted_batch_ids = []
@@ -246,10 +260,24 @@ def cleanup_pending_batches(app):
                     for batch in batches:
                         try:
                             batch_date = batch.created_at.strftime("%Y_%m_%d")
+                            app.logger.info(
+                                f"Deleting batch {batch.id} with process_status 'PENDING'"
+                            )
 
-                            Post.query.filter_by(batch_id=batch.id).delete()
-                            db.session.delete(batch)
-                            deleted_batch_ids.append(batch.id)
+                            # Delete related posts
+                            posts = Post.objects(batch_id=batch.id)
+                            for post in posts:
+                                try:
+                                    app.logger.info(
+                                        f"Deleting post {post.id} related to batch {batch.id}"
+                                    )
+                                    post.delete()
+                                except Exception as post_error:
+                                    app.logger.error(
+                                        f"Error deleting post {post.id}: {str(post_error)}"
+                                    )
+
+                            batch.delete()
 
                             upload_folder = os.path.join(
                                 UPLOAD_BASE_PATH, batch_date, str(batch.id)
@@ -264,8 +292,6 @@ def cleanup_pending_batches(app):
                             app.logger.error(
                                 f"Error processing batch {batch.id}: {str(batch_error)}"
                             )
-
-                db.session.commit()
 
             if deleted_batch_ids:
                 app.logger.info(
@@ -319,6 +345,16 @@ def check_urls_health(app):
         app.logger.info("✅ All URLs are healthy.")
 
 
+def auto_extend_subscription_task(app):
+    app.logger.info("Start auto_extend_subscription_task...")
+    with app.app_context():
+        try:
+            count = UserService.auto_extend_free_subscriptions()
+            app.logger.info(f"✓ Auto-extended {count} FREE users")
+        except Exception as e:
+            app.logger.error(f"Error in auto_extend_subscription_task: {str(e)}")
+
+
 def create_notification_task():
     try:
         app.logger.info("Check : Created a new notification successfully.")
@@ -339,6 +375,8 @@ def start_scheduler(app):
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
     four_am_kst_trigger = CronTrigger(hour=4, minute=0, timezone=kst)
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
+
+    twelve_oh_one_trigger = CronTrigger(hour=0, minute=1, timezone=kst)
 
     every_3_hours_trigger = CronTrigger(hour="*/3", minute=0, timezone=kst)
 
@@ -386,6 +424,12 @@ def start_scheduler(app):
         func=exchange_thread_token,
         trigger=four_am_kst_trigger,
         id="exchange_thread_token",
+    )
+
+    scheduler.add_job(
+        func=lambda: auto_extend_subscription_task(app),
+        trigger=twelve_oh_one_trigger,
+        id="auto_extend_subscription_task",
     )
 
     atexit.register(lambda: scheduler.shutdown(wait=False))
