@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from dotenv import load_dotenv
@@ -52,8 +53,11 @@ def main():
     with app.app_context():
         app.logger.info("Start TEST...")
 
-        thread1 = Thread(target=run_test)
-        thread2 = Thread(target=run_test)
+        user = UserService.find_user(id=1)
+        link = LinkService.find_link(id=1)
+
+        thread1 = Thread(target=run_test, args=(app, link, user))
+        thread2 = Thread(target=run_test, args=(app, link, user))
         thread1.start()
         thread2.start()
         thread1.join()
@@ -62,49 +66,58 @@ def main():
         app.logger.info("End TEST...")
 
 
-def run_test():
-    user_id = 0
-    redis_key_done = f"toktak:users:{user_id}:refreshtoken-done:X"
-    redis_key_check = f"toktak:users:{user_id}:refresh-token:X"
-    unique_value = f"{time.time()}_{user_id}_{uuid.uuid4()}"
-    redis_key_check_count = f"toktak:users:{user_id}:logging:X"
-    redis_client.rpush(redis_key_check_count, unique_value)
-    redis_client.expire(redis_key_check_count, 300)
+def run_test(app, link, user):
+    with app.app_context():
+        user_id = user.id
 
-    is_refresing = redis_client.get(redis_key_check)
-    current_time = time.time()
-    for i in range(3):
-        time.sleep(1)
-        count_client = redis_client.llen(redis_key_check_count)
-        if count_client > 1:
-            unique_values = redis_client.lrange(redis_key_check_count, 0, -1)
-            if unique_values and unique_values[-1].decode("utf-8") != unique_value:
-                time.sleep(1)
-                is_refresing = redis_client.get(redis_key_check)
-                if is_refresing:
-                    break
+        user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
+        user_link_meta = json.loads(user_link.meta)
+
+        redis_key_done = f"toktak:users:{user_id}:refreshtoken-done:X"
+        redis_key_check = f"toktak:users:{user_id}:refresh-token:X"
+        unique_value = f"{time.time()}_{user_id}_{uuid.uuid4()}"
+        redis_key_check_count = f"toktak:users:{user_id}:logging:X"
+        redis_client.rpush(redis_key_check_count, unique_value)
+        redis_client.expire(redis_key_check_count, 300)
+
         is_refresing = redis_client.get(redis_key_check)
-
-    if is_refresing:
-        while True:
-            refresh_done = redis_client.get(redis_key_done)
-            refresh_done_str = refresh_done.decode("utf-8") if refresh_done else None
-            if refresh_done_str:
-                redis_client.delete(redis_key_check)
-                redis_client.delete(redis_key_done)
-                current_time = time.time()
-                if refresh_done_str == "failled":
-                    return False
-                return True
+        current_time = time.time()
+        for i in range(3):
             time.sleep(1)
+            count_client = redis_client.llen(redis_key_check_count)
+            if count_client > 1:
+                unique_values = redis_client.lrange(redis_key_check_count, 0, -1)
+                if unique_values and unique_values[-1].decode("utf-8") != unique_value:
+                    time.sleep(1)
+                    is_refresing = redis_client.get(redis_key_check)
+                    if is_refresing:
+                        break
+            is_refresing = redis_client.get(redis_key_check)
 
-    redis_client.set(redis_key_check, 1, ex=300)
-    current_time = time.time()
-    print("processed", current_time, is_refresing)
+        if is_refresing:
+            while True:
+                refresh_done = redis_client.get(redis_key_done)
+                refresh_done_str = (
+                    refresh_done.decode("utf-8") if refresh_done else None
+                )
+                if refresh_done_str:
+                    redis_client.delete(redis_key_check)
+                    redis_client.delete(redis_key_done)
+                    current_time = time.time()
+                    if refresh_done_str == "failled":
+                        return False
+                    return True
+                time.sleep(1)
 
-    redis_client.set(redis_key_done, "success")
-    current_time = time.time()
-    print("updated_refresh_done", current_time)
+        redis_client.set(redis_key_check, 1, ex=300)
+        current_time = time.time()
+        print("processed", current_time, is_refresing)
+
+        time.sleep(3)
+
+        redis_client.set(redis_key_done, "success")
+        current_time = time.time()
+        print("updated_refresh_done", current_time)
 
 
 if __name__ == "__main__":
