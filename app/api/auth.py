@@ -96,7 +96,7 @@ class APISocialLogin(Resource):
                     code=202,
                 ).to_dict()
 
-        user, new_user_referral_code, is_new_user = AuthService.social_login(
+        user, new_user_referral_code , is_new_user = AuthService.social_login(
             provider=provider,
             access_token=access_token,
             person_id=person_id,

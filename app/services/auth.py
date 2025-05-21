@@ -118,7 +118,6 @@ class AuthService:
                     "num_days": 30,
                 }
                 UserService.create_user_history(**data_new_user_history)
-
             else:
                 user = User.query.filter_by(email=email).first()
 
