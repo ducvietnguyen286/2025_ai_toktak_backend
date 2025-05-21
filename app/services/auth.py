@@ -118,7 +118,6 @@ class AuthService:
                     "num_days": 30,
                 }
                 UserService.create_user_history(**data_new_user_history)
-                
             else:
                 user = User.query.filter_by(email=email).first()
 
@@ -175,7 +174,7 @@ class AuthService:
                 access_token=access_token,
             )
             social_account.save()
-        return user, new_user_referral_code , is_new_user
+        return user, new_user_referral_code, is_new_user
 
     @staticmethod
     def get_facebook_user_info(access_token, person_id):
@@ -305,10 +304,12 @@ class AuthService:
 
     @staticmethod
     def reset_free_user(user_id):
+
+        subscription_expired = datetime.now() + relativedelta(months=1)
         user_detail = AuthService.update(
             user_id,
             subscription="FREE",
-            subscription_expired=None,
+            subscription_expired=subscription_expired,
             batch_total=const.LIMIT_BATCH["FREE"],
             batch_remain=const.LIMIT_BATCH["FREE"],
             batch_sns_total=0,

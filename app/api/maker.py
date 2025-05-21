@@ -89,7 +89,6 @@ def validater_create_batch(current_user, is_advance, url=""):
                     code=201,
                 ).to_dict()
 
-        user_id_login = current_user.id
         if current_user.subscription == "FREE":
             if is_advance:
                 return Response(
@@ -105,65 +104,7 @@ def validater_create_batch(current_user, is_advance, url=""):
                     code=201,
                 ).to_dict()
 
-            today_used = redis_client.get(f"toktak:users:free:used:{user_id_login}")
-            if today_used:
-                return Response(
-                    message=MessageError.WAIT_TOMORROW.value["message"],
-                    data={
-                        "error_message": MessageError.WAIT_TOMORROW.value[
-                            "error_message"
-                        ],
-                        "error_message_en": MessageError.WAIT_TOMORROW.value[
-                            "error_message_en"
-                        ],
-                    },
-                    code=201,
-                ).to_dict()
-
-        current_month = time.strftime("%Y-%m", time.localtime())
-
-        if current_user.batch_remain == 0:
-            if (
-                current_user.subscription == "FREE"
-                and current_user.batch_of_month
-                and current_month != current_user.batch_of_month
-            ):
-                current_user.batch_total = const.LIMIT_BATCH[current_user.subscription]
-                current_user.batch_remain = const.LIMIT_BATCH[current_user.subscription]
-                current_user.batch_of_month = current_month
-                current_user.save()
-            else:
-                return Response(
-                    message=MessageError.NO_BATCH_REMAINING.value["message"],
-                    data={
-                        "error_message": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message"
-                        ],
-                        "error_message_en": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message_en"
-                        ],
-                    },
-                    code=201,
-                ).to_dict()
-
-        redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
-
-        current_remain = redis_client.get(redis_user_batch_key)
-        if current_remain:
-            current_remain = int(current_remain)
-            if current_remain <= 0:
-                return Response(
-                    message=MessageError.NO_BATCH_REMAINING.value["message"],
-                    data={
-                        "error_message": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message"
-                        ],
-                        "error_message_en": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message_en"
-                        ],
-                    },
-                    code=201,
-                ).to_dict()
+            
         return None
     except Exception as e:
         traceback.print_exc()

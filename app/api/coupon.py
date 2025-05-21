@@ -127,6 +127,9 @@ class APIUsedCoupon(Resource):
                     coupon_code.is_used = True
                     coupon_code.used_by = current_user.id
                     coupon_code.used_at = datetime.datetime.now()
+                    login_subscription_expired = (
+                        current_user.subscription_expired or datetime.datetime.now()
+                    )
 
                     if coupon.type == "DISCOUNT":
                         pass
@@ -136,26 +139,18 @@ class APIUsedCoupon(Resource):
                         value_coupon = coupon_code.value if coupon_code.value else 30
 
                         if current_user.subscription == "FREE":
+                            login_subscription_expired = datetime.datetime.now()
                             current_user.batch_total = value_coupon
                             current_user.batch_remain = value_coupon
                         else:
                             current_user.batch_total += value_coupon
                             current_user.batch_remain += value_coupon
 
-                            # if coupon.type == "SUB_STANDARD_2":
                         current_user.batch_no_limit_sns = 1
                         # tong so luong kenh co the lien ket
                         current_user.total_link_active = 7
-                        # else:
-                        #     if current_user.subscription == "FREE":
-                        #         current_user.batch_sns_remain = value_coupon * 2
-                        #         current_user.batch_sns_total = value_coupon * 2
-                        #     else:
-                        #         current_user.batch_sns_remain += value_coupon * 2
-                        #         current_user.batch_sns_total += value_coupon * 2
-
                         current_user.subscription = "COUPON_STANDARD"
-                        expired_at = datetime.datetime.now() + datetime.timedelta(
+                        expired_at = login_subscription_expired + datetime.timedelta(
                             days=coupon_code.num_days
                         )
                         end_of_expired_at = expired_at.replace(
@@ -177,6 +172,40 @@ class APIUsedCoupon(Resource):
                         pass
                     elif coupon.type == "SUB_PRO":
                         pass
+                    elif coupon.type == "KOL_COUPON":
+                        current_user_id = current_user.id
+                        value_coupon = coupon_code.value if coupon_code.value else 30
+
+                        if current_user.subscription == "FREE":
+                            login_subscription_expired = datetime.datetime.now()
+                            current_user.batch_total = value_coupon
+                            current_user.batch_remain = value_coupon
+                        else:
+                            current_user.batch_total += value_coupon
+                            current_user.batch_remain += value_coupon
+
+                        current_user.batch_no_limit_sns = 1
+                        current_user.total_link_active = (
+                            coupon_code.total_link_active or 1
+                        )
+                        current_user.subscription = "COUPON_KOL"
+                        expired_at = login_subscription_expired + datetime.timedelta(
+                            days=coupon_code.num_days
+                        )
+                        end_of_expired_at = expired_at.replace(
+                            hour=23, minute=59, second=59
+                        )
+                        coupon_code.expired_at = end_of_expired_at
+                        current_user.subscription_expired = end_of_expired_at
+
+                        redis_user_batch_key = (
+                            f"toktak:users:batch_remain:{current_user_id}"
+                        )
+                        redis_user_batch_sns_key = (
+                            f"toktak:users:batch_sns_remain:{current_user_id}"
+                        )
+                        redis_client.delete(redis_user_batch_key)
+                        redis_client.delete(redis_user_batch_sns_key)
 
                     coupon = session.merge(coupon)
                     coupon_code = session.merge(coupon_code)
@@ -190,8 +219,8 @@ class APIUsedCoupon(Resource):
                         "type": "USED_COUPON",
                         "type_2": coupon.type,
                         "object_id": coupon_code.id,
-                        "object_start_time": coupon_code.used_at,
-                        "object_end_time": coupon_code.expired_at,
+                        "object_start_time": login_subscription_expired,
+                        "object_end_time": end_of_expired_at,
                         "title": coupon_code.coupon.name,
                         "description": coupon_code.code,
                         "value": coupon_code.value,
