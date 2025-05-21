@@ -31,11 +31,12 @@ class APIUsedCoupon(Resource):
     )
     def post(self, args):
         current_user = AuthService.get_current_identity(no_cache=True)
+        current_user_id = current_user.id
         code = args.get("code", "")
         coupon = CouponService.find_coupon_by_code(code)
         if coupon == "not_exist":
             return Response(
-                message="쿠폰 코드가 존재하지 않습니다",
+                message="유효하지 않은 쿠폰입니다.<br/>쿠폰 번호를 확인해 주세요😭",
                 code=201,
             ).to_dict()
         if coupon == "used":
@@ -52,7 +53,7 @@ class APIUsedCoupon(Resource):
             ).to_dict()
         if coupon == "expired":
             return Response(
-                message="쿠폰 코드가 만료되었습니다<br/>쿠폰 번호를 확인해 주세요😭",
+                message="유효하지 않은 쿠폰입니다.<br/>쿠폰 번호를 확인해 주세요😭",
                 message_en="Mã đã hết hạn expired",
                 code=201,
             ).to_dict()
@@ -76,21 +77,41 @@ class APIUsedCoupon(Resource):
                 code=201,
             ).to_dict()
 
-        if coupon.max_used and coupon.used >= coupon.max_used:
-            return Response(
-                message="쿠폰 코드가 더 이상 사용할 수 없습니다",
-                code=201,
-            ).to_dict()
-
         if coupon.is_check_user:
-            count_used = CouponService.coount_coupon_used(coupon.id, current_user.id)
+            count_used = CouponService.count_coupon_used(coupon.id, current_user.id)
             if coupon.max_per_user and count_used >= coupon.max_per_user:
                 return Response(
-                    message="쿠폰 코드가 더 이상 사용할 수 없습니다",
+                    message="쿠폰 코드가 사용 가능 횟수를 초과했습니다",
+                    message_en="The coupon code has exceeded the number of allowed uses with is_check_user",
                     code=201,
                 ).to_dict()
-
         coupon_code = CouponService.find_coupon_code(code)
+
+        # kiểm tra xem user đã dùng mã mời của KOL hay chưa
+        # Nếu đã dùng của người khác thì không được dùng của KOL cũ
+        if coupon.type == "KOL_COUPON":
+            # Use KOL coupon_Fail_over join date
+            login_created_at = current_user.created_at
+            today = datetime.datetime.today().date()
+            if login_created_at and (today - login_created_at.date()).days >= 8:
+                return Response(
+                    message_title="⏰ 아쉽지만 사용 기한이 지났어요.",
+                    message="이 쿠폰은 가입 후 7일 이내에만 사용할 수 있어요! 😥",
+                    message_en="It has been 8 days since registration.",
+                    code=202,
+                ).to_dict()
+
+            user_history = UserService.find_user_history_coupon_kol(
+                current_user_id, "KOL_COUPON"
+            )
+            if user_history:
+                return Response(
+                    data={},
+                    message="이 쿠폰은 중복 사용이 불가능해요. 😊",
+                    message_title="⚠️ 이미 같은 종류의 쿠폰을 사용하셨어요!",
+                    message_en="Use KOL coupon_Fail_use same type coupon",
+                    code=201,
+                ).to_dict()
 
         result = None
 
@@ -143,7 +164,6 @@ class APIUsedCoupon(Resource):
                         coupon_code.expired_at = end_of_expired_at
                         current_user.subscription_expired = end_of_expired_at
 
-                        current_user_id = current_user.id
                         redis_user_batch_key = (
                             f"toktak:users:batch_remain:{current_user_id}"
                         )
@@ -168,6 +188,7 @@ class APIUsedCoupon(Resource):
                     data_user_history = {
                         "user_id": current_user_id,
                         "type": "USED_COUPON",
+                        "type_2": coupon.type,
                         "object_id": coupon_code.id,
                         "object_start_time": coupon_code.used_at,
                         "object_end_time": coupon_code.expired_at,
@@ -196,7 +217,6 @@ class APIUsedCoupon(Resource):
 
 @ns.route("/create")
 class APICreateCoupon(Resource):
-
     @jwt_required()
     @parameters(
         type="object",
@@ -211,12 +231,14 @@ class APICreateCoupon(Resource):
                     "SUB_STANDARD_2",
                     "SUB_PREMIUM",
                     "SUB_PRO",
+                    "KOL_COUPON",
                 ],
             },
             "is_check_user": {"type": "boolean"},
             "max_per_user": {"type": "string"},
             "max_used": {"type": ["string", "null"]},
             "num_days": {"type": ["string", "null"]},
+            "total_link_active": {"type": ["string", "null"]},
             "value": {"type": ["string", "null"]},
             # "is_has_whitelist": {"type": "boolean"},
             # "white_lists": {"type": "array", "items": {"type": ["string", "null"]}},
@@ -253,6 +275,13 @@ class APICreateCoupon(Resource):
             if args.get("num_days")
             else const.DATE_EXPIRED
         )
+
+        total_link_active = (
+            int(args.get("total_link_active", const.MAX_SNS))
+            if args.get("total_link_active")
+            else const.MAX_SNS
+        )
+
         value = args.get("value")
         is_has_whitelist = args.get("is_has_whitelist", False)
         white_lists = args.get("white_lists", [])
@@ -279,6 +308,7 @@ class APICreateCoupon(Resource):
             count_code=max_used,
             value=value,
             num_days=num_days,
+            total_link_active=total_link_active,
             expired_at=expired,
         )
         return Response(

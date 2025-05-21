@@ -17,6 +17,7 @@ class CouponCode(db.Model, BaseModel):
     expired_at = db.Column(db.DateTime)
     value = db.Column(db.Integer, nullable=False, default=0)
     num_days = db.Column(db.Integer, default=const.DATE_EXPIRED)
+    total_link_active = db.Column(db.Integer, default=7)
     used_at = db.Column(db.DateTime)
     used_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
@@ -50,6 +51,7 @@ class CouponCode(db.Model, BaseModel):
             "is_active": self.is_active,
             "value": self.value,
             "num_days": self.num_days,
+            "total_link_active": self.total_link_active,
             "used_by": self.used_by,
             "used_at": (
                 self.used_at.strftime("%Y-%m-%d %H:%M:%S") if self.used_at else None
