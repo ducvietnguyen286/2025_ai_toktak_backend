@@ -104,7 +104,6 @@ def validater_create_batch(current_user, is_advance, url=""):
                     code=201,
                 ).to_dict()
 
-            
         return None
     except Exception as e:
         traceback.print_exc()
@@ -531,6 +530,10 @@ class APIUpdateTemplateVideoUser(Resource):
             "is_paid_advertisements": {"type": "integer"},
             "product_name": {"type": "string"},
             "is_product_name": {"type": "integer"},
+            "is_product_description": {"type": "integer"},
+            "product_description": {"type": "string"},
+            "is_product_pin": {"type": "integer"},
+            "product_pin": {"type": "string"},
             "purchase_guide": {"type": "string"},
             "is_purchase_guide": {"type": "integer"},
             "voice_gender": {"type": ["integer", "null"]},
@@ -554,6 +557,10 @@ class APIUpdateTemplateVideoUser(Resource):
             is_product_name = args.get("is_product_name", 0)
             purchase_guide = args.get("purchase_guide", "")
             is_purchase_guide = args.get("is_purchase_guide", 0)
+            is_product_description = args.get("is_product_description", 0)
+            product_description = args.get("product_description", "")
+            is_product_pin = args.get("is_product_pin", 0)
+            product_pin = args.get("product_pin", "")
             voice_gender = args.get("voice_gender", 0)
             voice_id = args.get("voice_id", 0)
             is_video_hooking = args.get("is_video_hooking", 0)
@@ -580,6 +587,10 @@ class APIUpdateTemplateVideoUser(Resource):
                 "is_paid_advertisements": is_paid_advertisements,
                 "product_name": product_name,
                 "is_product_name": is_product_name,
+                "is_product_description": is_product_description,
+                "product_description": product_description,
+                "is_product_pin": is_product_pin,
+                "product_pin": product_pin,
                 "purchase_guide": purchase_guide,
                 "is_purchase_guide": is_purchase_guide,
                 "voice_gender": voice_gender,
@@ -1868,7 +1879,6 @@ class APIDownloadZip(Resource):
                 message="상품 정보를 불러올 수 없어요.(Error code : )",
                 code=201,
             ).to_dict()
-
 
 
 @ns.route("/schedule_batch")

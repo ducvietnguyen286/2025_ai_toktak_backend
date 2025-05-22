@@ -92,6 +92,17 @@ class APIUsedCoupon(Resource):
         # kiểm tra xem user đã dùng mã mời của KOL hay chưa
         # Nếu đã dùng của người khác thì không được dùng của KOL cũ
         if coupon.type == "KOL_COUPON":
+            
+            login_is_auth_nice = current_user.is_auth_nice
+            if login_is_auth_nice == 0:
+                return Response(
+                    message_title="⏰ 아쉽지만 사용 기한이 지났어요.",
+                    message="이 쿠폰은 가입 후 7일 이내에만 사용할 수 있어요! 😥",
+                    message_en="It has been 8 days since registration.",
+                    code=203,
+                ).to_dict()
+            
+            
             # Use KOL coupon_Fail_over join date
             login_created_at = current_user.created_at
             today = datetime.datetime.today().date()

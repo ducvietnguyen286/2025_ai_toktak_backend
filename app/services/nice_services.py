@@ -235,11 +235,17 @@ class NiceAuthService:
                     # Gia hạn 7 ngày cho người được mời
                     basic_package = PACKAGE_CONFIG["INVITE_BASIC"]
                     expire_date = referred_subscription_expired + reward_duration
+
+                    old_referred_batch_remain = UserService.get_total_batch_remain(
+                        referred_user_id
+                    )
+
                     referred_update_data = {
                         "subscription_expired": expire_date,
                         "subscription": "INVITE_BASIC",
-                        "batch_total": basic_package["batch_total"],
-                        "batch_remain": basic_package["batch_remain"],
+                        "batch_total": 30 + basic_package["batch_total"],
+                        "batch_remain": old_referred_batch_remain
+                        + basic_package["batch_remain"],
                         "total_link_active": basic_package["total_link_active"],
                     }
 

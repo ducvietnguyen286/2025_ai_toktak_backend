@@ -355,7 +355,7 @@ def get_subscription_name(subscription):
         elif subscription == "COUPON_STANDARD":
             subscription_name = "기업형 스탠다드 플랜"
         elif subscription == "NEW_USER":
-            subscription_name = "무료 체험"
+            subscription_name = "신규 가입 선물"
         elif subscription == "COUPON_KOL":
             subscription_name = "기업형 스탠다드 플랜"
         else:
