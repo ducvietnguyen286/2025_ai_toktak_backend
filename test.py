@@ -103,7 +103,11 @@ def run_test(app, link, user):
             else:
                 is_refresing = redis_client.get(redis_key_check)
 
-        if is_refresing:
+        check_refresh = is_refresing.decode("utf-8") if is_refresing else None
+
+        if check_refresh:
+            current_time = time.time()
+            print("is_refresing", current_time, is_refresing)
             while True:
                 refresh_done = redis_client.get(redis_key_done)
                 refresh_done_str = (
@@ -113,6 +117,7 @@ def run_test(app, link, user):
                     redis_client.delete(redis_key_check)
                     redis_client.delete(redis_key_done)
                     current_time = time.time()
+                    print("refresh_done", current_time, refresh_done_str)
                     if refresh_done_str == "failled":
                         return False
                     return True

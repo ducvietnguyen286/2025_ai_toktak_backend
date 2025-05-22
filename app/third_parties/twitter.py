@@ -160,9 +160,14 @@ class TwitterTokenService:
                         is_refresing = redis_client.get(redis_key_check)
                         if is_refresing:
                             break
-                is_refresing = redis_client.get(redis_key_check)
+                    else:
+                        is_refresing = redis_client.get(redis_key_check)
+                else:
+                    is_refresing = redis_client.get(redis_key_check)
 
-            if is_refresing:
+            check_refresh = is_refresing.decode("utf-8") if is_refresing else None
+
+            if check_refresh:
                 while True:
                     refresh_done = redis_client.get(redis_key_done)
                     refresh_done_str = (
