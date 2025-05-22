@@ -25,16 +25,17 @@ class CoupangScraper:
 
     def proxies(self):
         auth = "dyhnvzbd:ikzxkk88sckd"
+
         proxy_list = [
             f"http://{auth}@198.23.239.134:6540",
             f"http://{auth}@107.172.163.27:6543",
-            f"http://{auth}@64.137.42.112:5157",
-            f"http://{auth}@86.38.234.176:6630",
-            f"http://{auth}@173.211.0.148:6641",
+            f"http://{auth}@207.244.217.165:6712",
+            f"http://{auth}@161.123.152.115:6360",
+            f"http://{auth}@23.94.138.75:6349",
             f"http://{auth}@216.10.27.159:6837",
-            f"http://{auth}@154.36.110.199:6853",
-            f"http://{auth}@45.151.162.198:6600",
-            f"http://{auth}@188.74.210.21:6100",
+            f"http://{auth}@136.0.207.84:6661",
+            f"http://{auth}@64.64.118.149:6732",
+            f"http://{auth}@142.147.128.93:6593",
         ]
         selected_proxy = random.choice(proxy_list)
         return {
@@ -525,7 +526,7 @@ class CoupangScraper:
 
     def get_page_html(self, url, count=0, added_headers=None):
         try:
-            if count > 3:
+            if count > 5:
                 return False
 
             cookie_jar = CookieJar()
