@@ -27,7 +27,7 @@ class CouponService:
         return Coupon.query.get(id)
 
     @staticmethod
-    def coount_coupon_used(coupon_id, user_id):
+    def count_coupon_used(coupon_id, user_id):
         count_used = CouponCode.query.filter(
             CouponCode.coupon_id == coupon_id, CouponCode.used_by == user_id
         ).count()
@@ -35,16 +35,32 @@ class CouponService:
 
     @staticmethod
     def find_coupon_by_code(code):
-        coupon_code = CouponCode.query.where(CouponCode.code == code).first()
+        # Tìm mã coupon
+        coupon_code = CouponCode.query.filter_by(code=code).first()
         if not coupon_code:
             return "not_exist"
+
+        # Tìm thông tin coupon chính
+        coupon = Coupon.query.filter_by(id=coupon_code.coupon_id).first()
+        if not coupon:
+            return "not_exist"
+
+        # Nếu coupon yêu cầu kiểm tra người dùng thì trả thẳng về để xử lý ngoài
+        if coupon.is_check_user:
+            return coupon
+
+        # Các điều kiện kiểm tra trạng thái của mã coupon
         if coupon_code.is_used:
             return "used"
+
         if not coupon_code.is_active:
             return "not_active"
+
         if coupon_code.expired_at and coupon_code.expired_at < datetime.datetime.now():
             return "expired"
-        return Coupon.query.where(Coupon.id == coupon_code.coupon_id).first()
+
+        return coupon
+
 
     @staticmethod
     def find_coupon_code(code):
@@ -152,16 +168,13 @@ class CouponService:
         # Áp dụng các bộ lọc nếu có
         if "code" in query_params and query_params["code"]:
             search_term = f"%{query_params['code']}%"
-    
+
             # Chắc chắn join bảng Coupon để dùng filter
             code_query = code_query.join(Coupon)
 
             code_query = code_query.filter(
-                or_(
-                    CouponCode.code.ilike(search_term),
-                    Coupon.name.ilike(search_term)
-                )
-            ) 
+                or_(CouponCode.code.ilike(search_term), Coupon.name.ilike(search_term))
+            )
         if (
             "type_use_coupon" in query_params
             and query_params["type_use_coupon"]
@@ -243,7 +256,7 @@ class CouponService:
         return coupon_codes, total_codes
 
     @staticmethod
-    def create_codes(coupon_id, count_code=100, value=0, num_days=30, expired_at=None):
+    def create_codes(coupon_id, count_code=100, value=0, num_days=30,total_link_active = 7 ,  expired_at=None):
         coupon_codes = []
         code_by_day = CouponService.get_code_by_day()
         code_by_month = CouponService.get_code_by_month()
@@ -263,6 +276,7 @@ class CouponService:
                 "is_used": False,
                 "is_active": True,
                 "num_days": num_days,
+                "total_link_active": total_link_active,
                 "created_at": datetime.datetime.now(),
                 "updated_at": datetime.datetime.now(),
             }
