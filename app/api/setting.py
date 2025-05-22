@@ -120,6 +120,15 @@ class GetPublicConfig(Resource):
             data=settings_dict,
             message="Get Public setting",
         ).to_dict()
+        
+@ns.route("/ping")
+class APIPingStatus(Resource):
+    def get(self):
+        
+        return Response(
+            data={},
+            message="Ping Oke",
+        ).to_dict()
 
 
 
