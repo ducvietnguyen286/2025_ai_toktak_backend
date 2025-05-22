@@ -83,7 +83,7 @@ class APIUsedCoupon(Resource):
                 return Response(
                     message="쿠폰 코드가 사용 가능 횟수를 초과했습니다",
                     message_en="The coupon code has exceeded the number of allowed uses with is_check_user",
-                    code=201,
+                    code=202,
                 ).to_dict()
         coupon_code = CouponService.find_coupon_code(code)
 
