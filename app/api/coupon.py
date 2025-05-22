@@ -110,7 +110,7 @@ class APIUsedCoupon(Resource):
                     message="이 쿠폰은 중복 사용이 불가능해요. 😊",
                     message_title="⚠️ 이미 같은 종류의 쿠폰을 사용하셨어요!",
                     message_en="Use KOL coupon_Fail_use same type coupon",
-                    code=201,
+                    code=202,
                 ).to_dict()
 
         result = None
