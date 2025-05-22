@@ -18,13 +18,15 @@ class ReferralService:
         ).first()
         return referral_history_detail
 
+
     @staticmethod
-    def find_by_referred_user_id_done(referred_user_id) -> int:
+    def find_by_referrer_user_id_done(referrer_user_id) -> int:
         total = ReferralHistory.query.filter(
-            ReferralHistory.referred_user_id == referred_user_id,
+            ReferralHistory.referrer_user_id == referrer_user_id,
             ReferralHistory.status == "DONE",
         ).count()
         return total
+
 
     @staticmethod
     def use_referral_code(referral_code, login_user) -> dict:
@@ -38,7 +40,7 @@ class ReferralService:
             return False
 
         referrer_user_id = user.id
-        usage_count = ReferralService.find_by_referred_user_id_done(referrer_user_id)
+        usage_count = ReferralService.find_by_referrer_user_id_done(referrer_user_id)
         if usage_count >= MAX_REFERRAL_USAGE:
             return False
 
