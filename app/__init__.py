@@ -114,12 +114,14 @@ def __config_error_handlers(app):
 
 class CommandLogger(monitoring.CommandListener):
     def started(self, event):
-        log_mongo_database(f"Command: {event.command}")
+        # log_mongo_database(f"Command: {event.command}")
+        pass
 
     def succeeded(self, event):
         pass
 
     def failed(self, event):
-        log_mongo_database(
-            f"Failed command: {event.command_name} with request id {event.request_id} on server {event.connection_id} with error: {event.failure}"
-        )
+        # log_mongo_database(
+        #     f"Failed command: {event.command_name} with request id {event.request_id} on server {event.connection_id} with error: {event.failure}"
+        # )
+        pass
