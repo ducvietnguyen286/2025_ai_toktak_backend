@@ -337,6 +337,17 @@ class APICreateCoupon(Resource):
         white_lists = args.get("white_lists", [])
         description = args.get("description", "")
 
+        code_coupon=""
+        if type =='KOL_COUPON':
+            coupon_detail = CouponService.find_coupon_by_name(name)
+            if coupon_detail:
+                return Response(
+                    message="이미 생성된 이름입니다.",
+                    code=201
+                ).to_dict()
+            code_coupon = name
+            max_used = 1
+            
         coupon = CouponService.create_coupon(
             image=image,
             name=name,
@@ -353,8 +364,11 @@ class APICreateCoupon(Resource):
             created_by=current_user.id,
             # number_expired=number_expired,
         )
+        
+            
         CouponService.create_codes(
             coupon.id,
+            code_coupon,
             count_code=max_used,
             value=value,
             num_days=num_days,
