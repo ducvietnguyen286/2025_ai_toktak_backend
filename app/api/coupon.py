@@ -188,6 +188,10 @@ class APIUsedCoupon(Resource):
                             current_user.batch_total += value_coupon
                             current_user.batch_remain += value_coupon
 
+                        login_subscription_expired = (
+                            login_subscription_expired + datetime.timedelta(days=1)
+                        )
+
                         current_user.batch_no_limit_sns = 1
                         current_user.total_link_active = (
                             coupon_code.total_link_active or 1
