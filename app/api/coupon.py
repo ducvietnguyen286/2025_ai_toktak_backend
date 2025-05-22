@@ -64,18 +64,20 @@ class APIUsedCoupon(Resource):
                     message="쿠폰 코드가 사용 불가능합니다",
                     code=201,
                 ).to_dict()
-
-        if coupon.expired_from and coupon.expired_from > datetime.datetime.now():
+                
+        today = datetime.datetime.today().date()
+        if coupon.expired_from and coupon.expired_from.date() > today:
             return Response(
                 message="쿠폰 코드가 사용 불가능합니다",
                 code=201,
             ).to_dict()
 
-        if coupon.expired and coupon.expired < datetime.datetime.now():
+        if coupon.expired and coupon.expired.date() < today:
             return Response(
                 message="쿠폰 코드가 만료되었습니다",
                 code=201,
             ).to_dict()
+            
 
         if coupon.is_check_user:
             count_used = CouponService.count_coupon_used(coupon.id, current_user.id)
@@ -83,7 +85,7 @@ class APIUsedCoupon(Resource):
                 return Response(
                     message="쿠폰 코드가 사용 가능 횟수를 초과했습니다",
                     message_en="The coupon code has exceeded the number of allowed uses with is_check_user",
-                    code=202,
+                    code=201,
                 ).to_dict()
         coupon_code = CouponService.find_coupon_code(code)
 

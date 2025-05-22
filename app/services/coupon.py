@@ -45,6 +45,9 @@ class CouponService:
         if not coupon:
             return "not_exist"
 
+        if coupon.type == "KOL_COUPON":
+            return coupon
+
         # Nếu coupon yêu cầu kiểm tra người dùng thì trả thẳng về để xử lý ngoài
         if coupon.is_check_user:
             return coupon
@@ -60,7 +63,6 @@ class CouponService:
             return "expired"
 
         return coupon
-
 
     @staticmethod
     def find_coupon_code(code):
@@ -256,7 +258,14 @@ class CouponService:
         return coupon_codes, total_codes
 
     @staticmethod
-    def create_codes(coupon_id, count_code=100, value=0, num_days=30,total_link_active = 7 ,  expired_at=None):
+    def create_codes(
+        coupon_id,
+        count_code=100,
+        value=0,
+        num_days=30,
+        total_link_active=7,
+        expired_at=None,
+    ):
         coupon_codes = []
         code_by_day = CouponService.get_code_by_day()
         code_by_month = CouponService.get_code_by_month()
