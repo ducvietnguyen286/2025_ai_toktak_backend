@@ -75,24 +75,48 @@ def parameters(**schema):
                         if field in schema["properties"]:
                             if "name" in schema["properties"][field]:
                                 field_name = schema["properties"][field]["name"]
-                        raise BadRequest(message="{} is required".format(field_name))
+                        message = "{} is required".format(field_name)
+                        return Response(
+                            message=message,
+                            message_en="Request parameters are invalid.",
+                            status=500,
+                        ).to_dict()
+
             try:
                 validate(
                     instance=req_args, schema=schema, format_checker=FormatChecker()
                 )
             except ValidationError as exp:
                 exp_info = list(exp.schema_path)
-                error_type = ("type", "format", "pattern", "maxLength", "minLength")
+                error_type = (
+                    "type",
+                    "format",
+                    "pattern",
+                    "maxLength",
+                    "minLength",
+                    "enum",
+                )
+
                 if set(exp_info).intersection(set(error_type)):
                     field = exp_info[1]
-                    field_name = field
-                    if field_name in schema["properties"]:
-                        if "name" in schema["properties"][field]:
-                            field_name = schema["properties"][field]["name"]
-                    message = "{} is not valid".format(field_name)
+                    field_config = schema["properties"].get(field, {})
+                    field_name_kr = field_config.get("name", field)  # name tiếng Hàn
+                    valid_values = field_config.get("enum", [])
+
+                    message = f"'{field_name_kr}' 필드의 값이 올바르지 않습니다."
+                    message_en = f"Field '{field}' is not valid."
+
+                    if valid_values:
+                        enum_values = ", ".join(valid_values)
+                        message += f" 허용된 값: {enum_values}."
+                        message_en += f" Valid values: {enum_values}."
                 else:
-                    message = exp.message  # pragma: no cover
-                raise BadRequest(message=message)
+                    message = "요청 파라미터가 잘못되었습니다."
+                    message_en = "Request parameters are invalid."
+
+                return Response(
+                    message=message, message_en=message_en, status=500
+                ).to_dict()
 
             if request.endpoint == "api.maker_api_make_post":
                 kwargs["req_args"] = req_args

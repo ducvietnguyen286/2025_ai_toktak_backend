@@ -61,7 +61,7 @@ class AuthService:
         referral_code="",
     ):
         new_user_referral_code = 0
-
+        is_new_user = 0
         user_info = None
         if provider == "FACEBOOK":
             user_info = AuthService.get_facebook_user_info(access_token, person_id)
@@ -102,6 +102,23 @@ class AuthService:
                     level_info=json.dumps(level_info),
                 )
                 user.save()
+                is_new_user = 1
+                # Create Basic for new User
+                object_start_time = datetime.now()
+                data_new_user_history = {
+                    "user_id": user.id,
+                    "type": "user",
+                    "type_2": "NEW_USER",
+                    "object_id": user.id,
+                    "object_start_time": object_start_time,
+                    "object_end_time": subscription_expired,
+                    "title": "신규 가입을 환영합니다!",
+                    "description": "신규 가입을 환영합니다!",
+                    "value": 30,
+                    "num_days": 30,
+                }
+                UserService.create_user_history(**data_new_user_history)
+                
             else:
                 user = User.query.filter_by(email=email).first()
 
@@ -115,11 +132,34 @@ class AuthService:
                     name=name,
                     avatar=avatar,
                     level=level,
+                    subscription="NEW_USER",
                     subscription_expired=subscription_expired,
+                    batch_total=const.PACKAGE_CONFIG["BASIC"]["batch_total"],
+                    batch_remain=const.PACKAGE_CONFIG["BASIC"]["batch_remain"],
+                    total_link_active=const.PACKAGE_CONFIG["BASIC"][
+                        "total_link_active"
+                    ],
                     level_info=json.dumps(level_info),
                 )
 
                 user.save()
+
+                # Create Basic for new User
+                object_start_time = datetime.now()
+                data_new_user_history = {
+                    "user_id": user.id,
+                    "type": "user",
+                    "type_2": "NEW_USER",
+                    "object_id": user.id,
+                    "object_start_time": object_start_time,
+                    "object_end_time": subscription_expired,
+                    "title": "신규 가입을 환영합니다!",
+                    "description": "신규 가입을 환영합니다!",
+                    "value": 30,
+                    "num_days": 30,
+                }
+                UserService.create_user_history(**data_new_user_history)
+                is_new_user = 1
 
                 if referral_code != "":
                     user_history = ReferralService.use_referral_code(
@@ -135,7 +175,7 @@ class AuthService:
                 access_token=access_token,
             )
             social_account.save()
-        return user, new_user_referral_code
+        return user, new_user_referral_code , is_new_user
 
     @staticmethod
     def get_facebook_user_info(access_token, person_id):
