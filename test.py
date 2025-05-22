@@ -84,15 +84,24 @@ def run_test(app, link, user):
         current_time = time.time()
         for i in range(3):
             time.sleep(1)
-            count_client = redis_client.llen(redis_key_check_count)
-            if count_client > 1:
-                unique_values = redis_client.lrange(redis_key_check_count, 0, -1)
-                if unique_values and unique_values[-1].decode("utf-8") != unique_value:
-                    time.sleep(1)
+            count_client = redis_client.llen(
+                redis_key_check_count
+            )  # Đêm lấy số lượng client đang refresh
+            if count_client > 1:  # Nếu có nhiều client đang refresh
+                unique_values = redis_client.lrange(
+                    redis_key_check_count, 0, -1
+                )  # Lấy ra client refresh sau
+                if (
+                    unique_values and unique_values[-1].decode("utf-8") != unique_value
+                ):  # Xác định client refresh sau
+                    time.sleep(2)
                     is_refresing = redis_client.get(redis_key_check)
                     if is_refresing:
                         break
-            is_refresing = redis_client.get(redis_key_check)
+                else:
+                    is_refresing = redis_client.get(redis_key_check)
+            else:
+                is_refresing = redis_client.get(redis_key_check)
 
         if is_refresing:
             while True:

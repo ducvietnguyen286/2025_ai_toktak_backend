@@ -156,7 +156,7 @@ class TwitterTokenService:
                         unique_values
                         and unique_values[-1].decode("utf-8") != unique_value
                     ):
-                        time.sleep(1)
+                        time.sleep(2)
                         is_refresing = redis_client.get(redis_key_check)
                         if is_refresing:
                             break
