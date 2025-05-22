@@ -285,17 +285,18 @@ class ImageMaker:
             if not image_path:
                 continue
             try:
+                extension = image_path.split(".")[-1].lower()
+                if extension == "gif":
+                    base_images.append(image_path)
+                    continue
                 image_cv = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+
+                if image_cv is None:
+                    continue
+
                 image_height, image_width = image_cv.shape[:2]
 
                 if image_height <= (image_width * 3):
-                    extension = image_path.split(".")[-1].lower()
-                    if extension == "gif":
-                        base_images.append(image_path)
-                        continue
-
-                    if image_cv is None:
-                        continue
 
                     if not image_path.lower().endswith(".jpg"):
                         new_image_path = image_path.rsplit(".", 1)[0] + ".jpg"
