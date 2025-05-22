@@ -220,7 +220,7 @@ class NiceAuthService:
                     reward_duration = relativedelta(days=7)
                     # kiểm tra tối đa số lần của người mời
                     referrer_user_id = referral_history_detail.referrer_user_id
-                    usage_count = ReferralService.find_by_referred_user_id_done(
+                    usage_count = ReferralService.find_by_referrer_user_id_done(
                         referrer_user_id
                     )
                     if usage_count >= MAX_REFERRAL_USAGE:
