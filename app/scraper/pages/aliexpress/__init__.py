@@ -67,7 +67,10 @@ class AliExpressScraper:
             return url
 
     def run_scraper(self):
-        if "https://s.click.aliexpress.com/" in self.url:
+        if (
+            "https://s.click.aliexpress.com/" in self.url
+            or "https://a.aliexpress.com/" in self.url
+        ):
             request_url = self.un_shortend_url(self.url)
         else:
             request_url = self.url
@@ -294,10 +297,10 @@ class AliExpressScraper:
                     sku_image = "https:" + sku_image
 
             image_url = thumbnails[0] if thumbnails else ""
-            
+
             if image_url.startswith("//"):
                 image_url = "https:" + image_url
-                
+
             image_datas = []
             if images:
                 image_datas = [
@@ -309,8 +312,6 @@ class AliExpressScraper:
                     f"https:{img}" if img.startswith("//") else img
                     for img in thumbnails
                 ]
-
-
 
             if video_url.startswith("//"):
                 video_url = "https:" + video_url
@@ -414,10 +415,10 @@ class AliExpressScraper:
                 video_info = video.get("videoPlayInfo", {})
                 video_thumbnail = video.get("posterUrl", "")
                 video_url = video_info.get("webUrl", "")
-                
+
             if image_url.startswith("//"):
                 image_url = "https:" + image_url
-                    
+
             image_datas = []
             if images:
                 image_datas = [
@@ -429,7 +430,6 @@ class AliExpressScraper:
                     f"https:{img}" if img.startswith("//") else img
                     for img in thumbnails
                 ]
-                
 
             result = {
                 "name": data.get("title", ""),

@@ -120,7 +120,11 @@ def generate_shortcode(length=6):
 
 
 def should_replace_shortlink(url):
-    excluded_domains = ["https://link.coupang.com", "https://s.click.aliexpress.com"]
+    excluded_domains = [
+        "https://link.coupang.com",
+        "https://s.click.aliexpress.com",
+        "https://a.aliexpress.com",
+    ]
 
     return not any(url.startswith(domain) for domain in excluded_domains)
 
@@ -340,7 +344,7 @@ def change_advance_hashtags(original_str, new_hashtag, max_count=10):
 
 
 def mask_string_with_x(name, created_at):
-    masked_name =""
+    masked_name = ""
     if name:
         masked_name = "X" * len(name)
     return f"{created_at} {masked_name}님이 초대를 수락했어요"
