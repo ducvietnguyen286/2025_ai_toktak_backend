@@ -5,11 +5,6 @@ from gevent import monkey
 monkey.patch_all()
 gevent.get_hub().debug = True
 
-import time
-
-print("Original sleep:", gevent.monkey.get_original("time", "sleep"))
-print("Patched sleep:", time.sleep)
-
 import os
 
 from dotenv import load_dotenv
