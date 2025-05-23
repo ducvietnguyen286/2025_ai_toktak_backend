@@ -284,8 +284,11 @@ class NiceAuthService:
                     referrer_subscription_expired = (
                         referrer_user_data.subscription_expired
                     )
+                    
+                    old_batch_total = referrer_user_data.batch_total
                     if subscription == "FREE":
                         referrer_subscription_expired = datetime_now
+                        old_batch_total = 0
 
                     referrer_subscription_expired = (
                         referrer_subscription_expired + relativedelta(days=1)
@@ -294,12 +297,13 @@ class NiceAuthService:
                     subscription_expired = (
                         referrer_subscription_expired + reward_duration
                     )
+                    
+                    old_referred_batch_remain = UserService.get_total_batch_remain(
+                        referrer_user_id
+                    )
 
                     new_batch_remain = (
-                        referrer_user_data.batch_remain + basic_package["batch_remain"]
-                    )
-                    old_batch_total = UserService.get_total_batch_remain(
-                        referrer_user_id
+                        old_referred_batch_remain + basic_package["batch_remain"]
                     )
                     new_batch_total = basic_package["batch_total"] + old_batch_total
 
