@@ -127,6 +127,10 @@ def process_beauty_image(image_path):
                 image_path, width, height
             )
 
+            logger.info(
+                f"Full text: {full_text}, Ratio: {ratio}, Length labels: {length_labels}"
+            )
+
             if not full_text:
                 return {
                     "image_path": image_path,
@@ -316,9 +320,12 @@ class ImageMaker:
 
         time.sleep(1)
 
+        logger.info(f"Process images: {process_images}")
+
         cleared_images = []
         for image_path in process_images:
             result = process_beauty_image(image_path)
+            logger.info(f"Result: {result}")
             if "is_remove" in result and result["is_remove"]:
                 image_path = result["image_path"]
                 if os.path.exists(image_path):
