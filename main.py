@@ -1,14 +1,14 @@
 # coding: utf8
+from gevent import monkey
+
+monkey.patch_all()
+
 import os
 
 from dotenv import load_dotenv
 from flask import abort, send_from_directory, request, jsonify
 
 load_dotenv(override=False)
-
-from gevent import monkey
-
-monkey.patch_all()
 
 from app import create_app  # noqa
 from app.config import configs as config  # noqa
