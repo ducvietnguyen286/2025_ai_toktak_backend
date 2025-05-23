@@ -1,16 +1,15 @@
 # coding: utf8
+
 from logging import DEBUG
 import os
 
 from werkzeug.exceptions import default_exceptions
 
-from app.lib.logger import log_mongo_database
-
 from .errors.handler import api_error_handler
 
 from flask import Flask, jsonify
 from flask_cors import CORS
-from .extensions import redis_client, db, bcrypt, jwt, db_mongo, make_celery
+from .extensions import redis_client, db, bcrypt, jwt, init_mongoengine, make_celery
 from pymongo import monitoring
 
 from flask_jwt_extended.exceptions import NoAuthorizationError
@@ -68,7 +67,7 @@ def __init_app(app):
     redis_client.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
-    db_mongo.init_app(app)
+    init_mongoengine(app)
     # init_sam_model(app)
 
     celery = make_celery(app)
