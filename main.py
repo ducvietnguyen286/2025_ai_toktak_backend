@@ -22,7 +22,7 @@ from app.config import configs as config  # noqa
 
 config_name = os.environ.get("FLASK_CONFIG") or "develop"
 config_app = config[config_name]
-application = app = create_app(config_app)
+application = create_app(config_app)
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 VOICE_FOLDER = os.path.join(os.getcwd(), "static/voice")
@@ -67,7 +67,7 @@ EXCLUDED_ENDPOINTS = {"/api/v1/setting/get_public_config"}
 #     return send_from_directory(VOICE_FOLDER, filename)
 
 
-@app.route("/", methods=["GET"])
+@application.route("/", methods=["GET"])
 def index():
     headers = dict(request.headers)
     params = dict(request.args)
@@ -84,5 +84,4 @@ def index():
 
 
 if __name__ == "__main__":
-    is_debug = config_name == "develop"
-    application.run(debug=True)
+    application.run()
