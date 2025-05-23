@@ -24,8 +24,8 @@ import secrets
 import string
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
-import time
 from app.extensions import redis_client
+from gevent import sleep
 
 
 class AuthService:
@@ -118,7 +118,7 @@ class AuthService:
                     "num_days": 30,
                 }
                 UserService.create_user_history(**data_new_user_history)
-                
+
             else:
                 user = User.query.filter_by(email=email).first()
 
@@ -175,7 +175,7 @@ class AuthService:
                 access_token=access_token,
             )
             social_account.save()
-        return user, new_user_referral_code , is_new_user
+        return user, new_user_referral_code, is_new_user
 
     @staticmethod
     def get_facebook_user_info(access_token, person_id):
@@ -194,7 +194,7 @@ class AuthService:
         WEB_CLIENT_ID = os.environ.get("AUTH_GOOGLE_CLIENT_ID")
         IS_LOCAL = os.environ.get("FLASK_CONFIG") == "develop"
         if IS_LOCAL:
-            time.sleep(3)
+            sleep(3)
         idinfo = id_token.verify_oauth2_token(
             access_token, google_requests.Request(), WEB_CLIENT_ID
         )

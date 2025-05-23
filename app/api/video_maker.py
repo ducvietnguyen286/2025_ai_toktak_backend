@@ -19,6 +19,8 @@ from app.services.user import UserService
 from app.services.product import ProductService
 import const
 from app.extensions import redis_client
+from gevent import sleep
+
 
 ns = Namespace(name="video_maker", description="Video Maker API")
 
@@ -301,7 +303,7 @@ def download_video(video_url, batch_id):
             )
 
         if attempt < MAX_RETRIES:
-            time.sleep(RETRY_DELAY)
+            sleep(RETRY_DELAY)
 
     log_webhook_message(
         f"❌ Tải video thất bại batch_id: {batch_id} sau {MAX_RETRIES} lần: {video_url}"
