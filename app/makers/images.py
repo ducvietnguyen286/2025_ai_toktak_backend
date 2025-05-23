@@ -22,7 +22,7 @@ from app.lib.logger import logger
 
 from app.lib.header import generate_desktop_user_agent
 from app.third_parties.google import GoogleVision
-from gevent import sleep
+from time import sleep
 
 
 FONT_FOLDER = os.path.join(os.getcwd(), "app/makers/fonts")

@@ -19,7 +19,7 @@ from app.services.user import UserService
 from app.services.product import ProductService
 import const
 from app.extensions import redis_client
-from gevent import sleep
+from time import sleep
 
 
 ns = Namespace(name="video_maker", description="Video Maker API")

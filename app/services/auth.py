@@ -25,7 +25,7 @@ import string
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 from app.extensions import redis_client
-from gevent import sleep
+from time import sleep
 
 
 class AuthService:
