@@ -6,9 +6,12 @@ from flask import abort, send_from_directory, request, jsonify
 
 load_dotenv(override=False)
 
+from gevent import monkey
+
+monkey.patch_all()
+
 from app import create_app  # noqa
 from app.config import configs as config  # noqa
-import const
 
 config_name = os.environ.get("FLASK_CONFIG") or "develop"
 config_app = config[config_name]
