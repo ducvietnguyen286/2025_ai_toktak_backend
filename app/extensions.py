@@ -8,7 +8,7 @@ from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO
 from flask_mongoengine import MongoEngine
 from celery import Celery
-from mongoengine import connect
+from mongoengine import connect, disconnect
 
 
 redis_client = FlaskRedis()
@@ -21,6 +21,8 @@ db_mongo = MongoEngine()
 
 
 def init_mongoengine(app):
+    disconnect(alias="default")
+
     db_name = os.environ.get("MONGODB_DB", "toktak")
     host = os.environ.get("MONGODB_HOST", "localhost")
     port = os.environ.get("MONGODB_PORT", "27017")
