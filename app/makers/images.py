@@ -358,8 +358,6 @@ class ImageMaker:
         except IOError:
             logger.error(f"Cannot identify image file {image_path}")
             print(f"Cannot identify image file {image_path}")
-            if os.path.exists(image_path):
-                os.remove(image_path)
             return {
                 "image_urls": [],
                 "is_cut_out": False,
@@ -378,6 +376,10 @@ class ImageMaker:
                 SAM_CHECK_IMAGE_URL, json={"image_path": image_path}
             )
             json_response = response.json()
+
+            logger.info(f"Response from SAM: {json_response}")
+            logger.info(f"IMAGE PATH: {image_path}")
+
             results = json_response.get("images", [])
 
             image_cv = cv2.imread(image_path)

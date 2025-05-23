@@ -89,7 +89,6 @@ def validater_create_batch(current_user, is_advance, url=""):
                     code=201,
                 ).to_dict()
 
-        user_id_login = current_user.id
         if current_user.subscription == "FREE":
             if is_advance:
                 return Response(
@@ -105,65 +104,6 @@ def validater_create_batch(current_user, is_advance, url=""):
                     code=201,
                 ).to_dict()
 
-            today_used = redis_client.get(f"toktak:users:free:used:{user_id_login}")
-            if today_used:
-                return Response(
-                    message=MessageError.WAIT_TOMORROW.value["message"],
-                    data={
-                        "error_message": MessageError.WAIT_TOMORROW.value[
-                            "error_message"
-                        ],
-                        "error_message_en": MessageError.WAIT_TOMORROW.value[
-                            "error_message_en"
-                        ],
-                    },
-                    code=201,
-                ).to_dict()
-
-        current_month = time.strftime("%Y-%m", time.localtime())
-
-        if current_user.batch_remain == 0:
-            if (
-                current_user.subscription == "FREE"
-                and current_user.batch_of_month
-                and current_month != current_user.batch_of_month
-            ):
-                current_user.batch_total = const.LIMIT_BATCH[current_user.subscription]
-                current_user.batch_remain = const.LIMIT_BATCH[current_user.subscription]
-                current_user.batch_of_month = current_month
-                current_user.save()
-            else:
-                return Response(
-                    message=MessageError.NO_BATCH_REMAINING.value["message"],
-                    data={
-                        "error_message": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message"
-                        ],
-                        "error_message_en": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message_en"
-                        ],
-                    },
-                    code=201,
-                ).to_dict()
-
-        redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
-
-        current_remain = redis_client.get(redis_user_batch_key)
-        if current_remain:
-            current_remain = int(current_remain)
-            if current_remain <= 0:
-                return Response(
-                    message=MessageError.NO_BATCH_REMAINING.value["message"],
-                    data={
-                        "error_message": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message"
-                        ],
-                        "error_message_en": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message_en"
-                        ],
-                    },
-                    code=201,
-                ).to_dict()
         return None
     except Exception as e:
         traceback.print_exc()
@@ -436,21 +376,23 @@ class APIBatchMakeImage(Resource):
         try:
             batch_id = args.get("batch_id", 0)
             posts = []
+
+            batch_detail = BatchService.find_batch(batch_id)
+            if not batch_detail:
+                return Response(
+                    message="Batch không tồn tại",
+                    code=201,
+                ).to_dict()
+
+            content = json.loads(batch_detail.content)
+            batch_thumbails = batch_detail.thumbnails
+            crawl_url = content["url_crawl"] or ""
+            base_images = content["images"] or []
+            base_thumbnails = json.loads(batch_thumbails) if batch_thumbails else []
+            images = []
+            thumbnails = []
+
             if os.environ.get("USE_CUT_OUT_IMAGE") == "true":
-
-                batch_detail = BatchService.find_batch(batch_id)
-                if not batch_detail:
-                    return Response(
-                        message="Batch không tồn tại",
-                        code=201,
-                    ).to_dict()
-
-                content = json.loads(batch_detail.content)
-
-                base_images = content["images"] or []
-                images = []
-
-                crawl_url = content["url_crawl"] or ""
 
                 is_avif = True if "aliexpress" in crawl_url else False
                 if os.environ.get("USE_OCR") == "true":
@@ -466,26 +408,21 @@ class APIBatchMakeImage(Resource):
                 # cutout_images = []
                 cutout_by_sam_images = []
 
-                for image in images:
-                    # has_google_cut_out = False
-                    # has_sam_cut_out = False
-                    # cuted_image = ImageMaker.cut_out_long_height_images_by_google(
-                    #     image, batch_id=batch_id
-                    # )
-                    # if not cuted_image or (
-                    #     cuted_image and "is_cut_out" not in cuted_image
-                    # ):
-                    #     continue
-                    # elif cuted_image:
-                    #     is_cut_out = cuted_image.get("is_cut_out", False)
-                    #     image_urls = cuted_image.get("image_urls", [])
-                    #     if is_cut_out:
-                    #         cutout_images.extend(image_urls)
-                    #         has_google_cut_out = True
+                if "domeggook" in crawl_url:
+                    thumbnails = ImageMaker.save_normal_images(
+                        base_thumbnails, batch_id=batch_id, is_avif=is_avif
+                    )
 
+                    thumbnails = ImageMaker.get_multiple_image_url_from_path(thumbnails)
+                else:
+                    thumbnails = base_thumbnails
+
+                logger.info(f"images: {images}")
+                for image in images:
                     sam_cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
                     )
+                    logger.info(f"sam_cuted_image: {sam_cuted_image}")
                     if not sam_cuted_image or (
                         sam_cuted_image and "is_cut_out" not in sam_cuted_image
                     ):
@@ -499,39 +436,22 @@ class APIBatchMakeImage(Resource):
                             description_images.extend(sam_image_urls)
 
                 merge_cleared_images = []
-                # if len(cutout_images) > 0:
-                #     merge_cleared_images.extend(cutout_images)
                 if len(cutout_by_sam_images) > 0:
                     merge_cleared_images.extend(cutout_by_sam_images)
                 if len(description_images) > 0:
                     merge_cleared_images.extend(description_images)
                 content["cleared_images"] = merge_cleared_images
-                # content["cutout_images"] = cutout_images
+                content["images"] = []
                 content["sam_cutout_images"] = cutout_by_sam_images
                 content["description_images"] = description_images
+
                 data_update_batch = {
+                    "thumbnails": json.dumps(thumbnails),
                     "content": json.dumps(content),
                 }
                 BatchService.update_batch(batch_id, **data_update_batch)
             else:
-                batch_detail = BatchService.find_batch(batch_id)
-                if not batch_detail:
-                    return Response(
-                        message="Batch không tồn tại",
-                        code=201,
-                    ).to_dict()
-                content = json.loads(batch_detail.content)
-                crawl_url = content["url_crawl"] or ""
-
                 if "domeggook" in crawl_url:
-                    base_images = content["images"] or []
-                    batch_thumbails = batch_detail.thumbnails
-                    base_thumbnails = (
-                        json.loads(batch_thumbails) if batch_thumbails else []
-                    )
-                    images = []
-                    thumbnails = []
-
                     is_avif = True if "aliexpress" in crawl_url else False
                     images = ImageMaker.save_normal_images(
                         base_images, batch_id=batch_id, is_avif=is_avif
@@ -590,6 +510,10 @@ class APIUpdateTemplateVideoUser(Resource):
             "is_paid_advertisements": {"type": "integer"},
             "product_name": {"type": "string"},
             "is_product_name": {"type": "integer"},
+            "is_product_description": {"type": "integer"},
+            "product_description": {"type": "string"},
+            "is_product_pin": {"type": "integer"},
+            "product_pin": {"type": "string"},
             "purchase_guide": {"type": "string"},
             "is_purchase_guide": {"type": "integer"},
             "voice_gender": {"type": ["integer", "null"]},
@@ -613,6 +537,10 @@ class APIUpdateTemplateVideoUser(Resource):
             is_product_name = args.get("is_product_name", 0)
             purchase_guide = args.get("purchase_guide", "")
             is_purchase_guide = args.get("is_purchase_guide", 0)
+            is_product_description = args.get("is_product_description", 0)
+            product_description = args.get("product_description", "")
+            is_product_pin = args.get("is_product_pin", 0)
+            product_pin = args.get("product_pin", "")
             voice_gender = args.get("voice_gender", 0)
             voice_id = args.get("voice_id", 0)
             is_video_hooking = args.get("is_video_hooking", 0)
@@ -639,6 +567,10 @@ class APIUpdateTemplateVideoUser(Resource):
                 "is_paid_advertisements": is_paid_advertisements,
                 "product_name": product_name,
                 "is_product_name": is_product_name,
+                "is_product_description": is_product_description,
+                "product_description": product_description,
+                "is_product_pin": is_product_pin,
+                "product_pin": product_pin,
                 "purchase_guide": purchase_guide,
                 "is_purchase_guide": is_purchase_guide,
                 "voice_gender": voice_gender,
@@ -1927,7 +1859,6 @@ class APIDownloadZip(Resource):
                 message="상품 정보를 불러올 수 없어요.(Error code : )",
                 code=201,
             ).to_dict()
-
 
 
 @ns.route("/schedule_batch")

@@ -13,7 +13,7 @@ import json
 
 from app.services.auth import AuthService
 from app.services.notification import NotificationServices
-from app.lib.string import get_level_images
+from app.lib.string import get_level_images, get_subscription_name
 import const
 from app.extensions import redis_client
 
@@ -96,7 +96,7 @@ class APISocialLogin(Resource):
                     code=202,
                 ).to_dict()
 
-        user, new_user_referral_code = AuthService.social_login(
+        user, new_user_referral_code , is_new_user = AuthService.social_login(
             provider=provider,
             access_token=access_token,
             person_id=person_id,
@@ -119,6 +119,7 @@ class APISocialLogin(Resource):
                 "type": "Bearer",
                 "expires_in": 7200,
                 "new_user_referral_code": new_user_referral_code,
+                "is_new_user": is_new_user,
             }
         )
 
@@ -224,24 +225,16 @@ class APIMe(Resource):
                     level_info=json.dumps(level_info),
                 )
 
-            current_datetime = datetime.now()
-            if (
-                user_login.subscription_expired
-                and user_login.subscription_expired <= current_datetime
-            ):
-
+            current_date = datetime.now().date()
+            expired_date = (
+                user_login.subscription_expired.date()
+                if user_login.subscription_expired
+                else None
+            )
+            if expired_date and expired_date < current_date:
                 user_login = AuthService.reset_free_user(user_login.id)
 
-            subscription_name = user_login.subscription
-            if user_login.subscription == "FREE":
-                subscription_name = "무료 체험"
-            elif user_login.subscription == "COUPON_STANDARD":
-                subscription_name = "기업형 스탠다드 플랜"
-            else:
-                package_data = const.PACKAGE_CONFIG.get(subscription_name)
-                if not package_data:
-                    subscription_name = "무료 체험"
-                subscription_name = package_data["pack_name"]
+            subscription_name = get_subscription_name(user_login.subscription)
 
             user_dict = user_login._to_json()
             user_dict["subscription_name"] = subscription_name
@@ -404,11 +397,13 @@ class APIUserProfile(Resource):
                     },
                     code=201,
                 ).to_dict()
-            current_datetime = datetime.now()
-            if (
-                user_login.subscription_expired
-                and user_login.subscription_expired <= current_datetime
-            ):
+            current_date = datetime.now().date()
+            expired_date = (
+                user_login.subscription_expired.date()
+                if user_login.subscription_expired
+                else None
+            )
+            if expired_date and expired_date < current_date:
                 user_login = AuthService.reset_free_user(user_login.id)
 
             level = user_login.level
@@ -423,16 +418,7 @@ class APIUserProfile(Resource):
                     level_info=json.dumps(level_info),
                 )
 
-            subscription_name = user_login.subscription
-            if user_login.subscription == "FREE":
-                subscription_name = "무료 체험"
-            elif user_login.subscription == "COUPON_STANDARD":
-                subscription_name = "기업형 스탠다드 플랜"
-            else:
-                package_data = const.PACKAGE_CONFIG.get(subscription_name)
-                if not package_data:
-                    subscription_name = "무료 체험"
-                subscription_name = package_data["pack_name"]
+            subscription_name = get_subscription_name(user_login.subscription)
 
             first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
             user_histories = UserService.get_all_user_history_by_user_id(user_login.id)

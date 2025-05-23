@@ -5,6 +5,7 @@ import re
 import hashlib
 import base64
 import string
+import const
 from app.lib.logger import logger
 
 
@@ -340,7 +341,32 @@ def change_advance_hashtags(original_str, new_hashtag, max_count=10):
 
 
 def mask_string_with_x(name, created_at):
-    masked_name =""
+    masked_name = ""
     if name:
         masked_name = "X" * len(name)
     return f"{created_at} {masked_name}님이 초대를 수락했어요"
+
+
+def get_subscription_name(subscription):
+    try:
+        subscription_name = subscription
+        if subscription == "FREE":
+            subscription_name = "무료 체험"
+        elif subscription == "COUPON_STANDARD":
+            subscription_name = "기업형 스탠다드 플랜"
+        elif subscription == "NEW_USER":
+            subscription_name = "신규 가입 선물"
+        elif subscription == "COUPON_KOL":
+            subscription_name = "기업형 스탠다드 플랜"
+        else:
+            package_data = const.PACKAGE_CONFIG.get(subscription_name)
+            if not package_data:
+                subscription_name = "무료 체험"
+            subscription_name = package_data["pack_name"]
+        return subscription_name
+
+    except Exception as e:
+        logger.error(
+            f"[get_subscription_name] Failed for path: {subscription} — Error: {e}"
+        )
+        return subscription

@@ -369,15 +369,15 @@ class UserService:
 
     @staticmethod
     def auto_extend_free_subscriptions():
-        now = datetime.now()
+        today = datetime.today().date()
 
         expired_users = User.query.filter(
-            User.subscription == "FREE", User.subscription_expired <= now
+            User.subscription == "FREE", func.date(User.subscription_expired) < today
         ).all()
 
         extended = 0
         for user in expired_users:
-            new_expiry = now + relativedelta(months=1)
+            new_expiry = datetime.now() + relativedelta(months=1)
             user.subscription_expired = new_expiry
             user.batch_total = 10
             user.batch_remain = 10
@@ -414,3 +414,10 @@ class UserService:
             .scalar()
         )
         return batch_total or 0
+
+    @staticmethod
+    def find_user_history_coupon_kol(current_user_id, type_2):
+        user = UserHistory.query.filter_by(
+            type="USED_COUPON", user_id=current_user_id, type_2=type_2
+        ).first()
+        return user if user else None

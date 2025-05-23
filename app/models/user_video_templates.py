@@ -14,6 +14,12 @@ class UserVideoTemplates(db.Model, BaseModel):
     product_name = db.Column(db.String(500), default="", nullable=False)
     is_product_name = db.Column(db.Integer, default=0, nullable=False)
 
+    product_description = db.Column(db.String(500), default="", nullable=False)
+    is_product_description = db.Column(db.Integer, default=0, nullable=False)
+
+    product_pin = db.Column(db.String(500), default="", nullable=False)
+    is_product_pin = db.Column(db.Integer, default=0, nullable=False)
+
     purchase_guide = db.Column(db.String(500), default="", nullable=False)
     narration = db.Column(db.String(10), default="male", nullable=False)
     is_purchase_guide = db.Column(db.Integer, default=0, nullable=False)
@@ -49,6 +55,10 @@ class UserVideoTemplates(db.Model, BaseModel):
             "narration": self.narration,
             "product_name": self.product_name,
             "is_product_name": self.is_product_name,
+            "product_description": self.product_description,
+            "is_product_description": self.is_product_description,
+            "is_product_pin": self.is_product_pin,
+            "product_pin": self.product_pin,
             "purchase_guide": self.purchase_guide,
             "is_purchase_guide": self.is_purchase_guide,
             "voice_gender": self.voice_gender,
