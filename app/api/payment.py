@@ -327,9 +327,18 @@ class APIPaymentApproval(Resource):
 @ns.route("/addon/price_check")
 class APICalculateAddonPrice(Resource):
     @jwt_required()
-    def get(self):
+    @parameters(
+        type="object",
+        properties={
+            "addon_count": {"type": ["string", "null"]},
+        },
+        required=[],
+    )
+    def get(self, args):
+        addon_count = int(args.get("addon_count", 1))
+
         current_user = AuthService.get_current_identity() or None
-        result = PaymentService.calculate_addon_price(current_user.id)
+        result = PaymentService.calculate_addon_price(current_user.id, addon_count)
         return Response(
             data=result,
             code=200,

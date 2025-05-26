@@ -290,7 +290,7 @@ class PaymentService:
         return pagination
 
     @staticmethod
-    def calculate_addon_price(user_id):
+    def calculate_addon_price(user_id, addon_count=1):
         try:
             today = datetime.now().date()
             payment_basic = (
@@ -314,7 +314,7 @@ class PaymentService:
                 }
 
             end_date = payment_basic.end_date.date()
-            remaining_days = (end_date - today).days
+            remaining_days = min((end_date - today).days, 30)
             if remaining_days < 1:
                 return {
                     "can_buy": 0,
@@ -327,13 +327,18 @@ class PaymentService:
             addon_price = const.PACKAGE_CONFIG["BASIC"]["addon"]["EXTRA_CHANNEL"][
                 "price"
             ]
+            
+            total_price = addon_price *  addon_count
             duration = const.BASIC_DURATION_DAYS
             price_to_pay = int(addon_price / duration * remaining_days)
             price_discount = addon_price - price_to_pay
 
             return {
+                "addon_count": 1,
                 "can_buy": 1,
                 "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày.",
+                "duration": duration,
+                "price": total_price,
                 "addon_price": addon_price,
                 "price_discount": price_discount,
                 "price_payment": price_to_pay,
