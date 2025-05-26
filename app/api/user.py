@@ -300,32 +300,32 @@ class APISendPosts(Resource):
             total_sns_content = 0
             if current_user.batch_no_limit_sns == 0:
                 total_sns_content = count_images + count_videos
-                if current_user.batch_sns_remain < total_sns_content:
-                    return Response(
-                        message=MessageError.REQUIRED_COUPON.value["message"],
-                        data={
-                            "error_message": MessageError.REQUIRED_COUPON.value[
-                                "error_message"
-                            ],
-                        },
-                        code=201,
-                    ).to_dict()
+                # if current_user.batch_sns_remain < total_sns_content:
+                #     return Response(
+                #         message=MessageError.REQUIRED_COUPON.value["message"],
+                #         data={
+                #             "error_message": MessageError.REQUIRED_COUPON.value[
+                #                 "error_message"
+                #             ],
+                #         },
+                #         code=201,
+                #     ).to_dict()
 
                 redis_client.set(redis_unique_key, total_sns_content, ex=180)
 
                 current_remain = redis_client.get(redis_user_batch_key)
                 if current_remain:
                     current_remain = int(current_remain)
-                    if current_remain < total_sns_content:
-                        return Response(
-                            message=MessageError.REQUIRED_COUPON.value["message"],
-                            data={
-                                "error_message": MessageError.REQUIRED_COUPON.value[
-                                    "error_message"
-                                ],
-                            },
-                            code=201,
-                        ).to_dict()
+                    # if current_remain < total_sns_content:
+                    #     return Response(
+                    #         message=MessageError.REQUIRED_COUPON.value["message"],
+                    #         data={
+                    #             "error_message": MessageError.REQUIRED_COUPON.value[
+                    #                 "error_message"
+                    #             ],
+                    #         },
+                    #         code=201,
+                    #     ).to_dict()
 
                 if current_remain is None:
                     current_remain = current_user.batch_sns_remain
