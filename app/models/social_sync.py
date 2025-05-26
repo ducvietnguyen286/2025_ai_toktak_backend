@@ -10,7 +10,7 @@ class SocialSync(db.Model, BaseModel):
     in_post_ids = db.Column(db.Text)
     post_ids = db.Column(db.Text)
     social_post_ids = db.Column(db.Text)
-    status = db.Column(db.String(50), max_length=50, default="")
+    status = db.Column(db.String(50), default="")
     process_number = db.Column(db.Integer, default=0)
 
     to_json_filter = (social_post_ids, in_post_ids, post_ids)
