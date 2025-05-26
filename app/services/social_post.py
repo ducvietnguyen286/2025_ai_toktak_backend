@@ -39,49 +39,53 @@ class SocialPostService:
 
     @staticmethod
     def by_post_id_get_latest_social_posts(post_id):
-        latest_post = select_with_filter_one(
-            SocialPost,
-            filters=[
-                SocialPost.post_id == post_id,
-            ],
-            order_by=SocialPost.created_at.desc(),
-        )
-        if not latest_post:
+        try:
+            latest_post = select_with_filter_one(
+                SocialPost,
+                filters=[SocialPost.post_id == post_id],
+                order_by=SocialPost.created_at.desc(),
+            )
+            if latest_post is None:
+                return []
+            session_key = latest_post.session_key
+            results = select_with_filter(
+                SocialPost,
+                filters=[
+                    SocialPost.session_key == session_key,
+                    SocialPost.post_id == post_id,
+                ],
+                order_by=SocialPost.created_at.desc(),
+            )
+            if not results:
+                return []
+
+            link_ids = [result.link_id for result in results]
+            links = Link.query.filter(Link.id.in_(link_ids)).all()
+            link_dict = {link.id: link for link in links}
+
+            data = []
+            for social_post in results:
+                link = link_dict.get(social_post.link_id)
+                post_data = {
+                    "id": social_post.id,
+                    "title": link.title,
+                    "status": social_post.status,
+                    "social_link": social_post.social_link,
+                    "link_id": social_post.link_id,
+                    "link_type": link.type,
+                    "post_id": social_post.post_id,
+                    "session_key": social_post.session_key,
+                    "process_number": social_post.process_number,
+                    "error_message": social_post.error_message,
+                }
+                data.append(post_data)
+
+            return data
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"by_post_id_get_latest_social_posts: {e}")
+            print(e)
             return []
-        session_key = latest_post.session_key
-        results = select_with_filter(
-            SocialPost,
-            filters=[
-                SocialPost.session_key == session_key,
-                SocialPost.post_id == post_id,
-            ],
-            order_by=SocialPost.created_at.desc(),
-        )
-        if not results:
-            return []
-
-        link_ids = [result.link_id for result in results]
-        links = Link.query.filter(Link.id.in_(link_ids)).all()
-        link_dict = {link.id: link for link in links}
-
-        data = []
-        for social_post in results:
-            link = link_dict.get(social_post.link_id)
-            post_data = {
-                "id": social_post.id,
-                "title": link.title,
-                "status": social_post.status,
-                "social_link": social_post.social_link,
-                "link_id": social_post.link_id,
-                "link_type": link.type,
-                "post_id": social_post.post_id,
-                "session_key": social_post.session_key,
-                "process_number": social_post.process_number,
-                "error_message": social_post.error_message,
-            }
-            data.append(post_data)
-
-        return data
 
     @staticmethod
     def update_social_post(id, **kwargs):
