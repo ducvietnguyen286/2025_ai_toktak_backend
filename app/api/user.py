@@ -7,7 +7,6 @@ import time
 import traceback
 from urllib.parse import urlencode
 import uuid
-from bson import ObjectId
 from flask import redirect, request
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
@@ -336,19 +335,19 @@ class APISendPosts(Resource):
 
             social_sync = SocialPostService.create_social_sync(
                 user_id=current_user.id,
-                in_post_ids=id_posts,
-                post_ids=post_ids,
+                in_post_ids=json.dumps(id_posts),
+                post_ids=json.dumps(post_ids),
                 status="PROCESSING",
             )
 
-            sync_id = str(social_sync.id)
+            sync_id = social_sync.id
 
             social_post_ids = []
             upload = []
 
             for post in posts:
-                post_id = str(post.id)
-                batch_id = str(post.batch_id)
+                post_id = post.id
+                batch_id = post.batch_id
                 timestamp = int(time.time())
                 unique_id = uuid.uuid4().hex
 
@@ -376,8 +375,8 @@ class APISendPosts(Resource):
                     social_post = SocialPostService.create_social_post(
                         link_id=link_id,
                         user_id=current_user.id,
-                        post_id=ObjectId(post.id),
-                        batch_id=ObjectId(batch_id),
+                        post_id=post.id,
+                        batch_id=batch_id,
                         session_key=session_key,
                         sync_id=sync_id,
                         status="PROCESSING",
@@ -409,7 +408,7 @@ class APISendPosts(Resource):
                             "link_id": link_id,
                             "post_id": post_id,
                             "user_id": current_user.id,
-                            "social_post_id": str(social_post.id),
+                            "social_post_id": social_post.id,
                             "page_id": "",
                             "is_all": 1,
                         },
@@ -438,7 +437,7 @@ class APISendPosts(Resource):
                 "upload": upload,
             }
 
-            social_sync.social_post_ids = social_post_ids
+            social_sync.social_post_ids = json.dumps(social_post_ids)
             social_sync.save()
             redis_client.set(
                 f"toktak:progress-sync:{sync_id}", json.dumps(progress), ex=1800
@@ -1317,7 +1316,13 @@ class APIGetCallbackYoutube(Resource):
                 user_link.status = 1
                 user_link.save()
 
-                client.user_ids.append(user_id)
+                current_user_ids = client.user_ids
+                current_user_ids = (
+                    json.loads(current_user_ids) if current_user_ids else []
+                )
+                current_user_ids.append(int_user_id)
+
+                client.user_ids = json.dumps(current_user_ids)
                 client.member_count += 1
                 client.save()
             else:
