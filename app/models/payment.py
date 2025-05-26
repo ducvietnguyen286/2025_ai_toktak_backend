@@ -7,6 +7,8 @@ class Payment(db.Model, BaseModel):
     __tablename__ = "payments"
 
     id = db.Column(db.Integer, primary_key=True)
+    
+    parent_id = db.Column(db.Integer, db.ForeignKey("payments.id"), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     order_id = db.Column(db.Integer, nullable=False)
     customer_name = db.Column(db.String(255), nullable=False)
@@ -52,7 +54,7 @@ class Payment(db.Model, BaseModel):
             "status": self.status,
             "total_link": self.total_link,
             "total_create": self.total_create,
-            "status": self.status,
+            "parent_id": self.parent_id,
             "fail_reason": self.fail_reason,
             "requested_at": (
                 self.requested_at.strftime("%Y-%m-%d %H:%M:%S")
