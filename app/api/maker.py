@@ -92,12 +92,12 @@ def validater_create_batch(current_user, is_advance, url=""):
         if current_user.subscription == "FREE":
             if is_advance:
                 return Response(
-                    message=MessageError.REQUIRED_COUPON.value["message"],
+                    message=MessageError.REQUIRED_BILLING.value["message"],
                     data={
-                        "error_message": MessageError.REQUIRED_COUPON.value[
+                        "error_message": MessageError.REQUIRED_BILLING.value[
                             "error_message"
                         ],
-                        "error_message_en": MessageError.REQUIRED_COUPON.value[
+                        "error_message_en": MessageError.REQUIRED_BILLING.value[
                             "error_message_en"
                         ],
                     },

@@ -144,39 +144,27 @@ class PaymentService:
 
         # Tính số ngày còn lại
         today = datetime.now()
-        remaining_days = (basic_payment.end_date - today).days
-        if remaining_days <= 0:
-            logger.info(remaining_days)
-            return None
-
-        # Tính giá theo ngày còn lại
-        addon_full_price = const.PACKAGE_CONFIG["BASIC"]["addon"]["EXTRA_CHANNEL"][
-            "price"
-        ]
-        duration = const.BASIC_DURATION_DAYS
-        addon_price = int(addon_full_price / duration * remaining_days)
-
-        logger.info(f" addon_full_price : {addon_full_price}")
-        logger.info(f" remaining_days : {remaining_days}")
-        logger.info(f" duration : {duration}")
-
         now = datetime.now()
-        payment_data = {
-            "user_id": user_id,
-            "package_name": "ADDON",
-            "amount": addon_full_price,
-            "price": addon_price,
-            "start_date": today,
-            "end_date": basic_payment.end_date,
-            "customer_name": basic_payment.customer_name,
-            "parent_id": parent_payment_id,
-            "total_create": 0,
-            "method": "REQUEST",
-            "requested_at": now,
-            "total_link": 1,
-        }
-        payment = PaymentService.create_payment(**payment_data)
-        return payment
+        result = PaymentService.calculate_addon_price(user_id, 1)
+        if result["can_buy"] == 1:
+            payment_data = {
+                "user_id": user_id,
+                "package_name": "ADDON",
+                "amount": result["amount"],
+                "price": result["price"],
+                "start_date": today,
+                "end_date": basic_payment.end_date,
+                "customer_name": basic_payment.customer_name,
+                "parent_id": parent_payment_id,
+                "total_create": 0,
+                "method": "REQUEST",
+                "requested_at": now,
+                "total_link": 1,
+            }
+            payment = PaymentService.create_payment(**payment_data)
+            return payment
+
+        return None
 
     @staticmethod
     def upgrade_package(current_user, new_package):
@@ -290,7 +278,7 @@ class PaymentService:
         return pagination
 
     @staticmethod
-    def calculate_addon_price(user_id):
+    def calculate_addon_price(user_id, addon_count=1):
         try:
             today = datetime.now().date()
             payment_basic = (
@@ -314,7 +302,7 @@ class PaymentService:
                 }
 
             end_date = payment_basic.end_date.date()
-            remaining_days = (end_date - today).days
+            remaining_days = min((end_date - today).days, 30)
             if remaining_days < 1:
                 return {
                     "can_buy": 0,
@@ -327,14 +315,22 @@ class PaymentService:
             addon_price = const.PACKAGE_CONFIG["BASIC"]["addon"]["EXTRA_CHANNEL"][
                 "price"
             ]
+
+            total_price = addon_price * addon_count
             duration = const.BASIC_DURATION_DAYS
             price_to_pay = int(addon_price / duration * remaining_days)
             price_discount = addon_price - price_to_pay
 
             return {
+                "addon_count": 1,
                 "can_buy": 1,
                 "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày.",
+                "duration": duration,
+                "amount": addon_price,
+                "discount": price_discount,
+                "price": price_to_pay,
                 "addon_price": addon_price,
+                "total_discount": price_discount * addon_count,
                 "price_discount": price_discount,
                 "price_payment": price_to_pay,
                 "remaining_days": remaining_days,

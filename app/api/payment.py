@@ -144,7 +144,8 @@ class APICreateAddon(Resource):
 
         if not basic_payment:
             return Response(
-                message="Bạn không có gói BASIC nào còn hạn, không thể mua addon.",
+                message="유효한 BASIC 요금제가 없어 애드온을 구매할 수 없습니다.",
+                message_en="You don't have any active BASIC plan, so you cannot purchase an addon.",
                 code=201,
             ).to_dict()
 
@@ -155,7 +156,8 @@ class APICreateAddon(Resource):
 
         if total_addon_count >= max_addon:
             return Response(
-                message=f"Bạn đã mua đủ {max_addon} addon cho gói BASIC này.",
+                message=f"BASIC 요금제에 대해 최대 {max_addon}개의 애드온을 구매하셨습니다.",
+                message_en=f"You have purchased the maximum of {max_addon} addons for the BASIC plan.",
                 data={
                     "total_addon_count": total_addon_count,
                     "max_addon": max_addon,
@@ -245,7 +247,7 @@ class APIPaymentApproval(Resource):
                 payment_detail.parent_id
             )
             if payment_parent_detail:
-                payment_parent_end_date = payment_parent_detail.end_date
+                payment_parent_end_date = payment_parent_detail.end_date.date()
                 payment_parent_status = payment_parent_detail.status
                 if payment_parent_status != "PAID":
                     return Response(
@@ -327,9 +329,18 @@ class APIPaymentApproval(Resource):
 @ns.route("/addon/price_check")
 class APICalculateAddonPrice(Resource):
     @jwt_required()
-    def get(self):
+    @parameters(
+        type="object",
+        properties={
+            "addon_count": {"type": ["string", "null"]},
+        },
+        required=[],
+    )
+    def get(self, args):
+        addon_count = int(args.get("addon_count", 1))
+
         current_user = AuthService.get_current_identity() or None
-        result = PaymentService.calculate_addon_price(current_user.id)
+        result = PaymentService.calculate_addon_price(current_user.id, addon_count)
         return Response(
             data=result,
             code=200,
