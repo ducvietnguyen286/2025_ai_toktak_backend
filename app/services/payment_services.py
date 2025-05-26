@@ -366,6 +366,8 @@ class PaymentService:
     @staticmethod
     def calculate_upgrade_price(user_id, new_package):
         today = datetime.now().date()
+        start_date_default = today
+        end_date_default = today + timedelta(days=30)
 
         # Kiểm tra gói mới có hợp lệ không
         new_package_info = const.PACKAGE_CONFIG.get(new_package)
@@ -376,10 +378,13 @@ class PaymentService:
                 "message_en": "Invalid upgrade package.",
                 "current_package": None,
                 "remaining_days": 0,
+                "used_days": 0,
                 "discount": 0,
                 "upgrade_price": 0,
                 "price": 0,
                 "new_package_price": 0,
+                "start_date": start_date_default.strftime("%Y-%m-%d"),
+                "end_date": end_date_default.strftime("%Y-%m-%d"),
             }
 
         # Lấy payment hiện tại còn hạn
@@ -396,13 +401,23 @@ class PaymentService:
                 "message_en": "You do not have an active package to upgrade.",
                 "current_package": None,
                 "remaining_days": 0,
+                "used_days": 0,
                 "discount": 0,
                 "upgrade_price": 0,
                 "price": new_package_info["price"],
                 "new_package_price": new_package_info["price"],
+                "start_date": start_date_default.strftime("%Y-%m-%d"),
+                "end_date": end_date_default.strftime("%Y-%m-%d"),
             }
 
         current_package = current_payment.package_name
+        start_date = (
+            current_payment.start_date.date() if current_payment.start_date else None
+        )
+        end_date = current_payment.end_date.date() if current_payment.end_date else None
+
+        used_days = (today - start_date).days if start_date else 0
+
         if current_package == new_package:
             return {
                 "can_upgrade": 0,
@@ -410,15 +425,17 @@ class PaymentService:
                 "message_en": "You are already using this package.",
                 "current_package": current_package,
                 "remaining_days": 0,
+                "used_days": used_days,
                 "discount": 0,
                 "upgrade_price": 0,
                 "price": new_package_info["price"],
                 "new_package_price": new_package_info["price"],
+                "start_date": start_date.strftime("%Y-%m-%d") if start_date else None,
+                "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
             }
 
-        # Số ngày còn lại
-        end_date = current_payment.end_date.date()
-        remaining_days = (end_date - today).days
+        remaining_days = (end_date - today).days if end_date and today else 0
+
         if remaining_days <= 0:
             return {
                 "can_upgrade": 0,
@@ -426,10 +443,13 @@ class PaymentService:
                 "message_en": "Your current package has expired.",
                 "current_package": current_package,
                 "remaining_days": 0,
+                "used_days": used_days,
                 "discount": 0,
                 "upgrade_price": new_package_info["price"],
                 "price": new_package_info["price"],
                 "new_package_price": new_package_info["price"],
+                "start_date": start_date.strftime("%Y-%m-%d") if start_date else None,
+                "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
             }
 
         # Giá hiện tại
@@ -445,8 +465,11 @@ class PaymentService:
             "message_en": "You can upgrade.",
             "current_package": current_package,
             "remaining_days": remaining_days,
+            "used_days": used_days,
             "discount": discount,
             "upgrade_price": upgrade_price,
             "price": new_package_price,
             "new_package_price": new_package_price,
+            "start_date": start_date.strftime("%Y-%m-%d") if start_date else None,
+            "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
         }
