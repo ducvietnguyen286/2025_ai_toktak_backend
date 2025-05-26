@@ -115,6 +115,8 @@ class APICalculateUpgradePrice(Resource):
         return Response(
             data=result,
             code=result["code"],
+            message=result["message"],
+            message_en=result["message_en"],
         ).to_dict()
 
 
