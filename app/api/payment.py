@@ -84,15 +84,11 @@ class APICreateNewPayment(Resource):
         # Nếu mua kèm addon (chỉ áp dụng với BASIC)
         if package_name == "BASIC" and addon_count > 0:
             for _ in range(min(addon_count, const.MAX_ADDON_PER_BASIC)):
-                addon_payment = PaymentService.create_addon_payment(
-                    user_id_login, payment.id
-                )
-                if addon_payment:
-                    addon_payments.append(addon_payment._to_json())
+                PaymentService.create_addon_payment(user_id_login, payment.id)
 
         message = f"{package_name} 요금제가 성공적으로 등록되었습니다."
         if addon_payments:
-            message += f" (추가 Addon {len(addon_payments)}개 포함)"
+            message += f" (추가 Addon {addon_count}개 포함)"
 
         NotificationServices.create_notification(
             user_id=user_id_login,
@@ -124,21 +120,51 @@ class APICreateAddon(Resource):
     def post(self):
         current_user = AuthService.get_current_identity() or None
 
-        user_id = current_user.id
+        user_id_login = current_user.id
+        today = datetime.datetime.now().date()
+        basic_payment = PaymentService.get_last_payment_basic(user_id_login, today)
+
+        if not basic_payment:
+            return Response(
+                message="Bạn không có gói BASIC nào còn hạn, không thể mua addon.",
+                code=201,
+            ).to_dict()
+
+        total_addon_count = PaymentService.get_total_payment_basic_addon(
+            user_id_login, today, basic_payment.id
+        )
+        max_addon = const.MAX_ADDON_PER_BASIC
+
+        if total_addon_count >= max_addon:
+            return Response(
+                message=f"Bạn đã mua đủ {max_addon} addon cho gói BASIC này.",
+                data={
+                    "total_addon_count": total_addon_count,
+                    "max_addon": max_addon,
+                },
+                code=201,
+            ).to_dict()
 
         data = request.get_json()
-        parent_payment_id = data.get("parent_payment_id")
+        addon_count = int(data.get("addon_count", 0))
+        logger.info(f"addon_count {addon_count}")
+        parent_payment_id = basic_payment.id
         try:
-            payment = PaymentService.create_addon_payment(user_id, parent_payment_id)
+            if addon_count > 0:
+                for _ in range(min(addon_count, const.MAX_ADDON_PER_BASIC)):
+                    PaymentService.create_addon_payment(
+                        user_id_login, parent_payment_id
+                    )
+
             return Response(
-                message="Addon payment created",
-                data=payment.to_dict(),
+                message="Addon payment addon created",
+                data={"addon_count": addon_count},
                 code=200,
             ).to_dict()
         except Exception as e:
             return Response(
                 message=str(e),
-                data=payment.to_dict(),
+                # data=payment.to_dict(),
                 code=201,
             ).to_dict()
 
@@ -185,39 +211,92 @@ class APIPaymentApproval(Resource):
         data = request.get_json()
         payment_id = data.get("payment_id")
 
+        today = datetime.datetime.now().date()
+
+        payment_detail = PaymentService.find_payment(payment_id)
+        if not payment_detail:
+            return Response(
+                message="결제 정보가 존재하지 않습니다.",
+                message_en="Payment does not exist",
+                code=201,
+            ).to_dict()
+
+        package_name = payment_detail.package_name
+        if package_name == "ADDON":
+            payment_parent_detail = PaymentService.find_payment(
+                payment_detail.parent_id
+            )
+            if payment_parent_detail:
+                payment_parent_end_date = payment_parent_detail.end_date
+                payment_parent_status = payment_parent_detail.status
+                if payment_parent_status != "PAID":
+                    return Response(
+                        message="구매하신 Basic 요금제가 아직 결제되지 않았습니다.",
+                        message_en="Your Basic plan has not been paid for yet.",
+                        code=201,
+                    ).to_dict()
+                if payment_parent_end_date <= today:
+                    return Response(
+                        message="Basic 요금제가 만료되었습니다.",
+                        message_en="Your Basic plan has expired.",
+                        code=201,
+                    ).to_dict()
+
         payment = PaymentService.update_payment(payment_id, status="PAID")
         if payment:
             user_id = payment.user_id
             package_name = payment.package_name
-            package_data = const.PACKAGE_CONFIG.get(package_name)
-            if not package_data:
-                return Response(
-                    message="유효하지 않은 패키지입니다.", code=201
-                ).to_dict()
+            if package_name == "ADDON":
+                user_detail = UserService.find_user(user_id)
+                if user_detail:
+                    total_link_active = user_detail.total_link_active
+                    data_update = {
+                        "total_link_active": total_link_active + 1,
+                    }
 
-            subscription_expired = payment.end_date
+                    UserService.update_user(user_id, **data_update)
+                    data_user_history = {
+                        "user_id": user_id,
+                        "type": "payment",
+                        "object_id": payment.id,
+                        "object_start_time": payment.start_date,
+                        "object_end_time": payment.end_date,
+                        "title": "Basic 추가 기능을 구매하세요.",
+                        "description": "Basic 추가 기능을 구매하세요.",
+                        "value": 0,
+                        "num_days": 0,
+                    }
+                    UserService.create_user_history(**data_user_history)
+            else:
+                package_data = const.PACKAGE_CONFIG.get(package_name)
+                if not package_data:
+                    return Response(
+                        message="유효하지 않은 패키지입니다.", code=201
+                    ).to_dict()
 
-            data_update = {
-                "subscription": package_name,
-                "subscription_expired": subscription_expired,
-                "batch_total": package_data["batch_total"],
-                "batch_remain": package_data["batch_remain"],
-                "total_link_active": package_data["total_link_active"],
-            }
+                subscription_expired = payment.end_date
 
-            UserService.update_user(user_id, **data_update)
-            data_user_history = {
-                "user_id": user_id,
-                "type": "payment",
-                "object_id": payment.id,
-                "object_start_time": payment.start_date,
-                "object_end_time": subscription_expired,
-                "title": package_data["pack_name"],
-                "description": package_data["pack_description"],
-                "value": package_data["batch_total"],
-                "num_days": package_data["batch_remain"],
-            }
-            UserService.create_user_history(**data_user_history)
+                data_update = {
+                    "subscription": package_name,
+                    "subscription_expired": subscription_expired,
+                    "batch_total": package_data["batch_total"],
+                    "batch_remain": package_data["batch_remain"],
+                    "total_link_active": package_data["total_link_active"],
+                }
+
+                UserService.update_user(user_id, **data_update)
+                data_user_history = {
+                    "user_id": user_id,
+                    "type": "payment",
+                    "object_id": payment.id,
+                    "object_start_time": payment.start_date,
+                    "object_end_time": subscription_expired,
+                    "title": package_data["pack_name"],
+                    "description": package_data["pack_description"],
+                    "value": package_data["batch_total"],
+                    "num_days": package_data["batch_remain"],
+                }
+                UserService.create_user_history(**data_user_history)
 
         message = "승인이 완료되었습니다."
         return Response(

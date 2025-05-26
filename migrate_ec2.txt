@@ -1,2 +1,2 @@
 ALTER TABLE `payments` 
-ADD COLUMN `parent_payment_id` INT NULL AFTER `id`;
+ADD COLUMN `parent_id` INT NULL AFTER `id`;
