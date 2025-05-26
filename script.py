@@ -114,12 +114,18 @@ def import_month_text():
             data = json.load(f)
 
         for item in data:
+            created_at_str = item.get("created_at", {}).get("$date")
+            updated_at_str = item.get("updated_at", {}).get("$date")
             it = MonthText(
-                created_at=datetime.fromisoformat(
-                    item["created_at"]["$date"].replace("Z", "+00:00")
+                created_at=(
+                    datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                    if created_at_str
+                    else None
                 ),
-                updated_at=datetime.fromisoformat(
-                    item["updated_at"]["$date"].replace("Z", "+00:00")
+                updated_at=(
+                    datetime.fromisoformat(updated_at_str.replace("Z", "+00:00"))
+                    if updated_at_str
+                    else None
                 ),
                 keyword=item.get("keyword"),
                 hashtag=item.get("hashtag"),
@@ -144,12 +150,18 @@ def import_youtube_client():
             data = json.load(f)
 
         for item in data:
+            created_at_str = item.get("created_at", {}).get("$date")
+            updated_at_str = item.get("updated_at", {}).get("$date")
             it = YoutubeClient(
-                created_at=datetime.fromisoformat(
-                    item["created_at"]["$date"].replace("Z", "+00:00")
+                created_at=(
+                    datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                    if created_at_str
+                    else None
                 ),
-                updated_at=datetime.fromisoformat(
-                    item["updated_at"]["$date"].replace("Z", "+00:00")
+                updated_at=(
+                    datetime.fromisoformat(updated_at_str.replace("Z", "+00:00"))
+                    if updated_at_str
+                    else None
                 ),
                 user_ids=json.dumps(item.get("user_ids", [])),
                 member_count=item.get("member_count"),
