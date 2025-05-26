@@ -136,7 +136,7 @@ class APIUpdateUsersToClient(Resource):
 
         users = UserService.all_users()
         user_ids = [user.get("id") for user in users]
-        youtube_client.user_ids = user_ids
+        youtube_client.user_ids = json.dumps(user_ids)
         youtube_client.member_count = len(user_ids)
         youtube_client.save()
 
