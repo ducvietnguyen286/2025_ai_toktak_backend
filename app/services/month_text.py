@@ -56,7 +56,7 @@ class MonthTextService:
 
         current_month = datetime.now().month
         month_key_search = f"THANG{current_month}"
-        redis_key = (f"toktak:month_texts_{month_key_search}",)
+        redis_key = f"toktak:month_texts_{month_key_search}"
 
         try:
             raw = redis_client.get(redis_key)
