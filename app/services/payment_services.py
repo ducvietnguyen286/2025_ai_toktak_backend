@@ -362,3 +362,91 @@ class PaymentService:
             db.session.rollback()
             return 0
         return 1
+
+    @staticmethod
+    def calculate_upgrade_price(user_id, new_package):
+        today = datetime.now().date()
+
+        # Kiểm tra gói mới có hợp lệ không
+        new_package_info = const.PACKAGE_CONFIG.get(new_package)
+        if not new_package_info:
+            return {
+                "can_upgrade": 0,
+                "message": "Gói nâng cấp không hợp lệ.",
+                "message_en": "Invalid upgrade package.",
+                "current_package": None,
+                "remaining_days": 0,
+                "discount": 0,
+                "upgrade_price": 0,
+                "price": 0,
+                "new_package_price": 0,
+            }
+
+        # Lấy payment hiện tại còn hạn
+        current_payment = (
+            Payment.query.filter(Payment.user_id == user_id, Payment.end_date >= today)
+            .order_by(Payment.end_date.desc())
+            .first()
+        )
+
+        if not current_payment:
+            return {
+                "can_upgrade": 1,
+                "message": "Bạn không có gói nào còn hạn để nâng cấp.",
+                "message_en": "You do not have an active package to upgrade.",
+                "current_package": None,
+                "remaining_days": 0,
+                "discount": 0,
+                "upgrade_price": 0,
+                "price": new_package_info["price"],
+                "new_package_price": new_package_info["price"],
+            }
+
+        current_package = current_payment.package_name
+        if current_package == new_package:
+            return {
+                "can_upgrade": 0,
+                "message": "Bạn đang dùng đúng gói này.",
+                "message_en": "You are already using this package.",
+                "current_package": current_package,
+                "remaining_days": 0,
+                "discount": 0,
+                "upgrade_price": 0,
+                "price": new_package_info["price"],
+                "new_package_price": new_package_info["price"],
+            }
+
+        # Số ngày còn lại
+        end_date = current_payment.end_date.date()
+        remaining_days = (end_date - today).days
+        if remaining_days <= 0:
+            return {
+                "can_upgrade": 0,
+                "message": "Gói hiện tại đã hết hạn.",
+                "message_en": "Your current package has expired.",
+                "current_package": current_package,
+                "remaining_days": 0,
+                "discount": 0,
+                "upgrade_price": new_package_info["price"],
+                "price": new_package_info["price"],
+                "new_package_price": new_package_info["price"],
+            }
+
+        # Giá hiện tại
+        current_price = current_payment.price
+        current_days = const.PACKAGE_CONFIG[current_package].get("duration_days", 30)
+        discount = int(current_price / current_days * remaining_days)
+        new_package_price = new_package_info["price"]
+        upgrade_price = max(0, new_package_price - discount)
+
+        return {
+            "can_upgrade": 1,
+            "message": "Bạn có thể nâng cấp.",
+            "message_en": "You can upgrade.",
+            "current_package": current_package,
+            "remaining_days": remaining_days,
+            "discount": discount,
+            "upgrade_price": upgrade_price,
+            "price": new_package_price,
+            "new_package_price": new_package_price,
+        }

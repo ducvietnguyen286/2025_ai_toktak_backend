@@ -101,6 +101,22 @@ class APICreateNewPayment(Resource):
             code=200,
         ).to_dict()
 
+@ns.route("/calculate_upgrade_price")
+class APICalculateUpgradePrice(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        package_name = data.get("package_name")
+        current_user = AuthService.get_current_identity()
+        user_id = current_user.id
+
+        result = PaymentService.calculate_upgrade_price(user_id, package_name)
+        return Response(
+            data=result,
+            code=200,
+        ).to_dict()
+        
+    
 
 @ns.route("/rate-plan")
 class APIGetRatePlan(Resource):
