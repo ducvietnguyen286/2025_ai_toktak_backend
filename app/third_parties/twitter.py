@@ -52,7 +52,7 @@ class TwitterTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="X-TWITTER",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="fetch_user_info",
                 request="{}",
@@ -102,7 +102,7 @@ class TwitterTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="X-TWITTER",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="authorization_code",
                 request=json.dumps(r_data),
@@ -205,7 +205,7 @@ class TwitterTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="X-TWITTER",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="refresh_token",
                 request=json.dumps(r_data),
@@ -246,7 +246,7 @@ class TwitterService(BaseService):
         self.link_id = None
         self.post_id = None
         self.batch_id = None
-        self.social_post_id = ""
+        self.social_post_id = 0
         self.service = "X-TWITTER"
         self.key_log = ""
 
@@ -257,10 +257,10 @@ class TwitterService(BaseService):
         self.meta = json.loads(self.user_link.meta)
         self.social_post = SocialPostService.find_social_post(social_post_id)
         self.link_id = link.id
-        self.post_id = str(post.id)
-        self.batch_id = str(post.batch_id)
+        self.post_id = post.id
+        self.batch_id = post.batch_id
         self.user_id = self.user.id or 0
-        self.social_post_id = str(self.social_post.id)
+        self.social_post_id = self.social_post.id
         self.key_log = f"{self.post_id} - {self.social_post.session_key}"
 
         try:
