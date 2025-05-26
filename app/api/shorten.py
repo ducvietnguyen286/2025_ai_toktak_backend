@@ -23,7 +23,6 @@ shorten_model = ns.model(
         )
     },
 )
- 
 
 
 @ns.route("/create")
@@ -91,10 +90,9 @@ class ApiRedirectURLShorten(Resource):
                 },
                 code=200,
             ).to_dict()
-            
 
         # Nếu không có trong cache, kiểm tra DB
-        url_entry = ShortenURL.objects(short_code=short_code).first()
+        url_entry = ShortenURL.query.filter_by(short_code=short_code).first()
         if url_entry:
             redis_client.set(short_code, url_entry.original_url, ex=86400)  # Cache lại
             return Response(
@@ -105,9 +103,9 @@ class ApiRedirectURLShorten(Resource):
                 code=200,
             ).to_dict()
         return Response(
-                message="NOT FOUND URL",
-                data={
-                    "original_url": "",
-                },
-                code=201,
-            ).to_dict()
+            message="NOT FOUND URL",
+            data={
+                "original_url": "",
+            },
+            code=201,
+        ).to_dict()

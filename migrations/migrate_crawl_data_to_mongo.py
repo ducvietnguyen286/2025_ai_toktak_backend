@@ -5,7 +5,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from mongoengine import connect
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,22 +27,6 @@ MONGO_HOST = os.getenv("MONGODB_HOST", "localhost")
 MONGO_PORT = int(os.getenv("MONGODB_PORT", 27017))
 MONGO_USERNAME = os.getenv("MONGODB_USERNAME", "")
 MONGO_PASSWORD = os.getenv("MONGODB_PASSWORD", "")
-
-if MONGO_USERNAME and MONGO_PASSWORD:
-    connect(
-        db=MONGO_DB,
-        host=MONGO_HOST,
-        port=MONGO_PORT,
-        username=MONGO_USERNAME,
-        password=MONGO_PASSWORD,
-        authentication_source="admin",
-    )
-else:
-    connect(
-        db=MONGO_DB,
-        host=MONGO_HOST,
-        port=MONGO_PORT,
-    )
 
 
 # ----------- Migrate dữ liệu ----------
