@@ -5,6 +5,7 @@ from app.lib.logger import logger
 from app.models.social_account import SocialAccount
 from app.models.user import User
 from app.services.referral_service import ReferralService
+from app.services.payment_services import PaymentService
 from app.services.user import UserService
 from flask_jwt_extended import (
     create_access_token,
@@ -118,6 +119,10 @@ class AuthService:
                     "num_days": 30,
                 }
                 UserService.create_user_history(**data_new_user_history)
+
+                # payment history
+                payment = PaymentService.create_new_payment(user, "BASIC" , "PAID")
+
             else:
                 user = User.query.filter_by(email=email).first()
 
@@ -158,6 +163,10 @@ class AuthService:
                     "num_days": 30,
                 }
                 UserService.create_user_history(**data_new_user_history)
+
+                # payment history
+                payment = PaymentService.create_new_payment(user, "BASIC" , "PAID")
+
                 is_new_user = 1
 
                 if referral_code != "":

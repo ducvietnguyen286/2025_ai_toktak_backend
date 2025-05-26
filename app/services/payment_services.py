@@ -1,5 +1,4 @@
 from app.models.user import User
-from app.models.post import Post
 from app.models.link import Link
 from app.models.payment import Payment
 from app.extensions import db
@@ -22,14 +21,50 @@ from const import PACKAGE_CONFIG, PACKAGE_DURATION_DAYS
 class PaymentService:
 
     @staticmethod
+    def find_payment(id):
+        return Payment.query.get(id)
+
+    @staticmethod
     def create_payment(*args, **kwargs):
         try:
             payment = Payment(*args, **kwargs)
             payment.save()
-            return Payment
+            return payment
         except Exception as ex:
             logger.error(f"Error creating payment: {ex}")
             return None
+
+    @staticmethod
+    def get_last_payment_basic(user_id, date_today):
+        try:
+            payment_detail = (
+                Payment.query.filter(
+                    Payment.user_id == user_id,
+                    Payment.package_name == "BASIC",
+                    Payment.status == "PAID",
+                    Payment.end_date >= date_today,
+                )
+                .order_by(Payment.end_date.desc())
+                .first()
+            )
+            return payment_detail
+        except Exception as ex:
+            logger.error(f"Error creating payment: {ex}")
+            return None
+
+    @staticmethod
+    def get_total_payment_basic_addon(user_id, date_today, basic_payment_id):
+        try:
+            payment_addon_count = Payment.query.filter(
+                Payment.user_id == user_id,
+                Payment.status == "PAID",
+                Payment.end_date >= date_today,
+                Payment.parent_id == basic_payment_id,
+            ).count()
+            return payment_addon_count
+        except Exception as ex:
+            logger.error(f"Error creating payment: {ex}")
+            return 0
 
     @staticmethod
     def update_payment(id, *args, **kwargs):
@@ -66,7 +101,7 @@ class PaymentService:
         return active_payment
 
     @staticmethod
-    def create_new_payment(current_user, package_name):
+    def create_new_payment(current_user, package_name, status="PENDING"):
         now = datetime.now()
         origin_price = PACKAGE_CONFIG[package_name]["price"]
         start_date = now
@@ -78,6 +113,7 @@ class PaymentService:
             amount=origin_price,
             customer_name=current_user.name or current_user.email,
             method="REQUEST",
+            status=status,
             price=origin_price,
             requested_at=start_date,
             start_date=start_date,
@@ -91,6 +127,8 @@ class PaymentService:
 
     @staticmethod
     def create_addon_payment(user_id, parent_payment_id):
+        logger.info("----------------------------")
+        logger.info(parent_payment_id)
         basic_payment = Payment.query.filter_by(
             id=parent_payment_id, user_id=user_id, package_name="BASIC"
         ).first()
@@ -108,22 +146,34 @@ class PaymentService:
         today = datetime.now()
         remaining_days = (basic_payment.end_date - today).days
         if remaining_days <= 0:
+            logger.info(remaining_days)
             return None
 
         # Tính giá theo ngày còn lại
-        addon_full_price = const.PACKAGE_CONFIG["BASIC"]["addons"]["EXTRA_CHANNEL"][
+        addon_full_price = const.PACKAGE_CONFIG["BASIC"]["addon"]["EXTRA_CHANNEL"][
             "price"
         ]
         duration = const.BASIC_DURATION_DAYS
         addon_price = int(addon_full_price / duration * remaining_days)
 
+        logger.info(f" addon_full_price : {addon_full_price}")
+        logger.info(f" remaining_days : {remaining_days}")
+        logger.info(f" duration : {duration}")
+
+        now = datetime.now()
         payment_data = {
             "user_id": user_id,
             "package_name": "ADDON",
+            "amount": addon_full_price,
             "price": addon_price,
             "start_date": today,
             "end_date": basic_payment.end_date,
+            "customer_name": basic_payment.customer_name,
             "parent_id": parent_payment_id,
+            "total_create": 0,
+            "method": "REQUEST",
+            "requested_at": now,
+            "total_link": 1,
         }
         payment = PaymentService.create_payment(**payment_data)
         return payment
@@ -291,7 +341,7 @@ class PaymentService:
                 "basic_end_date": end_date.strftime("%Y-%m-%d"),
             }
         except Exception as ex:
-            
+
             traceback.print_exc()
             logger.error(f"Error calculating addon price: {ex}")
             return {
@@ -300,8 +350,6 @@ class PaymentService:
                 "price": 0,
                 "remaining_days": 0,
             }
-
-
 
     @staticmethod
     def deletePayment(post_ids):
