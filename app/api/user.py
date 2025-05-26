@@ -566,38 +566,39 @@ class APIPostToLinks(Resource):
 
             redis_client.set(redis_unique_key, post.type, ex=180)
 
-            if current_user.batch_no_limit_sns == 0 and (
-                post.type == "video" or post.type == "image"
-            ):
-                if current_user.batch_sns_remain < 1:
-                    return Response(
-                        message=MessageError.REQUIRED_COUPON.value["message"],
-                        data={
-                            "error_message": MessageError.REQUIRED_COUPON.value[
-                                "error_message"
-                            ],
-                        },
-                        status=400,
-                    ).to_dict()
+            # if current_user.batch_no_limit_sns == 0 and (
+            #     post.type == "video" or post.type == "image"
+            # ):
+            # if current_user.batch_sns_remain < 1:
 
-                current_remain = redis_client.get(redis_user_batch_key)
-                if current_remain:
-                    current_remain = int(current_remain)
-                    if current_remain < 1:
-                        return Response(
-                            message=MessageError.REQUIRED_COUPON.value["message"],
-                            data={
-                                "error_message": MessageError.REQUIRED_COUPON.value[
-                                    "error_message"
-                                ],
-                            },
-                            status=400,
-                        ).to_dict()
+            # return Response(
+            #     message=MessageError.REQUIRED_COUPON.value["message"],
+            #     data={
+            #         "error_message": MessageError.REQUIRED_COUPON.value[
+            #             "error_message"
+            #         ],
+            #     },
+            #     status=400,
+            # ).to_dict()
 
-                if current_remain is None:
-                    current_remain = current_user.batch_sns_remain
+            # current_remain = redis_client.get(redis_user_batch_key)
+            # if current_remain:
+            #     current_remain = int(current_remain)
+            #     if current_remain < 1:
+            #         return Response(
+            #             message=MessageError.REQUIRED_COUPON.value["message"],
+            #             data={
+            #                 "error_message": MessageError.REQUIRED_COUPON.value[
+            #                     "error_message"
+            #                 ],
+            #             },
+            #             status=400,
+            #         ).to_dict()
 
-                redis_client.set(redis_user_batch_key, current_remain - 1, ex=180)
+            # if current_remain is None:
+            #     current_remain = current_user.batch_sns_remain
+
+            # redis_client.set(redis_user_batch_key, current_remain - 1, ex=180)
 
             # Update to Uploads
             PostService.update_post(post_id, status=const.DRAFT_STATUS)
