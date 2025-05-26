@@ -156,7 +156,7 @@ LIMIT_BATCH = {
 
 ALLOWED_IPS = {"218.154.54.97"}
 
-
+BASIC_DURATION_DAYS = 30
 PACKAGE_CONFIG = {
     "BASIC": {
         "pack_name": "베이직",
@@ -169,6 +169,13 @@ PACKAGE_CONFIG = {
         "batch_remain": 30,
         "batch_sns_total": 1,
         "total_link_active": 1,
+        "addon": {
+            "EXTRA_CHANNEL": {
+                "price": 2500,
+                "name": "채널 추가 Addon",
+                "max_per_basic": 2,
+            },
+        },
     },
     "INVITE_BASIC": {
         "pack_name": "초대하기 보상",

@@ -14,11 +14,22 @@ import hashlib
 from app.models.batch import Batch
 from app.lib.logger import logger
 from dateutil.relativedelta import relativedelta
+import traceback
 
 from const import PACKAGE_CONFIG, PACKAGE_DURATION_DAYS
 
 
 class PaymentService:
+
+    @staticmethod
+    def create_payment(*args, **kwargs):
+        try:
+            payment = Payment(*args, **kwargs)
+            payment.save()
+            return Payment
+        except Exception as ex:
+            logger.error(f"Error creating payment: {ex}")
+            return None
 
     @staticmethod
     def update_payment(id, *args, **kwargs):
@@ -76,6 +87,45 @@ class PaymentService:
         )
         db.session.add(payment)
         db.session.commit()
+        return payment
+
+    @staticmethod
+    def create_addon_payment(user_id, parent_payment_id):
+        basic_payment = Payment.query.filter_by(
+            id=parent_payment_id, user_id=user_id, package_name="BASIC"
+        ).first()
+        if not basic_payment:
+            return None
+
+        # Kiểm tra số lần đã mua addon với parent_id này
+        count = Payment.query.filter_by(
+            user_id=user_id, parent_id=parent_payment_id, package_name="ADDON"
+        ).count()
+        if count >= const.MAX_ADDON_PER_BASIC:
+            raise Exception("You can buy this addon only 2 times per BASIC package.")
+
+        # Tính số ngày còn lại
+        today = datetime.now()
+        remaining_days = (basic_payment.end_date - today).days
+        if remaining_days <= 0:
+            return None
+
+        # Tính giá theo ngày còn lại
+        addon_full_price = const.PACKAGE_CONFIG["BASIC"]["addons"]["EXTRA_CHANNEL"][
+            "price"
+        ]
+        duration = const.BASIC_DURATION_DAYS
+        addon_price = int(addon_full_price / duration * remaining_days)
+
+        payment_data = {
+            "user_id": user_id,
+            "package_name": "ADDON",
+            "price": addon_price,
+            "start_date": today,
+            "end_date": basic_payment.end_date,
+            "parent_id": parent_payment_id,
+        }
+        payment = PaymentService.create_payment(**payment_data)
         return payment
 
     @staticmethod
@@ -188,3 +238,79 @@ class PaymentService:
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
         return pagination
+
+    @staticmethod
+    def calculate_addon_price(user_id):
+        try:
+            today = datetime.now().date()
+            payment_basic = (
+                Payment.query.filter(
+                    Payment.user_id == user_id,
+                    Payment.package_name == "BASIC",
+                    Payment.status == "DONE",
+                    Payment.end_date >= today,
+                )
+                .order_by(Payment.end_date.desc())
+                .first()
+            )
+
+            if not payment_basic:
+                return {
+                    "can_buy": 0,
+                    "message": "Không có gói BASIC nào còn hiệu lực hoặc đã hết hạn.",
+                    "price": 0,
+                    "remaining_days": 0,
+                }
+
+            end_date = payment_basic.end_date.date()
+            remaining_days = (end_date - today).days
+            if remaining_days <= 0:
+                return {
+                    "can_buy": 0,
+                    "message": "Gói BASIC đã hết hạn.",
+                    "price": 0,
+                    "remaining_days": 0,
+                }
+
+            # Tính tiền addon
+            addon_price = const.PACKAGE_CONFIG["BASIC"]["addons"]["EXTRA_CHANNEL"][
+                "price"
+            ]
+            duration = const.BASIC_DURATION_DAYS
+            price_to_pay = int(addon_price / duration * remaining_days)
+            price_discount = addon_price - price_to_pay
+
+            return {
+                "can_buy": 1,
+                "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày.",
+                "addon_price": addon_price,
+                "price_discount": price_discount,
+                "price_payment": price_to_pay,
+                "remaining_days": remaining_days,
+                "basic_payment_id": payment_basic.id,
+                "basic_end_date": end_date.strftime("%Y-%m-%d"),
+            }
+        except Exception as ex:
+            
+            traceback.print_exc()
+            logger.error(f"Error calculating addon price: {ex}")
+            return {
+                "can_buy": False,
+                "message": "Có lỗi xảy ra khi tính giá addon.",
+                "price": 0,
+                "remaining_days": 0,
+            }
+
+
+
+    @staticmethod
+    def deletePayment(post_ids):
+        try:
+            Payment.query.filter(Payment.id.in_(post_ids)).delete(
+                synchronize_session=False
+            )
+            db.session.commit()
+        except Exception as ex:
+            db.session.rollback()
+            return 0
+        return 1
