@@ -296,9 +296,15 @@ class UserService:
     @staticmethod
     def delete_users_by_ids(user_ids):
         try:
-            Post.objects(user_id__in=user_ids).delete()
-            Batch.objects(user_id__in=user_ids).delete()
-            Notification.objects(user_id__in=user_ids).delete()
+            Post.query.filter(Post.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+            Batch.query.filter(Batch.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+            Notification.query.filter(Notification.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
 
             SocialAccount.query.filter(SocialAccount.user_id.in_(user_ids)).delete(
                 synchronize_session=False
