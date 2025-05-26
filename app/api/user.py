@@ -1499,38 +1499,11 @@ class APICheckSNSLink(Resource):
 
             if batchId:
 
-                # if current_user.batch_remain == 0:
-                #     return Response(
-                #         message=MessageError.NO_BATCH_REMAINING.value["message"],
-                #         data={
-                #             "error_message": MessageError.NO_BATCH_REMAINING.value[
-                #                 "error_message"
-                #             ]
-                #         },
-                #         code=201,
-                #     ).to_dict()
-                if (
-                    current_user.batch_sns_remain < 2
-                    and current_user.batch_no_limit_sns == 0
-                ):
+                if current_user.batch_remain == 0:
                     return Response(
-                        message=MessageError.REQUIRED_COUPON.value["message"],
+                        message=MessageError.NO_BATCH_REMAINING.value["message"],
                         data={
-                            "error_message": MessageError.REQUIRED_COUPON.value[
-                                "error_message"
-                            ]
-                        },
-                        code=201,
-                    ).to_dict()
-
-                current_batch_sns = redis_client.get(
-                    f"toktak:users:batch_sns_remain:{current_user.id}"
-                )
-                if current_batch_sns and int(current_batch_sns) < 2:
-                    return Response(
-                        message=MessageError.REQUIRED_COUPON.value["message"],
-                        data={
-                            "error_message": MessageError.REQUIRED_COUPON.value[
+                            "error_message": MessageError.NO_BATCH_REMAINING.value[
                                 "error_message"
                             ]
                         },
