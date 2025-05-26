@@ -46,7 +46,7 @@ class APINotificationHistories(Resource):
                 "page": result.get("page", 0),
                 "per_page": result.get("per_page", 0),
                 "total_pages": result.get("pages", 0),
-                "data": [post.to_json() for post in result.get("items", [])],
+                "data": [post._to_json() for post in result.get("items", [])],
             }, 200
         except Exception as e:
             logger.error(f"Exception: Get Notification Fail  :  {str(e)}")

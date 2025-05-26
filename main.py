@@ -1,16 +1,15 @@
 # coding: utf8
-import gevent
 from gevent import monkey
 
 monkey.patch_all()
-gevent.get_hub().debug = True
 
 import os
 
 from dotenv import load_dotenv
-from flask import abort, send_from_directory, request, jsonify
+from flask import request
 
-load_dotenv(override=False)
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path=dotenv_path, override=True)
 
 from app import create_app  # noqa
 from app.config import configs as config  # noqa
@@ -29,6 +28,7 @@ ALLOWED_IPS = {"118.70.171.129", "218.154.54.97"}
 EXCLUDED_ENDPOINTS = {"/api/v1/setting/get_public_config"}
 
 
+<<<<<<< HEAD
 # @app.before_request
 # def limit_remote_addr():
 #     # Kiểm tra nếu route không cần kiểm tra IP
@@ -63,6 +63,9 @@ EXCLUDED_ENDPOINTS = {"/api/v1/setting/get_public_config"}
 
 
 @application.route("/", methods=["GET"])
+=======
+@app.route("/", methods=["GET"])
+>>>>>>> 34f5810eff433ea0a3cfa01f357de6503cbe2b81
 def index():
     headers = dict(request.headers)
     params = dict(request.args)

@@ -141,7 +141,7 @@ class YoutubeService(BaseService):
         try:
             self.save_uploading(0)
             log_youtube_message(
-                f"------------ READY TO SEND POST: {post.to_json()} ----------------"
+                f"------------ READY TO SEND POST: {post._to_json()} ----------------"
             )
             if post.type == "video":
                 self.send_post_video(post)

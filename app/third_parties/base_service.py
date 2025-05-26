@@ -18,6 +18,7 @@ from app.services.notification import NotificationServices
 from app.services.post import PostService
 from app.services.request_social_log import RequestSocialLogService
 import const
+from app.tasks.social_post_tasks import update_social_data
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
@@ -159,10 +160,13 @@ class BaseService:
         )
 
     def save_social_post_publish(self, status, social_link):
-        self.social_post.status = status
-        self.social_post.social_link = social_link
-        self.social_post.process_number = 100
-        self.social_post.save()
+        update_social_data.delay(
+            social_id=self.social_post.id,
+            status=status,
+            social_link=social_link,
+            process_number=100,
+        )
+
         PostService.update_post(self.post_id, status=1)
         RequestSocialLogService.increment_social_post_created(
             self.user.id, self.service
@@ -174,11 +178,15 @@ class BaseService:
         status = SocialMedia.ERRORED.value
         if self.service == SocialMedia.INSTAGRAM.value:
             status = SocialMedia.PUBLISHED.value
-        self.social_post.status = status
-        self.social_post.error_message = message
-        self.social_post.show_message = base_message
-        self.social_post.process_number = 100
-        self.social_post.save()
+
+        update_social_data.delay(
+            social_id=self.social_post.id,
+            status=status,
+            error_message=message,
+            show_message=base_message,
+            process_number=100,
+        )
+
         PostService.update_post(self.post_id, status=1)
 
     def log_social_message(self, message):
@@ -224,6 +232,8 @@ class BaseService:
 
     def save_uploading(self, value):
         self.publish_redis_channel("UPLOADING", value)
-        self.social_post.status = "UPLOADING"
-        self.social_post.process_number = value
-        self.social_post.save()
+        update_social_data.delay(
+            social_id=self.social_post.id,
+            status="UPLOADING",
+            process_number=value,
+        )

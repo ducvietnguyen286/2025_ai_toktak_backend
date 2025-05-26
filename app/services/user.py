@@ -10,11 +10,10 @@ from app.models.memberprofile import MemberProfile
 from app.models.referral_history import ReferralHistory
 from app.extensions import db
 from app.lib.logger import logger
-from sqlalchemy import select, update, delete, or_, func
+from sqlalchemy import delete, or_, func
 from app.lib.query import (
     select_with_filter,
     select_by_id,
-    select_with_pagination,
     select_with_filter_one,
     update_by_id,
 )
@@ -372,7 +371,7 @@ class UserService:
         today = datetime.today().date()
 
         expired_users = User.query.filter(
-            User.subscription == "FREE", func.date(User.subscription_expired) <= today
+            User.subscription == "FREE", func.date(User.subscription_expired) < today
         ).all()
 
         extended = 0

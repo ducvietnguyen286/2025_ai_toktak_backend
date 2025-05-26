@@ -27,6 +27,11 @@ class CouponService:
         return Coupon.query.get(id)
 
     @staticmethod
+    def find_coupon_by_name(name):
+        coupon_detail = Coupon.query.filter_by(name=name).first()
+        return coupon_detail
+
+    @staticmethod
     def count_coupon_used(coupon_id, user_id):
         count_used = CouponCode.query.filter(
             CouponCode.coupon_id == coupon_id, CouponCode.used_by == user_id
@@ -45,6 +50,9 @@ class CouponService:
         if not coupon:
             return "not_exist"
 
+        if coupon.type == "KOL_COUPON":
+            return coupon
+
         # Nếu coupon yêu cầu kiểm tra người dùng thì trả thẳng về để xử lý ngoài
         if coupon.is_check_user:
             return coupon
@@ -60,7 +68,6 @@ class CouponService:
             return "expired"
 
         return coupon
-
 
     @staticmethod
     def find_coupon_code(code):
@@ -256,7 +263,16 @@ class CouponService:
         return coupon_codes, total_codes
 
     @staticmethod
-    def create_codes(coupon_id, count_code=100, value=0, num_days=30,total_link_active = 7 ,  expired_at=None):
+    def create_codes(
+        coupon_id,
+        code_coupon,
+        count_code=100,
+        value=0,
+        num_days=30,
+        total_link_active=7,
+        expired_at=None,
+    ):
+
         coupon_codes = []
         code_by_day = CouponService.get_code_by_day()
         code_by_month = CouponService.get_code_by_month()
@@ -264,8 +280,12 @@ class CouponService:
         inserted_codes = set()
 
         for _ in range(count_code):
-            code = CouponService.generate_code(6)
-            code = f"{code_by_year}{code_by_month}{code_by_day}{code}"
+            if code_coupon == "":
+                code = CouponService.generate_code(6)
+                code = f"{code_by_year}{code_by_month}{code_by_day}{code}"
+            else:
+                code = code_coupon
+
             if code in inserted_codes:
                 continue
             inserted_codes.add(code)

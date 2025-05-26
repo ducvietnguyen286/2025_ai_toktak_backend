@@ -89,7 +89,6 @@ def validater_create_batch(current_user, is_advance, url=""):
                     code=201,
                 ).to_dict()
 
-        user_id_login = current_user.id
         if current_user.subscription == "FREE":
             if is_advance:
                 return Response(
@@ -105,65 +104,6 @@ def validater_create_batch(current_user, is_advance, url=""):
                     code=201,
                 ).to_dict()
 
-            today_used = redis_client.get(f"toktak:users:free:used:{user_id_login}")
-            if today_used:
-                return Response(
-                    message=MessageError.WAIT_TOMORROW.value["message"],
-                    data={
-                        "error_message": MessageError.WAIT_TOMORROW.value[
-                            "error_message"
-                        ],
-                        "error_message_en": MessageError.WAIT_TOMORROW.value[
-                            "error_message_en"
-                        ],
-                    },
-                    code=201,
-                ).to_dict()
-
-        current_month = time.strftime("%Y-%m", time.localtime())
-
-        if current_user.batch_remain == 0:
-            if (
-                current_user.subscription == "FREE"
-                and current_user.batch_of_month
-                and current_month != current_user.batch_of_month
-            ):
-                current_user.batch_total = const.LIMIT_BATCH[current_user.subscription]
-                current_user.batch_remain = const.LIMIT_BATCH[current_user.subscription]
-                current_user.batch_of_month = current_month
-                current_user.save()
-            else:
-                return Response(
-                    message=MessageError.NO_BATCH_REMAINING.value["message"],
-                    data={
-                        "error_message": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message"
-                        ],
-                        "error_message_en": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message_en"
-                        ],
-                    },
-                    code=201,
-                ).to_dict()
-
-        redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
-
-        current_remain = redis_client.get(redis_user_batch_key)
-        if current_remain:
-            current_remain = int(current_remain)
-            if current_remain <= 0:
-                return Response(
-                    message=MessageError.NO_BATCH_REMAINING.value["message"],
-                    data={
-                        "error_message": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message"
-                        ],
-                        "error_message_en": MessageError.NO_BATCH_REMAINING.value[
-                            "error_message_en"
-                        ],
-                    },
-                    code=201,
-                ).to_dict()
         return None
     except Exception as e:
         traceback.print_exc()
@@ -335,19 +275,18 @@ class APICreateBatch(Resource):
 
                 post.save()
 
-                post_res = post.to_json()
+                post_res = post._to_json()
                 post_res["url_run"] = (
                     f"{current_domain}/api/v1/maker/make-post/{post.id}"
                 )
                 posts.append(post_res)
 
-            batch_res = batch.to_json()
+            batch_res = batch._to_json()
             batch_res["posts"] = posts
 
             # Save batch for batch-make-image
             batch_id = batch.id
             redis_key = f"batch_info_{batch_id}"
-            print(posts)
             redis_client.set(redis_key, json.dumps(posts), ex=3600)
 
             if current_user:
@@ -428,7 +367,7 @@ class APIBatchMakeImage(Resource):
     @parameters(
         type="object",
         properties={
-            "batch_id": {"type": "string"},
+            "batch_id": {"type": "number"},
         },
         required=["batch_id"],
     )
@@ -566,10 +505,14 @@ class APIUpdateTemplateVideoUser(Resource):
     @parameters(
         type="object",
         properties={
-            "batch_id": {"type": "string"},
+            "batch_id": {"type": "number"},
             "is_paid_advertisements": {"type": "integer"},
             "product_name": {"type": "string"},
             "is_product_name": {"type": "integer"},
+            "is_product_description": {"type": "integer"},
+            "product_description": {"type": "string"},
+            "is_product_pin": {"type": "integer"},
+            "product_pin": {"type": "string"},
             "purchase_guide": {"type": "string"},
             "is_purchase_guide": {"type": "integer"},
             "voice_gender": {"type": ["integer", "null"]},
@@ -577,7 +520,7 @@ class APIUpdateTemplateVideoUser(Resource):
             "is_video_hooking": {"type": ["integer", "null"]},
             "is_caption_top": {"type": ["integer", "null"]},
             "is_caption_last": {"type": ["integer", "null"]},
-            "image_template_id": {"type": ["string", "null"]},
+            "image_template_id": {"type": ["number", "null"]},
             "comment": {"type": "string"},
             "hashtag": {"type": "array", "items": {"type": "string"}},
             "is_comment": {"type": ["integer", "null"]},
@@ -593,6 +536,10 @@ class APIUpdateTemplateVideoUser(Resource):
             is_product_name = args.get("is_product_name", 0)
             purchase_guide = args.get("purchase_guide", "")
             is_purchase_guide = args.get("is_purchase_guide", 0)
+            is_product_description = args.get("is_product_description", 0)
+            product_description = args.get("product_description", "")
+            is_product_pin = args.get("is_product_pin", 0)
+            product_pin = args.get("product_pin", "")
             voice_gender = args.get("voice_gender", 0)
             voice_id = args.get("voice_id", 0)
             is_video_hooking = args.get("is_video_hooking", 0)
@@ -619,6 +566,10 @@ class APIUpdateTemplateVideoUser(Resource):
                 "is_paid_advertisements": is_paid_advertisements,
                 "product_name": product_name,
                 "is_product_name": is_product_name,
+                "is_product_description": is_product_description,
+                "product_description": product_description,
+                "is_product_pin": is_product_pin,
+                "product_pin": product_pin,
                 "purchase_guide": purchase_guide,
                 "is_purchase_guide": is_purchase_guide,
                 "voice_gender": voice_gender,
@@ -1119,7 +1070,7 @@ class APIMakePost(Resource):
             post = PostService.find_post(post.id)
 
             return Response(
-                data=post.to_json(),
+                data=post._to_json(),
                 message=message,
             ).to_dict()
         except Exception as e:
@@ -1174,7 +1125,7 @@ class APIGetBatch(Resource):
 
             posts = PostService.get_posts_by_batch_id(batch.id)
 
-            batch_res = batch.to_json()
+            batch_res = batch._to_json()
             batch_res["posts"] = posts
 
             user_login = AuthService.get_current_identity()
@@ -1221,7 +1172,7 @@ class APIBatchs(Resource):
         }, 200
 
 
-@ns.route("/get-status-upload-by-sync-id/<string:id>")
+@ns.route("/get-status-upload-by-sync-id/<id>")
 class APIGetStatusUploadBySyncId(Resource):
 
     def get(self, id):
@@ -1344,7 +1295,7 @@ class APIGetStatusUploadBySyncId(Resource):
             ).to_dict()
 
 
-@ns.route("/get-status-upload-with-batch-id/<string:id>")
+@ns.route("/get-status-upload-with-batch-id/<id>")
 class APIGetStatusUploadWithBatch(Resource):
 
     def get(self, id):
@@ -1456,7 +1407,7 @@ class APIGetStatusUploadWithBatch(Resource):
                     traceback.print_exc()
                     logger.error(f"Lỗi xử lý post {post_id}: {e}", exc_info=True)
 
-            batch_res = batch.to_json()
+            batch_res = batch._to_json()
             batch_res["posts"] = show_posts
 
             return Response(
@@ -1473,7 +1424,7 @@ class APIGetStatusUploadWithBatch(Resource):
             ).to_dict()
 
 
-@ns.route("/save_draft_batch/<string:id>")
+@ns.route("/save_draft_batch/<id>")
 class APIUpdateStatusBatch(Resource):
 
     @jwt_required()
@@ -1507,7 +1458,7 @@ class APIUpdateStatusBatch(Resource):
             )
 
             return Response(
-                data=batch_detail.to_json(),
+                data=batch_detail._to_json(),
                 message=message,
                 code=200,
             ).to_dict()
@@ -1560,7 +1511,7 @@ class APIHistories(Resource):
                         ),
                     }
                     for post in posts.get("items", [])
-                    if (post_json := post.to_json())
+                    if (post_json := post._to_json())
                 ],
             }, 200
         except Exception as e:
@@ -1751,7 +1702,7 @@ class APICopyBlog(Resource):
     @parameters(
         type="object",
         properties={
-            "blog_id": {"type": "string"},
+            "blog_id": {"type": "number"},
         },
         required=["blog_id"],
     )

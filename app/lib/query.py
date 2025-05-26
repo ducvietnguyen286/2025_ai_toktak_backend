@@ -102,3 +102,44 @@ def update_by_id(
         db.session.commit()
         return instance
     return None
+
+
+def update_by_filter(
+    model: Type[DeclarativeMeta],
+    filters: List[Any],
+    data: Dict[str, Any],
+) -> int:
+    stmt = select(model)
+    for cond in filters:
+        stmt = stmt.where(cond)
+
+    instances = db.session.execute(stmt).scalars().all()
+
+    if not instances:
+        return 0
+
+    for instance in instances:
+        for key, value in data.items():
+            setattr(instance, key, value)
+
+    db.session.commit()
+    return len(instances)
+
+
+def update_multiple_by_ids(
+    model: Type[DeclarativeMeta],
+    ids: List[Any],
+    data: Dict[str, Any],
+) -> int:
+    stmt = select(model).where(model.id.in_(ids))
+    instances = db.session.execute(stmt).scalars().all()
+
+    if not instances:
+        return 0
+
+    for instance in instances:
+        for key, value in data.items():
+            setattr(instance, key, value)
+
+    db.session.commit()
+    return len(instances)

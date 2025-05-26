@@ -1,13 +1,12 @@
-from app.models.base_mongo import BaseDocument
-from mongoengine import StringField
+from app.extensions import db
+from app.models.base import BaseModel
 
 
-class MonthText(BaseDocument):
-    meta = {
-        "collection": "month_texts",
-        "indexes": ["month"],
-    }
-    keyword = StringField(default="")
-    hashtag = StringField(default="")
-    month = StringField(required=True, max_length=50)
-    status = StringField(required=True, max_length=50, default="ACTIVE")
+class MonthText(db.Model, BaseModel):
+    __tablename__ = "month_texts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    keyword = db.Column(db.String(255), default="")
+    hashtag = db.Column(db.String(255), default="")
+    month = db.Column(db.String(50), nullable=False, index=True)
+    status = db.Column(db.String(50), nullable=False, default="ACTIVE")

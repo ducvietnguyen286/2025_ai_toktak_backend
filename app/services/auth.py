@@ -112,13 +112,12 @@ class AuthService:
                     "object_id": user.id,
                     "object_start_time": object_start_time,
                     "object_end_time": subscription_expired,
-                    "title": "신규 가입을 환영합니다!",
-                    "description": "신규 가입을 환영합니다!",
+                    "title": "신규 가입 선물",
+                    "description": "신규 가입 선물",
                     "value": 30,
                     "num_days": 30,
                 }
                 UserService.create_user_history(**data_new_user_history)
-
             else:
                 user = User.query.filter_by(email=email).first()
 
@@ -153,8 +152,8 @@ class AuthService:
                     "object_id": user.id,
                     "object_start_time": object_start_time,
                     "object_end_time": subscription_expired,
-                    "title": "신규 가입을 환영합니다!",
-                    "description": "신규 가입을 환영합니다!",
+                    "title": "신규 가입 선물",
+                    "description": "신규 가입 선물",
                     "value": 30,
                     "num_days": 30,
                 }
@@ -305,10 +304,12 @@ class AuthService:
 
     @staticmethod
     def reset_free_user(user_id):
+
+        subscription_expired = datetime.now() + relativedelta(months=1)
         user_detail = AuthService.update(
             user_id,
             subscription="FREE",
-            subscription_expired=None,
+            subscription_expired=subscription_expired,
             batch_total=const.LIMIT_BATCH["FREE"],
             batch_remain=const.LIMIT_BATCH["FREE"],
             batch_sns_total=0,

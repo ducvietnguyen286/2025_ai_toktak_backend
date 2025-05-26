@@ -1,20 +1,39 @@
-from datetime import datetime
+import json
 import traceback
+import random
+from datetime import datetime, timedelta
+from app.extensions import db
 from app.models.month_text import MonthText
+from app.extensions import redis_client
 
 
 class MonthTextService:
 
     @staticmethod
-    def create_month_text(*args, **kwargs):
-        month_text = MonthText(*args, **kwargs)
-        month_text.save()
+    def create_month_text(**kwargs):
+        month_text = MonthText(**kwargs)
+        db.session.add(month_text)
+        db.session.commit()
         return month_text
 
     @staticmethod
     def insert_month_text(inserts):
-        month_text = MonthText.objects.insert(inserts)
-        return month_text
+        db.session.bulk_save_objects([MonthText(**data) for data in inserts])
+        db.session.commit()
+
+    @staticmethod
+    def update_month_text_cache(month_key):
+        rows = db.session.query(MonthText).filter(MonthText.month == month_key).all()
+        month_texts_json = [month_text._to_json() for month_text in rows]
+
+        end_of_month = datetime.now().replace(day=1) + timedelta(days=31)
+        end_of_month = end_of_month.replace(day=1) - timedelta(days=1)
+
+        redis_client.set(
+            f"toktak:month_texts_{month_key}",
+            json.dumps(month_texts_json),
+            ex=end_of_month - datetime.now(),
+        )
 
     @staticmethod
     def random_month_text():
@@ -30,71 +49,43 @@ class MonthTextService:
             },
             "blog": "",
         }
+
         blog_and_comment_count = 10
         hashtag_count = 5
         title_count = 5
 
         current_month = datetime.now().month
         month_key_search = f"THANG{current_month}"
+        redis_key = (f"toktak:month_texts_{month_key_search}",)
 
         try:
-            video_comment_random = MonthText.objects.aggregate(
-                [
-                    {"$match": {"month": month_key_search}},
-                    {"$sample": {"size": blog_and_comment_count}},
-                ]
-            )
-            video_title_random = MonthText.objects.aggregate(
-                [
-                    {"$match": {"month": month_key_search}},
-                    {"$sample": {"size": title_count}},
-                ]
-            )
-            hastag_video_random = MonthText.objects.aggregate(
-                [
-                    {"$match": {"month": month_key_search}},
-                    {"$sample": {"size": hashtag_count}},
-                ]
-            )
+            raw = redis_client.get(redis_key)
+            if not raw:
+                MonthTextService.update_month_text_cache(month_key_search)
+                raw = redis_client.get(redis_key)
 
-            image_comment_random = MonthText.objects.aggregate(
-                [
-                    {"$match": {"month": month_key_search}},
-                    {"$sample": {"size": blog_and_comment_count}},
-                ]
-            )
-            hastag_image_random = MonthText.objects.aggregate(
-                [
-                    {"$match": {"month": month_key_search}},
-                    {"$sample": {"size": hashtag_count}},
-                ]
-            )
+            data = json.loads(raw)
 
-            blog_random = MonthText.objects.aggregate(
-                [
-                    {"$match": {"month": month_key_search}},
-                    {"$sample": {"size": blog_and_comment_count}},
+            def sample(field, n):
+                return [
+                    item[field]
+                    for item in random.sample(data, min(n, len(data)))
+                    if item.get(field)
                 ]
-            )
 
             result["video"]["comment"] = ",".join(
-                [item["keyword"] for item in list(video_comment_random)]
+                sample("keyword", blog_and_comment_count)
             )
-            result["video"]["title"] = ",".join(
-                [item["keyword"] for item in list(video_title_random)]
-            )
-            result["video"]["hashtag"] = " ".join(
-                [item["hashtag"] for item in list(hastag_video_random)]
-            )
+            result["video"]["title"] = ",".join(sample("keyword", title_count))
+            result["video"]["hashtag"] = " ".join(sample("hashtag", hashtag_count))
             result["image"]["comment"] = ",".join(
-                [item["keyword"] for item in list(image_comment_random)]
+                sample("keyword", blog_and_comment_count)
             )
-            result["image"]["hashtag"] = " ".join(
-                [item["hashtag"] for item in list(hastag_image_random)]
-            )
-            result["blog"] = ",".join([item["keyword"] for item in list(blog_random)])
+            result["image"]["hashtag"] = " ".join(sample("hashtag", hashtag_count))
+            result["blog"] = ",".join(sample("keyword", blog_and_comment_count))
 
             return result
+
         except Exception as e:
             traceback.print_exc()
             print(e)
