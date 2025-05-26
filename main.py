@@ -6,7 +6,7 @@ monkey.patch_all()
 import os
 
 from dotenv import load_dotenv
-from flask import request
+from flask import app, request
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path=dotenv_path, override=True)
@@ -28,44 +28,7 @@ ALLOWED_IPS = {"118.70.171.129", "218.154.54.97"}
 EXCLUDED_ENDPOINTS = {"/api/v1/setting/get_public_config"}
 
 
-<<<<<<< HEAD
-# @app.before_request
-# def limit_remote_addr():
-#     # Kiểm tra nếu route không cần kiểm tra IP
-#     print(request.path)
-#     print("XXXXXXXXXXXXX")
-#     if request.path in EXCLUDED_ENDPOINTS:
-#         return
-#     # Lấy IP của người dùng
-#     remote_ip = request.remote_addr
-
-#     # Nếu IP không hợp lệ thì trả lỗi JSON
-#     if remote_ip not in const.ALLOWED_IPS:
-#         return (
-#             jsonify(
-#                 {"error": "Forbidden", "message": f"Access denied for IP: {remote_ip}"}
-#             ),
-#             403,
-#         )
-
-
-# @app.route("/files/<path:filename>")
-# def get_file(filename):
-#     try:
-#         return send_from_directory(UPLOAD_FOLDER, filename)
-#     except FileNotFoundError:
-#         abort(404)
-
-
-# @app.route("/voice/<path:filename>")
-# def serve_static(filename):
-#     return send_from_directory(VOICE_FOLDER, filename)
-
-
 @application.route("/", methods=["GET"])
-=======
-@app.route("/", methods=["GET"])
->>>>>>> 34f5810eff433ea0a3cfa01f357de6503cbe2b81
 def index():
     headers = dict(request.headers)
     params = dict(request.args)
