@@ -297,7 +297,7 @@ class PaymentService:
                 Payment.query.filter(
                     Payment.user_id == user_id,
                     Payment.package_name == "BASIC",
-                    Payment.status == "DONE",
+                    Payment.status == "PAID",
                     Payment.end_date >= today,
                 )
                 .order_by(Payment.end_date.desc())
@@ -306,6 +306,7 @@ class PaymentService:
 
             if not payment_basic:
                 return {
+                    "user_id": user_id,
                     "can_buy": 0,
                     "message": "Không có gói BASIC nào còn hiệu lực hoặc đã hết hạn.",
                     "price": 0,
@@ -314,7 +315,7 @@ class PaymentService:
 
             end_date = payment_basic.end_date.date()
             remaining_days = (end_date - today).days
-            if remaining_days <= 0:
+            if remaining_days < 1:
                 return {
                     "can_buy": 0,
                     "message": "Gói BASIC đã hết hạn.",
@@ -323,7 +324,7 @@ class PaymentService:
                 }
 
             # Tính tiền addon
-            addon_price = const.PACKAGE_CONFIG["BASIC"]["addons"]["EXTRA_CHANNEL"][
+            addon_price = const.PACKAGE_CONFIG["BASIC"]["addon"]["EXTRA_CHANNEL"][
                 "price"
             ]
             duration = const.BASIC_DURATION_DAYS
@@ -345,7 +346,7 @@ class PaymentService:
             traceback.print_exc()
             logger.error(f"Error calculating addon price: {ex}")
             return {
-                "can_buy": False,
+                "can_buy": 0,
                 "message": "Có lỗi xảy ra khi tính giá addon.",
                 "price": 0,
                 "remaining_days": 0,
