@@ -12,7 +12,7 @@ import requests
 import hashlib
 from app.lib.json_repair import loads
 
-from app.services.crawl_data_mongo import CrawlDataMongoService
+from app.services.crawl_data import CrawlDataService
 
 
 class CoupangScraper:
@@ -46,7 +46,7 @@ class CoupangScraper:
     def run_fire_crawler(self):
         try:
             crawl_url_hash = hashlib.sha1(self.url.encode()).hexdigest()
-            exist_data = CrawlDataMongoService.find_crawl_data(crawl_url_hash)
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
             if exist_data:
                 return json.loads(exist_data.response)
 
@@ -86,7 +86,7 @@ class CoupangScraper:
                             and "images" in response_data
                             and len(response_data["images"]) > 0
                         ):
-                            CrawlDataMongoService.create_crawl_data(
+                            CrawlDataService.create_crawl_data(
                                 site="COUPANG",
                                 input_url=self.url,
                                 crawl_url=self.url,
@@ -336,7 +336,7 @@ class CoupangScraper:
             real_url = "https://m.coupang.com" + path_mobile + "?" + query_params
 
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataMongoService.find_crawl_data(crawl_url_hash)
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
             if exist_data:
                 return json.loads(exist_data.response)
 
@@ -357,7 +357,7 @@ class CoupangScraper:
                 response.update(coupang_btf_content)
 
                 if response and "images" in response and len(response["images"]) > 0:
-                    CrawlDataMongoService.create_crawl_data(
+                    CrawlDataService.create_crawl_data(
                         site="COUPANG",
                         input_url=base_url,
                         crawl_url=real_url,

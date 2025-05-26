@@ -1,7 +1,5 @@
-from bson import ObjectId
 from app.models.batch import Batch
-from mongoengine import Q
-from app.lib.query_mongo import select_with_pagination_mongo
+from app.lib.query import select_with_filter, select_by_id, select_with_pagination
 
 
 class BatchService:
@@ -14,38 +12,42 @@ class BatchService:
 
     @staticmethod
     def find_batch(id):
-        try:
-            return Batch.objects.get(id=ObjectId(id))
-        except Batch.DoesNotExist:
-            return None
+        batch = select_by_id(Batch, id)
+        return batch
 
     @staticmethod
     def get_batchs():
-        batchs = Batch.objects(status=1)
-        return batchs
+        batchs = select_with_filter(
+            Batch, order_by=[Batch.id.desc()], filters=[Batch.status == 1]
+        )
+        return [batch._to_json() for batch in batchs]
 
     @staticmethod
     def update_batch(id, *args, **kwargs):
-        batch = Batch.objects.get(id=ObjectId(id))
+        batch = Batch.query.get(id)
         batch.update(**kwargs)
         return batch
 
     @staticmethod
     def delete_batch(id):
-        return Batch.objects.get(id=ObjectId(id)).delete()
+        batch = select_by_id(Batch, id)
+        if not batch:
+            return None
+        batch.delete()
+        return True
 
     @staticmethod
     def get_all_batches(page, per_page, user_id=None):
-        filters = [Q(user_id__gt=0)]
+        filters = [
+            Batch.user_id > 0,
+        ]
         if user_id is not None:
-            filters.append(Q(user_id=user_id))
-
-        order = ["-_id"]
-
-        return select_with_pagination_mongo(
-            model=Batch,
+            filters.append(Batch.user_id == user_id)
+        pagination = select_with_pagination(
+            Batch,
             page=page,
             per_page=per_page,
             filters=filters,
-            order_by=order,
+            order_by=[Batch.id.desc()],
         )
+        return pagination

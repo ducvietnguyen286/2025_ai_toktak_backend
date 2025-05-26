@@ -4,14 +4,11 @@ import os
 
 from werkzeug.exceptions import default_exceptions
 
-from app.lib.logger import log_mongo_database
-
 from .errors.handler import api_error_handler
 
 from flask import Flask, jsonify
 from flask_cors import CORS
-from .extensions import redis_client, db, bcrypt, jwt, db_mongo, make_celery
-from pymongo import monitoring
+from .extensions import redis_client, db, bcrypt, jwt
 
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
@@ -29,9 +26,9 @@ def create_app(config_app):
     __register_blueprint(app)
     __config_error_handlers(app)
 
-    # @app.teardown_appcontext
-    # def shutdown_session(exception=None):
-    #     db.session.remove()
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db.session.remove()
 
     @app.route("/admin/persistence/on")
     def persistence_on():
@@ -62,17 +59,11 @@ def __register_blueprint(app):
 
 
 def __init_app(app):
-    monitoring.register(CommandLogger())
-
     db.init_app(app)
     redis_client.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
-    db_mongo.init_app(app)
     # init_sam_model(app)
-
-    celery = make_celery(app)
-    app.extensions["celery"] = celery
 
     app.logger.info("Initial app...")
 
@@ -110,18 +101,3 @@ def __config_error_handlers(app):
             ),
             401,
         )
-
-
-class CommandLogger(monitoring.CommandListener):
-    def started(self, event):
-        # log_mongo_database(f"Command: {event.command}")
-        pass
-
-    def succeeded(self, event):
-        pass
-
-    def failed(self, event):
-        # log_mongo_database(
-        #     f"Failed command: {event.command_name} with request id {event.request_id} on server {event.connection_id} with error: {event.failure}"
-        # )
-        pass

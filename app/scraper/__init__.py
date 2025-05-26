@@ -8,7 +8,6 @@ import requests
 from app.lib.logger import logger
 import random
 from app.services.crawl_data import CrawlDataService
-from app.services.crawl_data_mongo import CrawlDataMongoService
 import hashlib
 import json
 
@@ -60,9 +59,9 @@ class Scraper:
 
                     crawl_url_hash = hashlib.sha1(params["url"].encode()).hexdigest()
                     # Check exists với crawl_url_hash
-                    exists = CrawlDataMongoService.find_crawl_data(crawl_url_hash)
+                    exists = CrawlDataService.find_crawl_data(crawl_url_hash)
                     if not exists:
-                        CrawlDataMongoService.create_crawl_data(
+                        CrawlDataService.create_crawl_data(
                             site=params["netloc"],
                             input_url=params["url"],
                             crawl_url=params["url"],

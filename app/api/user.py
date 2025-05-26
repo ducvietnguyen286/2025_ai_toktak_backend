@@ -209,7 +209,7 @@ class APISendPosts(Resource):
                 "items": {
                     "type": "object",
                     "properties": {
-                        "id": {"type": "string"},
+                        "id": {"type": "number"},
                         "is_all": {"type": "integer"},
                         "link_ids": {
                             "type": "array",
@@ -1152,7 +1152,7 @@ class APIYoutubeLogin(Resource):
                 #     client = random.choice(all_clients) if all_clients else None
                 # else:
                 client = YoutubeClientService.get_random_client()
-                client = client.to_json() if client else None
+                client = client._to_json() if client else None
 
             if not client:
                 PAGE_PROFILE = (
@@ -1313,7 +1313,7 @@ class APIGetCallbackYoutube(Resource):
                 user_link.name = name
                 user_link.avatar = avatar
                 user_link.url = url
-                user_link.youtube_client = json.dumps(client.to_json())
+                user_link.youtube_client = json.dumps(client._to_json())
                 user_link.status = 1
                 user_link.save()
 

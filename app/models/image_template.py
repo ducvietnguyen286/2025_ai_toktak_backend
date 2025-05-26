@@ -1,37 +1,36 @@
-from app.models.base_mongo import BaseDocument
-from mongoengine import StringField, IntField
+from app.extensions import db
+from app.models.base import BaseModel
 
 
-class ImageTemplate(BaseDocument):
-    meta = {
-        "collection": "image_templates",
-        "indexes": ["template_code", "type"],
-    }
-    template_name = StringField(default="")
-    template_code = StringField(default="", max_length=50)
-    template_image = StringField(default="")
-    font = StringField(default="")
-    font_name = StringField(default="")
-    font_path = StringField(default="")
-    font_size = IntField(default="")
-    main_text_color = StringField(default="random_color")
-    text_color = StringField(default="#FFFFFF")
-    stroke_color = StringField(default="#000000")
-    stroke_width = IntField(default="5")
-    text_shadow = StringField(default="")
-    text_align = StringField(default="left")
-    text_position = StringField(default="center")
-    text_position_x = IntField(default=0)
-    text_position_y = IntField(default=0)
-    background = StringField(default="random_color")
-    background_color = StringField(default="")
-    background_image = StringField(default="")
-    padding = StringField(default="")
-    margin = StringField(default="30,30,30,30")
-    type = StringField(default="TEMPLATE_IMAGE_1", max_length=50)
-    created_by = IntField(default=0)
-    sort = IntField(default=0)
-    status = StringField(required=True, max_length=50, default="ACTIVE")
+class ImageTemplate(db.Model, BaseModel):
+    __tablename__ = "image_templates"
+
+    id = db.Column(db.Integer, primary_key=True)
+    template_name = db.Column(db.String(255))
+    template_code = db.Column(db.String(50))
+    template_image = db.Column(db.String(255))
+    font = db.Column(db.String(255))
+    font_name = db.Column(db.String(255))
+    font_path = db.Column(db.String(255))
+    font_size = db.Column(db.Integer, default=50)
+    main_text_color = db.Column(db.String(255), default="random_color")
+    text_color = db.Column(db.String(255), default="#FFFFFF")
+    stroke_color = db.Column(db.String(255), default="#000000")
+    stroke_width = db.Column(db.Integer, default=5)
+    text_shadow = db.Column(db.String(255), default="")
+    text_align = db.Column(db.String(255), default="left")
+    text_position = db.Column(db.String(255), default="center")
+    text_position_x = db.Column(db.Integer, default=0)
+    text_position_y = db.Column(db.Integer, default=0)
+    background = db.Column(db.String(255), default="random_color")
+    background_color = db.Column(db.String(255), default="")
+    background_image = db.Column(db.String(255), default="")
+    padding = db.Column(db.String(255), default="")
+    margin = db.Column(db.String(255), default="30,30,30,30")
+    type = db.Column(db.String(50), default="TEMPLATE_IMAGE_1")
+    created_by = db.Column(db.Integer, default=0)
+    sort = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(50), default="ACTIVE", nullable=False)
 
     to_json_filter = (
         "font",

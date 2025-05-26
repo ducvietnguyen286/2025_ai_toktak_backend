@@ -275,19 +275,18 @@ class APICreateBatch(Resource):
 
                 post.save()
 
-                post_res = post.to_json()
+                post_res = post._to_json()
                 post_res["url_run"] = (
                     f"{current_domain}/api/v1/maker/make-post/{post.id}"
                 )
                 posts.append(post_res)
 
-            batch_res = batch.to_json()
+            batch_res = batch._to_json()
             batch_res["posts"] = posts
 
             # Save batch for batch-make-image
             batch_id = batch.id
             redis_key = f"batch_info_{batch_id}"
-            print(posts)
             redis_client.set(redis_key, json.dumps(posts), ex=3600)
 
             if current_user:
@@ -368,7 +367,7 @@ class APIBatchMakeImage(Resource):
     @parameters(
         type="object",
         properties={
-            "batch_id": {"type": "string"},
+            "batch_id": {"type": "number"},
         },
         required=["batch_id"],
     )
@@ -506,7 +505,7 @@ class APIUpdateTemplateVideoUser(Resource):
     @parameters(
         type="object",
         properties={
-            "batch_id": {"type": "string"},
+            "batch_id": {"type": "number"},
             "is_paid_advertisements": {"type": "integer"},
             "product_name": {"type": "string"},
             "is_product_name": {"type": "integer"},
@@ -521,7 +520,7 @@ class APIUpdateTemplateVideoUser(Resource):
             "is_video_hooking": {"type": ["integer", "null"]},
             "is_caption_top": {"type": ["integer", "null"]},
             "is_caption_last": {"type": ["integer", "null"]},
-            "image_template_id": {"type": ["string", "null"]},
+            "image_template_id": {"type": ["number", "null"]},
             "comment": {"type": "string"},
             "hashtag": {"type": "array", "items": {"type": "string"}},
             "is_comment": {"type": ["integer", "null"]},
@@ -1071,7 +1070,7 @@ class APIMakePost(Resource):
             post = PostService.find_post(post.id)
 
             return Response(
-                data=post.to_json(),
+                data=post._to_json(),
                 message=message,
             ).to_dict()
         except Exception as e:
@@ -1126,7 +1125,7 @@ class APIGetBatch(Resource):
 
             posts = PostService.get_posts_by_batch_id(batch.id)
 
-            batch_res = batch.to_json()
+            batch_res = batch._to_json()
             batch_res["posts"] = posts
 
             user_login = AuthService.get_current_identity()
@@ -1173,7 +1172,7 @@ class APIBatchs(Resource):
         }, 200
 
 
-@ns.route("/get-status-upload-by-sync-id/<string:id>")
+@ns.route("/get-status-upload-by-sync-id/<id>")
 class APIGetStatusUploadBySyncId(Resource):
 
     def get(self, id):
@@ -1296,7 +1295,7 @@ class APIGetStatusUploadBySyncId(Resource):
             ).to_dict()
 
 
-@ns.route("/get-status-upload-with-batch-id/<string:id>")
+@ns.route("/get-status-upload-with-batch-id/<id>")
 class APIGetStatusUploadWithBatch(Resource):
 
     def get(self, id):
@@ -1408,7 +1407,7 @@ class APIGetStatusUploadWithBatch(Resource):
                     traceback.print_exc()
                     logger.error(f"Lỗi xử lý post {post_id}: {e}", exc_info=True)
 
-            batch_res = batch.to_json()
+            batch_res = batch._to_json()
             batch_res["posts"] = show_posts
 
             return Response(
@@ -1425,7 +1424,7 @@ class APIGetStatusUploadWithBatch(Resource):
             ).to_dict()
 
 
-@ns.route("/save_draft_batch/<string:id>")
+@ns.route("/save_draft_batch/<id>")
 class APIUpdateStatusBatch(Resource):
 
     @jwt_required()
@@ -1459,7 +1458,7 @@ class APIUpdateStatusBatch(Resource):
             )
 
             return Response(
-                data=batch_detail.to_json(),
+                data=batch_detail._to_json(),
                 message=message,
                 code=200,
             ).to_dict()
@@ -1512,7 +1511,7 @@ class APIHistories(Resource):
                         ),
                     }
                     for post in posts.get("items", [])
-                    if (post_json := post.to_json())
+                    if (post_json := post._to_json())
                 ],
             }, 200
         except Exception as e:
@@ -1703,7 +1702,7 @@ class APICopyBlog(Resource):
     @parameters(
         type="object",
         properties={
-            "blog_id": {"type": "string"},
+            "blog_id": {"type": "number"},
         },
         required=["blog_id"],
     )
