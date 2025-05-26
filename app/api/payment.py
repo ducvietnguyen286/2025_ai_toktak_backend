@@ -322,7 +322,7 @@ class APIPaymentApproval(Resource):
         ).to_dict()
 
 
-@ns.route("/addon/price")
+@ns.route("/addon/price_check")
 class APICalculateAddonPrice(Resource):
     @jwt_required()
     def get(self):
