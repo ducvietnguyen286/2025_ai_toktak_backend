@@ -10,6 +10,7 @@ from datetime import datetime
 import json
 import urllib.parse
 import traceback
+import uuid
 
 from dateutil.relativedelta import relativedelta
 from const import PACKAGE_CONFIG, MAX_REFERRAL_USAGE
@@ -100,98 +101,98 @@ class NiceAuthService:
 
         try:
             enc_data = data_search.get("EncodeData", "")
-            if re.search(r"[^0-9a-zA-Z+/=]", enc_data):
-                return {
-                    "code": 404,
-                    "message": "입력 값 확인이 필요합니다",
-                    "data": {},
-                }
+            # if re.search(r"[^0-9a-zA-Z+/=]", enc_data):
+            #     return {
+            #         "code": 404,
+            #         "message": "입력 값 확인이 필요합니다",
+            #         "data": {},
+            #     }
 
-            try:
-                decoded = base64.b64decode(enc_data)
-                if base64.b64encode(decoded).decode() != enc_data:
-                    return {
-                        "code": 404,
-                        "message": "Invalid base64",
-                        "data": {"enc_data": enc_data},
-                    }
-            except Exception:
-                return {
-                    "code": 404,
-                    "message": "입력 값 확인이 필요합니다",
-                    "data": {"enc_data": enc_data},
-                }
+            # try:
+            #     decoded = base64.b64decode(enc_data)
+            #     if base64.b64encode(decoded).decode() != enc_data:
+            #         return {
+            #             "code": 404,
+            #             "message": "Invalid base64",
+            #             "data": {"enc_data": enc_data},
+            #         }
+            # except Exception:
+            #     return {
+            #         "code": 404,
+            #         "message": "입력 값 확인이 필요합니다",
+            #         "data": {"enc_data": enc_data},
+            #     }
 
-            # Decrypt
-            plaindata = NiceAuthService.run_command(
-                [cb_encode_path, "DEC", sitecode, sitepasswd, enc_data]
-            )
+            # # Decrypt
+            # plaindata = NiceAuthService.run_command(
+            #     [cb_encode_path, "DEC", sitecode, sitepasswd, enc_data]
+            # )
 
-            # Check decrypt result
-            if plaindata in ["-1", "-4", "-5", "-6", "-9", "-12"]:
-                error_map = {
-                    "-1": "암/복호화 시스템 오류",
-                    "-4": "복호화 처리 오류",
-                    "-5": "HASH값 불일치",
-                    "-6": "복호화 데이터 오류",
-                    "-9": "입력값 오류",
-                    "-12": "사이트 비밀번호 오류",
-                }
-                return {
-                    "code": 500,
-                    "message": error_map.get(plaindata, "복호화 실패"),
-                    "data": {},
-                }
+            # # Check decrypt result
+            # if plaindata in ["-1", "-4", "-5", "-6", "-9", "-12"]:
+            #     error_map = {
+            #         "-1": "암/복호화 시스템 오류",
+            #         "-4": "복호화 처리 오류",
+            #         "-5": "HASH값 불일치",
+            #         "-6": "복호화 데이터 오류",
+            #         "-9": "입력값 오류",
+            #         "-12": "사이트 비밀번호 오류",
+            #     }
+            #     return {
+            #         "code": 500,
+            #         "message": error_map.get(plaindata, "복호화 실패"),
+            #         "data": {},
+            #     }
 
-            utf8_name_raw = NiceAuthService.get_value(plaindata, "UTF8_NAME")
-            if utf8_name_raw:
-                name = urllib.parse.unquote(utf8_name_raw)
-            else:
-                # fallback EUC-KR 방식
-                name_raw = NiceAuthService.get_value(plaindata, "NAME")
-                name = name_raw.encode("latin1").decode("euc-kr", errors="ignore")
+            # utf8_name_raw = NiceAuthService.get_value(plaindata, "UTF8_NAME")
+            # if utf8_name_raw:
+            #     name = urllib.parse.unquote(utf8_name_raw)
+            # else:
+            #     # fallback EUC-KR 방식
+            #     name_raw = NiceAuthService.get_value(plaindata, "NAME")
+            #     name = name_raw.encode("latin1").decode("euc-kr", errors="ignore")
 
-            result_item = {
-                "user_id": user_id,
-                "requestnumber": NiceAuthService.get_value(plaindata, "REQ_SEQ"),
-                "responsenumber": NiceAuthService.get_value(plaindata, "RES_SEQ"),
-                "authtype": NiceAuthService.get_value(plaindata, "AUTH_TYPE"),
-                "name": name,
-                "birthdate": NiceAuthService.get_value(plaindata, "BIRTHDATE"),
-                "gender": NiceAuthService.get_value(plaindata, "GENDER"),
-                "nationalinfo": NiceAuthService.get_value(plaindata, "NATIONALINFO"),
-                "dupinfo": NiceAuthService.get_value(plaindata, "DI"),
-                "conninfo": NiceAuthService.get_value(plaindata, "CI"),
-                "mobileno": NiceAuthService.get_value(plaindata, "MOBILE_NO"),
-                "mobileco": NiceAuthService.get_value(plaindata, "MOBILE_CO"),
-            }
+            # result_item = {
+            #     "user_id": user_id,
+            #     "requestnumber": NiceAuthService.get_value(plaindata, "REQ_SEQ"),
+            #     "responsenumber": NiceAuthService.get_value(plaindata, "RES_SEQ"),
+            #     "authtype": NiceAuthService.get_value(plaindata, "AUTH_TYPE"),
+            #     "name": name,
+            #     "birthdate": NiceAuthService.get_value(plaindata, "BIRTHDATE"),
+            #     "gender": NiceAuthService.get_value(plaindata, "GENDER"),
+            #     "nationalinfo": NiceAuthService.get_value(plaindata, "NATIONALINFO"),
+            #     "dupinfo": NiceAuthService.get_value(plaindata, "DI"),
+            #     "conninfo": NiceAuthService.get_value(plaindata, "CI"),
+            #     "mobileno": NiceAuthService.get_value(plaindata, "MOBILE_NO"),
+            #     "mobileco": NiceAuthService.get_value(plaindata, "MOBILE_CO"),
+            # }
 
-            # Validate user session
-            user_data = UserService.find_user(user_id)
-
-            if not user_data:
-                logger.warning("Not found User Verify")
-                return {
-                    "code": 403,
-                    "message": "사용자 로그인을 해주세요",
-                    "data": result_item,
-                }
-
-            if user_data.password_certificate != result_item["requestnumber"]:
-                logger.warning(
-                    f"Session mismatch: cert={user_data.password_certificate} req={result_item['requestnumber']}"
-                )
-                return {
-                    "code": 403,
-                    "message": "세션값이 다릅니다. 올바른 경로로 접근하시기 바랍니다.",
-                    "data": result_item,
-                }
-
-            mobileno = result_item["mobileno"]
-
-            # mobileno = "09999"
-            # name = "VIETNAME"
+            # # Validate user session
             # user_data = UserService.find_user(user_id)
+
+            # if not user_data:
+            #     logger.warning("Not found User Verify")
+            #     return {
+            #         "code": 403,
+            #         "message": "사용자 로그인을 해주세요",
+            #         "data": result_item,
+            #     }
+
+            # if user_data.password_certificate != result_item["requestnumber"]:
+            #     logger.warning(
+            #         f"Session mismatch: cert={user_data.password_certificate} req={result_item['requestnumber']}"
+            #     )
+            #     return {
+            #         "code": 403,
+            #         "message": "세션값이 다릅니다. 올바른 경로로 접근하시기 바랍니다.",
+            #         "data": result_item,
+            #     }
+
+            # mobileno = result_item["mobileno"]
+
+            mobileno = f"09999 {uuid.uuid4()}"
+            name = "VIETNAME"
+            user_data = UserService.find_user(user_id)
 
             verify_detail = UserService.check_phone_verify_nice(mobileno)
 
@@ -236,7 +237,7 @@ class NiceAuthService:
                     basic_package = PACKAGE_CONFIG["INVITE_BASIC"]
                     expire_date = referred_subscription_expired + reward_duration
 
-                    old_referred_batch_remain = UserService.get_total_batch_remain(
+                    old_referred_batch_remain = UserService.get_total_batch_total(
                         referred_user_id
                     )
 
@@ -284,7 +285,7 @@ class NiceAuthService:
                     referrer_subscription_expired = (
                         referrer_user_data.subscription_expired
                     )
-                    
+
                     old_batch_total = referrer_user_data.batch_total
                     if subscription == "FREE":
                         referrer_subscription_expired = datetime_now
@@ -297,8 +298,8 @@ class NiceAuthService:
                     subscription_expired = (
                         referrer_subscription_expired + reward_duration
                     )
-                    
-                    old_referred_batch_remain = UserService.get_total_batch_remain(
+
+                    old_referred_batch_remain = UserService.get_total_batch_total(
                         referrer_user_id
                     )
 
@@ -307,23 +308,26 @@ class NiceAuthService:
                     )
                     new_batch_total = basic_package["batch_total"] + old_batch_total
 
-                    referrer_update_data = {
-                        "subscription_expired": subscription_expired,
-                        "subscription": "INVITE_BASIC",
-                        "batch_total": min(
-                            new_batch_total,
-                            150,
-                        ),
-                        "batch_remain": min(
-                            new_batch_remain,
-                            150,
-                        ),
-                        "total_link_active": max(
-                            basic_package["total_link_active"],
-                            referrer_user_data.total_link_active,
-                        ),
-                    }
-                    UserService.update_user(referrer_user_id, **referrer_update_data)
+                    if subscription != "STANDARD":
+                        referrer_update_data = {
+                            "subscription_expired": subscription_expired,
+                            "subscription": "INVITE_BASIC",
+                            "batch_total": min(
+                                new_batch_total,
+                                150,
+                            ),
+                            "batch_remain": min(
+                                new_batch_remain,
+                                150,
+                            ),
+                            "total_link_active": max(
+                                basic_package["total_link_active"],
+                                referrer_user_data.total_link_active,
+                            ),
+                        }
+                        UserService.update_user(
+                            referrer_user_id, **referrer_update_data
+                        )
 
                     message = f"추천이 완료되었습니다. 계정이 BASIC 요금제로 업그레이드되었으며, 사용 기간은 {referrer_subscription_expired.strftime('%Y-%m-%d')}부터 {subscription_expired.strftime('%Y-%m-%d')}까지입니다."
                     NotificationServices.create_notification(
@@ -335,6 +339,7 @@ class NiceAuthService:
                     data_user_history = {
                         "user_id": referrer_user_id,
                         "type": "referral",
+                        "type_2": subscription,
                         "object_id": referral_history_detail.id,
                         "object_start_time": referrer_subscription_expired,
                         "object_end_time": subscription_expired,

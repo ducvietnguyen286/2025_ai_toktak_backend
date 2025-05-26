@@ -232,7 +232,7 @@ class APIMe(Resource):
                 else None
             )
             if expired_date and expired_date < current_date:
-                user_login = AuthService.reset_free_user(user_login.id)
+                user_login = AuthService.reset_free_user(user_login)
 
             subscription_name = get_subscription_name(user_login.subscription)
 
@@ -397,15 +397,6 @@ class APIUserProfile(Resource):
                     },
                     code=201,
                 ).to_dict()
-            current_date = datetime.now().date()
-            expired_date = (
-                user_login.subscription_expired.date()
-                if user_login.subscription_expired
-                else None
-            )
-            if expired_date and expired_date < current_date:
-                user_login = AuthService.reset_free_user(user_login.id)
-
             level = user_login.level
             total_link = UserService.get_user_links(user_login.id)
 
