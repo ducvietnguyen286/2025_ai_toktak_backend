@@ -59,7 +59,7 @@ def import_image_template():
     with app.app_context():
         print("Start Script...")
         json_path = os.path.join(
-            os.path.dirname(__file__), "data_scripts", "image_templates.json"
+            os.path.dirname(__file__), "data_scripts", "toktak.image_templates.json"
         )
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -110,7 +110,7 @@ def import_month_text():
     with app.app_context():
         print("Start Script...")
         json_path = os.path.join(
-            os.path.dirname(__file__), "data_scripts", "month_texts.json"
+            os.path.dirname(__file__), "data_scripts", "toktak.month_texts.json"
         )
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -140,7 +140,7 @@ def import_youtube_client():
     with app.app_context():
         print("Start Script...")
         json_path = os.path.join(
-            os.path.dirname(__file__), "data_scripts", "youtube_clients.json"
+            os.path.dirname(__file__), "data_scripts", "toktak.youtube_clients.json"
         )
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
