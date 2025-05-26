@@ -1,8 +1,6 @@
-import datetime
+from datetime import datetime
 import os
-import time
 from dotenv import load_dotenv
-import logging
 from flask import Flask
 from werkzeug.exceptions import default_exceptions
 
