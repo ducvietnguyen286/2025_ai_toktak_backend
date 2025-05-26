@@ -41,7 +41,7 @@ class ThreadTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="THREAD",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="authorization_code",
                 request=json.dumps(body),
@@ -97,7 +97,7 @@ class ThreadTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="THREAD",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="exchange_token",
                 request=json.dumps(params),
@@ -152,7 +152,7 @@ class ThreadTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="THREAD",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="refresh_token",
                 request=json.dumps(params),
@@ -210,7 +210,7 @@ class ThreadTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="THREAD",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="get_info",
                 request=json.dumps(params),
@@ -256,9 +256,9 @@ class ThreadService(BaseService):
         self.access_token = self.meta.get("access_token")
         self.social_post = SocialPostService.find_social_post(social_post_id)
         self.link_id = link.id
-        self.post_id = str(post.id)
-        self.batch_id = str(post.batch_id)
-        self.social_post_id = str(self.social_post.id)
+        self.post_id = post.id
+        self.batch_id = post.batch_id
+        self.social_post_id = self.social_post.id
         self.thread_user_id = self.user_link.social_id
         self.key_log = f"{self.post_id} - {self.social_post.session_key}"
 
