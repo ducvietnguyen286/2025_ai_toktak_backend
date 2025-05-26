@@ -1,3 +1,4 @@
+import datetime
 import os
 import time
 from dotenv import load_dotenv
@@ -5,12 +6,11 @@ import logging
 from flask import Flask
 from werkzeug.exceptions import default_exceptions
 
-from app.services.batch import BatchService
+from app.models.month_text import MonthText
+from app.models.youtube_client import YoutubeClient
 from app.services.link import LinkService
 from app.services.notification import NotificationServices
-from app.services.post import PostService
 from app.services.user import UserService
-from app.models.shorten import ShortenURL
 from sqlalchemy import text
 
 load_dotenv(override=False)
@@ -18,7 +18,8 @@ load_dotenv(override=False)
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db
 from app.config import configs as config
-from threading import Thread
+import json
+from app.models.image_template import ImageTemplate
 
 
 def __config_logging(app):
@@ -48,118 +49,120 @@ def create_app():
 
 
 def main():
-    migrate_from_mysql_to_mongo_shotenlink()
-    migrate_from_mysql_to_mongo_batch_and_posts()
+    import_image_template()
+    import_month_text()
+    import_youtube_client()
 
 
-def migrate_from_mysql_to_mongo_batch_and_posts():
+def import_image_template():
     app = create_app()
     with app.app_context():
         print("Start Script...")
-        offset = 0
-        limit = 200
-        while True:
-            print("Batch and Posts")
-            print("=====================================")
-            print(f"offset: {offset}")
-            print(f"limit: {limit}")
-            mysql_batchs = db.session.execute(
-                text("SELECT * FROM batchs LIMIT :limit OFFSET :offset"),
-                {"limit": limit, "offset": offset},
-            ).fetchall()
-            if not mysql_batchs:
-                break
-            for batch in mysql_batchs:
-                batch_id = batch.id
-                batch_data = {
-                    "user_id": batch.user_id,
-                    "url": batch.url,
-                    "shorten_link": batch.shorten_link,
-                    "thumbnail": batch.thumbnail,
-                    "thumbnails": batch.thumbnails,
-                    "content": batch.content,
-                    "type": batch.type,
-                    "count_post": batch.count_post,
-                    "done_post": batch.done_post,
-                    "status": batch.status,
-                    "process_status": batch.process_status,
-                    "voice_google": batch.voice_google,
-                    "is_paid_advertisements": batch.is_paid_advertisements,
-                    "template_info": batch.template_info,
-                    "created_at": batch.created_at,
-                    "updated_at": batch.updated_at,
-                }
-                new_batch = BatchService.create_batch(**batch_data)
-                posts = db.session.execute(
-                    text("SELECT * FROM posts WHERE batch_id = :batch_id"),
-                    {"batch_id": batch_id},
-                ).fetchall()
-                for post in posts:
-                    post_data = {
-                        "user_id": post.user_id,
-                        "batch_id": new_batch.id,
-                        "thumbnail": post.thumbnail,
-                        "captions": post.captions,
-                        "images": post.images,
-                        "title": post.title,
-                        "subtitle": post.subtitle,
-                        "content": post.content,
-                        "description": post.description,
-                        "hashtag": post.hashtag,
-                        "video_url": post.video_url,
-                        "docx_url": post.docx_url,
-                        "file_size": (
-                            int(post.file_size)
-                            if post.file_size and post.file_size != ""
-                            else 0
-                        ),
-                        "mime_type": post.mime_type,
-                        "type": post.type,
-                        "status": post.status,
-                        "status_sns": post.status_sns,
-                        "process_number": post.process_number,
-                        "render_id": post.render_id,
-                        "video_path": post.video_path,
-                        "created_at": post.created_at,
-                        "updated_at": post.updated_at,
-                        "schedule_date": post.schedule_date,
-                        "social_sns_description": post.social_sns_description,
-                    }
-                    PostService.create_post(**post_data)
+        json_path = os.path.join(
+            os.path.dirname(__file__), "data_scripts", "image_templates.json"
+        )
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-            offset += limit
+        for item in data:
+            it = ImageTemplate(
+                created_at=datetime.fromisoformat(
+                    item["created_at"]["$date"].replace("Z", "+00:00")
+                ),
+                updated_at=datetime.fromisoformat(
+                    item["updated_at"]["$date"].replace("Z", "+00:00")
+                ),
+                template_name=item.get("template_name"),
+                template_code=item.get("template_code"),
+                template_image=item.get("template_image"),
+                font=item.get("font"),
+                font_name=item.get("font_name"),
+                font_path=item.get("font_path"),
+                font_size=item.get("font_size"),
+                main_text_color=item.get("main_text_color"),
+                text_color=item.get("text_color"),
+                stroke_color=item.get("stroke_color"),
+                stroke_width=item.get("stroke_width"),
+                text_shadow=item.get("text_shadow"),
+                text_align=item.get("text_align"),
+                text_position=item.get("text_position"),
+                text_position_x=item.get("text_position_x"),
+                text_position_y=item.get("text_position_y"),
+                background=item.get("background"),
+                background_color=item.get("background_color"),
+                background_image=item.get("background_image"),
+                padding=item.get("padding"),
+                margin=item.get("margin"),
+                type=item.get("type"),
+                created_by=item.get("created_by"),
+                sort=item.get("sort"),
+                status=item.get("status"),
+            )
+            db.session.add(it)
+
+        db.session.commit()
+        db.session.close()
         print("End Script...")
 
 
-def migrate_from_mysql_to_mongo_shotenlink():
+def import_month_text():
     app = create_app()
     with app.app_context():
         print("Start Script...")
-        offset = 0
-        limit = 200
-        while True:
-            print("Shorten Links")
-            print("=====================================")
-            print(f"offset: {offset}")
-            print(f"limit: {limit}")
-            mysql_shorten_links = db.session.execute(
-                text("SELECT * FROM shorten_url LIMIT :limit OFFSET :offset"),
-                {"limit": limit, "offset": offset},
-            ).fetchall()
+        json_path = os.path.join(
+            os.path.dirname(__file__), "data_scripts", "month_texts.json"
+        )
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-            if not mysql_shorten_links:
-                break
+        for item in data:
+            it = MonthText(
+                created_at=datetime.fromisoformat(
+                    item["created_at"]["$date"].replace("Z", "+00:00")
+                ),
+                updated_at=datetime.fromisoformat(
+                    item["updated_at"]["$date"].replace("Z", "+00:00")
+                ),
+                keyword=item.get("keyword"),
+                hashtag=item.get("hashtag"),
+                month=item.get("month"),
+                status=item.get("status"),
+            )
+            db.session.add(it)
 
-            for link in mysql_shorten_links:
-                shorten = ShortenURL(
-                    original_url=link.original_url,
-                    original_url_hash=link.original_url_hash or "",
-                    short_code=link.short_code,
-                    status=link.status,
-                )
-                shorten.save()
-            offset += limit
+        db.session.commit()
+        db.session.close()
+        print("End Script...")
 
+
+def import_youtube_client():
+    app = create_app()
+    with app.app_context():
+        print("Start Script...")
+        json_path = os.path.join(
+            os.path.dirname(__file__), "data_scripts", "youtube_clients.json"
+        )
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        for item in data:
+            it = YoutubeClient(
+                created_at=datetime.fromisoformat(
+                    item["created_at"]["$date"].replace("Z", "+00:00")
+                ),
+                updated_at=datetime.fromisoformat(
+                    item["updated_at"]["$date"].replace("Z", "+00:00")
+                ),
+                user_ids=json.dumps(item.get("user_ids", [])),
+                member_count=item.get("member_count"),
+                project_name=item.get("project_name"),
+                client_id=item.get("client_id"),
+                client_secret=item.get("client_secret"),
+            )
+            db.session.add(it)
+
+        db.session.commit()
+        db.session.close()
         print("End Script...")
 
 
