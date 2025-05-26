@@ -153,7 +153,7 @@ class APICreateImageTemplate(Resource):
                 created_by=current_user.id,
             )
             return Response(
-                data=image_template.to_json(),
+                data=image_template._to_json(),
                 message="Tạo image_template thành công",
             ).to_dict()
         except Exception as e:
@@ -246,6 +246,6 @@ class APIUpdateImageTemplate(Resource):
         image_template = ImageTemplateService.find_image_template(id)
 
         return Response(
-            data=image_template.to_json(),
+            data=image_template._to_json(),
             message="Update image_template thành công",
         ).to_dict()

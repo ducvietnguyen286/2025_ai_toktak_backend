@@ -1,3 +1,4 @@
+import json
 import traceback
 from app.lib.logger import logger
 from app.models.link import Link
@@ -5,8 +6,18 @@ from app.models.post import Post
 from app.models.social_post import SocialPost
 from app.models.social_sync import SocialSync
 from app.models.user_link import UserLink
+
 from datetime import datetime, timedelta
-from bson import ObjectId
+from sqlalchemy import func
+from app.extensions import db
+
+from app.lib.query import (
+    select_with_filter,
+    select_by_id,
+    update_multiple_by_ids,
+    select_with_filter_one,
+    update_by_id,
+)
 
 
 class SocialPostService:
@@ -19,21 +30,35 @@ class SocialPostService:
 
     @staticmethod
     def find_social_post(id):
-        return SocialPost.objects.get(id=id)
+        return select_by_id(SocialPost, id)
 
     def get_all_by_post_ids(post_ids):
-        social_posts = SocialPost.objects(post_id__in=post_ids)
-        return social_posts
+        return select_with_filter(
+            SocialPost, filters=[SocialPost.post_id.in_(post_ids)]
+        )
 
     @staticmethod
     def by_post_id_get_latest_social_posts(post_id):
-        social_post = (
-            SocialPost.objects(post_id=post_id).order_by("-created_at").first()
+        latest_post = select_with_filter_one(
+            SocialPost,
+            filters=[
+                SocialPost.post_id == post_id,
+            ],
+            order_by=SocialPost.created_at.desc(),
         )
-        if not social_post:
+        if not latest_post:
             return []
-        session_key = social_post.session_key
-        results = SocialPost.objects(session_key=session_key)
+        session_key = latest_post.session_key
+        results = select_with_filter(
+            SocialPost,
+            filters=[
+                SocialPost.session_key == session_key,
+                SocialPost.post_id == post_id,
+            ],
+            order_by=SocialPost.created_at.desc(),
+        )
+        if not results:
+            return []
 
         link_ids = [result.link_id for result in results]
         links = Link.query.filter(Link.id.in_(link_ids)).all()
@@ -43,13 +68,13 @@ class SocialPostService:
         for social_post in results:
             link = link_dict.get(social_post.link_id)
             post_data = {
-                "id": str(social_post.id),
+                "id": social_post.id,
                 "title": link.title,
                 "status": social_post.status,
                 "social_link": social_post.social_link,
                 "link_id": social_post.link_id,
                 "link_type": link.type,
-                "post_id": str(social_post.post_id),
+                "post_id": social_post.post_id,
                 "session_key": social_post.session_key,
                 "process_number": social_post.process_number,
                 "error_message": social_post.error_message,
@@ -59,21 +84,20 @@ class SocialPostService:
         return data
 
     @staticmethod
-    def update_social_post(id, **args):
-        social_post = SocialPost.objects.get(id=id)
-        social_post.update(**args)
-        return social_post
+    def update_social_post(id, **kwargs):
+        return update_by_id(SocialPost, id, kwargs)
 
     @staticmethod
     def update_multple_social_post_by__ids(ids, **args):
-        converted_ids = [ObjectId(id) for id in ids]
-        social_post = SocialPost.objects(id__in=converted_ids)
-        social_post.update(**args)
-        return social_post
+        return update_multiple_by_ids(SocialPost, ids, args)
 
     @staticmethod
     def delete_social_post(id):
-        return SocialPost.objects.get(id=id).delete()
+        post = select_by_id(SocialPost, id)
+        if post:
+            post.delete()
+            return True
+        return False
 
     @staticmethod
     def create_social_sync(*args, **kwargs):
@@ -83,67 +107,85 @@ class SocialPostService:
 
     @staticmethod
     def find_social_sync(id):
-        return SocialSync.objects.get(id=id)
+        return select_by_id(SocialSync, id)
 
     @staticmethod
-    def update_social_sync(id, *args):
-        social_sync = SocialSync.query.get(id)
-        social_sync.update(*args)
-        return social_sync
+    def update_social_sync(id, **kwargs):
+        return update_by_id(SocialSync, id, kwargs)
 
     @staticmethod
     def delete_social_sync(id):
-        return SocialSync.query.get(id).delete()
+        sync = select_by_id(SocialSync, id)
+        if sync:
+            sync.delete()
+            return True
+        return False
 
     @staticmethod
     def get_social_syncs():
-        return SocialSync.objects.all()
+        return select_with_filter(SocialSync)
 
     @staticmethod
     def get_status_social_sycns__by_id(id):
         try:
-            social_sync = SocialSync.objects.get(id=id)
-            if not social_sync:
+            sync = select_by_id(SocialSync, id)
+            if not sync:
                 return {}
-            social_posts = SocialPost.objects(sync_id=str(id))
 
-            print(f"social_posts: {type(id)}")
+            social_posts = select_with_filter(
+                SocialPost,
+                filters=[
+                    SocialPost.sync_id == sync.id,
+                ],
+                order_by=SocialPost.created_at.desc(),
+            )
 
-            post_ids = social_sync.post_ids
+            sync_post_ids = sync.post_ids
+            sync_post_ids = json.loads(sync_post_ids) if sync_post_ids else []
 
-            user_links = UserLink.query.filter(
-                UserLink.user_id == social_sync.user_id
-            ).all()
+            post_ids = [pid for pid in sync_post_ids]
+
+            user_links = select_with_filter(
+                UserLink,
+                filters=[UserLink.user_id == sync.user_id],
+            )
             link_ids = [user_link.link_id for user_link in user_links]
 
-            links = Link.query.filter(Link.id.in_(link_ids)).all()
+            links = select_with_filter(
+                Link,
+                filters=[Link.id.in_(link_ids)],
+            )
             link_dict = {link.id: link for link in links}
 
-            post_ids = [ObjectId(post_id) for post_id in post_ids]
-
-            posts = Post.objects(id__in=post_ids)
+            posts = select_with_filter(
+                Post,
+                filters=[
+                    Post.id.in_(post_ids),
+                ],
+                order_by=Post.created_at.desc(),
+            )
 
             data = {}
-            post_dict = {str(post.id): post for post in posts}
+            post_dict = {post.id: post for post in posts}
 
             for social_post in social_posts:
-                social_post_id = str(social_post.post_id)
+                social_post_id = social_post.post_id
                 post = data.get(social_post_id)
                 if not post:
                     post = post_dict.get(social_post_id)
                     if not post:
                         continue
-                    post = post.to_json()
+                    post = post._to_json()
                 link = link_dict.get(social_post.link_id)
 
                 post_social = {
-                    "id": str(social_post.id),
+                    "id": social_post.id,
                     "title": link.title,
                     "status": social_post.status,
                     "social_link": social_post.social_link,
                     "link_id": social_post.link_id,
                     "link_type": link.type,
-                    "post_id": str(social_post.post_id),
+                    "post_id": social_post.post_id,
                     "session_key": social_post.session_key,
                     "process_number": social_post.process_number,
                     "error_message": social_post.error_message,
@@ -152,14 +194,11 @@ class SocialPostService:
                 if "social_posts" not in post:
                     post["social_posts"] = []
                 post["social_posts"].append(post_social)
-                data[str(social_post.post_id)] = post
+                data[social_post.post_id] = post
 
-            post_data = []
-            for key in data:
-                post_data.append(data[key])
+            social_sync_data = sync._to_json()
+            social_sync_data["posts"] = list(data.values())
 
-            social_sync_data = social_sync.to_json()
-            social_sync_data["posts"] = post_data
             return social_sync_data
         except Exception as e:
             traceback.print_exc()
@@ -170,56 +209,24 @@ class SocialPostService:
     @staticmethod
     def getTotalRunning(filters=None):
         filters = filters or {}
-        match_stage = {}
+        query = db.session.query(SocialPost.status, func.count().label("count"))
 
-        # Xử lý khoảng thời gian
-        from_date_str = filters.get("from_date")
-        to_date_str = filters.get("to_date")
+        if "from_date" in filters:
+            from_date = datetime.strptime(filters["from_date"], "%Y-%m-%d")
+            query = query.filter(SocialPost.created_at >= from_date)
+        if "to_date" in filters:
+            to_date = datetime.strptime(filters["to_date"], "%Y-%m-%d") + timedelta(
+                days=1
+            )
+            query = query.filter(SocialPost.created_at < to_date)
 
-        if from_date_str or to_date_str:
-            created_at_filter = {}
-            try:
-                if from_date_str:
-                    from_date = datetime.strptime(from_date_str, "%Y-%m-%d")
-                    created_at_filter["$gte"] = from_date
-                if to_date_str:
-                    # Thêm 1 ngày để lấy hết to_date trong ngày đó
-                    to_date = datetime.strptime(to_date_str, "%Y-%m-%d") + timedelta(
-                        days=1
-                    )
-                    created_at_filter["$lt"] = to_date
-            except ValueError:
-                raise ValueError(
-                    "from_date hoặc to_date không đúng định dạng YYYY-MM-DD"
-                )
+        query = query.group_by(SocialPost.status).order_by(SocialPost.status)
+        result = query.all()
 
-            match_stage["created_at"] = created_at_filter
-
-        # Xử lý các filter khác ngoài ngày
-        for key, value in filters.items():
-            if key in ("from_date", "to_date"):
-                continue
-            # match_stage[key] = value
-
-        # Build pipeline
-        pipeline = []
-        if match_stage:
-            pipeline.append({"$match": match_stage})
-
-        pipeline.append({"$group": {"_id": "$status", "count": {"$sum": 1}}})
-
-        pipeline.append({"$sort": {"_id": 1}})
-
-        result = SocialPost._get_collection().aggregate(pipeline)
         fixed_statuses = ["ERRORED", "PROCESSING", "PUBLISHED", "UPLOADING"]
+        result_dict = {status: 0 for status in fixed_statuses}
+        for row in result:
+            if row.status in result_dict:
+                result_dict[row.status] = row.count
 
-        # Tạo dict tạm để tra cứu
-        result_dict = {item["_id"]: item["count"] for item in result}
-
-        # Đảm bảo kết quả luôn có đủ 4 loại
-        formatted_result = [
-            {"status": status, "count": result_dict.get(status, 0)}
-            for status in fixed_statuses
-        ]
-
-        return formatted_result
+        return [{"status": s, "count": result_dict[s]} for s in fixed_statuses]

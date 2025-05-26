@@ -1,6 +1,10 @@
 import hashlib
 from app.models.shorten import ShortenURL
 from app.lib.string import generate_shortcode, should_replace_shortlink
+from app.lib.query import (
+    select_by_id,
+    select_with_filter_one,
+)
 
 
 class ShortenServices:
@@ -13,22 +17,30 @@ class ShortenServices:
 
     @staticmethod
     def find_post(id):
-        short_url = ShortenURL.objects(id=id).first()
+        short_url = select_by_id(ShortenURL, id)
         return short_url
 
     @staticmethod
     def get_short_by_original_url(origin_hash):
-        shorten_link = ShortenURL.objects(
-            original_url_hash=origin_hash,
-            status=1,
-        ).first()
+        shorten_link = select_with_filter_one(
+            ShortenURL,
+            filters=[
+                ShortenURL.original_url_hash == origin_hash,
+                ShortenURL.status == 1,
+            ],
+        )
         return shorten_link
 
     @staticmethod
     def make_short_url():
         while True:
             short_code = generate_shortcode()
-            exist = ShortenURL.objects(short_code=short_code).first()
+            exist = select_with_filter_one(
+                ShortenURL,
+                filters=[
+                    ShortenURL.short_code == short_code,
+                ],
+            )
             if not exist:
                 break
         return short_code
