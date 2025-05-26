@@ -15,8 +15,14 @@ class MessageError(Enum):
         "error_message": "🎟️ 참여 방법은 도매꾹 홈페이지 톡탁 이벤트를 확인하세요. 😊",
         "error_message_en": "🎟️ Please check the Toktak event on the Domeggook website for participation instructions. 😊",
     }
+    
+    REQUIRED_BILLING = {
+        "message": "⚠️ 플랜 구매 후 이용 할 수 있어요!",
+        "error_message": "🎟️ 요금제 메뉴를 확인하세요. 😊",
+        "error_message_en": "🎟️ Please check the plan . 😊",
+    }
 
-    NO_BATCH_REMAINING = {
+    NO_BATCH_REMAINING = { 
         "message": "⚠️ 콘텐츠 생성 한도를 초과했어요!",
         "error_message": "🚫 더 이상 콘텐츠를 생성할 수 없습니다.",
         "error_message_en": "🚫 You can no longer create content.",
