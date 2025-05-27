@@ -97,7 +97,11 @@ class APICreateNewPayment(Resource):
         )
         return Response(
             message=message,
-            data={"payment": payment._to_json()},
+            data={
+                "payment": payment._to_json(),
+                "package_name": package_name,
+                "addon_count": addon_count,
+            },
             code=200,
         ).to_dict()
 
@@ -268,7 +272,7 @@ class APIPaymentApproval(Resource):
             package_name = payment.package_name
             user_detail = UserService.find_user(user_id)
             if package_name == "ADDON":
-                
+
                 if user_detail:
                     total_link_active = user_detail.total_link_active
                     data_update = {
@@ -305,7 +309,7 @@ class APIPaymentApproval(Resource):
                     "subscription": package_name,
                     "subscription_expired": subscription_expired,
                     "batch_total": batch_total,
-                    "batch_remain": batch_remain +  payment.total_create,
+                    "batch_remain": batch_remain + payment.total_create,
                     "total_link_active": package_data["total_link_active"],
                 }
 
@@ -345,7 +349,13 @@ class APICalculateAddonPrice(Resource):
         addon_count = int(args.get("addon_count", 1))
 
         current_user = AuthService.get_current_identity() or None
-        result = PaymentService.calculate_addon_price(current_user.id, addon_count)
+        subscription = current_user.subscription
+        if subscription == "FREE":
+            result = PaymentService.calculate_price_with_addon(
+                current_user.id, addon_count
+            )
+        else:
+            result = PaymentService.calculate_addon_price(current_user.id, addon_count)
         return Response(
             data=result,
             code=200,

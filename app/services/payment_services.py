@@ -139,8 +139,6 @@ class PaymentService:
 
     @staticmethod
     def create_addon_payment(user_id, parent_payment_id):
-        logger.info("----------------------------")
-        logger.info(parent_payment_id)
         basic_payment = Payment.query.filter_by(
             id=parent_payment_id, user_id=user_id, package_name="BASIC"
         ).first()
@@ -158,25 +156,22 @@ class PaymentService:
         today = datetime.now()
         now = datetime.now()
         result = PaymentService.calculate_addon_price(user_id, 1)
-        if result["can_buy"] == 1:
-            payment_data = {
-                "user_id": user_id,
-                "package_name": "ADDON",
-                "amount": result["amount"],
-                "price": result["price"],
-                "start_date": today,
-                "end_date": basic_payment.end_date,
-                "customer_name": basic_payment.customer_name,
-                "parent_id": parent_payment_id,
-                "total_create": 0,
-                "method": "REQUEST",
-                "requested_at": now,
-                "total_link": 1,
-            }
-            payment = PaymentService.create_payment(**payment_data)
-            return payment
-
-        return None
+        payment_data = {
+            "user_id": user_id,
+            "package_name": "ADDON",
+            "amount": result["amount"],
+            "price": result["price"],
+            "start_date": today,
+            "end_date": basic_payment.end_date,
+            "customer_name": basic_payment.customer_name,
+            "parent_id": parent_payment_id,
+            "total_create": 0,
+            "method": "REQUEST",
+            "requested_at": now,
+            "total_link": 1,
+        }
+        payment = PaymentService.create_payment(**payment_data)
+        return payment
 
     @staticmethod
     def upgrade_package(current_user, new_package):
@@ -297,7 +292,7 @@ class PaymentService:
                 Payment.query.filter(
                     Payment.user_id == user_id,
                     Payment.package_name == "BASIC",
-                    Payment.status == "PAID",
+                    # Payment.status == "PAID",
                     Payment.end_date >= today,
                 )
                 .order_by(Payment.end_date.desc())
@@ -367,6 +362,53 @@ class PaymentService:
                 "basic_payment_id": payment_basic.id,
                 "basic_price": basic_price,
                 "basic_end_date": end_date.strftime("%Y-%m-%d"),
+            }
+        except Exception as ex:
+
+            traceback.print_exc()
+            logger.error(f"Error calculating addon price: {ex}")
+            return {
+                "can_buy": 0,
+                "message": "Có lỗi xảy ra khi tính giá addon.",
+                "price": 0,
+                "remaining_days": 0,
+            }
+
+    @staticmethod
+    def calculate_price_with_addon(user_id, addon_count=1):
+        try:
+            today = datetime.now().date()
+
+            end_date_default = today + timedelta(days=30)
+            # Tính tiền addon
+            addon_price = const.PACKAGE_CONFIG["BASIC"]["addon"]["EXTRA_CHANNEL"][
+                "price"
+            ]
+
+            basic_price = const.PACKAGE_CONFIG["BASIC"]["price"]
+            remaining_days = 30
+            total_amount = addon_price * addon_count
+            duration = const.BASIC_DURATION_DAYS
+            price_to_pay = 0
+            price_discount = addon_price - price_to_pay
+
+            return {
+                "addon_count": addon_count,
+                "payment_addons": [],
+                "can_buy": 1,
+                "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày.",
+                "duration": duration,
+                "amount": total_amount,
+                "discount": 0,
+                "price": price_to_pay,
+                "addon_price": addon_price,
+                "total_discount": price_discount * addon_count,
+                "price_discount": 0,
+                "price_payment": price_to_pay,
+                "remaining_days": remaining_days,
+                "basic_payment_id": 0,
+                "basic_price": basic_price,
+                "basic_end_date": end_date_default.strftime("%Y-%m-%d"),
             }
         except Exception as ex:
 
