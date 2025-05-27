@@ -10,8 +10,7 @@ from app.models.memberprofile import MemberProfile
 from app.models.referral_history import ReferralHistory
 from app.models.payment import Payment
 from app.extensions import db
-from app.lib.logger import logger
-from app.services.auth import AuthService
+from app.lib.logger import logger 
 from sqlalchemy import select, update, delete, or_, func
 from app.lib.query import (
     select_with_filter,
@@ -374,27 +373,7 @@ class UserService:
         user = User.query.filter(User.phone == mobileno, User.is_auth_nice == 1).first()
         return user
 
-    @staticmethod
-    def auto_extend_free_subscriptions():
-        today = datetime.today().date()
-
-        expired_users = User.query.filter(
-            func.date(User.subscription_expired) < today
-        ).all()
-
-        extended = 0
-        current_date = datetime.now().date()
-        for user_detail in expired_users:
-            expired_date = (
-                user_detail.subscription_expired.date()
-                if user_detail.subscription_expired
-                else None
-            )
-            if expired_date and expired_date < current_date:
-                user_detail = AuthService.reset_free_user(user_detail)
-
-            extended += 1
-        return extended
+    
 
     @staticmethod
     def find_user_by_referral_code(referral_code):

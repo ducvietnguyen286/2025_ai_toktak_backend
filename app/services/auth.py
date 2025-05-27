@@ -19,7 +19,7 @@ from google.auth.transport import requests as google_requests
 from app.lib.string import get_level_images
 import json
 import const
-from sqlalchemy import select
+from sqlalchemy import select, update, delete, or_, func
 from app.extensions import db
 import secrets
 import string
@@ -344,3 +344,25 @@ class AuthService:
             total_link_active=total_link_active,
         )
         return user_detail
+
+    @staticmethod
+    def auto_extend_free_subscriptions():
+        today = datetime.today().date()
+
+        expired_users = User.query.filter(
+            func.date(User.subscription_expired) < today
+        ).all()
+
+        extended = 0
+        current_date = datetime.now().date()
+        for user_detail in expired_users:
+            expired_date = (
+                user_detail.subscription_expired.date()
+                if user_detail.subscription_expired
+                else None
+            )
+            if expired_date and expired_date < current_date:
+                user_detail = AuthService.reset_free_user(user_detail)
+
+            extended += 1
+        return extended
