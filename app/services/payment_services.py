@@ -1,6 +1,7 @@
 from app.models.user import User
 from app.models.link import Link
 from app.models.payment import Payment
+from app.models.user_history import UserHistory
 from app.extensions import db
 from sqlalchemy import and_, func, or_
 from flask import jsonify
@@ -351,6 +352,10 @@ class PaymentService:
     @staticmethod
     def deletePayment(post_ids):
         try:
+            UserHistory.query.filter(
+                UserHistory.type == "payment", UserHistory.object_id.in_(post_ids)
+            ).delete(synchronize_session=False)
+
             Payment.query.filter(Payment.id.in_(post_ids)).delete(
                 synchronize_session=False
             )

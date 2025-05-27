@@ -327,8 +327,65 @@ class GetDetailLog(Resource):
 
             UserService.update_user(userId, password=random_string)
             fe_current_domain = os.environ.get("FE_DOMAIN") or "https://toktak.ai"
-            url_return = f"{fe_current_domain}/auth/loginadmin?random_string={random_string}"
+            url_return = (
+                f"{fe_current_domain}/auth/loginadmin?random_string={random_string}"
+            )
             return Response(
                 data={"userId": userId, "url_return": url_return},
                 message="Đăng nhập thành công",
+            ).to_dict()
+
+
+@ns.route("/user/detail/<path:id>")
+class APIUserDetailById(Resource):
+
+    @jwt_required()
+    @admin_required()
+    def get(self, id):
+
+        user = UserService.find_user(id)
+        return Response(
+            data=user._to_json(),
+            message="Get User Info",
+        ).to_dict()
+
+
+@ns.route("/user/save")
+class APIAdminSaveUser(Resource):
+    @jwt_required()
+    @admin_required()
+    @parameters(
+        type="object",
+        properties={
+            "id": {"type": ["integer", "null"]},
+            "phone": {"type": ["string", "null"]},
+            "subscription": {"type": ["string", "null"]},
+            "subscription_expired": {"type": ["string", "null"]},
+        },
+        required=["id"],
+    )
+    def post(self, args):
+        try:
+            userId = args.get("id", 0)
+            phone = args.get("phone", "")
+            subscription = args.get("subscription", "")
+            subscription_expired = args.get("subscription_expired", "")
+
+            data_update = {
+                "phone": phone,
+                "subscription": subscription,
+                "subscription_expired": subscription_expired,
+            }
+            logger.info(data_update)
+            user_info = UserService.update_user(userId, **data_update)
+
+            return Response(
+                # data=user_info,
+                message="Updated User successfully",
+            ).to_dict()
+        except Exception as e:
+            logger.error(f"Exception: Updated User Fail  :  {str(e)}")
+            return Response(
+                message="Updated User Fail",
+                code=201,
             ).to_dict()
