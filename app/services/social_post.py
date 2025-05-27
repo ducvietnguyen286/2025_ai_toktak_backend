@@ -43,7 +43,7 @@ class SocialPostService:
             latest_post = select_with_filter_one(
                 SocialPost,
                 filters=[SocialPost.post_id == post_id],
-                order_by=SocialPost.created_at.desc(),
+                order_by=[SocialPost.created_at.desc()],
             )
             if latest_post is None:
                 return []
@@ -54,7 +54,7 @@ class SocialPostService:
                     SocialPost.session_key == session_key,
                     SocialPost.post_id == post_id,
                 ],
-                order_by=SocialPost.created_at.desc(),
+                order_by=[SocialPost.created_at.desc()],
             )
             if not results:
                 return []
@@ -138,10 +138,8 @@ class SocialPostService:
 
             social_posts = select_with_filter(
                 SocialPost,
-                filters=[
-                    SocialPost.sync_id == sync.id,
-                ],
-                order_by=SocialPost.created_at.desc(),
+                filters=[SocialPost.sync_id == sync.id],
+                order_by=[SocialPost.created_at.desc()],
             )
 
             sync_post_ids = sync.post_ids
@@ -166,7 +164,7 @@ class SocialPostService:
                 filters=[
                     Post.id.in_(post_ids),
                 ],
-                order_by=Post.created_at.desc(),
+                order_by=[Post.created_at.desc()],
             )
 
             data = {}

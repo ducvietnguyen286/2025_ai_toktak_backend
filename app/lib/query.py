@@ -16,7 +16,7 @@ def select_with_filter(
             stmt = stmt.where(cond)
     if eager_opts:
         stmt = stmt.options(*eager_opts)
-    if order_by:
+    if order_by is not None and len(order_by) > 0:
         stmt = stmt.order_by(*order_by)
     result = db.session.execute(stmt).scalars().all()
     return result
