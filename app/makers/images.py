@@ -370,6 +370,10 @@ class ImageMaker:
 
             results = json_response.get("images", [])
 
+            logger.info(
+                f"Cut out long height images: {image_path}, Found {len(results)} results"
+            )
+
             image_cv = cv2.imread(image_path)
             if image_cv is None:
                 if os.path.exists(image_path):
@@ -411,6 +415,10 @@ class ImageMaker:
                     unique_id = uuid.uuid4().hex
                     new_name = f"{timestamp}_{unique_id}.jpg"
                     cropped_path = os.path.join(output_folder, new_name)
+
+                    logger.info(
+                        f"Saving cropped image: {cropped_path}, Width: {w}, Height: {h}, Confidence: {conf}"
+                    )
 
                     # Resize the cropped image to the target size (1350x1080)
                     # target_size = (1350, 1080)
