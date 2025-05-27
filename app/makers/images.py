@@ -454,6 +454,9 @@ class ImageMaker:
                 if os.environ.get("USE_OCR") == "true":
                     for cropped_path in need_check_images:
                         result = process_beauty_image(cropped_path)
+                        logger.info(
+                            f"Processed cropped image: {cropped_path}, Result: {result}"
+                        )
                         if "is_remove" in result and result["is_remove"]:
                             cropped_image_path = result["image_path"]
                             if os.path.exists(cropped_image_path):
