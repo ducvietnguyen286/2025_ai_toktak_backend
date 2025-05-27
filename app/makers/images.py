@@ -265,8 +265,6 @@ class ImageMaker:
             )
         )
 
-        print(f"Downloaded images: {downloaded_images}")
-
         sleep(1)
 
         for image_path in downloaded_images:
@@ -369,9 +367,6 @@ class ImageMaker:
                 SAM_CHECK_IMAGE_URL, json={"image_path": image_path}
             )
             json_response = response.json()
-
-            logger.info(f"Response from SAM: {json_response}")
-            logger.info(f"IMAGE PATH: {image_path}")
 
             results = json_response.get("images", [])
 
@@ -857,7 +852,6 @@ class ImageMaker:
 
             image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
         else:
-            logger.info(f"Old image path: {image_path}")
             timestamp = int(time.time())
             unique_id = uuid.uuid4().hex
             new_image_name = f"{timestamp}_{unique_id}.jpg"
@@ -865,7 +859,6 @@ class ImageMaker:
             image.save(new_image_path)
 
             image_path = new_image_path
-            logger.info(f"New image path: {image_path}")
 
             image_url = (
                 f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_image_name}"
@@ -1394,7 +1387,6 @@ class ImageMaker:
                     f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
                 )
             else:
-                logger.info(f"Old image path: {image_path}")
                 timestamp = int(time.time())
                 unique_id = uuid.uuid4().hex
                 new_image_name = f"{timestamp}_{unique_id}.jpg"
@@ -1404,12 +1396,10 @@ class ImageMaker:
                     f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_image_name}"
                 )
                 image_path = new_image_path
-                logger.info(f"New image path: {image_path}")
 
             return image_url
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
-            logger.error(f"Error processing {image_path}: {e}")
             traceback.print_exc()
             logger.error(f"Traceback: {traceback.format_exc()}")
             image_name = image_path.split("/")[-1]
