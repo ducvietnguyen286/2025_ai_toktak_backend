@@ -119,31 +119,16 @@ def process_beauty_image(image_path):
                 image_path, width, height
             )
 
-            logger.info(
-                f"Full text: {full_text}, Ratio: {ratio}, Length labels: {length_labels}"
-            )
-
-            if not full_text:
-                return {
-                    "image_path": image_path,
-                    "is_remove": True,
-                }
-
             # logger.info(f"Beauty Result OCR Text: {full_text}, Ratio: {ratio}")
 
-            if full_text == "":
-                return {
-                    "image_path": image_path,
-                    "is_remove": True,
-                }
-
-            blocked_texts = BlockedText.BLOCKED_TEXT.value
-            for blocked_text in blocked_texts:
-                if blocked_text in full_text:
-                    return {
-                        "image_path": image_path,
-                        "is_remove": True,
-                    }
+            if full_text and full_text != "":
+                blocked_texts = BlockedText.BLOCKED_TEXT.value
+                for blocked_text in blocked_texts:
+                    if blocked_text in full_text:
+                        return {
+                            "image_path": image_path,
+                            "is_remove": True,
+                        }
 
             if length_labels <= 0:
                 return {
@@ -151,7 +136,7 @@ def process_beauty_image(image_path):
                     "is_remove": True,
                 }
 
-            if len(full_text) > 0 and length_labels <= 3:
+            if full_text and len(full_text) > 0 and length_labels <= 3:
                 return {
                     "image_path": image_path,
                     "is_remove": True,
@@ -377,10 +362,6 @@ class ImageMaker:
 
             results = json_response.get("images", [])
 
-            logger.info(
-                f"Cut out long height images: {image_path}, Found {len(results)} results"
-            )
-
             image_cv = cv2.imread(image_path)
             if image_cv is None:
                 if os.path.exists(image_path):
@@ -423,10 +404,6 @@ class ImageMaker:
                     new_name = f"{timestamp}_{unique_id}.jpg"
                     cropped_path = os.path.join(output_folder, new_name)
 
-                    logger.info(
-                        f"Saving cropped image: {cropped_path}, Width: {w}, Height: {h}, Confidence: {conf}"
-                    )
-
                     # Resize the cropped image to the target size (1350x1080)
                     # target_size = (1350, 1080)
                     # h, w, _ = cropped.shape
@@ -454,9 +431,6 @@ class ImageMaker:
                 if os.environ.get("USE_OCR") == "true":
                     for cropped_path in need_check_images:
                         result = process_beauty_image(cropped_path)
-                        logger.info(
-                            f"Processed cropped image: {cropped_path}, Result: {result}"
-                        )
                         if "is_remove" in result and result["is_remove"]:
                             cropped_image_path = result["image_path"]
                             if os.path.exists(cropped_image_path):
