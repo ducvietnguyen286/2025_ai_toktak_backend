@@ -68,6 +68,17 @@ class PaymentService:
             return 0
 
     @staticmethod
+    def get_payment_basic_addon(basic_payment_id):
+        try:
+            payment_addons = Payment.query.filter(
+                Payment.parent_id == basic_payment_id,
+            ).all()
+            return payment_addons
+        except Exception as ex:
+            logger.error(f"Error get_payment_basic_addon payment: {ex}")
+            return 0
+
+    @staticmethod
     def update_payment(id, *args, **kwargs):
         payment = Payment.query.get(id)
         if not payment:
@@ -297,7 +308,19 @@ class PaymentService:
                 return {
                     "user_id": user_id,
                     "can_buy": 0,
-                    "message": "Không có gói BASIC nào còn hiệu lực hoặc đã hết hạn.",
+                    "message": "유효한 BASIC 요금제가 없거나 만료되었습니다.",
+                    "message_en": "There is no active or valid BASIC plan, or it has expired.",
+                    "price": 0,
+                    "remaining_days": 0,
+                }
+
+            payment_addons = PaymentService.get_payment_basic_addon(payment_basic.id)
+            if len(payment_addons) > 1:
+                return {
+                    "user_id": user_id,
+                    "can_buy": 0,
+                    "message": "애드온 2개가 이미 존재합니다",
+                    "message_en": "2 addon packages already exist",
                     "price": 0,
                     "remaining_days": 0,
                 }
@@ -317,17 +340,23 @@ class PaymentService:
                 "price"
             ]
 
-            total_price = addon_price * addon_count
+            basic_price = const.PACKAGE_CONFIG["BASIC"]["price"]
+
+            total_amount = addon_price * addon_count
             duration = const.BASIC_DURATION_DAYS
             price_to_pay = int(addon_price / duration * remaining_days)
             price_discount = addon_price - price_to_pay
 
             return {
-                "addon_count": 1,
+                "addon_count": addon_count,
+                "payment_addons": [
+                    payment_addon_detail._to_json()
+                    for payment_addon_detail in payment_addons
+                ],
                 "can_buy": 1,
                 "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày.",
                 "duration": duration,
-                "amount": addon_price,
+                "amount": total_amount,
                 "discount": price_discount,
                 "price": price_to_pay,
                 "addon_price": addon_price,
@@ -336,6 +365,7 @@ class PaymentService:
                 "price_payment": price_to_pay,
                 "remaining_days": remaining_days,
                 "basic_payment_id": payment_basic.id,
+                "basic_price": basic_price,
                 "basic_end_date": end_date.strftime("%Y-%m-%d"),
             }
         except Exception as ex:
