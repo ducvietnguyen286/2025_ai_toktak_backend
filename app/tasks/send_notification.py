@@ -1,13 +1,17 @@
-from app.extensions import celery
+from app.tasks.celery_app import celery_app, make_celery_app
+
+app = make_celery_app()
+
 from app.services.notification import NotificationServices
 
 
-@celery.task(name="tasks.send_notification")
+@celery_app.task(bind=True, name="send_notification")
 def send_notification(
-    payload: dict,
+    self,
+    **kwargs,
 ):
     """
-    payload = {
+    kwargs = {
       "user_id": …,
       "status": …,
       "title": …,
@@ -21,4 +25,5 @@ def send_notification(
       "notification_type": …,
     }
     """
-    NotificationServices.create_notification(**payload)
+    with app.app_context():
+        NotificationServices.create_notification(kwargs)
