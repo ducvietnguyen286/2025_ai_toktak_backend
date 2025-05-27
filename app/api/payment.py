@@ -266,8 +266,9 @@ class APIPaymentApproval(Resource):
         if payment:
             user_id = payment.user_id
             package_name = payment.package_name
+            user_detail = UserService.find_user(user_id)
             if package_name == "ADDON":
-                user_detail = UserService.find_user(user_id)
+                
                 if user_detail:
                     total_link_active = user_detail.total_link_active
                     data_update = {
@@ -297,11 +298,14 @@ class APIPaymentApproval(Resource):
 
                 subscription_expired = payment.end_date
 
+                batch_total = UserService.get_total_batch_total(user_id)
+                batch_remain = user_detail.batch_remain
+
                 data_update = {
                     "subscription": package_name,
                     "subscription_expired": subscription_expired,
-                    "batch_total": package_data["batch_total"],
-                    "batch_remain": package_data["batch_remain"],
+                    "batch_total": batch_total,
+                    "batch_remain": batch_remain,
                     "total_link_active": package_data["total_link_active"],
                 }
 
