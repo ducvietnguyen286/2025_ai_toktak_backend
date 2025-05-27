@@ -179,16 +179,10 @@ class TwitterTokenService:
                         redis_client.delete(redis_key_check)
                         redis_client.delete(redis_key_done)
                         is_done = refresh_done_str
-                        log_twitter_message(
-                            f"Refresh token done: {is_done}, user_id: {user_id}"
-                        )
                         break
 
                     time.sleep(1)
 
-            log_twitter_message(
-                f"Check refresh token status: {check_refresh}, is_done: {is_done}"
-            )
             if is_done and is_done != "":
                 if is_done == "failled":
                     return False
@@ -636,8 +630,6 @@ class TwitterService(BaseService):
                 )
                 return False
 
-            log_twitter_message(f"Before refresh token: {self.meta}")
-
             refreshed = TwitterTokenService().refresh_token(
                 link=self.link, user=self.user
             )
@@ -646,8 +638,6 @@ class TwitterService(BaseService):
                     link_id=self.link_id, user_id=self.user.id
                 )
                 self.meta = json.loads(self.user_link.meta)
-
-                log_twitter_message(f"After refresh token: {self.meta}")
 
                 return self.upload_media_init(
                     media_type=media_type,
