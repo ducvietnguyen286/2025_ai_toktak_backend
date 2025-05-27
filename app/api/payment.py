@@ -305,7 +305,7 @@ class APIPaymentApproval(Resource):
                     "subscription": package_name,
                     "subscription_expired": subscription_expired,
                     "batch_total": batch_total,
-                    "batch_remain": batch_remain,
+                    "batch_remain": batch_remain +  payment.total_create,
                     "total_link_active": package_data["total_link_active"],
                 }
 
