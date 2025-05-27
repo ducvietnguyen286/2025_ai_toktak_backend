@@ -389,8 +389,8 @@ class PaymentService:
             remaining_days = 30
             total_amount = addon_price * addon_count
             duration = const.BASIC_DURATION_DAYS
-            price_to_pay = 0
-            price_discount = addon_price - price_to_pay
+            price_to_pay = total_amount + basic_price
+            price_discount = 0
 
             return {
                 "addon_count": addon_count,
@@ -398,7 +398,7 @@ class PaymentService:
                 "can_buy": 1,
                 "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày.",
                 "duration": duration,
-                "amount": total_amount,
+                "amount": price_to_pay,
                 "discount": 0,
                 "price": price_to_pay,
                 "addon_price": addon_price,
