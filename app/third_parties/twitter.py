@@ -167,6 +167,8 @@ class TwitterTokenService:
 
             check_refresh = is_refresing.decode("utf-8") if is_refresing else None
 
+            is_done = ""
+
             if check_refresh:
                 while True:
                     refresh_done = redis_client.get(redis_key_done)
@@ -176,11 +178,21 @@ class TwitterTokenService:
                     if refresh_done_str:
                         redis_client.delete(redis_key_check)
                         redis_client.delete(redis_key_done)
-                        if refresh_done_str == "failled":
-                            return False
-                        return True
+                        is_done = refresh_done_str
+                        log_twitter_message(
+                            f"Refresh token done: {is_done}, user_id: {user_id}"
+                        )
+                        break
 
                     time.sleep(1)
+
+            log_twitter_message(
+                f"Check refresh token status: {check_refresh}, is_done: {is_done}"
+            )
+            if is_done and is_done != "":
+                if is_done == "failled":
+                    return False
+                return True
 
             redis_client.set(redis_key_check, 1, ex=300)
 
