@@ -88,6 +88,7 @@ class AliExpressScraper:
         try:
             parsed_url = urlparse(request_url)
             real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
+
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
             exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
             if exist_data:
@@ -115,7 +116,13 @@ class AliExpressScraper:
             response = requests.get(url, headers=headers, params=querystring)
             res = response.json()
             data = res.get("result", {})
+
             if not data:
+                return {}
+
+            status = data.get("status", {})
+            data_status = status.get("data", "")
+            if data_status != "success":
                 return {}
 
             item = data.get("item", {})
@@ -257,6 +264,11 @@ class AliExpressScraper:
             res = response.json()
             data = res.get("result", {})
             if not data:
+                return {}
+
+            status = data.get("status", {})
+            data_status = status.get("data", "")
+            if data_status != "success":
                 return {}
 
             description_url = "https://aliexpress-datahub.p.rapidapi.com/item_desc_2"
