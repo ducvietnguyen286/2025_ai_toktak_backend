@@ -50,3 +50,4 @@ paddleocr.sh
 run_with_watchdog.sh
 sam-venv 
 run_sam.sh 
+data_scripts
