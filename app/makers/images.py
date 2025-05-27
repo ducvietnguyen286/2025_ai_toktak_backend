@@ -119,27 +119,16 @@ def process_beauty_image(image_path):
                 image_path, width, height
             )
 
-            if not full_text:
-                return {
-                    "image_path": image_path,
-                    "is_remove": True,
-                }
-
             # logger.info(f"Beauty Result OCR Text: {full_text}, Ratio: {ratio}")
 
-            if full_text == "":
-                return {
-                    "image_path": image_path,
-                    "is_remove": True,
-                }
-
-            blocked_texts = BlockedText.BLOCKED_TEXT.value
-            for blocked_text in blocked_texts:
-                if blocked_text in full_text:
-                    return {
-                        "image_path": image_path,
-                        "is_remove": True,
-                    }
+            if full_text and full_text != "":
+                blocked_texts = BlockedText.BLOCKED_TEXT.value
+                for blocked_text in blocked_texts:
+                    if blocked_text in full_text:
+                        return {
+                            "image_path": image_path,
+                            "is_remove": True,
+                        }
 
             if length_labels <= 0:
                 return {
@@ -147,7 +136,7 @@ def process_beauty_image(image_path):
                     "is_remove": True,
                 }
 
-            if len(full_text) > 0 and length_labels <= 3:
+            if full_text and len(full_text) > 0 and length_labels <= 3:
                 return {
                     "image_path": image_path,
                     "is_remove": True,
