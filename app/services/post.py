@@ -89,7 +89,7 @@ class PostService:
     def get_posts_by_batch_id(batch_id):
         posts = select_with_filter(
             Post,
-            order_by=[Post.id.desc()],
+            order_by=[Post.id.asc()],
             filters=[Post.batch_id == batch_id],
         )
         return [post._to_json() for post in posts]

@@ -23,6 +23,9 @@ celery_app.conf.task_routes = {
 }
 
 
+celery_app.autodiscover_tasks(["app.tasks"])
+
+
 def make_celery_app():
     flask_app = Flask(__name__)
     flask_app.config.from_object(config_app)
