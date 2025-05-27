@@ -636,6 +636,8 @@ class TwitterService(BaseService):
                 )
                 return False
 
+            log_twitter_message(f"Before refresh token: {self.meta}")
+
             refreshed = TwitterTokenService().refresh_token(
                 link=self.link, user=self.user
             )
@@ -644,6 +646,9 @@ class TwitterService(BaseService):
                     link_id=self.link_id, user_id=self.user.id
                 )
                 self.meta = json.loads(self.user_link.meta)
+
+                log_twitter_message(f"After refresh token: {self.meta}")
+
                 return self.upload_media_init(
                     media_type=media_type,
                     total_bytes=total_bytes,
