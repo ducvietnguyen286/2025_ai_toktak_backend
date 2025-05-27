@@ -121,7 +121,7 @@ class AuthService:
                 UserService.create_user_history(**data_new_user_history)
 
                 # payment history
-                payment = PaymentService.create_new_payment(user, "BASIC" , "PAID")
+                payment = PaymentService.create_new_payment(user, "BASIC", "PAID")
 
             else:
                 user = User.query.filter_by(email=email).first()
@@ -165,7 +165,7 @@ class AuthService:
                 UserService.create_user_history(**data_new_user_history)
 
                 # payment history
-                payment = PaymentService.create_new_payment(user, "BASIC" , "PAID")
+                payment = PaymentService.create_new_payment(user, "BASIC", "PAID")
 
                 is_new_user = 1
 
@@ -312,18 +312,35 @@ class AuthService:
         return new_user
 
     @staticmethod
-    def reset_free_user(user_id):
-
+    def reset_free_user(user_detail):
+        if not user_detail:
+            return None
+        subscription = "FREE"
+        total_link_active = 0
+        batch_total = const.LIMIT_BATCH[subscription]
+        batch_remain = const.LIMIT_BATCH[subscription]
         subscription_expired = datetime.now() + relativedelta(months=1)
+        user_id = user_detail.id
+        user_subscription = user_detail.subscription
+        if user_subscription == "STANDARD":
+            history = UserService.find_user_history_valid(user_id)
+            total = history["total"]
+            if total > 0:
+                batch_remain = history["batch_remain"]
+                subscription_expired = history["max_object_end_time"]
+                subscription = "BASIC"
+                total_link_active = 1
+                batch_total = UserService.get_total_batch_total(user_id)
+
         user_detail = AuthService.update(
             user_id,
-            subscription="FREE",
+            subscription=subscription,
             subscription_expired=subscription_expired,
-            batch_total=const.LIMIT_BATCH["FREE"],
-            batch_remain=const.LIMIT_BATCH["FREE"],
+            batch_total=batch_total,
+            batch_remain=batch_remain,
             batch_sns_total=0,
             batch_sns_remain=0,
             batch_no_limit_sns=0,
-            total_link_active=0,
+            total_link_active=total_link_active,
         )
         return user_detail

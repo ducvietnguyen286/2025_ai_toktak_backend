@@ -10,6 +10,7 @@ from datetime import datetime
 import json
 import urllib.parse
 import traceback
+import uuid
 
 from dateutil.relativedelta import relativedelta
 from const import PACKAGE_CONFIG, MAX_REFERRAL_USAGE
@@ -186,10 +187,9 @@ class NiceAuthService:
                     "message": "세션값이 다릅니다. 올바른 경로로 접근하시기 바랍니다.",
                     "data": result_item,
                 }
-
             mobileno = result_item["mobileno"]
 
-            # mobileno = "09999"
+            # mobileno = f"09999 {uuid.uuid4()}"
             # name = "VIETNAME"
             # user_data = UserService.find_user(user_id)
 
@@ -236,7 +236,7 @@ class NiceAuthService:
                     basic_package = PACKAGE_CONFIG["INVITE_BASIC"]
                     expire_date = referred_subscription_expired + reward_duration
 
-                    old_referred_batch_remain = UserService.get_total_batch_remain(
+                    old_referred_batch_remain = UserService.get_total_batch_total(
                         referred_user_id
                     )
 
@@ -284,7 +284,7 @@ class NiceAuthService:
                     referrer_subscription_expired = (
                         referrer_user_data.subscription_expired
                     )
-                    
+
                     old_batch_total = referrer_user_data.batch_total
                     if subscription == "FREE":
                         referrer_subscription_expired = datetime_now
@@ -297,8 +297,8 @@ class NiceAuthService:
                     subscription_expired = (
                         referrer_subscription_expired + reward_duration
                     )
-                    
-                    old_referred_batch_remain = UserService.get_total_batch_remain(
+
+                    old_referred_batch_remain = UserService.get_total_batch_total(
                         referrer_user_id
                     )
 
@@ -307,23 +307,26 @@ class NiceAuthService:
                     )
                     new_batch_total = basic_package["batch_total"] + old_batch_total
 
-                    referrer_update_data = {
-                        "subscription_expired": subscription_expired,
-                        "subscription": "INVITE_BASIC",
-                        "batch_total": min(
-                            new_batch_total,
-                            150,
-                        ),
-                        "batch_remain": min(
-                            new_batch_remain,
-                            150,
-                        ),
-                        "total_link_active": max(
-                            basic_package["total_link_active"],
-                            referrer_user_data.total_link_active,
-                        ),
-                    }
-                    UserService.update_user(referrer_user_id, **referrer_update_data)
+                    if subscription != "STANDARD":
+                        referrer_update_data = {
+                            "subscription_expired": subscription_expired,
+                            "subscription": "INVITE_BASIC",
+                            "batch_total": min(
+                                new_batch_total,
+                                150,
+                            ),
+                            "batch_remain": min(
+                                new_batch_remain,
+                                150,
+                            ),
+                            "total_link_active": max(
+                                basic_package["total_link_active"],
+                                referrer_user_data.total_link_active,
+                            ),
+                        }
+                        UserService.update_user(
+                            referrer_user_id, **referrer_update_data
+                        )
 
                     message = f"추천이 완료되었습니다. 계정이 BASIC 요금제로 업그레이드되었으며, 사용 기간은 {referrer_subscription_expired.strftime('%Y-%m-%d')}부터 {subscription_expired.strftime('%Y-%m-%d')}까지입니다."
                     NotificationServices.create_notification(
@@ -335,6 +338,7 @@ class NiceAuthService:
                     data_user_history = {
                         "user_id": referrer_user_id,
                         "type": "referral",
+                        "type_2": subscription,
                         "object_id": referral_history_detail.id,
                         "object_start_time": referrer_subscription_expired,
                         "object_end_time": subscription_expired,

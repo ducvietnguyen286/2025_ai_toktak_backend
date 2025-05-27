@@ -278,6 +278,7 @@ class APIPaymentApproval(Resource):
                     data_user_history = {
                         "user_id": user_id,
                         "type": "payment",
+                        "type_2": package_name,
                         "object_id": payment.id,
                         "object_start_time": payment.start_date,
                         "object_end_time": payment.end_date,
