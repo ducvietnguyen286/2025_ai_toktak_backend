@@ -197,7 +197,7 @@ PACKAGE_CONFIG = {
         "pack_description": "SNS를 더 빠르게 성장시키고 싶은 분",
         "order_index": 2,
         "total_create": 60,
-        "price_origin": 899000,
+        "price_origin": 89000,
         "price": 29900,
         "total_link": 7,
         "batch_total": 60,
