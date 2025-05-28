@@ -1,4 +1,6 @@
+from hashlib import sha1
 import io
+import json
 import os
 import time
 import datetime
@@ -16,11 +18,13 @@ import cv2
 # import torch
 # import numpy as np
 from app.enums.blocked_text import BlockedText
+from app.lib.link import get_item_id, get_link_type, get_vendor_id
 from app.lib.logger import logger
 
 # from app.extensions import sam_model
 
 from app.lib.header import generate_desktop_user_agent
+from app.services.ocr_result import OCRResultService
 from app.third_parties.google import GoogleVision
 from gevent import sleep
 
@@ -352,14 +356,28 @@ class ImageMaker:
 
         try:
             # results = process_inference(image_path=image_path)
-            response = requests.post(
-                SAM_CHECK_IMAGE_URL, json={"image_path": image_path}, timeout=30
+
+            image_hash = sha1(image_path.encode()).hexdigest()
+
+            response = OCRResultService.find_one_ocr_result_by_filter(
+                image_hash=image_hash
             )
-            json_response = response.json()
-
-            logger.info(f"Response from SAM: {json_response}")
-
-            results = json_response.get("images", [])
+            if response:
+                results = response.get("response", None)
+                results = json.loads(results) if results else []
+            else:
+                response = requests.post(
+                    SAM_CHECK_IMAGE_URL, json={"image_path": image_path}, timeout=30
+                )
+                json_response = response.json()
+                if response.status_code == 200:
+                    OCRResultService.create_ocr_result(
+                        image_url=image_path,
+                        image_hash=image_hash,
+                        response=json.dumps(json_response),
+                    )
+                logger.info(f"Response from SAM: {json_response}")
+                results = json_response.get("images", [])
 
             if not results or len(results) == 0:
                 image_name = os.path.basename(image_path)

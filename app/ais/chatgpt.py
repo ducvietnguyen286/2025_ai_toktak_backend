@@ -1,6 +1,9 @@
+from hashlib import sha1
 import json
 import time
 from openai import OpenAI, OpenAIError
+from app.lib.link import get_item_id, get_link_type, get_vendor_id
+from app.services.chatgpt_result import ChatGPTResultService
 from app.services.request_log import RequestLogService
 import os
 import re
@@ -9,7 +12,83 @@ from app.lib.logger import logger
 chatgpt_api_key = os.environ.get("CHATGPT_API_KEY") or ""
 
 
+def save_to_database(type, data, response):
+    try:
+        name = ""
+        name_hash = ""
+        link = ""
+        link_type = ""
+        item_id = ""
+        vendor_id = ""
+        if list(data.keys()) == ["name"]:
+            name = data["name"]
+            name_hash = sha1(data["name"].encode("utf-8")).hexdigest()
+        else:
+            item_id = get_item_id(data)
+            vendor_id = get_vendor_id(data)
+            link = (
+                data.get("url_crawl", "")
+                if "url_crawl" in data
+                else data.get("base_url", "")
+            )
+            link_type = get_link_type(link)
+        ChatGPTResultService.create_chatgpt_result(
+            type=type,
+            response=json.dumps(response),
+            link_type=link_type,
+            link=link,
+            item_id=item_id,
+            vendor_id=vendor_id,
+            name_hash=name_hash,
+            name=name,
+        )
+    except Exception as e:
+        logger.error(f"Error saving to database: {str(e)}")
+
+
+def get_from_database(type, data):
+    try:
+        if list(data.keys()) == ["name"]:
+            name_hash = sha1(data["name"].encode("utf-8")).hexdigest()
+            chatgpt_result = ChatGPTResultService.find_one_chatgpt_result_by_filter(
+                type=type,
+                name_hash=name_hash,
+            )
+        else:
+            item_id = get_item_id(data)
+            vendor_id = get_vendor_id(data)
+            link = (
+                data.get("url_crawl", "")
+                if "url_crawl" in data
+                else data.get("base_url", "")
+            )
+            link_type = get_link_type(link)
+            if link_type == "COUPANG":
+                chatgpt_result = ChatGPTResultService.find_one_chatgpt_result_by_filter(
+                    type=type,
+                    link_type=link_type,
+                    item_id=item_id,
+                    vendor_id=vendor_id,
+                )
+            else:
+                chatgpt_result = ChatGPTResultService.find_one_chatgpt_result_by_filter(
+                    type=type,
+                    link_type=link_type,
+                    item_id=item_id,
+                )
+        if chatgpt_result:
+            return json.loads(chatgpt_result.response)
+        else:
+            return None
+    except Exception as e:
+        logger.error(f"Error retrieving from database: {str(e)}")
+        return None
+
+
 def call_chatgpt_create_caption(images=[], data={}, post_id=""):
+    response_database = get_from_database("video", data)
+    if response_database:
+        return response_database
     prompt = """[역할]
 당신은 SNS 숏폼 콘텐츠 전문가입니다.
 사용자의 Pain Point(불편함, 고민, 불만 등)를 중심으로 문제를 제시하고,
@@ -154,10 +233,20 @@ hashtag:
         },
     }
 
-    return call_chatgpt(content, response_schema, post_id)
+    response = call_chatgpt(content, response_schema, post_id)
+    if response:
+        if "error" in response:
+            return response
+        if "choices" in response and len(response["choices"]) > 0:
+            save_to_database("video", data, response)
+
+    return response
 
 
 def call_chatgpt_create_blog(images=[], data={}, post_id=0):
+    response_database = get_from_database("blog", data)
+    if response_database:
+        return response_database
 
     prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 블로그 게시글을 작성해 주세요.
 
@@ -312,10 +401,21 @@ Note:
         "strict": True,
     }
 
-    return call_chatgpt(content, response_schema, post_id)
+    response = call_chatgpt(content, response_schema, post_id)
+    if response:
+        if "error" in response:
+            return response
+        if "choices" in response and len(response["choices"]) > 0:
+            save_to_database("blog", data, response)
+
+    return response
 
 
 def call_chatgpt_create_social(images=[], data={}, post_id=0):
+    response_database = get_from_database("image", data)
+    if response_database:
+        return response_database
+
     prompt = """[역할]  
 당신은 SNS 바이럴 콘텐츠 제작 전문가입니다.  
 사용자의 Pain Point(불편함, 아쉬움, 고민 등)를 중심으로 문제를 제시하고,  
@@ -418,10 +518,21 @@ hashtag
         "strict": True,
     }
 
-    return call_chatgpt(content, response_schema, post_id)
+    response = call_chatgpt(content, response_schema, post_id)
+    if response:
+        if "error" in response:
+            return response
+        if "choices" in response and len(response["choices"]) > 0:
+            save_to_database("image", data, response)
+
+    return response
 
 
 def call_chatgpt_clear_product_name(name):
+    response_database = get_from_database("product_name", {"name": name})
+    if response_database:
+        return response_database.name
+
     client = OpenAI(api_key=chatgpt_api_key)
     assistant_id = "asst_EK0uKR3AbhB2Js9cESzqRIxa"
     empty_thread = client.beta.threads.create()
@@ -441,10 +552,16 @@ def call_chatgpt_clear_product_name(name):
             break
 
     thread_messages = client.beta.threads.messages.list(empty_thread.id)
+
+    response_name = name
     for message in thread_messages:
         if message.role == "assistant":
-            return message.content[0].text.value
-    return name
+            response_name = message.content[0].text.value
+
+    if response_name != name:
+        save_to_database("product_name", {"name": name}, {"name": response_name})
+
+    return response_name
 
 
 def call_chatgpt_get_main_text_and_color_for_image(

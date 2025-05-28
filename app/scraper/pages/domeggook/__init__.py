@@ -74,6 +74,7 @@ class DomeggookScraper:
 
             parsed_url = urlparse(request_url)
             real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
+            product_id = parsed_url.path.strip("/").split("/")[-1]
             domeggook_data = self.get_page_html(real_url)
             if not domeggook_data:
                 return {}
@@ -81,6 +82,9 @@ class DomeggookScraper:
             # file_html.write(str(domeggook_data))
             # file_html.close()
             response = Parser(domeggook_data).parse(real_url)
+            response["meta_id"] = ""
+            response["item_id"] = product_id
+            response["vendor_id"] = ""
             return response
         except Exception as e:
             traceback.print_exc()
