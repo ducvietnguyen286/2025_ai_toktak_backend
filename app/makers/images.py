@@ -361,6 +361,16 @@ class ImageMaker:
 
             results = json_response.get("images", [])
 
+            if not results or len(results) == 0:
+                image_name = os.path.basename(image_path)
+                image_url = (
+                    f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+                )
+                return {
+                    "image_urls": [image_url],
+                    "is_cut_out": False,
+                }
+
             image_cv = cv2.imread(image_path)
             if image_cv is None:
                 if os.path.exists(image_path):
