@@ -162,8 +162,9 @@ class APICreateAddon(Resource):
     @jwt_required()
     def post(self):
         current_user = AuthService.get_current_identity() or None
-
         user_id_login = current_user.id
+        data = request.get_json()
+        addon_count = int(data.get("addon_count", 0))
         today = datetime.datetime.now().date()
         basic_payment = PaymentService.get_last_payment_basic(user_id_login, today)
 
@@ -178,8 +179,9 @@ class APICreateAddon(Resource):
             user_id_login, today, basic_payment.id
         )
         max_addon = const.MAX_ADDON_PER_BASIC
-
-        if total_addon_count >= max_addon:
+        # Mua thêm và đã mua không quá 2
+        total_addon_count = total_addon_count + addon_count
+        if total_addon_count > max_addon:
             return Response(
                 message=f"BASIC 요금제에 대해 최대 {max_addon}개의 애드온을 구매하셨습니다.",
                 message_en=f"You have purchased the maximum of {max_addon} addons for the BASIC plan.",
@@ -190,8 +192,6 @@ class APICreateAddon(Resource):
                 code=201,
             ).to_dict()
 
-        data = request.get_json()
-        addon_count = int(data.get("addon_count", 0))
         logger.info(f"addon_count {addon_count}")
         parent_payment_id = basic_payment.id
         try:
@@ -202,7 +202,8 @@ class APICreateAddon(Resource):
                     )
 
             return Response(
-                message="Addon payment addon created",
+                message="애드온을 성공적으로 구매하였습니다",
+                message_en="Addon payment addon created",
                 data={"addon_count": addon_count},
                 code=200,
             ).to_dict()
