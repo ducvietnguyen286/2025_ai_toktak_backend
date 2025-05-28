@@ -281,8 +281,8 @@ class APICreateBatchSync(Resource):
 
             chain(
                 create_batch_content.s(batch_id, data=data),
-                create_images.s(batch_id),
-                make_post_data.s(batch_id),
+                create_images.si(batch_id),
+                make_post_data.si(batch_id),
             )()
 
             return Response(
