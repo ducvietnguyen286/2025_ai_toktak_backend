@@ -234,6 +234,7 @@ class APICreateBatchSync(Resource):
                 ).to_dict()
 
             thumbnail_url = data.get("image", "")
+            thumbnails = data.get("thumbnails", [])
 
             data["input_url"] = url
             data["base_url"] = ""
@@ -252,7 +253,7 @@ class APICreateBatchSync(Resource):
                 url=url,
                 shorten_link="",
                 thumbnail=thumbnail_url,
-                thumbnails="[]",
+                thumbnails=json.dumps(thumbnails),
                 content=json.dumps(data),
                 type=batch_type,
                 count_post=len(post_types),

@@ -46,14 +46,11 @@ def create_batch_content(self, batch_id, data):
             if product_name_cleared:
                 data["name"] = product_name_cleared
 
-            thumbnails = data.get("thumbnails", [])
-
             BatchService.update_batch(
                 batch_id,
                 base_url=shorten_link,
                 shorten_link=shorten_link,
                 content=json.dumps(data),
-                thumbnails=thumbnails,
             )
             return batch_id
         except Exception as e:
@@ -79,7 +76,12 @@ def create_images(self, batch_id):
             batch_thumbnails = batch_detail.thumbnails
             crawl_url = content.get("url_crawl", "") or ""
             base_images = content.get("images", []) or []
-            base_thumbnails = json.loads(batch_thumbnails) if batch_thumbnails else []
+            base_thumbnails = []
+            if batch_thumbnails and batch_thumbnails.strip().startswith("["):
+                try:
+                    base_thumbnails = json.loads(batch_thumbnails)
+                except json.JSONDecodeError:
+                    base_thumbnails = []
             images, thumbnails = [], []
 
             is_cut_out = os.environ.get("USE_CUT_OUT_IMAGE") == "true"
