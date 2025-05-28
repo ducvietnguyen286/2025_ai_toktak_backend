@@ -19,6 +19,8 @@ from const import PACKAGE_CONFIG, PACKAGE_DURATION_DAYS
 import requests
 import base64
 
+from app.lib.string import generate_order_id
+
 
 class PaymentService:
 
@@ -121,9 +123,11 @@ class PaymentService:
         start_date = now
         end_date = start_date + relativedelta(months=1)
         user_id = current_user.id
+        order_id = generate_order_id()
         payment = Payment(
             user_id=user_id,
             package_name=package_name,
+            order_id=order_id,
             amount=origin_price,
             customer_name=current_user.name or current_user.email,
             method="REQUEST",
@@ -535,7 +539,7 @@ class PaymentService:
             new_package_price_origin = new_package_info["price_origin"]
             new_package_price = new_package_info["price"]
             discount_welcome = new_package_price_origin - new_package_price
-            
+
             if current_package == new_package:
                 return {
                     "can_upgrade": 0,
@@ -644,10 +648,8 @@ class PaymentService:
             }
 
     @staticmethod
-    def confirm_payment(payment_key, order_id, amount):
-        return
+    def confirm_payment_toss(payment_key, order_id, amount):
         TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY")
-        TOSSPAYMENTS_CLIEN_KEY = os.getenv("TOSSPAYMENTS_CLIEN_KEY")
         url = "https://api.tosspayments.com/v1/payments/confirm"
         auth = base64.b64encode(f"{TOSS_SECRET_KEY}:".encode()).decode()
 
@@ -655,5 +657,8 @@ class PaymentService:
 
         payload = {"paymentKey": payment_key, "orderId": order_id, "amount": amount}
 
-        res = requests.post(url, json=payload, headers=headers)
-        return res.json(), res.status_code
+        try:
+            res = requests.post(url, json=payload, headers=headers)
+            return res.json(), res.status_code
+        except requests.RequestException as e:
+            return {"message": f"TossPayments 연결 오류: {str(e)}"}, 500

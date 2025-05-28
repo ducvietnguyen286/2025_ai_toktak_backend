@@ -10,7 +10,7 @@ class Payment(db.Model, BaseModel):
 
     parent_id = db.Column(db.Integer, db.ForeignKey("payments.id"), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    order_id = db.Column(db.Integer, nullable=False)
+    order_id = db.Column(db.String(255), nullable=False)
     customer_name = db.Column(db.String(255), nullable=False)
     method = db.Column(db.String(255), nullable=False)
     package_name = db.Column(db.String(50), nullable=False)
@@ -29,6 +29,8 @@ class Payment(db.Model, BaseModel):
     requested_at = db.Column(db.DateTime, nullable=False)
     approved_at = db.Column(db.DateTime, nullable=False)
     fail_reason = db.Column(db.String(255), nullable=False)
+    payment_key = db.Column(db.String(255), nullable=False)
+    payment_data = db.Column(db.Text, nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
     updated_at = db.Column(
@@ -44,6 +46,8 @@ class Payment(db.Model, BaseModel):
             "current_user_subscription": self.user.subscription if self.user else None,
             "id": self.id,
             "order_id": self.order_id,
+            "payment_key": self.payment_key,
+            "payment_data": self.payment_data,
             "method": self.method,
             "user_id": self.user_id,
             "customer_name": self.customer_name,
