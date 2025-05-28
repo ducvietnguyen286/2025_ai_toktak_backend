@@ -10,7 +10,7 @@ class Payment(db.Model, BaseModel):
 
     parent_id = db.Column(db.Integer, db.ForeignKey("payments.id"), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    order_id = db.Column(db.Integer, nullable=False)
+    order_id = db.Column(db.String(255), nullable=False)
     customer_name = db.Column(db.String(255), nullable=False)
     method = db.Column(db.String(255), nullable=False)
     package_name = db.Column(db.String(50), nullable=False)

@@ -11,6 +11,7 @@ from app.decorators import parameters, admin_required
 from app.services.post import PostService
 from app.lib.response import Response
 from app.lib.logger import logger
+from dateutil.parser import isoparse
 import const
 
 import datetime
@@ -109,6 +110,9 @@ class APICreateNewPayment(Resource):
             title=message,
             notification_type="payment",
         )
+
+        # PaymentService.confirm_payment()
+
         return Response(
             message=message,
             data={
@@ -430,3 +434,103 @@ class APIDeleteAccount(Resource):
                 message="Delete Payment Fail",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/get_detail")
+class APIGetPaymentDetail(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        payment_id = int(data.get("payment_id", 0))
+        message = ""
+        active = PaymentService.find_payment(payment_id)
+        if active:
+
+            return Response(
+                message="",
+                data={"payment": active._to_json()},
+                code=200,
+            ).to_dict()
+
+        return Response(
+            message=message,
+            data={},
+            code=201,
+        ).to_dict()
+
+
+@ns.route("/get_detail")
+class APIGetPaymentDetail(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        payment_id = int(data.get("payment_id", 0))
+        message = ""
+        active = PaymentService.find_payment(payment_id)
+        if active:
+
+            return Response(
+                message="",
+                data={"payment": active._to_json()},
+                code=200,
+            ).to_dict()
+
+        return Response(
+            message=message,
+            data={},
+            code=201,
+        ).to_dict()
+
+
+@ns.route("/confirm")
+class APIPaymentConfirm(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        payment_key = data.get("paymentKey")
+        order_id = data.get("orderId")
+        amount = data.get("amount")
+        payment_id = data.get("payment_id")  # optional
+        message = ""
+
+        payment_data, status_code = PaymentService.confirm_payment_toss(
+            payment_key, order_id, amount
+        )
+
+        if status_code == 200:
+            # Thanh toán thành công, cập nhật DB
+            payment = PaymentService.file_payment_by_order(order_id)
+
+            if not payment:
+                return Response(
+                    message="결제 정보가 존재하지 않습니다",
+                    message_en="Payment does not exist",
+                    code=201,
+                ).to_dict()
+
+            data_update = {
+                "paymentKey": payment_data["paymentKey"],
+                "method": payment_data["method"],
+                "status": "PAID",
+                "approved_at": isoparse(payment_data["approvedAt"]),
+            }
+
+            payment = PaymentService.update_payment(payment_id, **data_update)
+            return Response(
+                message="Tosspayment 결제가 완료되었습니다",
+                message_en="Payment completed successfully via Tosspayment",
+                data={
+                    "paymentKey": payment_data["paymentKey"],
+                    "method": payment_data["method"],
+                },
+            ).to_dict()
+
+        return Response(
+            message=message,
+            data={
+                "status": "FAILED",
+                "fail_reason": payment_data.get("message", "Thanh toán thất bại"),
+                "code": payment_data.get("code"),
+            },
+            code=201,
+        ).to_dict()
