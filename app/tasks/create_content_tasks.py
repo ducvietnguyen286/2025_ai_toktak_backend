@@ -1,7 +1,7 @@
 import json
 import os
 
-from celery import group
+from celery import chord, group
 from app.ais.chatgpt import (
     call_chatgpt_clear_product_name,
     call_chatgpt_create_blog,
@@ -173,13 +173,8 @@ def make_post_data(self, batch_id):
             if not posts:
                 return None
             job = group(make_single_post.s(batch.id, post.id) for post in posts)
-            result = job.apply_async()
-            result.join()
-            if result.successful():
-                return batch_id
-            else:
-                app.logger.error(f"Error in make_post_data for batch {batch_id}")
-                return None
+            job.apply_async()
+            return batch_id
 
         except Exception as e:
             traceback = e.__traceback__
@@ -512,7 +507,7 @@ def process_create_post_image(process_images, data, batch, post):
             is_avif=is_avif,
         )
         image_urls = img_res.get("image_urls", [])
-        file_size += img_res.get("file_size", 0)
+        file_size = img_res.get("file_size", 0)
         mime_type = img_res.get("mime_type", "")
         maker_images = image_urls
     else:
