@@ -244,6 +244,7 @@ class APICreateBatchSync(Resource):
             if "iframes" not in data:
                 data["iframes"] = []
             data["cleared_images"] = []
+            data["narration"] = narration
 
             post_types = ["video", "image", "blog"]
 

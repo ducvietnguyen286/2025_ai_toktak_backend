@@ -1,7 +1,8 @@
+import datetime
 import json
 import os
 
-from celery import chord, group
+from celery import group
 from app.ais.chatgpt import (
     call_chatgpt_clear_product_name,
     call_chatgpt_create_blog,
@@ -26,7 +27,7 @@ from app.services.post import PostService
 from app.services.shorten_services import ShortenServices
 from app.services.shotstack_services import ShotStackService
 from app.services.video_service import VideoService
-from app.tasks.celery_app import celery_app, make_celery_app
+from app.tasks.celery_app import celery_app, make_celery_app, redis_client
 import const
 
 app = make_celery_app()
@@ -36,6 +37,10 @@ app = make_celery_app()
 def create_batch_content(self, batch_id, data):
     with app.app_context():
         try:
+            batch = BatchService.find_batch(batch_id)
+            if not batch:
+                return None
+
             url = data.get("input_url")
             shorten_link, is_shorted = ShortenServices.shorted_link(url)
             data["base_url"] = shorten_link
@@ -52,6 +57,51 @@ def create_batch_content(self, batch_id, data):
                 shorten_link=shorten_link,
                 content=json.dumps(data),
             )
+
+            is_advance = batch.is_advance
+            is_paid_advertisements = batch.is_paid_advertisements
+            narration = data.get("narration", "")
+            user_id = batch.user_id
+
+            if not is_advance:
+                user_template = PostService.get_template_video_by_user_id(user_id)
+                if not user_template:
+                    user_template = PostService.create_user_template_make_video(
+                        user_id=user_id
+                    )
+                data_update_template = {
+                    "is_paid_advertisements": is_paid_advertisements,
+                    "narration": narration,
+                }
+
+                user_template = PostService.update_template(
+                    user_template.id, **data_update_template
+                )
+
+                # current_user.batch_remain -= 1
+                # current_user.save()
+
+            time_to_end_of_day = int(
+                (
+                    datetime.datetime.combine(datetime.date.today(), datetime.time.max)
+                    - datetime.datetime.now()
+                ).total_seconds()
+                + 1
+            )
+
+            redis_client.set(
+                f"toktak:users:free:used:{user_id}",
+                "1",
+                ex=time_to_end_of_day,
+            )
+
+            NotificationServices.create_notification(
+                user_id=user_id,
+                batch_id=batch.id,
+                notification_type="create_batch",
+                title=f"제품 정보를 성공적으로 가져왔습니다. {url}",
+            )
+
             return batch_id
         except Exception as e:
             traceback = e.__traceback__
