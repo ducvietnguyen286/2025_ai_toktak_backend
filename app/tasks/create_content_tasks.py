@@ -57,6 +57,11 @@ def create_batch_content(self, batch_id, data):
             )
             return batch_id
         except Exception as e:
+            traceback = e.__traceback__
+            if traceback:
+                app.logger.error(
+                    f"Error creating batch content: {e} at line {traceback.tb_lineno}"
+                )
             app.logger.error(f"Error creating batch content: {e}")
             self.retry(exc=e, countdown=5, max_retries=3)
             return None
@@ -145,6 +150,11 @@ def create_images(self, batch_id):
             return batch_id
 
         except Exception as e:
+            traceback = e.__traceback__
+            if traceback:
+                app.logger.error(
+                    f"Error in create_images: {e} at line {traceback.tb_lineno}"
+                )
             app.logger.error(f"Error in create_images: {e}")
             self.retry(exc=e, countdown=5, max_retries=3)
             return None
@@ -170,6 +180,11 @@ def make_post_data(self, batch_id):
                 return None
 
         except Exception as e:
+            traceback = e.__traceback__
+            if traceback:
+                app.logger.error(
+                    f"Error finding batch: {e} at line {traceback.tb_lineno}"
+                )
             app.logger.error(f"Error finding batch: {e}")
             self.retry(exc=e, countdown=5, max_retries=3)
             return None
