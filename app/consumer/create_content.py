@@ -52,7 +52,8 @@ class CreateContent:
             data = self.data
             batch_id = batch.id
 
-            url = data.get("")
+            url = data.get("input_url", "")
+
             shorten_link, is_shorted = ShortenServices.shorted_link(url)
             data["base_url"] = shorten_link
             data["shorten_link"] = shorten_link if is_shorted else ""
