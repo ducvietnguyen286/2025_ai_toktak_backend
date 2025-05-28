@@ -16,6 +16,8 @@ from app.lib.logger import logger
 from dateutil.relativedelta import relativedelta
 import traceback
 from const import PACKAGE_CONFIG, PACKAGE_DURATION_DAYS
+import requests
+import base64
 
 
 class PaymentService:
@@ -463,6 +465,7 @@ class PaymentService:
                     "amount": 0,
                     "price": 0,
                     "new_package_price": 0,
+                    "new_package_price_origin": 0,
                     "start_date": start_date_default.strftime("%Y-%m-%d"),
                     "end_date": end_date_default.strftime("%Y-%m-%d"),
                     "next_payment": (end_date_default + timedelta(days=1)).strftime(
@@ -490,6 +493,10 @@ class PaymentService:
                     f"addon_count  : {addon_count}  price_addon: {price_addon} "
                 )
 
+            new_package_price_origin = new_package_info["price_origin"]
+            new_package_price = new_package_info["price"]
+            discount_welcome = new_package_price_origin - new_package_price
+
             if not current_payment:
                 return {
                     "can_upgrade": 1,
@@ -503,7 +510,9 @@ class PaymentService:
                     "upgrade_price": 0,
                     "amount": amount,
                     "price": amount + price_addon,
-                    "new_package_price": new_package_info["price"],
+                    "new_package_price_origin": new_package_price_origin,
+                    "new_package_price": new_package_price,
+                    "discount_welcome": discount_welcome,
                     "start_date": start_date_default.strftime("%Y-%m-%d"),
                     "end_date": end_date_default.strftime("%Y-%m-%d"),
                     "next_payment": (end_date_default + timedelta(days=1)).strftime(
@@ -523,6 +532,10 @@ class PaymentService:
 
             used_days = (today - start_date).days if start_date else 0
 
+            new_package_price_origin = new_package_info["price_origin"]
+            new_package_price = new_package_info["price"]
+            discount_welcome = new_package_price_origin - new_package_price
+            
             if current_package == new_package:
                 return {
                     "can_upgrade": 0,
@@ -537,6 +550,8 @@ class PaymentService:
                     "amount": new_package_info["price"],
                     "price": new_package_info["price"],
                     "new_package_price": new_package_info["price"],
+                    "new_package_price_origin": new_package_info["price_origin"],
+                    "discount_welcome": discount_welcome,
                     "start_date": (
                         start_date.strftime("%Y-%m-%d") if start_date else None
                     ),
@@ -566,6 +581,8 @@ class PaymentService:
                     "amount": new_package_info["price"],
                     "price": new_package_info["price"],
                     "new_package_price": new_package_info["price"],
+                    "new_package_price_origin": new_package_info["price_origin"],
+                    "discount_welcome": discount_welcome,
                     "start_date": (
                         start_date.strftime("%Y-%m-%d") if start_date else None
                     ),
@@ -585,6 +602,9 @@ class PaymentService:
             new_package_price = new_package_info["price"]
             upgrade_price = max(0, new_package_price - discount)
             amount = upgrade_price
+            discount_welcome = (
+                new_package_info["price"] - new_package_info["price_origin"]
+            )
 
             return {
                 "can_upgrade": 1,
@@ -601,6 +621,8 @@ class PaymentService:
                 "amount": new_package_price,
                 "price": upgrade_price,
                 "new_package_price": new_package_price,
+                "new_package_price_origin": new_package_info["price_origin"],
+                "discount_welcome": discount_welcome,
                 "start_date": start_date.strftime("%Y-%m-%d") if start_date else None,
                 "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
                 "next_payment": (
@@ -620,3 +642,18 @@ class PaymentService:
                 "message": "Có lỗi xảy ra khi tính toán nâng cấp.",
                 "message_en": "Error occurred while calculating upgrade.",
             }
+
+    @staticmethod
+    def confirm_payment(payment_key, order_id, amount):
+        return
+        TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY")
+        TOSSPAYMENTS_CLIEN_KEY = os.getenv("TOSSPAYMENTS_CLIEN_KEY")
+        url = "https://api.tosspayments.com/v1/payments/confirm"
+        auth = base64.b64encode(f"{TOSS_SECRET_KEY}:".encode()).decode()
+
+        headers = {"Authorization": f"Basic {auth}", "Content-Type": "application/json"}
+
+        payload = {"paymentKey": payment_key, "orderId": order_id, "amount": amount}
+
+        res = requests.post(url, json=payload, headers=headers)
+        return res.json(), res.status_code
