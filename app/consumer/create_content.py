@@ -8,7 +8,7 @@ from app.ais.chatgpt import (
     call_chatgpt_create_social,
 )
 from app.enums.messages import MessageError, MessageSuccess
-from app.lib.logger import log_create_content_message
+from app.lib.logger import log_create_content_message, logger
 from app.lib.string import (
     change_advance_hashtags,
     get_ads_content,
@@ -498,37 +498,68 @@ def check_is_avif(data):
 
 
 def process_create_post_blog(process_images, data, batch, post):
+    log_create_content_message(
+        f"Creating blog post for batch_id={batch.id}, post_id={post.id}"
+    )
+    response = None
+    docx_url = ""
+    file_size = 0
+    mime_type = ""
+    docx_title = ""
+    docx_content = ""
     url = batch.url
     batch_id = batch.id
-    response = call_chatgpt_create_blog(process_images, data, post.id)
-    if response:
-        parse_caption = json.loads(response)
-        parse_response = parse_caption.get("response", {})
-        docx_title = parse_response.get("title", "")
-        docx_content = parse_response.get("docx_content", "")
+    try:
+        response = call_chatgpt_create_blog(process_images, data, post.id)
+        if response:
+            parse_caption = json.loads(response)
+            parse_response = parse_caption.get("response", {})
+            docx_title = parse_response.get("title", "")
+            docx_content = parse_response.get("docx_content", "")
 
-        ads_text = get_ads_content(url)
+            ads_text = get_ads_content(url)
 
-        res_txt = DocxMaker().make_txt(
-            docx_title,
-            ads_text,
-            docx_content,
+            res_txt = DocxMaker().make_txt(
+                docx_title,
+                ads_text,
+                docx_content,
+                process_images,
+                batch_id=batch_id,
+            )
+
+            txt_path = res_txt.get("txt_path", "")
+            docx_url = res_txt.get("docx_url", "")
+            file_size = res_txt.get("file_size", 0)
+            mime_type = res_txt.get("mime_type", "")
+        else:
+            message_error = MessageError.CREATE_POST_BLOG.value
+            log_create_content_message(f"Error creating blog post: {message_error}")
+            return (
+                None,
+                docx_url,
+                file_size,
+                mime_type,
+                process_images,
+                docx_title,
+                docx_content,
+            )
+
+        return (
+            response,
+            docx_url,
+            file_size,
+            mime_type,
             process_images,
-            batch_id=batch_id,
+            docx_title,
+            docx_content,
         )
-
-        txt_path = res_txt.get("txt_path", "")
-        docx_url = res_txt.get("docx_url", "")
-        file_size = res_txt.get("file_size", 0)
-        mime_type = res_txt.get("mime_type", "")
-    else:
-        docx_url = ""
-        file_size = 0
-        mime_type = ""
-        docx_title = ""
-        docx_content = ""
-        message_error = MessageError.CREATE_POST_BLOG.value
-        log_create_content_message(f"Error creating blog post: {message_error}")
+    except Exception as e:
+        traceback = e.__traceback__
+        if traceback:
+            log_create_content_message(
+                f"Error in process_create_post_blog: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+            )
+        logger.error(f"Error in process_create_post_blog: {e}")
         return (
             None,
             docx_url,
@@ -539,122 +570,146 @@ def process_create_post_blog(process_images, data, batch, post):
             docx_content,
         )
 
-    return (
-        response,
-        docx_url,
-        file_size,
-        mime_type,
-        process_images,
-        docx_title,
-        docx_content,
-    )
-
 
 def process_create_post_image(process_images, data, batch, post):
-    template_info = json.loads(batch.template_info)
-    image_template_id = template_info.get("image_template_id", "")
-    if image_template_id == "":
-        return None
+    log_create_content_message(
+        f"Creating image post for batch_id={batch.id}, post_id={post.id}"
+    )
+    response = None
+    maker_images = []
+    captions = []
+    file_size = 0
+    mime_type = ""
 
-    is_avif = check_is_avif(data)
-
-    response = call_chatgpt_create_social(process_images, data, post.id)
-    if response:
-        parse_caption = json.loads(response)
-        parse_response = parse_caption.get("response", {})
-        captions = parse_response.get("caption", "")
-        image_template = ImageTemplateService.find_image_template(image_template_id)
-        if not image_template:
+    try:
+        template_info = json.loads(batch.template_info)
+        image_template_id = template_info.get("image_template_id", "")
+        if image_template_id == "":
             return None
 
-        img_res = ImageTemplateService.create_image_by_template(
-            template=image_template,
-            captions=captions,
-            process_images=process_images,
-            post=post,
-            is_avif=is_avif,
-        )
-        image_urls = img_res.get("image_urls", [])
-        file_size = img_res.get("file_size", 0)
-        mime_type = img_res.get("mime_type", "")
-        maker_images = image_urls
-    else:
-        maker_images = []
-        captions = []
-        file_size = 0
-        mime_type = ""
-        message_error = MessageError.CREATE_POST_IMAGE.value
-        log_create_content_message(f"Error creating image post: {message_error}")
-        return None, maker_images, captions, file_size, mime_type
+        is_avif = check_is_avif(data)
 
-    return response, maker_images, captions, file_size, mime_type
+        response = call_chatgpt_create_social(process_images, data, post.id)
+        if response:
+            parse_caption = json.loads(response)
+            parse_response = parse_caption.get("response", {})
+            captions = parse_response.get("caption", "")
+            image_template = ImageTemplateService.find_image_template(image_template_id)
+            if not image_template:
+                return None
+
+            img_res = ImageTemplateService.create_image_by_template(
+                template=image_template,
+                captions=captions,
+                process_images=process_images,
+                post=post,
+                is_avif=is_avif,
+            )
+            image_urls = img_res.get("image_urls", [])
+            file_size = img_res.get("file_size", 0)
+            mime_type = img_res.get("mime_type", "")
+            maker_images = image_urls
+        else:
+            message_error = MessageError.CREATE_POST_IMAGE.value
+            log_create_content_message(f"Error creating image post: {message_error}")
+            return None, maker_images, captions, file_size, mime_type
+
+        return response, maker_images, captions, file_size, mime_type
+    except Exception as e:
+        traceback = e.__traceback__
+        if traceback:
+            log_create_content_message(
+                f"Error in process_create_post_image: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+            )
+        logger.error(f"Error in process_create_post_image: {e}")
+        return response, maker_images, captions, file_size, mime_type
 
 
 def process_create_post_video(process_images, data, batch, post):
-    batch_id = batch.id
-    is_avif = check_is_avif(data)
+    log_create_content_message(
+        f"Creating video post for batch_id={batch.id}, post_id={post.id}"
+    )
+    response = None
     maker_images = []
-    response = call_chatgpt_create_caption(process_images, data, post.id)
-    if response:
-        parse_caption = json.loads(response)
-        parse_response = parse_caption.get("response", {})
+    render_id = ""
+    hooking = []
+    captions = []
 
-        caption = parse_response.get("caption", "")
-        origin_caption = caption
-        hooking = parse_response.get("hooking", [])
+    try:
+        batch_id = batch.id
+        is_avif = check_is_avif(data)
+        response = call_chatgpt_create_caption(process_images, data, post.id)
+        if response:
+            parse_caption = json.loads(response)
+            parse_response = parse_caption.get("response", {})
 
-        product_video_url = data.get("video_url", "")
-
-        captions = split_text_by_sentences(caption, len(process_images))
-
-        for image_url in process_images:
-            maker_image = ImageMaker.save_image_for_short_video(
-                image_url, batch_id, is_avif=is_avif
-            )
-            maker_images.append(maker_image)
-
-        # Tạo video từ ảnh
-        if len(maker_images) > 0:
-            image_renders = maker_images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
-            image_renders_sliders = maker_images[:10]  # Lấy tối đa 10 Ảnh đầu tiên
-            gifs = data.get("gifs", [])
-            if gifs:
-                image_renders_sliders = gifs + image_renders_sliders
-
-            product_name = data["name"]
-
-            voice_google = batch.voice_google or 1
+            caption = parse_response.get("caption", "")
+            origin_caption = caption
+            hooking = parse_response.get("hooking", [])
 
             product_video_url = data.get("video_url", "")
-            if product_video_url != "":
-                image_renders_sliders.insert(0, product_video_url)
 
-            data_make_video = {
-                "post_id": post.id,
-                "batch_id": batch.id,
-                "is_advance": batch.is_advance,
-                "template_info": batch.template_info,
-                "batch_type": batch.type,
-                "voice_google": voice_google,
-                "origin_caption": origin_caption,
-                "images_url": image_renders,
-                "images_slider_url": image_renders_sliders,
-                "product_video_url": product_video_url,
-            }
-            result = ShotStackService.create_video_from_images_v2(data_make_video)
+            captions = split_text_by_sentences(caption, len(process_images))
 
-            if result["status_code"] == 200:
-                render_id = result["response"]["id"]
-
-                VideoService.create_create_video(
-                    render_id=render_id,
-                    user_id=post.user_id,
-                    product_name=product_name,
-                    images_url=json.dumps(image_renders),
-                    description="",
-                    origin_caption=origin_caption,
-                    post_id=post.id,
+            for image_url in process_images:
+                maker_image = ImageMaker.save_image_for_short_video(
+                    image_url, batch_id, is_avif=is_avif
                 )
+                maker_images.append(maker_image)
+
+            # Tạo video từ ảnh
+            if len(maker_images) > 0:
+                image_renders = maker_images[:3]  # Lấy tối đa 3 Ảnh đầu tiên
+                image_renders_sliders = maker_images[:10]  # Lấy tối đa 10 Ảnh đầu tiên
+                gifs = data.get("gifs", [])
+                if gifs:
+                    image_renders_sliders = gifs + image_renders_sliders
+
+                product_name = data["name"]
+
+                voice_google = batch.voice_google or 1
+
+                product_video_url = data.get("video_url", "")
+                if product_video_url != "":
+                    image_renders_sliders.insert(0, product_video_url)
+
+                data_make_video = {
+                    "post_id": post.id,
+                    "batch_id": batch.id,
+                    "is_advance": batch.is_advance,
+                    "template_info": batch.template_info,
+                    "batch_type": batch.type,
+                    "voice_google": voice_google,
+                    "origin_caption": origin_caption,
+                    "images_url": image_renders,
+                    "images_slider_url": image_renders_sliders,
+                    "product_video_url": product_video_url,
+                }
+                result = ShotStackService.create_video_from_images_v2(data_make_video)
+
+                if result["status_code"] == 200:
+                    render_id = result["response"]["id"]
+
+                    VideoService.create_create_video(
+                        render_id=render_id,
+                        user_id=post.user_id,
+                        product_name=product_name,
+                        images_url=json.dumps(image_renders),
+                        description="",
+                        origin_caption=origin_caption,
+                        post_id=post.id,
+                    )
+
+                else:
+                    render_id = ""
+                    hooking = []
+                    maker_images = []
+                    captions = []
+                    message_error = MessageError.CREATE_POST_VIDEO.value
+                    log_create_content_message(
+                        f"Error creating video post: {message_error}"
+                    )
+                    return None, render_id, hooking, maker_images, captions
 
             else:
                 render_id = ""
@@ -668,21 +723,16 @@ def process_create_post_video(process_images, data, batch, post):
                 return None, render_id, hooking, maker_images, captions
 
         else:
-            render_id = ""
-            hooking = []
-            maker_images = []
-            captions = []
             message_error = MessageError.CREATE_POST_VIDEO.value
             log_create_content_message(f"Error creating video post: {message_error}")
             return None, render_id, hooking, maker_images, captions
 
-    else:
-        render_id = ""
-        hooking = []
-        maker_images = []
-        captions = []
-        message_error = MessageError.CREATE_POST_VIDEO.value
-        log_create_content_message(f"Error creating video post: {message_error}")
-        return None, render_id, hooking, maker_images, captions
-
-    return response, render_id, hooking, maker_images, captions
+        return response, render_id, hooking, maker_images, captions
+    except Exception as e:
+        traceback = e.__traceback__
+        if traceback:
+            log_create_content_message(
+                f"Error in process_create_post_video: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+            )
+        logger.error(f"Error in process_create_post_video: {e}")
+        return response, render_id, hooking, maker_images, captions
