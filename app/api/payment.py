@@ -26,6 +26,7 @@ class APICreateNewPayment(Resource):
         data = request.get_json()
         package_name = data.get("package_name")
         addon_count = int(data.get("addon_count", 0))
+        message = ""
 
         PACKAGE_CHOICES = list(const.PACKAGE_CONFIG.keys())
 
@@ -37,9 +38,23 @@ class APICreateNewPayment(Resource):
 
         current_user = AuthService.get_current_identity()
         user_id_login = current_user.id
+        user_subscription = current_user.subscription
+        if user_subscription == "FREE":
+            message = f"{package_name} 요금제가 성공적으로 등록되었습니다."
+        else:
+            message = f"{package_name} 요금제가 성공적으로 등록되었습니다."
         # Kiểm tra xem đã đăng kí gói nào chưa
         active = PaymentService.has_active_subscription(user_id_login)
         if active:
+            active_status = active.status
+            if active_status == "PENDING":
+                message = f"{package_name} 패키지를 구매하셨습니다.<br> 서비스 이용을 위해 시스템의 확인을 기다려 주세요."
+                message_en = f" You have purchased the {package_name} package. Please wait for system confirmation to start using the service."
+                return Response(
+                    message=message,
+                    message_en=message_en,
+                    code=201).to_dict()
+
             # Đã đăng kí gói nào chưa
             # Không cho downgrade
             if not PaymentService.can_upgrade(active.package_name, package_name):
@@ -112,10 +127,13 @@ class APICalculateUpgradePrice(Resource):
     def post(self):
         data = request.get_json()
         package_name = data.get("package_name")
+        addon_count = data.get("addon_count", 0)
         current_user = AuthService.get_current_identity()
         user_id = current_user.id
 
-        result = PaymentService.calculate_upgrade_price(user_id, package_name)
+        result = PaymentService.calculate_upgrade_price(
+            user_id, package_name, addon_count
+        )
         return Response(
             data=result,
             code=result["code"],
@@ -303,13 +321,16 @@ class APIPaymentApproval(Resource):
                 subscription_expired = payment.end_date
 
                 batch_total = UserService.get_total_batch_total(user_id)
-                batch_remain = user_detail.batch_remain
+                login_user_subscription = user_detail.subscription
+                batch_remain = 0
+                if login_user_subscription != "FREE":
+                    batch_remain = user_detail.batch_remain
 
                 data_update = {
                     "subscription": package_name,
                     "subscription_expired": subscription_expired,
-                    "batch_total": batch_total,
-                    "batch_remain": batch_remain + payment.total_create,
+                    "batch_total": batch_total + payment.total_create,
+                    "batch_remain": batch_remain,
                     "total_link_active": package_data["total_link_active"],
                 }
 
