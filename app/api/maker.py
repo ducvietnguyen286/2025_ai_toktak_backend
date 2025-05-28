@@ -57,6 +57,13 @@ from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
 import const
 
+from celery import chain
+from app.tasks.create_content_tasks import (
+    create_batch_content,
+    create_images,
+    make_post_data,
+)
+
 from flask_jwt_extended import (
     verify_jwt_in_request,
 )
@@ -142,6 +149,164 @@ class APICheckCreateBatch(Resource):
             data={},
             code=200,
         ).to_dict()
+
+
+@ns.route("/create-batch-sync")
+class APICreateBatchSync(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "url": {"type": "string"},
+            "voice": {"type": ["string", "null"]},
+            "narration": {"type": ["string", "null"]},
+            "is_advance": {"type": "boolean"},
+            "is_paid_advertisements": {"type": "integer"},
+        },
+        required=["url"],
+    )
+    def post(self, args):
+        url = args.get("url", "")
+        is_advance = args.get("is_advance", False)
+        current_month = time.strftime("%Y-%m", time.localtime())
+        current_user = AuthService.get_current_identity(no_cache=True) or None
+
+        user_id_login = current_user.id if current_user else 0
+
+        try:
+            batch_type = const.TYPE_NORMAL
+
+            errors = validater_create_batch(current_user, is_advance, url)
+            if errors:
+                return errors
+
+            if current_user:
+                user_id_login = current_user.id
+
+                if (
+                    current_user.subscription != "FREE"
+                    and current_user.subscription_expired.date()
+                    >= datetime.date.today()
+                ):
+                    batch_type = const.TYPE_PRO
+
+                redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
+                redis_client.set(
+                    redis_user_batch_key, current_user.batch_remain - 1, ex=180
+                )
+                if current_user.batch_of_month != current_month:
+                    UserService.update_user(
+                        user_id_login,
+                        batch_of_month=current_month,
+                    )
+
+            narration = args.get("narration", "female")
+            if narration == "female":
+                voice = 3
+            else:
+                voice = 2
+
+            is_paid_advertisements = args.get("is_paid_advertisements", 0)
+
+            data = Scraper().scraper({"url": url})
+
+            if not data:
+                NotificationServices.create_notification(
+                    user_id=user_id_login,
+                    status=const.NOTIFICATION_FALSE,
+                    title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                    description=f"Scraper False {url}",
+                )
+
+                redis_client.set(
+                    redis_user_batch_key, current_user.batch_remain + 1, ex=180
+                )
+
+                return Response(
+                    message=MessageError.NO_ANALYZE_URL.value["message"],
+                    data={
+                        "error_message": MessageError.NO_ANALYZE_URL.value[
+                            "error_message"
+                        ]
+                    },
+                    code=201,
+                ).to_dict()
+
+            thumbnail_url = data.get("image", "")
+
+            data["input_url"] = url
+            data["base_url"] = ""
+            data["shorten_link"] = ""
+            if "text" not in data:
+                data["text"] = ""
+            if "iframes" not in data:
+                data["iframes"] = []
+            data["cleared_images"] = []
+
+            post_types = ["video", "image", "blog"]
+
+            template_info = get_template_info(is_advance, is_paid_advertisements)
+            batch = BatchService.create_batch(
+                user_id=user_id_login,
+                url=url,
+                shorten_link="",
+                thumbnail=thumbnail_url,
+                thumbnails="[]",
+                content=json.dumps(data),
+                type=batch_type,
+                count_post=len(post_types),
+                status=0,
+                process_status="PENDING",
+                voice_google=voice,
+                is_paid_advertisements=is_paid_advertisements,
+                is_advance=is_advance,
+                template_info=template_info,
+            )
+
+            posts = []
+            for post_type in post_types:
+                post = PostService.create_post(
+                    user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
+                )
+                post.save()
+
+                post_res = post._to_json()
+                posts.append(post_res)
+
+            batch_res = batch._to_json()
+            batch_res["posts"] = posts
+
+            batch_id = batch.id
+
+            chain(
+                create_batch_content.s(batch_id, data=data),
+                create_images.s(batch_id),
+                make_post_data.s(batch_id),
+            )()
+
+            return Response(
+                data=batch_res,
+                message=MessageSuccess.CREATE_BATCH.value,
+            ).to_dict()
+
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            if current_user:
+                user_id_login = current_user.id
+                redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
+                redis_client.delete(f"toktak:users:free:used:{user_id_login}")
+                redis_client.set(
+                    redis_user_batch_key, current_user.batch_remain + 1, ex=180
+                )
+            return Response(
+                message=MessageError.NO_ANALYZE_URL.value["message"],
+                data={
+                    "error_message": MessageError.NO_ANALYZE_URL.value["error_message"]
+                },
+                code=201,
+            ).to_dict()
 
 
 @ns.route("/create-batch")
