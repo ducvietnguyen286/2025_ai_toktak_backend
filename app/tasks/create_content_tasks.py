@@ -172,7 +172,7 @@ def make_post_data(self, batch_id):
             posts = PostService.get_posts__by_batch_id(batch_id)
             if not posts:
                 return None
-            job = group(make_single_post.s(batch, post) for post in posts)
+            job = group(make_single_post.s(batch.id, post.id) for post in posts)
             result = job.apply_async()
             result.join()
             if result.successful():
@@ -193,8 +193,16 @@ def make_post_data(self, batch_id):
 
 
 @celery_app.task(bind=True, name="make_single_post")
-def make_single_post(self, batch, post):
+def make_single_post(self, batch_id, post_id):
     with app.app_context():
+        batch = BatchService.find_batch(batch_id)
+        post = PostService.find_post(post_id)
+        if not batch or not post:
+            app.logger.error(
+                f"Batch or Post not found for batch_id={batch_id}, post_id={post_id}"
+            )
+            return None
+
         is_paid_advertisements = batch.is_paid_advertisements
         template_info = json.loads(batch.template_info)
         data = json.loads(batch.content)
