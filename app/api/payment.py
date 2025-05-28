@@ -509,10 +509,11 @@ class APIPaymentConfirm(Resource):
                 ).to_dict()
 
             data_update = {
-                "paymentKey": payment_data["paymentKey"],
+                "payment_key": payment_data["paymentKey"],
                 "method": payment_data["method"],
                 "status": "PAID",
                 "approved_at": isoparse(payment_data["approvedAt"]),
+                "payment_data": json.dumps(payment_data),
             }
 
             payment = PaymentService.update_payment(payment_id, **data_update)
