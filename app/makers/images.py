@@ -372,8 +372,7 @@ class ImageMaker:
                     image_hash=image_hash
                 )
             if response:
-                results = response.get("response", None)
-                results = json.loads(results) if results else []
+                results = json.loads(response) if response else None
             else:
                 response = requests.post(
                     SAM_CHECK_IMAGE_URL, json={"image_path": image_path}, timeout=30
