@@ -115,7 +115,7 @@ class CreateContent:
             traceback = e.__traceback__
             if traceback:
                 log_create_content_message(
-                    f"Error creating batch content: {e} at line {traceback.tb_lineno}"
+                    f"Error creating batch content: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                 )
             log_create_content_message(f"Error creating batch content: {e}")
             return None
@@ -204,7 +204,7 @@ class CreateContent:
             traceback = e.__traceback__
             if traceback:
                 log_create_content_message(
-                    f"Error in create_images: {e} at line {traceback.tb_lineno}"
+                    f"Error in create_images: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                 )
             log_create_content_message(f"Error in create_images: {e}")
             return None
@@ -469,6 +469,11 @@ class CreateContent:
                     post_id=post.id,
                     notification_type="blog",
                     description=f"Create Blog False {str(e)}",
+                )
+            traceback = e.__traceback__
+            if traceback:
+                log_create_content_message(
+                    f"Error in make_single_post: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                 )
             log_create_content_message(f"Error in make_single_post: {e}")
             self.retry(exc=e, countdown=5, max_retries=1)
