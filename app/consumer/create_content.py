@@ -62,7 +62,11 @@ class CreateContent:
 
             log_create_content_message(f"Create Batch {data} with URL: {type(data)}")
 
-            product_name = data.get("name", "")
+            product_name = (
+                data.get("name", "")
+                if "name" in data
+                else (data["name"] if "name" in data else "")
+            )
             product_name_cleared = call_chatgpt_clear_product_name(product_name)
             if product_name_cleared:
                 data["name"] = product_name_cleared
