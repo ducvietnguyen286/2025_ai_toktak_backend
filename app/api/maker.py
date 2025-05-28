@@ -151,7 +151,7 @@ class APICheckCreateBatch(Resource):
         ).to_dict()
 
 
-@ns.route("/create-batch-sync")
+@ns.route("/create-batch")
 class APICreateBatchSync(Resource):
 
     @jwt_required()
@@ -310,7 +310,7 @@ class APICreateBatchSync(Resource):
             ).to_dict()
 
 
-@ns.route("/create-batch")
+@ns.route("/create-batch-1")
 class APICreateBatch(Resource):
     @jwt_required()
     @parameters(
@@ -541,6 +541,10 @@ class APIBatchMakeImage(Resource):
     )
     def post(self, args):
         try:
+            return Response(
+                message="Batch Make Image",
+                data={},
+            ).to_dict()
             batch_id = args.get("batch_id", 0)
             posts = []
 
@@ -820,6 +824,10 @@ class APIMakePost(Resource):
         required=[],
     )
     def post(self, id, **kwargs):
+        return Response(
+            message="Make Post",
+            data={},
+        ).to_dict()
         args = kwargs.get("req_args", False)
         verify_jwt_in_request(optional=True)
         current_user_id = 0
