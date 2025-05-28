@@ -36,11 +36,12 @@ class CreateContent:
         self.batch = batch
         self.data = data
 
-    def create_content(self):
+    def create_content(self, app):
         try:
-            batch_id = self.create_batch()
-            batch_id = self.create_images(batch_id)
-            self.create_posts(batch_id)
+            with app.app_context():
+                batch_id = self.create_batch()
+                batch_id = self.create_images(batch_id)
+                self.create_posts(batch_id)
             return True
         except Exception as e:
             log_create_content_message(f"Error in create_content: {e}")
