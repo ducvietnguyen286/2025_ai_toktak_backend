@@ -531,7 +531,7 @@ hashtag
 def call_chatgpt_clear_product_name(name):
     response_database = get_from_database("product_name", {"name": name})
     if response_database:
-        return response_database.name
+        return response_database.get("name", name)
 
     client = OpenAI(api_key=chatgpt_api_key)
     assistant_id = "asst_EK0uKR3AbhB2Js9cESzqRIxa"
