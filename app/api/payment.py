@@ -109,6 +109,9 @@ class APICreateNewPayment(Resource):
             title=message,
             notification_type="payment",
         )
+
+        PaymentService.confirm_payment()
+
         return Response(
             message=message,
             data={
@@ -430,3 +433,27 @@ class APIDeleteAccount(Resource):
                 message="Delete Payment Fail",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/get_detail")
+class APIGetPaymentDetail(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        payment_id = int(data.get("payment_id", 0))
+        payment_id = 1
+        message = ""
+        active = PaymentService.find_payment(payment_id)
+        if active:
+
+            return Response(
+                message="",
+                data={"payment": active._to_json()},
+                code=200,
+            ).to_dict()
+
+        return Response(
+            message=message,
+            data={},
+            code=201,
+        ).to_dict()
