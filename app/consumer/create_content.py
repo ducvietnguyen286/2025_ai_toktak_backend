@@ -36,10 +36,11 @@ class CreateContent:
         self.batch = batch
         self.data = data
 
-    def create_content(self):
-        self.create_batch()
-        self.create_images(self.batch.id)
-        self.create_posts(self.batch.id)
+    def create_content(self, app):
+        with app.app_context():
+            self.create_batch()
+            self.create_images(self.batch.id)
+            self.create_posts(self.batch.id)
 
     def create_batch(self):
         try:

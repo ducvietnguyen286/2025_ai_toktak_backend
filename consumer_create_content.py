@@ -54,7 +54,7 @@ def create_app():
     return app
 
 
-def action_create_batch(message):
+def action_create_batch(message, app):
     try:
         batch_id = message.get("batch_id")
         data = message.get("data")
@@ -67,7 +67,7 @@ def action_create_batch(message):
             log_create_content_message("ERROR: Batch not found")
             return False
 
-        CreateContent(batch=batch, data=data).create_content()
+        CreateContent(batch=batch, data=data).create_content(app)
         return True
     except Exception as e:
         log_create_content_message(f"ERROR: Error create batch: {str(e)}")
@@ -86,7 +86,7 @@ def process_message_sync(body, app):
             log_create_content_message(f"Processing CREATE_BATCH action {decoded_body}")
             message = decoded_body.get("message")
             with app.app_context():
-                result = action_create_batch(message)
+                result = action_create_batch(message, app)
                 return result
 
         return False
