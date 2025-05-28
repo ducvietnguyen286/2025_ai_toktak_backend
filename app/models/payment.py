@@ -7,7 +7,7 @@ class Payment(db.Model, BaseModel):
     __tablename__ = "payments"
 
     id = db.Column(db.Integer, primary_key=True)
-    
+
     parent_id = db.Column(db.Integer, db.ForeignKey("payments.id"), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     order_id = db.Column(db.Integer, nullable=False)
@@ -36,6 +36,7 @@ class Payment(db.Model, BaseModel):
     )
 
     user = db.relationship("User", lazy="joined")
+    parent = db.relationship("Payment", remote_side=[id], lazy="joined")
 
     def to_dict(self):
         return {

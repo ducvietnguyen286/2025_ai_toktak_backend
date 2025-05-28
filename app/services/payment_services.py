@@ -15,7 +15,6 @@ from app.models.batch import Batch
 from app.lib.logger import logger
 from dateutil.relativedelta import relativedelta
 import traceback
-
 from const import PACKAGE_CONFIG, PACKAGE_DURATION_DAYS
 
 
@@ -100,6 +99,7 @@ class PaymentService:
         active_payment = (
             Payment.query.filter_by(user_id=user_id)
             .filter(Payment.end_date > now)
+            .filter(Payment.package_name != "ADDON")
             .order_by(Payment.end_date.desc())
             .first()
         )
@@ -150,7 +150,9 @@ class PaymentService:
             user_id=user_id, parent_id=parent_payment_id, package_name="ADDON"
         ).count()
         if count >= const.MAX_ADDON_PER_BASIC:
-            raise Exception("You can buy this addon only 2 times per BASIC package.")
+            raise Exception(
+                "이 애드온은 BASIC 패키지당 최대 2회까지만 구매할 수 있습니다."
+            )
 
         # Tính số ngày còn lại
         today = datetime.now()
@@ -339,8 +341,8 @@ class PaymentService:
 
             total_amount = addon_price * addon_count
             duration = const.BASIC_DURATION_DAYS
-            price_to_pay = int(addon_price / duration * remaining_days)
-            price_discount = addon_price - price_to_pay
+            price_to_pay = int(total_amount / duration * remaining_days)
+            price_discount = total_amount - price_to_pay
 
             return {
                 "addon_count": addon_count,
@@ -349,12 +351,12 @@ class PaymentService:
                     for payment_addon_detail in payment_addons
                 ],
                 "can_buy": 1,
-                "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày.",
+                "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày. calculate_addon_price",
                 "duration": duration,
                 "amount": total_amount,
                 "discount": price_discount,
                 "price": price_to_pay,
-                "addon_price": addon_price,
+                "addon_price": total_amount,
                 "total_discount": price_discount * addon_count,
                 "price_discount": price_discount,
                 "price_payment": price_to_pay,
@@ -389,16 +391,16 @@ class PaymentService:
             remaining_days = 30
             total_amount = addon_price * addon_count
             duration = const.BASIC_DURATION_DAYS
-            price_to_pay = 0
-            price_discount = addon_price - price_to_pay
+            price_to_pay = total_amount + basic_price
+            price_discount = 0
 
             return {
                 "addon_count": addon_count,
                 "payment_addons": [],
                 "can_buy": 1,
-                "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày.",
+                "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày. calculate_price_with_addon",
                 "duration": duration,
-                "amount": total_amount,
+                "amount": price_to_pay,
                 "discount": 0,
                 "price": price_to_pay,
                 "addon_price": addon_price,
@@ -438,14 +440,12 @@ class PaymentService:
         return 1
 
     @staticmethod
-    def calculate_upgrade_price(user_id, new_package):
-        from datetime import datetime, timedelta
-        import traceback
-
+    def calculate_upgrade_price(user_id, new_package, addon_count=0):
         try:
             today = datetime.now().date()
             start_date_default = today
             end_date_default = today + timedelta(days=30)
+            logger.info(addon_count)
 
             # Kiểm tra gói mới có hợp lệ không
             new_package_info = const.PACKAGE_CONFIG.get(new_package)
@@ -473,25 +473,36 @@ class PaymentService:
             # Lấy payment hiện tại còn hạn
             current_payment = (
                 Payment.query.filter(
-                    Payment.user_id == user_id, Payment.end_date >= today
+                    Payment.user_id == user_id,
+                    Payment.package_name != "ADDON",
+                    Payment.end_date >= today,
                 )
                 .order_by(Payment.end_date.desc())
                 .first()
             )
+            amount = new_package_info["price"]
+            price_addon = 0
+            if addon_count > 0 and new_package == "BASIC":
+                price_addon = (
+                    new_package_info["addon"]["EXTRA_CHANNEL"]["price"] * addon_count
+                )
+                logger.info(
+                    f"addon_count  : {addon_count}  price_addon: {price_addon} "
+                )
 
             if not current_payment:
                 return {
                     "can_upgrade": 1,
                     "code": 200,
                     "message": "플랜을 업그레이드할 수 있습니다.",
-                    "message_en": "You can upgrade your plan.",
+                    "message_en": "You can upgrade your plan.Not have current_payment",
                     "current_package": None,
                     "remaining_days": 0,
                     "used_days": 0,
                     "discount": 0,
                     "upgrade_price": 0,
-                    "amount": new_package_info["price"],
-                    "price": new_package_info["price"],
+                    "amount": amount,
+                    "price": amount + price_addon,
                     "new_package_price": new_package_info["price"],
                     "start_date": start_date_default.strftime("%Y-%m-%d"),
                     "end_date": end_date_default.strftime("%Y-%m-%d"),
@@ -537,7 +548,9 @@ class PaymentService:
                     ),
                 }
 
-            remaining_days = (end_date - today).days if end_date and today else 0
+            remaining_days = min(
+                (end_date - today).days if end_date and today else 0, 30
+            )
 
             if remaining_days <= 0:
                 return {
@@ -564,9 +577,10 @@ class PaymentService:
                     ),
                 }
 
-            package_detail = const.PACKAGE_CONFIG[current_package]
+            current_package_detail = const.PACKAGE_CONFIG[current_package]
+
             current_price = current_payment.price
-            current_days = package_detail.get("duration_days", 30)
+            current_days = current_package_detail.get("duration_days", 30)
             discount = int(current_price / current_days * remaining_days)
             new_package_price = new_package_info["price"]
             upgrade_price = max(0, new_package_price - discount)
@@ -576,7 +590,7 @@ class PaymentService:
                 "can_upgrade": 1,
                 "code": 200,
                 "message": "업그레이드하실 수 있습니다.",
-                "message_en": "You can upgrade.",
+                "message_en": f"You can upgrade. {new_package}",
                 "upgrade_package": new_package,
                 "upgrade_origin_price": new_package_price,
                 "current_package": current_package,
@@ -584,7 +598,7 @@ class PaymentService:
                 "remaining_days": remaining_days,
                 "used_days": used_days,
                 "discount": discount,
-                "amount": amount,
+                "amount": new_package_price,
                 "price": upgrade_price,
                 "new_package_price": new_package_price,
                 "start_date": start_date.strftime("%Y-%m-%d") if start_date else None,
@@ -594,6 +608,8 @@ class PaymentService:
                     if end_date
                     else None
                 ),
+                "current_package_detail": current_package_detail,
+                "current_days": current_days,
             }
         except Exception as ex:
             tb_str = traceback.format_exc()
