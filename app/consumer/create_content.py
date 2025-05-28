@@ -54,9 +54,13 @@ class CreateContent:
 
             url = data.get("input_url", "")
 
+            log_create_content_message(f"Create Batch {batch_id} with URL: {url}")
+
             shorten_link, is_shorted = ShortenServices.shorted_link(url)
             data["base_url"] = shorten_link
             data["shorten_link"] = shorten_link if is_shorted else ""
+
+            log_create_content_message(f"Create Batch {data} with URL: {type(data)}")
 
             product_name = data.get("name", "")
             product_name_cleared = call_chatgpt_clear_product_name(product_name)
