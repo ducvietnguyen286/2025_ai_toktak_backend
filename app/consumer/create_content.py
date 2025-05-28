@@ -35,10 +35,12 @@ class CreateContent:
     def __init__(self, batch, data):
         self.batch = batch
         self.data = data
+        self.app = None
 
     def create_content(self, app):
         try:
             with app.app_context():
+                self.app = app
                 batch_id = self.create_batch()
                 batch_id = self.create_images(batch_id)
                 self.create_posts(batch_id)
@@ -220,20 +222,22 @@ class CreateContent:
             if not posts:
                 return None
 
-            async def run_create_single_post(batch_id, post_id, self_ref):
+            async def run_create_single_post(batch_id, post_id, self_ref, app):
                 loop = asyncio.get_event_loop()
                 return await loop.run_in_executor(
-                    None, self_ref.create_single_post, batch_id, post_id
+                    None, self_ref.create_single_post, batch_id, post_id, app
                 )
 
-            async def run_all_create_single_post(batch_id, posts, self_ref):
+            async def run_all_create_single_post(batch_id, posts, self_ref, app):
                 tasks = [
-                    run_create_single_post(batch_id, post.id, self_ref)
+                    run_create_single_post(batch_id, post.id, self_ref, app)
                     for post in posts[:3]
                 ]
                 return await asyncio.gather(*tasks)
 
-            asyncio.run(run_all_create_single_post(batch_id, posts, self))
+            app = self.app
+
+            asyncio.run(run_all_create_single_post(batch_id, posts, self, app))
             return batch_id
 
         except Exception as e:
@@ -245,241 +249,244 @@ class CreateContent:
             log_create_content_message(f"Error finding batch: {e}")
             return None
 
-    def create_single_post(self, batch_id, post_id):
-        batch = BatchService.find_batch(batch_id)
-        post = PostService.find_post(post_id)
-        if not batch or not post:
-            log_create_content_message(
-                f"Batch or Post not found for batch_id={batch_id}, post_id={post_id}"
-            )
-            return None
-
-        is_paid_advertisements = batch.is_paid_advertisements
-        template_info = json.loads(batch.template_info)
-        data = json.loads(batch.content)
-        images = data.get("images", [])
-        thumbnails = batch.thumbnails
-        url = batch.url
-
-        type = post.type
-
-        try:
-            need_count = 10 if type == "video" else 5
-            cleared_images = data.get("cleared_images", [])
-
-            process_images = json.loads(thumbnails)
-            if process_images and len(process_images) < need_count:
-                current_length = len(process_images)
-                need_length = need_count - current_length
-                if len(cleared_images) > need_length:
-                    process_images = process_images + cleared_images[:need_length]
-                else:
-                    process_images = process_images + cleared_images
-
-                if len(process_images) < need_count:
-                    current_length = len(process_images)
-                    need_length = need_count - current_length
-                    if len(images) > need_length:
-                        process_images = process_images + images[:need_length]
-                    else:
-                        process_images = process_images + images
-            elif process_images and len(process_images) >= need_count:
-                process_images = process_images[:need_count]
-            else:
-                if len(cleared_images) > need_count:
-                    process_images = cleared_images[:need_count]
-                else:
-                    process_images = cleared_images
-
-                if len(process_images) < need_count:
-                    current_length = len(process_images)
-                    need_length = need_count - current_length
-                    if len(images) > need_length:
-                        process_images = process_images + images[:need_length]
-                    else:
-                        process_images = process_images + images
-
-            response = None
-            render_id = ""
-            hooking = []
-            maker_images = []
-            captions = []
-            thumbnail = batch.thumbnail
-            file_size = 0
-            mime_type = ""
-            docx_url = ""
-            title = ""
-            subtitle = ""
-            content = ""
-            video_url = ""
-            hashtag = ""
-            description = ""
-
-            if type == "video":
-                response, render_id, hooking, maker_images, captions = (
-                    process_create_post_video(process_images, data, batch, post)
+    def create_single_post(self, batch_id, post_id, app):
+        with app.app_context():
+            batch = BatchService.find_batch(batch_id)
+            post = PostService.find_post(post_id)
+            if not batch or not post:
+                log_create_content_message(
+                    f"Batch or Post not found for batch_id={batch_id}, post_id={post_id}"
                 )
-            elif type == "image":
-                response, maker_images, captions, file_size, mime_type = (
-                    process_create_post_image(process_images, data, batch, post)
-                )
-            elif type == "blog":
-                (
-                    response,
-                    docx_url,
-                    file_size,
-                    mime_type,
-                    maker_images,
-                    title,
-                    content,
-                ) = process_create_post_blog(process_images, data, batch, post)
-
-            if response:
-                parse_caption = json.loads(response)
-                parse_response = parse_caption.get("response", {})
-
-                if parse_response and "post" in parse_response:
-                    content = parse_response.get("post", "")
-                if parse_response and "description" in parse_response:
-                    description = parse_response.get("description", "")
-                    if "<" in description or ">" in description:
-                        description = description.replace("<", "").replace(">", "")
-
-                if parse_response and "title" in parse_response:
-                    title = parse_response.get("title", "")
-                if parse_response and "summarize" in parse_response:
-                    subtitle = parse_response.get("summarize", "")
-                if parse_response and "hashtag" in parse_response:
-                    hashtag = parse_response.get("hashtag", "")
-                if parse_response and "docx_content" in parse_response:
-                    docx = parse_response.get("docx_content", "")
-                    description = json.dumps(docx)
-                if parse_response and "content" in parse_response:
-                    content = parse_response.get("content", "")
-                    cleared_images = data.get("cleared_images", [])
-
-                    for index, image_url in enumerate(process_images):
-                        content = content.replace(f"IMAGE_URL_{index}", image_url)
-            else:
-                message_error = {
-                    "video": MessageError.CREATE_POST_VIDEO.value,
-                    "image": MessageError.CREATE_POST_IMAGE.value,
-                    "blog": MessageError.CREATE_POST_BLOG.value,
-                }
-
                 return None
 
+            is_paid_advertisements = batch.is_paid_advertisements
+            template_info = json.loads(batch.template_info)
+            data = json.loads(batch.content)
+            images = data.get("images", [])
+            thumbnails = batch.thumbnails
             url = batch.url
-            if type == "blog":
-                content = update_ads_content(url, content)
 
-            if is_paid_advertisements == 1:
-                hashtag = f"#광고 {hashtag}"
+            type = post.type
 
-            if type == "image" or type == "video":
-                hashtag = insert_hashtags_to_string(hashtag)
+            try:
+                need_count = 10 if type == "video" else 5
+                cleared_images = data.get("cleared_images", [])
 
-            comment = template_info.get("comment", "")
-            is_comment = template_info.get("is_comment", 0)
-            is_hashtag = template_info.get("is_hashtag", 0)
-            if is_comment == 1 and comment != "":
-                description = f"{comment}\n{description}"
+                process_images = json.loads(thumbnails)
+                if process_images and len(process_images) < need_count:
+                    current_length = len(process_images)
+                    need_length = need_count - current_length
+                    if len(cleared_images) > need_length:
+                        process_images = process_images + cleared_images[:need_length]
+                    else:
+                        process_images = process_images + cleared_images
 
-            if is_hashtag == 1:
-                raw_hashtag = template_info.get("hashtag", "[]")
-                try:
-                    new_hashtag = json.loads(raw_hashtag)
-                except Exception:
-                    new_hashtag = []
-                hashtag = change_advance_hashtags(hashtag, new_hashtag)
+                    if len(process_images) < need_count:
+                        current_length = len(process_images)
+                        need_length = need_count - current_length
+                        if len(images) > need_length:
+                            process_images = process_images + images[:need_length]
+                        else:
+                            process_images = process_images + images
+                elif process_images and len(process_images) >= need_count:
+                    process_images = process_images[:need_count]
+                else:
+                    if len(cleared_images) > need_count:
+                        process_images = cleared_images[:need_count]
+                    else:
+                        process_images = cleared_images
 
-            if should_replace_shortlink(url):
-                shorten_link = batch.shorten_link
-                description = description.replace(url, shorten_link)
+                    if len(process_images) < need_count:
+                        current_length = len(process_images)
+                        need_length = need_count - current_length
+                        if len(images) > need_length:
+                            process_images = process_images + images[:need_length]
+                        else:
+                            process_images = process_images + images
 
-            post = PostService.update_post(
-                post.id,
-                thumbnail=thumbnail,
-                images=json.dumps(maker_images),
-                captions=json.dumps(captions),
-                title=title,
-                subtitle=subtitle,
-                hooking=json.dumps(hooking),
-                description=description,
-                content=content,
-                video_url=video_url,
-                docx_url=docx_url,
-                file_size=file_size,
-                mime_type=mime_type,
-                hashtag=hashtag,
-                render_id=render_id,
-                status=1,
-                social_sns_description="[]",
-            )
-            current_done_post = batch.done_post
+                response = None
+                render_id = ""
+                hooking = []
+                maker_images = []
+                captions = []
+                thumbnail = batch.thumbnail
+                file_size = 0
+                mime_type = ""
+                docx_url = ""
+                title = ""
+                subtitle = ""
+                content = ""
+                video_url = ""
+                hashtag = ""
+                description = ""
 
-            batch = BatchService.update_batch(batch.id, done_post=current_done_post + 1)
+                if type == "video":
+                    response, render_id, hooking, maker_images, captions = (
+                        process_create_post_video(process_images, data, batch, post)
+                    )
+                elif type == "image":
+                    response, maker_images, captions, file_size, mime_type = (
+                        process_create_post_image(process_images, data, batch, post)
+                    )
+                elif type == "blog":
+                    (
+                        response,
+                        docx_url,
+                        file_size,
+                        mime_type,
+                        maker_images,
+                        title,
+                        content,
+                    ) = process_create_post_blog(process_images, data, batch, post)
 
-            if batch.done_post == batch.count_post:
-                BatchService.update_batch(batch.id, status=1)
+                if response:
+                    parse_caption = json.loads(response)
+                    parse_response = parse_caption.get("response", {})
 
-            if type == "video":
-                message = MessageSuccess.CREATE_POST_VIDEO.value
-            elif type == "image":
-                message = MessageSuccess.CREATE_POST_IMAGE.value
-                NotificationServices.create_notification(
-                    user_id=post.user_id,
-                    batch_id=batch.id,
-                    title=message,
-                    post_id=post.id,
-                    notification_type="image",
+                    if parse_response and "post" in parse_response:
+                        content = parse_response.get("post", "")
+                    if parse_response and "description" in parse_response:
+                        description = parse_response.get("description", "")
+                        if "<" in description or ">" in description:
+                            description = description.replace("<", "").replace(">", "")
+
+                    if parse_response and "title" in parse_response:
+                        title = parse_response.get("title", "")
+                    if parse_response and "summarize" in parse_response:
+                        subtitle = parse_response.get("summarize", "")
+                    if parse_response and "hashtag" in parse_response:
+                        hashtag = parse_response.get("hashtag", "")
+                    if parse_response and "docx_content" in parse_response:
+                        docx = parse_response.get("docx_content", "")
+                        description = json.dumps(docx)
+                    if parse_response and "content" in parse_response:
+                        content = parse_response.get("content", "")
+                        cleared_images = data.get("cleared_images", [])
+
+                        for index, image_url in enumerate(process_images):
+                            content = content.replace(f"IMAGE_URL_{index}", image_url)
+                else:
+                    message_error = {
+                        "video": MessageError.CREATE_POST_VIDEO.value,
+                        "image": MessageError.CREATE_POST_IMAGE.value,
+                        "blog": MessageError.CREATE_POST_BLOG.value,
+                    }
+
+                    return None
+
+                url = batch.url
+                if type == "blog":
+                    content = update_ads_content(url, content)
+
+                if is_paid_advertisements == 1:
+                    hashtag = f"#광고 {hashtag}"
+
+                if type == "image" or type == "video":
+                    hashtag = insert_hashtags_to_string(hashtag)
+
+                comment = template_info.get("comment", "")
+                is_comment = template_info.get("is_comment", 0)
+                is_hashtag = template_info.get("is_hashtag", 0)
+                if is_comment == 1 and comment != "":
+                    description = f"{comment}\n{description}"
+
+                if is_hashtag == 1:
+                    raw_hashtag = template_info.get("hashtag", "[]")
+                    try:
+                        new_hashtag = json.loads(raw_hashtag)
+                    except Exception:
+                        new_hashtag = []
+                    hashtag = change_advance_hashtags(hashtag, new_hashtag)
+
+                if should_replace_shortlink(url):
+                    shorten_link = batch.shorten_link
+                    description = description.replace(url, shorten_link)
+
+                post = PostService.update_post(
+                    post.id,
+                    thumbnail=thumbnail,
+                    images=json.dumps(maker_images),
+                    captions=json.dumps(captions),
+                    title=title,
+                    subtitle=subtitle,
+                    hooking=json.dumps(hooking),
+                    description=description,
+                    content=content,
+                    video_url=video_url,
+                    docx_url=docx_url,
+                    file_size=file_size,
+                    mime_type=mime_type,
+                    hashtag=hashtag,
+                    render_id=render_id,
+                    status=1,
+                    social_sns_description="[]",
+                )
+                current_done_post = batch.done_post
+
+                batch = BatchService.update_batch(
+                    batch.id, done_post=current_done_post + 1
                 )
 
-            elif type == "blog":
-                message = MessageSuccess.CREATE_POST_BLOG.value
-                NotificationServices.create_notification(
-                    user_id=post.user_id,
-                    batch_id=batch.id,
-                    title=message,
-                    post_id=post.id,
-                    notification_type="blog",
-                )
+                if batch.done_post == batch.count_post:
+                    BatchService.update_batch(batch.id, status=1)
 
-            return post.id
-        except Exception as e:
-            if type == "video":
-                message = MessageError.CREATE_POST_VIDEO.value
-            elif type == "image":
-                message = MessageError.CREATE_POST_IMAGE.value
-                NotificationServices.create_notification(
-                    user_id=post.user_id,
-                    status=const.NOTIFICATION_FALSE,
-                    batch_id=batch.id,
-                    title=message,
-                    post_id=post.id,
-                    notification_type="image",
-                    description=f"Create Image False {str(e)}",
-                )
+                if type == "video":
+                    message = MessageSuccess.CREATE_POST_VIDEO.value
+                elif type == "image":
+                    message = MessageSuccess.CREATE_POST_IMAGE.value
+                    NotificationServices.create_notification(
+                        user_id=post.user_id,
+                        batch_id=batch.id,
+                        title=message,
+                        post_id=post.id,
+                        notification_type="image",
+                    )
 
-            elif type == "blog":
-                message = MessageError.CREATE_POST_BLOG.value
-                NotificationServices.create_notification(
-                    user_id=post.user_id,
-                    status=const.NOTIFICATION_FALSE,
-                    batch_id=batch.id,
-                    title=message,
-                    post_id=post.id,
-                    notification_type="blog",
-                    description=f"Create Blog False {str(e)}",
-                )
-            traceback = e.__traceback__
-            if traceback:
-                log_create_content_message(
-                    f"Error in make_single_post: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
-                )
-            log_create_content_message(f"Error in make_single_post: {e}")
-            self.retry(exc=e, countdown=5, max_retries=1)
-            return None
+                elif type == "blog":
+                    message = MessageSuccess.CREATE_POST_BLOG.value
+                    NotificationServices.create_notification(
+                        user_id=post.user_id,
+                        batch_id=batch.id,
+                        title=message,
+                        post_id=post.id,
+                        notification_type="blog",
+                    )
+
+                return post.id
+            except Exception as e:
+                if type == "video":
+                    message = MessageError.CREATE_POST_VIDEO.value
+                elif type == "image":
+                    message = MessageError.CREATE_POST_IMAGE.value
+                    NotificationServices.create_notification(
+                        user_id=post.user_id,
+                        status=const.NOTIFICATION_FALSE,
+                        batch_id=batch.id,
+                        title=message,
+                        post_id=post.id,
+                        notification_type="image",
+                        description=f"Create Image False {str(e)}",
+                    )
+
+                elif type == "blog":
+                    message = MessageError.CREATE_POST_BLOG.value
+                    NotificationServices.create_notification(
+                        user_id=post.user_id,
+                        status=const.NOTIFICATION_FALSE,
+                        batch_id=batch.id,
+                        title=message,
+                        post_id=post.id,
+                        notification_type="blog",
+                        description=f"Create Blog False {str(e)}",
+                    )
+                traceback = e.__traceback__
+                if traceback:
+                    log_create_content_message(
+                        f"Error in make_single_post: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                    )
+                log_create_content_message(f"Error in make_single_post: {e}")
+                self.retry(exc=e, countdown=5, max_retries=1)
+                return None
 
 
 def check_is_avif(data):
