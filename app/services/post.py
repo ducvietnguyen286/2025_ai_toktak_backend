@@ -26,12 +26,7 @@ class PostService:
     def create_post(*args, **kwargs):
         post = Post(*args, **kwargs)
         post.save()
-
-        post_data = select_with_filter_one(
-            Post, filters=[Post.id == post.id], eager_opts=[joinedload(Post.user)]
-        )
-
-        return post_data
+        return post
 
     @staticmethod
     def find_post(id):
