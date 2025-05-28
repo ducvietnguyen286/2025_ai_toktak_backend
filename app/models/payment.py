@@ -31,6 +31,7 @@ class Payment(db.Model, BaseModel):
     fail_reason = db.Column(db.String(255), nullable=False)
     payment_key = db.Column(db.String(255), nullable=False)
     payment_data = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
     updated_at = db.Column(
@@ -61,6 +62,7 @@ class Payment(db.Model, BaseModel):
             "total_create": self.total_create,
             "parent_id": self.parent_id,
             "fail_reason": self.fail_reason,
+            "description": self.description,
             "requested_at": (
                 self.requested_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.requested_at
