@@ -66,8 +66,8 @@ def action_create_batch(message, app):
         if not batch:
             log_create_content_message("ERROR: Batch not found")
             return False
-
-        CreateContent(batch=batch, data=data).create_content(app)
+        with app.app_context():
+            CreateContent(batch=batch, data=data).create_content()
         return True
     except Exception as e:
         log_create_content_message(f"ERROR: Error create batch: {str(e)}")
