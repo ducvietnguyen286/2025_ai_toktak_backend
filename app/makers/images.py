@@ -248,11 +248,12 @@ class ImageMaker:
 
         process_images = []
         base_images = []
+        image_with_base = {}
 
         downloaded_images = list(
             map(
                 lambda url: ImageMaker.save_image_url_get_path(
-                    url, batch_id, is_avif=is_avif
+                    url, batch_id, is_avif=is_avif, get_base=True
                 ),
                 images,
             )
@@ -260,12 +261,18 @@ class ImageMaker:
 
         sleep(1)
 
-        for image_path in downloaded_images:
-            if not image_path:
+        for image_base in downloaded_images:
+            if not image_base:
                 continue
             try:
+                image_path = image_base.get("image_path", None)
+                if not image_path or not os.path.exists(image_path):
+                    continue
+                image_url = image_base.get("image_url", None)
+
                 extension = image_path.split(".")[-1].lower()
                 if extension == "gif":
+                    image_with_base[image_path] = image_url
                     base_images.append(image_path)
                     continue
                 image_cv = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
@@ -288,9 +295,9 @@ class ImageMaker:
                         cv2.imwrite(
                             image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90]
                         )
-
                     process_images.append(image_path)
                 else:
+                    image_with_base[image_path] = image_url
                     base_images.append(image_path)
             except IOError:
                 print(f"Cannot identify image file {image_path}")
@@ -314,10 +321,10 @@ class ImageMaker:
 
         cleared_images.extend(base_images)
 
-        return cleared_images
+        return cleared_images, image_with_base
 
     @staticmethod
-    def cut_out_long_height_images_by_sam(image_path, batch_id=0):
+    def cut_out_long_height_images_by_sam(image_path, batch_id=0, base_image={}):
         date_create, upload_folder = ImageMaker.get_current_date_str()
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
@@ -357,11 +364,13 @@ class ImageMaker:
         try:
             # results = process_inference(image_path=image_path)
 
-            image_hash = sha1(image_path.encode()).hexdigest()
-
-            response = OCRResultService.find_one_ocr_result_by_filter(
-                image_hash=image_hash
-            )
+            image_url_root = base_image.get(image_path, None)
+            response = None
+            if image_url_root:
+                image_hash = sha1(image_url_root.encode("utf-8")).hexdigest()
+                response = OCRResultService.find_one_ocr_result_by_filter(
+                    image_hash=image_hash
+                )
             if response:
                 results = response.get("response", None)
                 results = json.loads(results) if results else []
@@ -370,9 +379,9 @@ class ImageMaker:
                     SAM_CHECK_IMAGE_URL, json={"image_path": image_path}, timeout=30
                 )
                 json_response = response.json()
-                if response.status_code == 200:
+                if image_url_root and response.status_code == 200:
                     OCRResultService.create_ocr_result(
-                        image_url=image_path,
+                        image_url=image_url_root,
                         image_hash=image_hash,
                         response=json.dumps(json_response),
                     )
@@ -1274,7 +1283,7 @@ class ImageMaker:
         return image_url
 
     @staticmethod
-    def save_image_url_get_path(image_url, batch_id=0, is_avif=False):
+    def save_image_url_get_path(image_url, batch_id=0, is_avif=False, get_base=False):
         if "toktak.ai" in image_url:
             return ImageMaker.get_image_path_from_url(image_url)
         date_create, upload_folder = ImageMaker.get_current_date_str()
@@ -1323,6 +1332,8 @@ class ImageMaker:
 
             sleep(0.1)
             os.remove(image_temp_path)
+        if get_base:
+            return {"image_path": image_path, "image_url": image_url}
         return image_path
 
     @staticmethod

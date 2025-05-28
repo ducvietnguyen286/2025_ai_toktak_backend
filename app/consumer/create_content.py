@@ -140,10 +140,11 @@ class CreateContent:
             is_cut_out = os.environ.get("USE_CUT_OUT_IMAGE") == "true"
             is_ocr = os.environ.get("USE_OCR") == "true"
             is_avif = "aliexpress" in crawl_url
+            image_with_base = {}
 
             if is_cut_out:
                 if is_ocr:
-                    images = ImageMaker.get_only_beauty_images(
+                    images, image_with_base = ImageMaker.get_only_beauty_images(
                         base_images, batch_id=batch_id, is_avif=is_avif
                     )
                 else:
@@ -164,7 +165,7 @@ class CreateContent:
 
                 for image in images:
                     sam_cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
-                        image, batch_id=batch_id
+                        image, batch_id=batch_id, base_image=image_with_base
                     )
                     if not sam_cuted_image or "is_cut_out" not in sam_cuted_image:
                         continue
