@@ -541,10 +541,6 @@ class APIBatchMakeImage(Resource):
     )
     def post(self, args):
         try:
-            return Response(
-                message="Batch Make Image",
-                data={},
-            ).to_dict()
             batch_id = args.get("batch_id", 0)
             posts = []
 
@@ -554,6 +550,19 @@ class APIBatchMakeImage(Resource):
                     message="Batch không tồn tại",
                     code=201,
                 ).to_dict()
+
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+
+            posts = PostService.get_posts_by_batch_id(batch_id)
+            for post in posts:
+                post["url_run"] = (
+                    f"{current_domain}/api/v1/maker/make-post/{post['id']}"
+                )
+
+            return Response(
+                data=posts,
+                message="제품 정보를 성공적으로 가져왔습니다.",
+            ).to_dict()
 
             content = json.loads(batch_detail.content)
             batch_thumbails = batch_detail.thumbnails
@@ -824,9 +833,15 @@ class APIMakePost(Resource):
         required=[],
     )
     def post(self, id, **kwargs):
+        post = PostService.find_post(id)
+        if not post:
+            return Response(
+                message="Post không tồn tại",
+                status=201,
+            ).to_dict()
         return Response(
-            message="Make Post",
-            data={},
+            data=post._to_json(),
+            message="Post đã được tạo thành công",
         ).to_dict()
         args = kwargs.get("req_args", False)
         verify_jwt_in_request(optional=True)
