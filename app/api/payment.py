@@ -51,9 +51,8 @@ class APICreateNewPayment(Resource):
                 message = f"{package_name} 패키지를 구매하셨습니다.<br> 서비스 이용을 위해 시스템의 확인을 기다려 주세요."
                 message_en = f" You have purchased the {package_name} package. Please wait for system confirmation to start using the service."
                 return Response(
-                    message=message,
-                    message_en=message_en,
-                    code=201).to_dict()
+                    message=message, message_en=message_en, code=201
+                ).to_dict()
 
             # Đã đăng kí gói nào chưa
             # Không cho downgrade
@@ -325,6 +324,8 @@ class APIPaymentApproval(Resource):
                 batch_remain = 0
                 if login_user_subscription != "FREE":
                     batch_remain = user_detail.batch_remain
+
+                batch_remain = batch_remain + package_data["batch_remain"]
 
                 data_update = {
                     "subscription": package_name,
