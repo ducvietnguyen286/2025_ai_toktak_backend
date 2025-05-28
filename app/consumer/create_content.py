@@ -687,6 +687,10 @@ def process_create_post_video(process_images, data, batch, post):
                 }
                 result = ShotStackService.create_video_from_images_v2(data_make_video)
 
+                logger.info(
+                    f"ShotStackService.create_video_from_images_v2 result: {result}"
+                )
+
                 if result["status_code"] == 200:
                     render_id = result["response"]["id"]
 
@@ -705,7 +709,6 @@ def process_create_post_video(process_images, data, batch, post):
                     hooking = []
                     maker_images = []
                     captions = []
-                    message_error = MessageError.CREATE_POST_VIDEO.value
                     log_create_content_message(
                         f"Error creating video post: {message_error}"
                     )
