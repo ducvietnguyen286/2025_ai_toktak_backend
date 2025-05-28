@@ -709,9 +709,7 @@ def process_create_post_video(process_images, data, batch, post):
                     hooking = []
                     maker_images = []
                     captions = []
-                    log_create_content_message(
-                        f"Error creating video post: {message_error}"
-                    )
+                    log_create_content_message(f"Error creating video post")
                     return None, render_id, hooking, maker_images, captions
 
             else:

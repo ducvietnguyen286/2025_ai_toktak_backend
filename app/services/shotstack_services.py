@@ -1150,7 +1150,7 @@ def get_audio_duration(file_path):
     try:
         result = subprocess.run(
             [
-                "ffprobe",
+                "/usr/bin/ffprobe",
                 "-i",
                 file_path,
                 "-show_entries",
@@ -1274,7 +1274,6 @@ def generate_srt(text, audio_file, output_srt, start_offset=0.0):
         with open(output_srt, "w", encoding="utf-8") as f:
             f.write(srt_content)
 
-
         # Tạo đường dẫn file trên server
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
         output_srt = output_srt.replace("static/", "").replace("\\", "/")
@@ -1292,7 +1291,7 @@ def get_media_duration(url):
     try:
         result = subprocess.run(
             [
-                "ffprobe",
+                "/usr/bin/ffprobe",
                 "-i",
                 url,
                 "-show_entries",
