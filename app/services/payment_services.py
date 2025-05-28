@@ -61,7 +61,7 @@ class PaymentService:
         try:
             payment_addon_count = Payment.query.filter(
                 Payment.user_id == user_id,
-                Payment.status == "PAID",
+                # Payment.status == "PAID",
                 Payment.end_date >= date_today,
                 Payment.parent_id == basic_payment_id,
             ).count()
@@ -607,7 +607,7 @@ class PaymentService:
             upgrade_price = max(0, new_package_price - discount)
             amount = upgrade_price
             discount_welcome = (
-                new_package_info["price"] - new_package_info["price_origin"]
+                new_package_info["price_origin"] - new_package_info["price"]
             )
 
             return {
