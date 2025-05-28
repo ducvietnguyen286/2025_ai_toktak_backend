@@ -37,9 +37,14 @@ class CreateContent:
         self.data = data
 
     def create_content(self):
-        self.create_batch()
-        self.create_images(self.batch.id)
-        self.create_posts(self.batch.id)
+        try:
+            batch_id = self.create_batch()
+            batch_id = self.create_images(batch_id)
+            self.create_posts(batch_id)
+            return True
+        except Exception as e:
+            log_create_content_message(f"Error in create_content: {e}")
+            return None
 
     def create_batch(self):
         try:
@@ -125,12 +130,7 @@ class CreateContent:
             batch_thumbnails = batch_detail.thumbnails
             crawl_url = content.get("url_crawl", "") or ""
             base_images = content.get("images", []) or []
-            base_thumbnails = []
-            if batch_thumbnails and batch_thumbnails.strip().startswith("["):
-                try:
-                    base_thumbnails = json.loads(batch_thumbnails)
-                except json.JSONDecodeError:
-                    base_thumbnails = []
+            base_thumbnails = json.loads(batch_thumbnails)
             images, thumbnails = [], []
 
             is_cut_out = os.environ.get("USE_CUT_OUT_IMAGE") == "true"
