@@ -32,7 +32,7 @@ import const
 app = make_celery_app()
 
 
-@celery_app.task(bind=True, name="create_batch_content")
+@celery_app.task(bind=True, name="create_batch_content", time_limit=300)
 def create_batch_content(self, batch_id, data):
     with app.app_context():
         try:
@@ -64,7 +64,7 @@ def create_batch_content(self, batch_id, data):
             return None
 
 
-@celery_app.task(bind=True, name="create_images")
+@celery_app.task(bind=True, name="create_images", time_limit=300)
 def create_images(self, batch_id):
     with app.app_context():
         try:
@@ -162,7 +162,7 @@ def create_images(self, batch_id):
             return None
 
 
-@celery_app.task(bind=True, name="make_post_data")
+@celery_app.task(bind=True, name="make_post_data", time_limit=300)
 def make_post_data(self, batch_id):
     with app.app_context():
         try:
@@ -187,7 +187,7 @@ def make_post_data(self, batch_id):
             return None
 
 
-@celery_app.task(bind=True, name="make_single_post")
+@celery_app.task(queue="post", bind=True, name="make_single_post", time_limit=300)
 def make_single_post(self, batch_id, post_id):
     with app.app_context():
         batch = BatchService.find_batch(batch_id)
