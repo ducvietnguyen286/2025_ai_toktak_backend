@@ -58,13 +58,6 @@ from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
 import const
 
-# from celery import chain
-# from app.tasks.create_content_tasks import (
-#     create_batch_content,
-#     create_images,
-#     make_post_data,
-# )
-
 from flask_jwt_extended import (
     verify_jwt_in_request,
 )
@@ -282,17 +275,12 @@ class APICreateBatchSync(Resource):
 
             batch_id = batch.id
 
-            # chain(
-            #     create_batch_content.s(batch_id, data=data),
-            #     create_images.si(batch_id),
-            #     make_post_data.si(batch_id),
-            # )()
-
-            message = {
-                "action": "CREATE_BATCH",
-                "message": {"batch_id": batch_id, "data": data},
-            }
-            send_create_content_message(message)
+            if not is_advance:
+                message = {
+                    "action": "CREATE_BATCH",
+                    "message": {"batch_id": batch_id, "data": data},
+                }
+                send_create_content_message(message)
 
             return Response(
                 data=batch_res,
@@ -817,6 +805,14 @@ class APIUpdateTemplateVideoUser(Resource):
             user_template_data["batch_total"] = (
                 current_user.batch_total if current_user else 0
             )
+
+            data = json.loads(batch_detail.content)
+
+            message = {
+                "action": "CREATE_BATCH",
+                "message": {"batch_id": batch_id, "data": data},
+            }
+            send_create_content_message(message)
 
             return Response(
                 data=user_template_data,
