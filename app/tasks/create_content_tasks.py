@@ -257,6 +257,12 @@ def make_single_post(self, batch_id, post_id):
             file_size = 0
             mime_type = ""
             docx_url = ""
+            title = ""
+            subtitle = ""
+            content = ""
+            video_url = ""
+            hashtag = ""
+            description = ""
 
             if type == "video":
                 response, render_id, hooking, maker_images, captions = (
@@ -277,12 +283,6 @@ def make_single_post(self, batch_id, post_id):
                     content,
                 ) = process_create_post_blog(process_images, data, batch, post)
 
-            title = ""
-            subtitle = ""
-            content = ""
-            video_url = ""
-            hashtag = ""
-            description = ""
             if response:
                 parse_caption = json.loads(response)
                 parse_response = parse_caption.get("response", {})
