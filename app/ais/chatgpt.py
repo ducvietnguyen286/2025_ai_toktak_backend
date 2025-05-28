@@ -237,8 +237,7 @@ hashtag:
     if response:
         if "error" in response:
             return response
-        if "choices" in response and len(response["choices"]) > 0:
-            save_to_database("video", data, response)
+        save_to_database("video", data, response)
 
     return response
 
@@ -405,8 +404,7 @@ Note:
     if response:
         if "error" in response:
             return response
-        if "choices" in response and len(response["choices"]) > 0:
-            save_to_database("blog", data, response)
+        save_to_database("blog", data, response)
 
     return response
 
@@ -522,8 +520,7 @@ hashtag
     if response:
         if "error" in response:
             return response
-        if "choices" in response and len(response["choices"]) > 0:
-            save_to_database("image", data, response)
+        save_to_database("image", data, response)
 
     return response
 
