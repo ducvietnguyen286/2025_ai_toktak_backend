@@ -17,6 +17,8 @@ import const
 import datetime
 from dateutil.relativedelta import relativedelta
 
+from app.lib.string import generate_order_id
+
 ns = Namespace("payment", description="Payment API")
 
 
@@ -98,8 +100,9 @@ class APICreateNewPayment(Resource):
 
         # Nếu mua kèm addon (chỉ áp dụng với BASIC)
         if package_name == "BASIC" and addon_count > 0:
+            order_id = generate_order_id()
             for _ in range(min(addon_count, const.MAX_ADDON_PER_BASIC)):
-                PaymentService.create_addon_payment(user_id_login, payment.id)
+                PaymentService.create_addon_payment(user_id_login, payment.id, order_id)
 
         message = f"{package_name} 요금제가 성공적으로 등록되었습니다."
         if addon_payments:
@@ -196,15 +199,20 @@ class APICreateAddon(Resource):
         parent_payment_id = basic_payment.id
         try:
             if addon_count > 0:
+                order_id = generate_order_id()
+                payment = PaymentService.create_addon_payment(
+                    user_id_login, parent_payment_id, order_id, addon_count
+                )
+
                 for _ in range(min(addon_count, const.MAX_ADDON_PER_BASIC)):
-                    PaymentService.create_addon_payment(
-                        user_id_login, parent_payment_id
+                    payment_detail = PaymentService.create_addon_payment_detail(
+                        user_id_login, payment.id
                     )
 
             return Response(
                 message="애드온을 성공적으로 구매하였습니다",
                 message_en="Addon payment addon created",
-                data={"addon_count": addon_count},
+                data={"addon_count": addon_count, "payment": payment._to_json()},
                 code=200,
             ).to_dict()
         except Exception as e:
@@ -298,7 +306,7 @@ class APIPaymentApproval(Resource):
                 if user_detail:
                     total_link_active = user_detail.total_link_active
                     data_update = {
-                        "total_link_active": total_link_active + 1,
+                        "total_link_active": total_link_active + payment.total_link,
                     }
 
                     UserService.update_user(user_id, **data_update)

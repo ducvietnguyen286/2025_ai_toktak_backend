@@ -9,6 +9,7 @@ from app.models.notification import Notification
 from app.models.memberprofile import MemberProfile
 from app.models.referral_history import ReferralHistory
 from app.models.payment import Payment
+from app.models.payment_detail import PaymentDetail
 from app.extensions import db
 from app.lib.logger import logger 
 from sqlalchemy import select, update, delete, or_, func
@@ -320,6 +321,10 @@ class UserService:
                 ReferralHistory.referred_user_id.in_(user_ids)
             ).delete(synchronize_session=False)
 
+            PaymentDetail.query.filter(PaymentDetail.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+            
             Payment.query.filter(Payment.user_id.in_(user_ids)).delete(
                 synchronize_session=False
             )
