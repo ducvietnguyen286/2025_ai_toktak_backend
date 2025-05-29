@@ -373,6 +373,7 @@ class ImageMaker:
                 )
             if response:
                 response_data = json.loads(response) if response else None
+                logger.info(f"Response from OCR DATABASE: {response_data}")
                 if response_data and "images" in response_data:
                     results = response_data["images"]
                 else:
