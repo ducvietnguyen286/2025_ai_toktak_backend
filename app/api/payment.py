@@ -507,14 +507,16 @@ class APIPaymentConfirm(Resource):
                     message="Tosspayment 결제가 완료되었습니다",
                     message_en="Payment completed successfully via Tosspayment",
                     data={
+                        "payment": payment._to_json(),
                         "paymentKey": payment_data["paymentKey"],
-                        "method": payment_data["method"],
+                        "method": payment_data["method"]
                     },
                 ).to_dict()
 
             return Response(
                 message=message,
                 data={
+                    "payment": payment._to_json(),
                     "status": "FAILED",
                     "fail_reason": payment_data.get("message", "Thanh toán thất bại"),
                     "code": payment_data.get("code"),
