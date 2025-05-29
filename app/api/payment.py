@@ -451,9 +451,9 @@ class APIPaymentConfirm(Resource):
             payment_key = data.get("paymentKey")
             order_id = data.get("orderId")
             amount = data.get("amount")
-            payment_id = data.get("payment_id")  # optional
             message = ""
             payment = PaymentService.find_payment_by_order(order_id)
+            payment_id = payment.id
             if not payment:
                 return Response(
                     message="결제 정보가 존재하지 않습니다",
@@ -486,8 +486,8 @@ class APIPaymentConfirm(Resource):
                     ).to_dict()
 
                 data_update_payment = {
-                    "payment_key": payment_data["paymentKey"],
-                    "method": payment_data["method"],
+                    "payment_key": payment_data.get("paymentKey", ""),
+                    "method": payment_data.get("method", ""),
                     "status": "PAID",
                     "approved_at": datetime.datetime.now(),
                     "payment_data": json.dumps(payment_data),
@@ -507,14 +507,16 @@ class APIPaymentConfirm(Resource):
                     message="Tosspayment 결제가 완료되었습니다",
                     message_en="Payment completed successfully via Tosspayment",
                     data={
+                        "payment": payment._to_json(),
                         "paymentKey": payment_data["paymentKey"],
-                        "method": payment_data["method"],
+                        "method": payment_data["method"]
                     },
                 ).to_dict()
 
             return Response(
                 message=message,
                 data={
+                    "payment": payment._to_json(),
                     "status": "FAILED",
                     "fail_reason": payment_data.get("message", "Thanh toán thất bại"),
                     "code": payment_data.get("code"),
