@@ -1778,8 +1778,23 @@ class APITemplateVideo(Resource):
 
             if not user_template:
                 user_template = PostService.create_user_template_make_video(
-                    user_id=current_user.id
+                    user_id=current_user.id,
+                    image_template_id=(
+                        image_templates[0]["id"] if len(image_templates) > 0 else 0
+                    ),
+                    image_template=json.dumps(image_templates),
                 )
+            else:
+                image_templates = ImageTemplateService.get_image_templates()
+                template_id = (
+                    image_templates[0]["id"] if len(image_templates) > 0 else 0
+                )
+                if user_template.image_template_id != template_id:
+                    user_template = PostService.update_template(
+                        user_template.id,
+                        image_template_id=template_id,
+                        image_template=json.dumps(image_templates),
+                    )
             user_template_data = user_template.to_dict()
 
             if batch_id:
