@@ -35,7 +35,8 @@ def migrate():
     print("Starting migration...")
 
     histories = UserHistory.query.filter(
-        UserHistory.type == "referral",
+        UserHistory.type == "user",
+        UserHistory.type_2 == "NEW_USER",
     ).all()
 
     package_name = "BASIC"
