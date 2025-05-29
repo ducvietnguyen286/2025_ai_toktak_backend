@@ -264,9 +264,10 @@ class PaymentService:
         origin_price = PACKAGE_CONFIG[new_package]["price"]
 
         final_price = max(0, origin_price - remaining_value)
-
+        order_id = generate_order_id()
         new_payment = Payment(
             user_id=user_id,
+            order_id=order_id,
             package_name=new_package,
             amount=origin_price,
             customer_name=current_user.name or current_user.email,
@@ -384,16 +385,6 @@ class PaymentService:
                 }
 
             payment_addons = PaymentService.get_payment_basic_addon(payment_basic.id)
-            if len(payment_addons) > 1:
-                return {
-                    "user_id": user_id,
-                    "can_buy": 0,
-                    "message": "애드온 2개가 이미 존재합니다",
-                    "message_en": "2 addon packages already exist",
-                    "price": 0,
-                    "remaining_days": 0,
-                }
-
             end_date = payment_basic.end_date.date()
             remaining_days = min((end_date - today).days, 30)
             if remaining_days < 1:
