@@ -52,6 +52,17 @@ class PaymentService:
             return None
 
     @staticmethod
+    def find_payment_by_order(order_id):
+        try:
+            payment_detail = Payment.query.filter(
+                Payment.order_id == order_id,
+            ).first()
+            return payment_detail
+        except Exception as ex:
+            logger.error(f"Error creating payment: {ex}")
+            return None
+
+    @staticmethod
     def get_last_payment_basic(user_id, date_today):
         try:
             payment_detail = (
@@ -161,6 +172,7 @@ class PaymentService:
             amount_price = result_addon["price"]
 
             data_update_payment = {
+                "total_link": payment.total_link + addon_count,
                 "amount": payment.amount + amount_addon,
                 "price": payment.price + amount_price,
                 "description": f"{payment.description} buy with {amount_addon} BuyAddon",
@@ -786,13 +798,15 @@ class PaymentService:
                         batch_remain = user_detail.batch_remain
 
                     batch_remain = batch_remain + package_data["batch_remain"]
-
+                    total_link_active = user_detail.total_link_active
                     data_update = {
                         "subscription": package_name,
                         "subscription_expired": subscription_expired,
                         "batch_total": batch_total + payment.total_create,
                         "batch_remain": batch_remain,
-                        "total_link_active": package_data["total_link_active"],
+                        "total_link_active": min(
+                            total_link_active + payment.total_link, 7
+                        ),
                     }
 
                     UserService.update_user(user_id, **data_update)

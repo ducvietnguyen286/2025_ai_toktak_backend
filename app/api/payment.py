@@ -258,11 +258,10 @@ class APIPaymentApproval(Resource):
     def post(self):
         data = request.get_json()
         payment_id = data.get("payment_id")
-        
+
         result = PaymentService.approvalPayment(payment_id)
 
         return result
-        
 
 
 @ns.route("/addon/price_check")
@@ -403,12 +402,20 @@ class APIPaymentConfirm(Resource):
 
         if status_code == 200:
             # Thanh toán thành công, cập nhật DB
-            payment = PaymentService.file_payment_by_order(order_id)
+            payment = PaymentService.find_payment_by_order(order_id)
 
             if not payment:
                 return Response(
                     message="결제 정보가 존재하지 않습니다",
                     message_en="Payment does not exist",
+                    code=201,
+                ).to_dict()
+
+            if payment.status == "PAID":
+
+                return Response(
+                    message="결제가 완료되었습니다",
+                    message_en="Payment has been completed",
                     code=201,
                 ).to_dict()
 
@@ -418,6 +425,7 @@ class APIPaymentConfirm(Resource):
                 "status": "PAID",
                 "approved_at": isoparse(payment_data["approvedAt"]),
                 "payment_data": json.dumps(payment_data),
+                "description": f"{payment.description} Tosspayment : 결제가 완료되었습니다",
             }
 
             payment = PaymentService.update_payment(payment_id, **data_update)
