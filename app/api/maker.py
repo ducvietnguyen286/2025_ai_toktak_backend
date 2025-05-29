@@ -531,13 +531,14 @@ class APIBatchMakeImage(Resource):
     @parameters(
         type="object",
         properties={
-            "batch_id": {"type": "number"},
+            "batch_id": {"type": ["string", "number", "null"]},
         },
         required=["batch_id"],
     )
     def post(self, args):
         try:
             batch_id = args.get("batch_id", 0)
+            batch_id = int(batch_id) if batch_id else 0
             posts = []
 
             batch_detail = BatchService.find_batch(batch_id)
@@ -1913,13 +1914,14 @@ class APICopyBlog(Resource):
     @parameters(
         type="object",
         properties={
-            "blog_id": {"type": "number"},
+            "blog_id": {"type": ["string", "number", "null"]},
         },
         required=["blog_id"],
     )
     def post(self, args):
         try:
-            blog_id = args.get("blog_id", "")
+            blog_id = args.get("blog_id", 0)
+            blog_id = int(blog_id) if blog_id else 0
             message = "블로그 업데이트 성공"
             post = PostService.update_post(
                 blog_id, status=const.UPLOADED, status_sns=const.UPLOADED

@@ -208,7 +208,7 @@ class APISendPosts(Resource):
                 "items": {
                     "type": "object",
                     "properties": {
-                        "id": {"type": "number"},
+                        "id": {"type": ["string", "number", "null"]},
                         "is_all": {"type": "integer"},
                         "link_ids": {
                             "type": "array",
@@ -265,6 +265,7 @@ class APISendPosts(Resource):
             ids = []
             for post in id_posts:
                 post_id = post.get("id", 0)
+                post_id = int(post_id) if post_id else 0
                 id_links = post.get("link_ids", [])
 
                 ids.append(post_id)
@@ -482,7 +483,7 @@ class APIPostToLinks(Resource):
                 "items": {"type": "integer"},
                 "uniqueItems": True,
             },
-            "post_id": {"type": "number"},
+            "post_id": {"type": ["string", "number", "null"]},
             "page_id": {"type": "string"},
             "disable_comment": {"type": "boolean"},
             "disable_duet": {"type": "boolean"},
@@ -512,6 +513,7 @@ class APIPostToLinks(Resource):
         try:
             is_all = args.get("is_all", 0)
             post_id = args.get("post_id", 0)
+            post_id = int(post_id) if post_id else 0
             page_id = args.get("page_id", "")
             link_ids = args.get("link_ids", [])
             disable_comment = args.get("disable_comment", False)

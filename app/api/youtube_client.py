@@ -81,7 +81,7 @@ class APIUpdateYoutubeClient(Resource):
     @parameters(
         type="object",
         properties={
-            "id": {"type": "number"},
+            "id": {"type": ["string", "number", "null"]},
             "project_name": {"type": "string"},
             "client_id": {"type": "string"},
             "client_secret": {"type": "string"},
@@ -90,6 +90,7 @@ class APIUpdateYoutubeClient(Resource):
     )
     def put(self, args):
         id = args.pop("id", None)
+        id = int(id) if id else 0
         if not id:
             return Response(
                 message="ID không hợp lệ",
@@ -115,12 +116,13 @@ class APIUpdateUsersToClient(Resource):
     @parameters(
         type="object",
         properties={
-            "id": {"type": "number"},
+            "id": {"type": ["string", "number", "null"]},
         },
         required=[],
     )
     def put(self, args):
         id = args.pop("id", None)
+        id = int(id) if id else 0
         if not id:
             return Response(
                 message="ID không hợp lệ",
