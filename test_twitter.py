@@ -108,6 +108,13 @@ def upload_media(media_url, is_photo=False):
 
     print(f"Media upload appended successfully, media ID: {media_id}")
 
+    finalize_data = finalize_upload(media_id=media_id)
+    if finalize_data.get("status") == "error":
+        print(f"Error finalizing upload: {finalize_data.get('message')}")
+        return False
+
+    print("Media upload finalized successfully")
+
     while True:
         status_data = get_status_upload(media_id=media_id)
         processing_info = status_data.get("processing_info", {})
@@ -122,12 +129,6 @@ def upload_media(media_url, is_photo=False):
             print("Upload completed or failed")
             break
 
-    finalize_data = finalize_upload(media_id=media_id)
-    if finalize_data.get("status") == "error":
-        print(f"Error finalizing upload: {finalize_data.get('message')}")
-        return False
-
-    print("Media upload finalized successfully")
     return media_id
 
 
@@ -172,7 +173,7 @@ def append_upload(media_id, media_content, total_bytes):
 
     while bytes_sent < total_bytes:
         chunk = media_content[bytes_sent : bytes_sent + chunk_size]
-        files = {"media": ("chunk", chunk)}
+        files = {"media": ("chunk", chunk, "application/octet-stream")}
 
         data = {
             "segment_index": segment_id,
@@ -200,7 +201,7 @@ def finalize_upload(media_id):
     print(f"Finalizing upload for media ID: {media_id}")
     url = f"{MEDIA_ENDPOINT_URL}/{media_id}/finalize"
 
-    headers = {"Authorization": "Bearer access_token"}
+    headers = {"Authorization": f"Bearer {access_token}"}
 
     response = requests.request("POST", url, headers=headers)
 
