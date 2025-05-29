@@ -291,6 +291,58 @@ class APICalculateAddonPrice(Resource):
         ).to_dict()
 
 
+@ns.route("/delete_pending")
+class APIDeletePending(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "payment_id": {"type": "string"},
+        },
+        required=["payment_id"],
+    )
+    def post(self, args):
+        try:
+            payment_id = args.get("payment_id", "")
+
+            payment_detail = PaymentService.find_payment(payment_id)
+            if not payment_detail:
+                return Response(
+                    message="결제가 존재하지 않습니다",
+                    message_en="Payment does not exist",
+                    data={},
+                    code=201,
+                ).to_dict()
+
+            if payment_detail.status != "PENDING":
+                return Response(
+                    message="결제를 삭제할 수 없습니다",
+                    message_en="Cannot delete payment",
+                    data={},
+                    code=201,
+                ).to_dict()
+            
+            id_list = [int(id.strip()) for id in payment_id.split(",")]
+
+            process_delete = PaymentService.deletePaymentPending(id_list)
+            if process_delete == 1:
+                message = "Delete Payment Success"
+            else:
+                message = "Delete Payment Fail"
+
+            return Response(
+                message=message,
+                code=200,
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Exception: Delete Payment Fail  :  {str(e)}")
+            return Response(
+                message="Delete Payment Fail",
+                code=201,
+            ).to_dict()
+
+
 @ns.route("/admin/delete_payment")
 class APIDeleteAccount(Resource):
     @jwt_required()
