@@ -41,7 +41,7 @@ class PaymentService:
         except Exception as ex:
             logger.error(f"Error creating payment: {ex}")
             return None
-        
+
     @staticmethod
     def create_payment_log(*args, **kwargs):
         try:
@@ -505,6 +505,7 @@ class PaymentService:
             db.session.rollback()
             return 0
         return 1
+
     @staticmethod
     def deletePaymentPending(post_ids):
         try:
@@ -680,7 +681,10 @@ class PaymentService:
 
             current_package_detail = const.PACKAGE_CONFIG[current_package]
 
-            current_price = current_payment.price
+            # tính tiền basic và addon
+
+            current_price = PaymentService.get_total_price(current_payment.id)
+
             current_days = current_package_detail.get("duration_days", 30)
             discount = int(current_price / current_days * remaining_days)
             new_package_price = new_package_info["price"]
@@ -860,3 +864,12 @@ class PaymentService:
             return Response(
                 message=f"유효하지 않은 패키지입니다. {str(e)}", code=201
             ).to_dict()
+
+    @staticmethod
+    def get_total_price(payment_id):
+        total = (
+            Payment.query.with_entities(func.sum(Payment.price))
+            .filter((Payment.id == payment_id) | (Payment.parent_id == payment_id))
+            .scalar()
+        )
+        return total or 0

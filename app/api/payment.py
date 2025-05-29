@@ -303,6 +303,11 @@ class APIDeletePending(Resource):
     )
     def post(self, args):
         try:
+            return Response(
+                message="",
+                code=200,
+            ).to_dict()
+
             payment_id = args.get("payment_id", "")
 
             payment_detail = PaymentService.find_payment(payment_id)
@@ -321,7 +326,7 @@ class APIDeletePending(Resource):
                     data={},
                     code=201,
                 ).to_dict()
-            
+
             id_list = [int(id.strip()) for id in payment_id.split(",")]
 
             process_delete = PaymentService.deletePaymentPending(id_list)
@@ -466,12 +471,13 @@ class APIPaymentConfirm(Resource):
         }
 
         PaymentService.create_payment_log(**payment_data_log)
+        logger.info("_------------------------------------payment_data_log")
+        logger.info(payment_data_log)
+        logger.info(payment_data)
 
         if status_code == 200:
             # Thanh toán thành công, cập nhật DB
-
             if payment.status == "PAID":
-
                 return Response(
                     message="결제가 완료되었습니다",
                     message_en="Payment has been completed",
@@ -486,6 +492,8 @@ class APIPaymentConfirm(Resource):
                 "payment_data": json.dumps(payment_data),
                 "description": f"{payment.description} Tosspayment : 결제가 완료되었습니다",
             }
+            logger.info("_------------------------------------data_update")
+            logger.info(data_update)
 
             payment = PaymentService.update_payment(payment_id, **data_update)
             return Response(
