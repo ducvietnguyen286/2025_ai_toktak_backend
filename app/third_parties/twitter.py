@@ -21,8 +21,8 @@ from app.extensions import redis_client
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
-MEDIA_ENDPOINT_URL = "https://upload.twitter.com/1.1/media/upload.json"
-X_POST_TO_X_URL = "https://api.x.com/2/tweets"
+MEDIA_ENDPOINT_URL = "https://api.x.com/2/media/upload"
+X_POST_TO_X_URL = "https://api.twitter.com/2/tweets"
 TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
 
@@ -603,13 +603,11 @@ class TwitterService(BaseService):
             "media_category": "tweet_video" if is_video else "tweet_image",
         }
 
-        log_twitter_message(
-            f"Request to upload media init: {MEDIA_ENDPOINT_URL} with data: {request_data}"
-        )
+        log_twitter_message(request_data)
 
         try:
             req = requests.post(
-                url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
+                url=MEDIA_ENDPOINT_URL, json=request_data, headers=headers
             )
         except Exception as e:
             self.save_errors(
@@ -619,14 +617,7 @@ class TwitterService(BaseService):
             )
             return False
 
-        log_twitter_message(
-            f"Response from upload media init: {req.status_code} - {req.text} - headers: {req.headers}"
-        )
-
-        self.save_request_log(
-            "upload_media_init",
-            request_data,
-        )
+        self.save_request_log("upload_media_init", request_data, req.json())
 
         self.save_uploading(10)
 
