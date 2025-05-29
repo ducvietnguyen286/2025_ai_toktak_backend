@@ -680,7 +680,7 @@ class APIUpdateTemplateVideoUser(Resource):
     @parameters(
         type="object",
         properties={
-            "batch_id": {"type": "number"},
+            "batch_id": {"type": ["string", "number", "null"]},
             "is_paid_advertisements": {"type": "integer"},
             "product_name": {"type": "string"},
             "is_product_name": {"type": "integer"},
@@ -705,7 +705,8 @@ class APIUpdateTemplateVideoUser(Resource):
     )
     def post(self, args):
         try:
-            batch_id = args.get("batch_id", "")
+            batch_id = args.get("batch_id", 0)
+            batch_id = int(batch_id) if batch_id else 0
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
             product_name = args.get("product_name", "")
             is_product_name = args.get("is_product_name", 0)
@@ -721,7 +722,7 @@ class APIUpdateTemplateVideoUser(Resource):
             is_caption_top = args.get("is_caption_top", 0)
             is_caption_last = args.get("is_caption_last", 0)
             image_template_id = args.get("image_template_id", 0)
-            image_template_id = int(image_template_id) if image_template_id else None
+            image_template_id = int(image_template_id) if image_template_id else 0
             is_comment = args.get("is_comment", 0)
             is_hashtag = args.get("is_hashtag", 0)
             comment = args.get("comment", "")
