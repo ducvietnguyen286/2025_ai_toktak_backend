@@ -619,7 +619,14 @@ class TwitterService(BaseService):
             )
             return False
 
-        self.save_request_log("upload_media_init", request_data, req.json())
+        log_twitter_message(
+            f"Response from upload media init: {req.status_code} - {req.text} - headers: {req.headers}"
+        )
+
+        self.save_request_log(
+            "upload_media_init",
+            request_data,
+        )
 
         self.save_uploading(10)
 
