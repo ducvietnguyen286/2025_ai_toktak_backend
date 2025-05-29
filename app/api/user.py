@@ -1848,8 +1848,13 @@ class APICheckActiveLinkSns(Resource):
     def get(self):
         current_user = AuthService.get_current_identity(no_cache=True)
         total_user_links = UserService.get_total_link(current_user.id)
-        total_link_active = current_user.total_link_active
-        if total_user_links >= total_link_active:
+        total_user_link = total_user_links if total_user_links else 0
+        total_link_active = (
+            current_user.total_link_active
+            if current_user and current_user.total_link_active
+            else 0
+        )
+        if total_user_link >= total_link_active:
             return Response(
                 data={},
                 message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
@@ -1858,7 +1863,7 @@ class APICheckActiveLinkSns(Resource):
 
         return Response(
             data={
-                "total_user_links": total_user_links,
+                "total_user_links": total_user_link,
                 "total_link_active": total_link_active,
             },
             message="You can add active new link",
