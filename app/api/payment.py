@@ -258,11 +258,10 @@ class APIPaymentApproval(Resource):
     def post(self):
         data = request.get_json()
         payment_id = data.get("payment_id")
-        
+
         result = PaymentService.approvalPayment(payment_id)
 
         return result
-        
 
 
 @ns.route("/addon/price_check")
@@ -396,19 +395,34 @@ class APIPaymentConfirm(Resource):
         amount = data.get("amount")
         payment_id = data.get("payment_id")  # optional
         message = ""
+        payment = PaymentService.find_payment_by_order(order_id)
+        if not payment:
+            return Response(
+                message="결제 정보가 존재하지 않습니다",
+                message_en="Payment does not exist",
+                code=201,
+            ).to_dict()
 
         payment_data, status_code = PaymentService.confirm_payment_toss(
             payment_key, order_id, amount
         )
 
+        payment_data_log = {
+            "payment_id": payment.id if payment else None,
+            "status_code": status_code,
+            "response_json": json.dumps(payment_data, ensure_ascii=False),
+        }
+
+        PaymentService.create_payment_log(**payment_data_log)
+
         if status_code == 200:
             # Thanh toán thành công, cập nhật DB
-            payment = PaymentService.file_payment_by_order(order_id)
 
-            if not payment:
+            if payment.status == "PAID":
+
                 return Response(
-                    message="결제 정보가 존재하지 않습니다",
-                    message_en="Payment does not exist",
+                    message="결제가 완료되었습니다",
+                    message_en="Payment has been completed",
                     code=201,
                 ).to_dict()
 
@@ -418,6 +432,7 @@ class APIPaymentConfirm(Resource):
                 "status": "PAID",
                 "approved_at": isoparse(payment_data["approvedAt"]),
                 "payment_data": json.dumps(payment_data),
+                "description": f"{payment.description} Tosspayment : 결제가 완료되었습니다",
             }
 
             payment = PaymentService.update_payment(payment_id, **data_update)
@@ -437,5 +452,46 @@ class APIPaymentConfirm(Resource):
                 "fail_reason": payment_data.get("message", "Thanh toán thất bại"),
                 "code": payment_data.get("code"),
             },
+            code=201,
+        ).to_dict()
+
+
+@ns.route("/log/fail")
+class APIPaymentLogFail(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        order_id = data.get("orderId")
+        payment_key = data.get("paymentKey")
+        status_code = data.get("status_code")
+        fail_reason = data.get("fail_reason")
+        fail_code = data.get("fail_code")
+
+        payment = PaymentService.find_payment_by_order(order_id)
+        if not payment:
+            return Response(
+                message="결제 정보가 존재하지 않습니다",
+                message_en="Payment does not exist",
+                code=201,
+            ).to_dict()
+
+        payment_data_log = {
+            "payment_id": payment.id if payment else None,
+            "status_code": status_code,
+            "response_json": json.dumps(
+                {
+                    "paymentKey": payment_key,
+                    "fail_reason": fail_reason,
+                    "code": fail_code,
+                },
+                ensure_ascii=False,
+            ),
+        }
+
+        PaymentService.create_payment_log(**payment_data_log)
+        return Response(
+            message="결제가 실패했습니다",
+            message_en="Payment failed",
+            data={},
             code=201,
         ).to_dict()
