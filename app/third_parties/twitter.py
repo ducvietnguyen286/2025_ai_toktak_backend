@@ -454,8 +454,10 @@ class TwitterService(BaseService):
             hashtag = " ".join(hashtags)
 
             text = post.description + "\n\n " + hashtag
-            if len(text) > 250:
-                text = text[:250]
+            while len(text) > 180 and len(hashtags) > 0:
+                hashtags.pop()
+                hashtag = " ".join(hashtags)
+                text = post.description + "\n\n " + hashtag
             data = {
                 "text": text,
                 "media": {"media_ids": [media_id]},
