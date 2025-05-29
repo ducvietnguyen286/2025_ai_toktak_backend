@@ -144,7 +144,7 @@ class PaymentService:
         return payment
 
     @staticmethod
-    def create_addon_payment(user_id, parent_payment_id):
+    def create_addon_payment(user_id, parent_payment_id, order_id):
         basic_payment = Payment.query.filter_by(
             id=parent_payment_id, user_id=user_id, package_name="BASIC"
         ).first()
@@ -159,7 +159,6 @@ class PaymentService:
             raise Exception(
                 "이 애드온은 BASIC 패키지당 최대 2회까지만 구매할 수 있습니다."
             )
-
         # Tính số ngày còn lại
         today = datetime.now()
         now = datetime.now()
@@ -167,6 +166,7 @@ class PaymentService:
         payment_data = {
             "user_id": user_id,
             "package_name": "ADDON",
+            "order_id": order_id,
             "amount": result["amount"],
             "price": result["price"],
             "start_date": today,
@@ -177,6 +177,7 @@ class PaymentService:
             "method": "REQUEST",
             "requested_at": now,
             "total_link": 1,
+            "description": "BuyAddon",
         }
         payment = PaymentService.create_payment(**payment_data)
         return payment
