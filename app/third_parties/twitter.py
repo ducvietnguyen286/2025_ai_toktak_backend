@@ -607,7 +607,7 @@ class TwitterService(BaseService):
 
         try:
             req = requests.post(
-                url=MEDIA_ENDPOINT_URL, json=request_data, headers=headers
+                url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
             )
         except Exception as e:
             self.save_errors(
