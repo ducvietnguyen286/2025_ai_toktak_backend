@@ -172,7 +172,7 @@ class PaymentService:
             "method": "REQUEST",
             "requested_at": start_date,
             "total_link": PACKAGE_CONFIG[package_name]["total_link"],
-            "description": f"Buy {package_name} ",
+            "description": f"{package_name} 패키지를 구매하기",
             "status": status,
         }
         payment = PaymentService.create_payment(**payment_data)
@@ -186,7 +186,7 @@ class PaymentService:
                 "total_link": payment.total_link + addon_count,
                 "amount": payment.amount + amount_addon,
                 "price": payment.price + amount_price,
-                "description": f"{payment.description} buy with {amount_addon} BuyAddon",
+                "description": f"{payment.description}을(를) {amount_addon}개의 애드온으로 구매",
             }
             payment = PaymentService.update_payment(payment.id, **data_update_payment)
             logger.info(
@@ -230,7 +230,7 @@ class PaymentService:
             "method": "REQUEST",
             "requested_at": now,
             "total_link": addon_count,
-            "description": "BuyAddon",
+            "description": "애드온 구매 결제",
         }
         payment = PaymentService.create_payment(**payment_data)
         return payment
@@ -488,6 +488,25 @@ class PaymentService:
 
     @staticmethod
     def deletePayment(post_ids):
+        try:
+            UserHistory.query.filter(
+                UserHistory.type == "payment", UserHistory.object_id.in_(post_ids)
+            ).delete(synchronize_session=False)
+
+            PaymentDetail.query.filter(PaymentDetail.payment_id.in_(post_ids)).delete(
+                synchronize_session=False
+            )
+
+            Payment.query.filter(Payment.id.in_(post_ids)).delete(
+                synchronize_session=False
+            )
+            db.session.commit()
+        except Exception as ex:
+            db.session.rollback()
+            return 0
+        return 1
+    @staticmethod
+    def deletePaymentPending(post_ids):
         try:
             UserHistory.query.filter(
                 UserHistory.type == "payment", UserHistory.object_id.in_(post_ids)
