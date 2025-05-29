@@ -389,7 +389,6 @@ class ImageMaker:
                         image_hash=image_hash,
                         response=json.dumps(json_response),
                     )
-                logger.info(f"Response from SAM: {json_response}")
                 results = json_response.get("images", [])
 
             if not results or len(results) == 0:
