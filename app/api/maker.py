@@ -1790,7 +1790,8 @@ class APITemplateVideo(Resource):
                 template_id = (
                     image_templates[0]["id"] if len(image_templates) > 0 else 0
                 )
-                if user_template.image_template_id != template_id:
+                user_template_id = int(user_template.image_template_id)
+                if user_template_id != template_id:
                     user_template = PostService.update_template(
                         user_template.id,
                         image_template_id=template_id,
