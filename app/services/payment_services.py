@@ -1,6 +1,7 @@
 from app.models.user import User
 from app.models.link import Link
 from app.models.payment import Payment
+from app.models.payment_logs import PaymentLog
 from app.models.payment_detail import PaymentDetail
 from app.models.user_history import UserHistory
 from app.extensions import db
@@ -19,6 +20,8 @@ import traceback
 from const import PACKAGE_CONFIG, PACKAGE_DURATION_DAYS
 import requests
 import base64
+from app.services.user import UserService
+from app.lib.response import Response
 
 from app.lib.string import generate_order_id
 
@@ -38,6 +41,16 @@ class PaymentService:
         except Exception as ex:
             logger.error(f"Error creating payment: {ex}")
             return None
+        
+    @staticmethod
+    def create_payment_log(*args, **kwargs):
+        try:
+            payment_log = PaymentLog(*args, **kwargs)
+            payment_log.save()
+            return payment_log
+        except Exception as ex:
+            logger.error(f"Error creating payment_log: {ex}")
+            return None
 
     @staticmethod
     def create_payment_detail(*args, **kwargs):
@@ -47,6 +60,17 @@ class PaymentService:
             return payment_detail
         except Exception as ex:
             logger.error(f"Error creating payment_detail: {ex}")
+            return None
+
+    @staticmethod
+    def find_payment_by_order(order_id):
+        try:
+            payment_detail = Payment.query.filter(
+                Payment.order_id == order_id,
+            ).first()
+            return payment_detail
+        except Exception as ex:
+            logger.error(f"Error creating payment: {ex}")
             return None
 
     @staticmethod
@@ -128,30 +152,48 @@ class PaymentService:
         return active_payment
 
     @staticmethod
-    def create_new_payment(current_user, package_name, status="PENDING"):
+    def create_new_payment(current_user, package_name, status="PENDING", addon_count=0):
         now = datetime.now()
         origin_price = PACKAGE_CONFIG[package_name]["price"]
         start_date = now
         end_date = start_date + relativedelta(months=1)
         user_id = current_user.id
         order_id = generate_order_id()
-        payment = Payment(
-            user_id=user_id,
-            package_name=package_name,
-            order_id=order_id,
-            amount=origin_price,
-            customer_name=current_user.name or current_user.email,
-            method="REQUEST",
-            status=status,
-            price=origin_price,
-            requested_at=start_date,
-            start_date=start_date,
-            end_date=end_date,
-            total_link=PACKAGE_CONFIG[package_name]["total_link"],
-            total_create=PACKAGE_CONFIG[package_name]["total_create"],
-        )
-        db.session.add(payment)
-        db.session.commit()
+        payment_data = {
+            "user_id": user_id,
+            "package_name": package_name,
+            "order_id": order_id,
+            "amount": origin_price,
+            "price": origin_price,
+            "start_date": start_date,
+            "end_date": end_date,
+            "customer_name": current_user.name or current_user.email,
+            "total_create": PACKAGE_CONFIG[package_name]["total_create"],
+            "method": "REQUEST",
+            "requested_at": start_date,
+            "total_link": PACKAGE_CONFIG[package_name]["total_link"],
+            "description": f"Buy {package_name} ",
+            "status": status,
+        }
+        payment = PaymentService.create_payment(**payment_data)
+        logger.info(f"package_name {package_name} addon_count : {addon_count} ")
+        if package_name == "BASIC" and addon_count > 0:
+            result_addon = PaymentService.calculate_addon_price(user_id, addon_count)
+            amount_addon = result_addon["amount"]
+            amount_price = result_addon["price"]
+
+            data_update_payment = {
+                "total_link": payment.total_link + addon_count,
+                "amount": payment.amount + amount_addon,
+                "price": payment.price + amount_price,
+                "description": f"{payment.description} buy with {amount_addon} BuyAddon",
+            }
+            payment = PaymentService.update_payment(payment.id, **data_update_payment)
+            logger.info(
+                f"package_name {package_name} addon_count : {addon_count}  data_update_payment : {data_update_payment}"
+            )
+            PaymentService.create_addon_payment_detail(user_id, payment.id)
+
         return payment
 
     @staticmethod
@@ -690,3 +732,121 @@ class PaymentService:
             return res.json(), res.status_code
         except requests.RequestException as e:
             return {"message": f"TossPayments 연결 오류: {str(e)}"}, 500
+
+    @staticmethod
+    def approvalPayment(payment_id):
+        try:
+            today = datetime.now().date()
+            payment_detail = PaymentService.find_payment(payment_id)
+            if not payment_detail:
+                return Response(
+                    message="결제 정보가 존재하지 않습니다.",
+                    message_en="Payment does not exist",
+                    code=201,
+                ).to_dict()
+
+            package_name = payment_detail.package_name
+            if package_name == "ADDON":
+                payment_parent_detail = PaymentService.find_payment(
+                    payment_detail.parent_id
+                )
+                if payment_parent_detail:
+                    payment_parent_end_date = payment_parent_detail.end_date.date()
+                    payment_parent_status = payment_parent_detail.status
+                    if payment_parent_status != "PAID":
+                        return Response(
+                            message="구매하신 Basic 요금제가 아직 결제되지 않았습니다.",
+                            message_en="Your Basic plan has not been paid for yet.",
+                            code=201,
+                        ).to_dict()
+                    if payment_parent_end_date <= today:
+                        return Response(
+                            message="Basic 요금제가 만료되었습니다.",
+                            message_en="Your Basic plan has expired.",
+                            code=201,
+                        ).to_dict()
+
+            payment = PaymentService.update_payment(payment_id, status="PAID")
+            if payment:
+                user_id = payment.user_id
+                package_name = payment.package_name
+                user_detail = UserService.find_user(user_id)
+                if package_name == "ADDON":
+
+                    if user_detail:
+                        total_link_active = user_detail.total_link_active
+                        data_update = {
+                            "total_link_active": total_link_active + payment.total_link,
+                        }
+
+                        UserService.update_user(user_id, **data_update)
+                        data_user_history = {
+                            "user_id": user_id,
+                            "type": "payment",
+                            "type_2": package_name,
+                            "object_id": payment.id,
+                            "object_start_time": payment.start_date,
+                            "object_end_time": payment.end_date,
+                            "title": "Basic 추가 기능을 구매하세요.",
+                            "description": "Basic 추가 기능을 구매하세요.",
+                            "value": 0,
+                            "num_days": 0,
+                        }
+                        UserService.create_user_history(**data_user_history)
+                else:
+                    package_data = const.PACKAGE_CONFIG.get(package_name)
+                    if not package_data:
+                        return Response(
+                            message="유효하지 않은 패키지입니다.", code=201
+                        ).to_dict()
+
+                    subscription_expired = payment.end_date
+
+                    batch_total = UserService.get_total_batch_total(user_id)
+                    login_user_subscription = user_detail.subscription
+                    batch_remain = 0
+                    if login_user_subscription != "FREE":
+                        batch_remain = user_detail.batch_remain
+
+                    batch_remain = batch_remain + package_data["batch_remain"]
+                    total_link_active = user_detail.total_link_active
+                    data_update = {
+                        "subscription": package_name,
+                        "subscription_expired": subscription_expired,
+                        "batch_total": batch_total + payment.total_create,
+                        "batch_remain": batch_remain,
+                        "total_link_active": min(
+                            total_link_active + payment.total_link, 7
+                        ),
+                    }
+
+                    UserService.update_user(user_id, **data_update)
+                    data_user_history = {
+                        "user_id": user_id,
+                        "type": "payment",
+                        "object_id": payment.id,
+                        "object_start_time": payment.start_date,
+                        "object_end_time": subscription_expired,
+                        "title": package_data["pack_name"],
+                        "description": package_data["pack_description"],
+                        "value": package_data["batch_total"],
+                        "num_days": package_data["batch_remain"],
+                    }
+                    UserService.create_user_history(**data_user_history)
+            else:
+                return Response(
+                    message="결제 정보가 존재하지 않습니다",
+                    message_en="Payment does not exist",
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                message="승인이 완료되었습니다.",
+                message_en="Approval has been completed",
+                data={"payment": payment._to_json()},
+                code=200,
+            ).to_dict()
+        except requests.RequestException as e:
+            return Response(
+                message=f"유효하지 않은 패키지입니다. {str(e)}", code=201
+            ).to_dict()
