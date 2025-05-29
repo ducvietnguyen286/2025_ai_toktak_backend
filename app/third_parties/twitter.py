@@ -21,8 +21,8 @@ from app.extensions import redis_client
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
-MEDIA_ENDPOINT_URL = "https://api.x.com/2/media/upload"
-X_POST_TO_X_URL = "https://api.x.com/2/tweets"
+MEDIA_ENDPOINT_URL = "https://upload.twitter.com/1.1/media/upload.json"
+X_POST_TO_X_URL = "https://api.twitter.com/2/tweets"
 TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
 
@@ -593,7 +593,7 @@ class TwitterService(BaseService):
 
         headers = {
             "Authorization": "Bearer {}".format(access_token),
-            "Content-Type": "application/json",
+            "Content-Type": "multipart/form-data",
         }
 
         request_data = {
