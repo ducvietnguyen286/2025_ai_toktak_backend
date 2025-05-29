@@ -695,7 +695,7 @@ class APIUpdateTemplateVideoUser(Resource):
             "is_video_hooking": {"type": ["integer", "null"]},
             "is_caption_top": {"type": ["integer", "null"]},
             "is_caption_last": {"type": ["integer", "null"]},
-            "image_template_id": {"type": ["number", "null"]},
+            "image_template_id": {"type": ["string", "number", "null"]},
             "comment": {"type": "string"},
             "hashtag": {"type": "array", "items": {"type": "string"}},
             "is_comment": {"type": ["integer", "null"]},
@@ -721,6 +721,7 @@ class APIUpdateTemplateVideoUser(Resource):
             is_caption_top = args.get("is_caption_top", 0)
             is_caption_last = args.get("is_caption_last", 0)
             image_template_id = args.get("image_template_id", 0)
+            image_template_id = int(image_template_id) if image_template_id else None
             is_comment = args.get("is_comment", 0)
             is_hashtag = args.get("is_hashtag", 0)
             comment = args.get("comment", "")
@@ -1789,7 +1790,8 @@ class APITemplateVideo(Resource):
                 template_id = (
                     image_templates[0]["id"] if len(image_templates) > 0 else 0
                 )
-                if user_template.image_template_id != template_id:
+                user_template_id = int(user_template.image_template_id)
+                if user_template_id != template_id:
                     user_template = PostService.update_template(
                         user_template.id,
                         image_template_id=template_id,
