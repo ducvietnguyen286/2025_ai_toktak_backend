@@ -21,7 +21,7 @@ from app.extensions import redis_client
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
-MEDIA_ENDPOINT_URL = "https://api.x.com/2/media/upload"
+MEDIA_ENDPOINT_URL = "https://api.twitter.com/2/media/upload"
 X_POST_TO_X_URL = "https://api.x.com/2/tweets"
 TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
@@ -596,18 +596,18 @@ class TwitterService(BaseService):
             "Content-Type": "application/json",
         }
 
-        request_data = {
-            "command": "INIT",
-            "media_type": media_type,
-            "total_bytes": total_bytes,
+        payload = {
             "media_category": "tweet_video" if is_video else "tweet_image",
+            "media_type": media_type,
+            "shared": False,
+            "total_bytes": total_bytes,
         }
 
-        log_twitter_message(request_data)
+        log_twitter_message(payload)
 
         try:
             req = requests.post(
-                url=MEDIA_ENDPOINT_URL, json=request_data, headers=headers
+                url=f"{MEDIA_ENDPOINT_URL}/initialize", json=payload, headers=headers
             )
         except Exception as e:
             self.save_errors(
@@ -617,7 +617,7 @@ class TwitterService(BaseService):
             )
             return False
 
-        self.save_request_log("upload_media_init", request_data, req.json())
+        self.save_request_log("upload_media_init", payload, req.json())
 
         self.save_uploading(10)
 
@@ -690,19 +690,17 @@ class TwitterService(BaseService):
             files = {"media": ("chunk", chunk, "application/octet-stream")}
 
             data = {
-                "command": "APPEND",
-                "media_id": media_id,
                 "segment_index": segment_id,
             }
 
-            headers = {
-                "Authorization": f"Bearer {access_token}",
-                "User-Agent": "MediaUploadSampleCode",
-            }
+            headers = {"Authorization": f"Bearer {access_token}"}
 
             try:
                 req = requests.post(
-                    url=MEDIA_ENDPOINT_URL, data=data, files=files, headers=headers
+                    url=f"{MEDIA_ENDPOINT_URL}/{media_id}/append",
+                    data=data,
+                    files=files,
+                    headers=headers,
                 )
             except Exception as e:
                 self.save_errors(
@@ -771,11 +769,12 @@ class TwitterService(BaseService):
             "Content-Type": "application/json",
         }
 
-        request_data = {"command": "FINALIZE", "media_id": media_id}
+        request_data = {"media_id": media_id}
 
         try:
             req = requests.post(
-                url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
+                url=f"{MEDIA_ENDPOINT_URL}/{media_id}/finalize",
+                headers=headers,
             )
         except Exception as e:
             self.save_errors(
@@ -850,10 +849,7 @@ class TwitterService(BaseService):
         if self.processing_info is None:
             return False
 
-        headers = {
-            "Authorization": "Bearer {}".format(access_token),
-            "Content-Type": "application/json",
-        }
+        headers = {"Authorization": "Bearer {}".format(access_token)}
 
         state = self.processing_info["state"]
 
