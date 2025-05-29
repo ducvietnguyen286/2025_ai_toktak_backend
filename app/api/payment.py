@@ -485,7 +485,7 @@ class APIPaymentConfirm(Resource):
                         code=201,
                     ).to_dict()
 
-                data_update = {
+                data_update_payment = {
                     "payment_key": payment_data["paymentKey"],
                     "method": payment_data["method"],
                     "status": "PAID",
@@ -493,10 +493,16 @@ class APIPaymentConfirm(Resource):
                     "payment_data": json.dumps(payment_data),
                     "description": f"{payment.description} Tosspayment : 결제가 완료되었습니다",
                 }
-                logger.info("_------------------------------------data_update")
-                logger.info(data_update)
+                logger.info(
+                    f"_------------------------------------data_update_payment payment_id {payment_id}"
+                )
+                logger.info(data_update_payment)
 
-                payment = PaymentService.update_payment(payment_id, **data_update)
+                payment = PaymentService.update_payment(
+                    payment_id, **data_update_payment
+                )
+                logger.info(payment)
+
                 return Response(
                     message="Tosspayment 결제가 완료되었습니다",
                     message_en="Payment completed successfully via Tosspayment",
