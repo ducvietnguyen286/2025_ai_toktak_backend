@@ -417,31 +417,7 @@ class APIGetPaymentDetail(Resource):
             data={},
             code=201,
         ).to_dict()
-
-
-@ns.route("/get_detail")
-class APIGetPaymentDetail(Resource):
-    @jwt_required()
-    def post(self):
-        data = request.get_json()
-        payment_id = int(data.get("payment_id", 0))
-        message = ""
-        active = PaymentService.find_payment(payment_id)
-        if active:
-
-            return Response(
-                message="",
-                data={"payment": active._to_json()},
-                code=200,
-            ).to_dict()
-
-        return Response(
-            message=message,
-            data={},
-            code=201,
-        ).to_dict()
-
-
+ 
 @ns.route("/confirm")
 class APIPaymentConfirm(Resource):
     @jwt_required()
@@ -488,7 +464,6 @@ class APIPaymentConfirm(Resource):
                 data_update_payment = {
                     "payment_key": payment_data.get("paymentKey", ""),
                     "method": payment_data.get("method", ""),
-                    "status": "PAID",
                     "approved_at": datetime.datetime.now(),
                     "payment_data": json.dumps(payment_data),
                     "description": f"{payment.description} Tosspayment : 결제가 완료되었습니다",
@@ -502,6 +477,7 @@ class APIPaymentConfirm(Resource):
                     payment_id, **data_update_payment
                 )
                 logger.info(payment)
+                PaymentService.approvalPayment(payment_id)
 
                 return Response(
                     message="Tosspayment 결제가 완료되었습니다",
@@ -509,7 +485,7 @@ class APIPaymentConfirm(Resource):
                     data={
                         "payment": payment._to_json(),
                         "paymentKey": payment_data["paymentKey"],
-                        "method": payment_data["method"]
+                        "method": payment_data["method"],
                     },
                 ).to_dict()
 
