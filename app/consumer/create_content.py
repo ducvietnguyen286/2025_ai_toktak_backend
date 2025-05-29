@@ -199,6 +199,7 @@ class CreateContent:
                 content["images"] = images
 
             data_update_batch = {
+                "thumbnail": thumbnails[0] if thumbnails else batch_detail.thumbnail,
                 "thumbnails": json.dumps(thumbnails),
                 "content": json.dumps(content),
             }
