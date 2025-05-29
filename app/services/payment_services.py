@@ -278,6 +278,7 @@ class PaymentService:
             end_date=active_payment.end_date,
             total_link=PACKAGE_CONFIG[new_package]["total_link"],
             total_create=PACKAGE_CONFIG[new_package]["total_create"],
+            description=f"{new_package} 추가 기능을 구매하세요",
         )
         db.session.add(new_payment)
         db.session.commit()
