@@ -1,6 +1,7 @@
 from app.models.user import User
 from app.models.link import Link
 from app.models.payment import Payment
+from app.models.payment_detail import PaymentDetail
 from app.models.user_history import UserHistory
 from app.extensions import db
 from sqlalchemy import and_, func, or_
@@ -36,6 +37,16 @@ class PaymentService:
             return payment
         except Exception as ex:
             logger.error(f"Error creating payment: {ex}")
+            return None
+
+    @staticmethod
+    def create_payment_detail(*args, **kwargs):
+        try:
+            payment_detail = PaymentDetail(*args, **kwargs)
+            payment_detail.save()
+            return payment_detail
+        except Exception as ex:
+            logger.error(f"Error creating payment_detail: {ex}")
             return None
 
     @staticmethod
@@ -144,7 +155,7 @@ class PaymentService:
         return payment
 
     @staticmethod
-    def create_addon_payment(user_id, parent_payment_id):
+    def create_addon_payment(user_id, parent_payment_id, order_id, addon_count=1):
         basic_payment = Payment.query.filter_by(
             id=parent_payment_id, user_id=user_id, package_name="BASIC"
         ).first()
@@ -159,14 +170,14 @@ class PaymentService:
             raise Exception(
                 "이 애드온은 BASIC 패키지당 최대 2회까지만 구매할 수 있습니다."
             )
-
         # Tính số ngày còn lại
         today = datetime.now()
         now = datetime.now()
-        result = PaymentService.calculate_addon_price(user_id, 1)
+        result = PaymentService.calculate_addon_price(user_id, addon_count)
         payment_data = {
             "user_id": user_id,
             "package_name": "ADDON",
+            "order_id": order_id,
             "amount": result["amount"],
             "price": result["price"],
             "start_date": today,
@@ -176,9 +187,22 @@ class PaymentService:
             "total_create": 0,
             "method": "REQUEST",
             "requested_at": now,
-            "total_link": 1,
+            "total_link": addon_count,
+            "description": "BuyAddon",
         }
         payment = PaymentService.create_payment(**payment_data)
+        return payment
+
+    @staticmethod
+    def create_addon_payment_detail(user_id, payment_id):
+        result = PaymentService.calculate_addon_price(user_id, 1)
+        payment_data = {
+            "user_id": user_id,
+            "payment_id": payment_id,
+            "amount": result["amount"],
+            "price": result["price"],
+        }
+        payment = PaymentService.create_payment_detail(**payment_data)
         return payment
 
     @staticmethod
@@ -435,6 +459,10 @@ class PaymentService:
             UserHistory.query.filter(
                 UserHistory.type == "payment", UserHistory.object_id.in_(post_ids)
             ).delete(synchronize_session=False)
+
+            PaymentDetail.query.filter(PaymentDetail.payment_id.in_(post_ids)).delete(
+                synchronize_session=False
+            )
 
             Payment.query.filter(Payment.id.in_(post_ids)).delete(
                 synchronize_session=False
