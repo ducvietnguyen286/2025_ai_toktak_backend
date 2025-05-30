@@ -1,12 +1,12 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from mongoengine import connect
-from app.models.crawl_data_mongo import CrawlDataMongo
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # ----------- Kết nối MySQL ----------
@@ -28,22 +28,6 @@ MONGO_PORT = int(os.getenv("MONGODB_PORT", 27017))
 MONGO_USERNAME = os.getenv("MONGODB_USERNAME", "")
 MONGO_PASSWORD = os.getenv("MONGODB_PASSWORD", "")
 
-if MONGO_USERNAME and MONGO_PASSWORD:
-    connect(
-        db=MONGO_DB,
-        host=MONGO_HOST,
-        port=MONGO_PORT,
-        username=MONGO_USERNAME,
-        password=MONGO_PASSWORD,
-        authentication_source="admin",
-    )
-else:
-    connect(
-        db=MONGO_DB,
-        host=MONGO_HOST,
-        port=MONGO_PORT,
-    )
-
 
 # ----------- Migrate dữ liệu ----------
 def migrate():
@@ -57,11 +41,7 @@ def migrate():
         # None -> ""
         data = {k: (v if v is not None else "") for k, v in data.items()}
         crawl_url_hash = data.get("crawl_url_hash")
-        if CrawlDataMongo.objects(crawl_url_hash=crawl_url_hash).first():
-            print(f"Skip exists: {crawl_url_hash}")
-            continue
-        crawl_data = CrawlDataMongo(**data)
-        crawl_data.save()
+
         print(f"Migrated: {crawl_url_hash}")
 
     print("Migration completed.")

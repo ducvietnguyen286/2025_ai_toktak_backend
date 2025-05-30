@@ -9,11 +9,12 @@ from flask import Flask
 from functools import partial
 from werkzeug.exceptions import default_exceptions
 
-load_dotenv(override=False)
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path=dotenv_path, override=True)
 
 from app.lib.logger import log_twitter_message
 from app.errors.handler import api_error_handler
-from app.extensions import redis_client, db, db_mongo
+from app.extensions import redis_client, db
 from app.config import configs as config
 from app.services.link import LinkService
 from app.services.post import PostService
@@ -34,7 +35,6 @@ def __config_logging(app):
 def __init_app(app):
     db.init_app(app)
     redis_client.init_app(app)
-    db_mongo.init_app(app)
 
 
 def __config_error_handlers(app):

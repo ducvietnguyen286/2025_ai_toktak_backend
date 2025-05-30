@@ -1,18 +1,22 @@
 # coding: utf8
+from gevent import monkey
+
+monkey.patch_all()
+
 import os
 
 from dotenv import load_dotenv
-from flask import abort, send_from_directory, request, jsonify
+from flask import app, request
 
-load_dotenv(override=False)
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path=dotenv_path, override=True)
 
 from app import create_app  # noqa
 from app.config import configs as config  # noqa
-import const
 
 config_name = os.environ.get("FLASK_CONFIG") or "develop"
 config_app = config[config_name]
-application = app = create_app(config_app)
+application = create_app(config_app)
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 VOICE_FOLDER = os.path.join(os.getcwd(), "static/voice")
@@ -24,40 +28,7 @@ ALLOWED_IPS = {"118.70.171.129", "218.154.54.97"}
 EXCLUDED_ENDPOINTS = {"/api/v1/setting/get_public_config"}
 
 
-# @app.before_request
-# def limit_remote_addr():
-#     # Kiểm tra nếu route không cần kiểm tra IP
-#     print(request.path)
-#     print("XXXXXXXXXXXXX")
-#     if request.path in EXCLUDED_ENDPOINTS:
-#         return
-#     # Lấy IP của người dùng
-#     remote_ip = request.remote_addr
-
-#     # Nếu IP không hợp lệ thì trả lỗi JSON
-#     if remote_ip not in const.ALLOWED_IPS:
-#         return (
-#             jsonify(
-#                 {"error": "Forbidden", "message": f"Access denied for IP: {remote_ip}"}
-#             ),
-#             403,
-#         )
-
-
-# @app.route("/files/<path:filename>")
-# def get_file(filename):
-#     try:
-#         return send_from_directory(UPLOAD_FOLDER, filename)
-#     except FileNotFoundError:
-#         abort(404)
-
-
-# @app.route("/voice/<path:filename>")
-# def serve_static(filename):
-#     return send_from_directory(VOICE_FOLDER, filename)
-
-
-@app.route("/", methods=["GET"])
+@application.route("/", methods=["GET"])
 def index():
     headers = dict(request.headers)
     params = dict(request.args)
@@ -74,5 +45,4 @@ def index():
 
 
 if __name__ == "__main__":
-    is_debug = config_name == "develop"
-    application.run(debug=True)
+    application.run()

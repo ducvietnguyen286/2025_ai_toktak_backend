@@ -1,7 +1,16 @@
 import json
+
+from sqlalchemy import asc
 from app.ais.chatgpt import call_chatgpt_get_main_text_and_color_for_image
 from app.makers.images import ImageMaker
 from app.models.image_template import ImageTemplate
+from app.lib.query import (
+    select_with_filter,
+    select_by_id,
+    select_with_pagination,
+    select_with_filter_one,
+    update_by_id,
+)
 
 
 class ImageTemplateService:
@@ -14,35 +23,46 @@ class ImageTemplateService:
 
     @staticmethod
     def find_image_template(id):
-        return ImageTemplate.objects.get(id=id)
+        return select_by_id(ImageTemplate, id)
 
     @staticmethod
     def find_image_template_by_template_code(template_code):
-        return ImageTemplate.objects(template_code=template_code).first()
+        return select_with_filter_one(
+            ImageTemplate, filters=[ImageTemplate.template_code == template_code]
+        )
 
     @staticmethod
     def find_image_template_by_type(type):
-        return ImageTemplate.objects(type=type).first()
+        return select_with_filter_one(
+            ImageTemplate, filters=[ImageTemplate.type == type]
+        )
 
     @staticmethod
     def get_image_templates():
-        image_templates = ImageTemplate.objects(status="ACTIVE").order_by("sort").all()
-        return [image_template.to_json() for image_template in image_templates]
+        templates = select_with_filter(
+            ImageTemplate,
+            filters=[ImageTemplate.status == "ACTIVE"],
+            order_by=[asc(ImageTemplate.sort)],
+        )
+        return [t._to_json() for t in templates]
 
     @staticmethod
     def get_not_json_image_templates():
-        image_templates = ImageTemplate.objects(status="ACTIVE").all()
-        return image_templates
+        return select_with_filter(
+            ImageTemplate, filters=[ImageTemplate.status == "ACTIVE"]
+        )
 
     @staticmethod
-    def update_image_template(id, **args):
-        image_template = ImageTemplate.objects.get(id=id)
-        image_template.update(**args)
-        return image_template
+    def update_image_template(id, **kwargs):
+        return update_by_id(ImageTemplate, id, kwargs)
 
     @staticmethod
     def delete_image_template(id):
-        return ImageTemplate.objects.get(id=id).delete()
+        template = select_by_id(ImageTemplate, id)
+        if template:
+            template.delete()
+            return True
+        return False
 
     @staticmethod
     def create_image_by_template(
@@ -50,7 +70,7 @@ class ImageTemplateService:
     ):
         template_type = template.type
         random_key = []
-        for key, value in template.to_json().items():
+        for key, value in template._to_json().items():
             if value == "random_color":
                 random_key.append(key)
         random_key_str = ",".join(random_key)
@@ -73,8 +93,12 @@ class ImageTemplateService:
                 )
                 image_urls.append(res_visual["image_url"])
                 file_size += res_visual["file_size"]
-                other_images = process_images[0:-1]
-                other_captions = captions[1:]
+                if len(process_images) > 1:
+                    other_captions = captions[1:]
+                    other_images = process_images[0:-1]
+                else:
+                    other_captions = captions
+                    other_images = process_images
 
             elif template_type == "TEMPLATE_IMAGE_2":
                 res_visual = ImageTemplateService.create_image_by_template_image_2(

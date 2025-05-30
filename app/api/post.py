@@ -37,7 +37,7 @@ class APIEditPost(Resource):
     @parameters(
         type="object",
         properties={
-            "post_id": {"type": "string"},
+            "post_id": {"type": ["string", "number", "null"]},
             "title": {"type": ["string", "null"]},
             "description": {"type": ["string", "null"]},
             "content": {"type": ["string", "null"]},
@@ -48,7 +48,8 @@ class APIEditPost(Resource):
     )
     def post(self, args):
         try:
-            post_id = args.get("post_id", "")
+            post_id = args.get("post_id", 0)
+            post_id = int(post_id) if post_id else 0
             description = args.get("description", "")
             title = args.get("title", "")
             hashtag = args.get("hashtag", "")
@@ -76,7 +77,7 @@ class APIEditPost(Resource):
             if update_data:
                 post_detail = PostService.update_post(post_id, **update_data)
                 return Response(
-                    data=post_detail.to_json(),
+                    data=post_detail._to_json(),
                     message="성공적으로 업데이트되었습니다.",
                     code=200,
                 ).to_dict()

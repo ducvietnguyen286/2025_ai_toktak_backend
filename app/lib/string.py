@@ -6,6 +6,7 @@ import hashlib
 import base64
 import string
 import const
+import uuid
 from app.lib.logger import logger
 
 
@@ -374,3 +375,8 @@ def get_subscription_name(subscription):
             f"[get_subscription_name] Failed for path: {subscription} — Error: {e}"
         )
         return subscription
+
+
+def generate_order_id():
+    raw_id = f"order_{uuid.uuid4().hex[:16]}"
+    return re.sub(r"[^a-zA-Z0-9_-]", "", raw_id)

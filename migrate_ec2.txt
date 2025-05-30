@@ -1,6 +1,2 @@
-ALTER TABLE  `user_histories` 
-ADD COLUMN `type_2` VARCHAR(20) NULL AFTER `type`;
-
-
-ALTER TABLE `coupon_codes` 
-ADD COLUMN `total_link_active` INT NULL DEFAULT 7 AFTER `updated_at`;
+ALTER TABLE `payments` 
+ADD COLUMN `parent_id` INT NULL AFTER `id`;

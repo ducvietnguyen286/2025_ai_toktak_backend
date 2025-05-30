@@ -1,7 +1,9 @@
 from app.models.user import User
-from app.models.post import Post
 from app.models.link import Link
 from app.models.payment import Payment
+from app.models.payment_logs import PaymentLog
+from app.models.payment_detail import PaymentDetail
+from app.models.user_history import UserHistory
 from app.extensions import db
 from sqlalchemy import and_, func, or_
 from flask import jsonify
@@ -14,11 +16,105 @@ import hashlib
 from app.models.batch import Batch
 from app.lib.logger import logger
 from dateutil.relativedelta import relativedelta
-
+import traceback
 from const import PACKAGE_CONFIG, PACKAGE_DURATION_DAYS
+import requests
+import base64
+from app.services.user import UserService
+from app.lib.response import Response
+
+from app.lib.string import generate_order_id
 
 
 class PaymentService:
+
+    @staticmethod
+    def find_payment(id):
+        return Payment.query.get(id)
+
+    @staticmethod
+    def create_payment(*args, **kwargs):
+        try:
+            payment = Payment(*args, **kwargs)
+            payment.save()
+            return payment
+        except Exception as ex:
+            logger.error(f"Error creating payment: {ex}")
+            return None
+
+    @staticmethod
+    def create_payment_log(*args, **kwargs):
+        try:
+            payment_log = PaymentLog(*args, **kwargs)
+            payment_log.save()
+            return payment_log
+        except Exception as ex:
+            logger.error(f"Error creating payment_log: {ex}")
+            return None
+
+    @staticmethod
+    def create_payment_detail(*args, **kwargs):
+        try:
+            payment_detail = PaymentDetail(*args, **kwargs)
+            payment_detail.save()
+            return payment_detail
+        except Exception as ex:
+            logger.error(f"Error creating payment_detail: {ex}")
+            return None
+
+    @staticmethod
+    def find_payment_by_order(order_id):
+        try:
+            payment_detail = Payment.query.filter(
+                Payment.order_id == order_id,
+            ).first()
+            return payment_detail
+        except Exception as ex:
+            logger.error(f"Error creating payment: {ex}")
+            return None
+
+    @staticmethod
+    def get_last_payment_basic(user_id, date_today):
+        try:
+            payment_detail = (
+                Payment.query.filter(
+                    Payment.user_id == user_id,
+                    Payment.package_name == "BASIC",
+                    Payment.status == "PAID",
+                    Payment.end_date >= date_today,
+                )
+                .order_by(Payment.end_date.desc())
+                .first()
+            )
+            return payment_detail
+        except Exception as ex:
+            logger.error(f"Error creating payment: {ex}")
+            return None
+
+    @staticmethod
+    def get_total_payment_basic_addon(user_id, date_today, basic_payment_id):
+        try:
+            payment_addon_count = Payment.query.filter(
+                Payment.user_id == user_id,
+                # Payment.status == "PAID",
+                Payment.end_date >= date_today,
+                Payment.parent_id == basic_payment_id,
+            ).count()
+            return payment_addon_count
+        except Exception as ex:
+            logger.error(f"Error creating payment: {ex}")
+            return 0
+
+    @staticmethod
+    def get_payment_basic_addon(basic_payment_id):
+        try:
+            payment_addons = Payment.query.filter(
+                Payment.parent_id == basic_payment_id,
+            ).all()
+            return payment_addons
+        except Exception as ex:
+            logger.error(f"Error get_payment_basic_addon payment: {ex}")
+            return 0
 
     @staticmethod
     def update_payment(id, *args, **kwargs):
@@ -42,6 +138,7 @@ class PaymentService:
         active_payment = (
             Payment.query.filter_by(user_id=user_id)
             .filter(Payment.end_date > now)
+            .filter(Payment.package_name != "ADDON")
             .order_by(Payment.end_date.desc())
             .first()
         )
@@ -55,27 +152,99 @@ class PaymentService:
         return active_payment
 
     @staticmethod
-    def create_new_payment(current_user, package_name):
+    def create_new_payment(current_user, package_name, status="PENDING", addon_count=0):
         now = datetime.now()
         origin_price = PACKAGE_CONFIG[package_name]["price"]
         start_date = now
         end_date = start_date + relativedelta(months=1)
         user_id = current_user.id
-        payment = Payment(
-            user_id=user_id,
-            package_name=package_name,
-            amount=origin_price,
-            customer_name=current_user.name or current_user.email,
-            method="REQUEST",
-            price=origin_price,
-            requested_at=start_date,
-            start_date=start_date,
-            end_date=end_date,
-            total_link=PACKAGE_CONFIG[package_name]["total_link"],
-            total_create=PACKAGE_CONFIG[package_name]["total_create"],
-        )
-        db.session.add(payment)
-        db.session.commit()
+        order_id = generate_order_id()
+        payment_data = {
+            "user_id": user_id,
+            "package_name": package_name,
+            "order_id": order_id,
+            "amount": origin_price,
+            "price": origin_price,
+            "start_date": start_date,
+            "end_date": end_date,
+            "customer_name": current_user.name or current_user.email,
+            "total_create": PACKAGE_CONFIG[package_name]["total_create"],
+            "method": "REQUEST",
+            "requested_at": start_date,
+            "total_link": PACKAGE_CONFIG[package_name]["total_link"],
+            "description": f"{package_name} 패키지를 구매하기",
+            "status": status,
+        }
+        payment = PaymentService.create_payment(**payment_data)
+        logger.info(f"package_name {package_name} addon_count : {addon_count} ")
+        if package_name == "BASIC" and addon_count > 0:
+            result_addon = PaymentService.calculate_addon_price(user_id, addon_count)
+            amount_addon = result_addon["amount"]
+            amount_price = result_addon["price"]
+
+            data_update_payment = {
+                "total_link": payment.total_link + addon_count,
+                "amount": payment.amount + amount_addon,
+                "price": payment.price + amount_price,
+                "description": f"{payment.description}을(를) {amount_addon}개의 애드온으로 구매",
+            }
+            payment = PaymentService.update_payment(payment.id, **data_update_payment)
+            logger.info(
+                f"package_name {package_name} addon_count : {addon_count}  data_update_payment : {data_update_payment}"
+            )
+            PaymentService.create_addon_payment_detail(user_id, payment.id)
+
+        return payment
+
+    @staticmethod
+    def create_addon_payment(user_id, parent_payment_id, order_id, addon_count=1):
+        basic_payment = Payment.query.filter_by(
+            id=parent_payment_id, user_id=user_id, package_name="BASIC"
+        ).first()
+        if not basic_payment:
+            return None
+
+        # Kiểm tra số lần đã mua addon với parent_id này
+        count = Payment.query.filter_by(
+            user_id=user_id, parent_id=parent_payment_id, package_name="ADDON"
+        ).count()
+        if count >= const.MAX_ADDON_PER_BASIC:
+            raise Exception(
+                "이 애드온은 BASIC 패키지당 최대 2회까지만 구매할 수 있습니다."
+            )
+        # Tính số ngày còn lại
+        today = datetime.now()
+        now = datetime.now()
+        result = PaymentService.calculate_addon_price(user_id, addon_count)
+        payment_data = {
+            "user_id": user_id,
+            "package_name": "ADDON",
+            "order_id": order_id,
+            "amount": result["amount"],
+            "price": result["price"],
+            "start_date": today,
+            "end_date": basic_payment.end_date,
+            "customer_name": basic_payment.customer_name,
+            "parent_id": parent_payment_id,
+            "total_create": 0,
+            "method": "REQUEST",
+            "requested_at": now,
+            "total_link": addon_count,
+            "description": "애드온 구매 결제",
+        }
+        payment = PaymentService.create_payment(**payment_data)
+        return payment
+
+    @staticmethod
+    def create_addon_payment_detail(user_id, payment_id):
+        result = PaymentService.calculate_addon_price(user_id, 1)
+        payment_data = {
+            "user_id": user_id,
+            "payment_id": payment_id,
+            "amount": result["amount"],
+            "price": result["price"],
+        }
+        payment = PaymentService.create_payment_detail(**payment_data)
         return payment
 
     @staticmethod
@@ -95,9 +264,10 @@ class PaymentService:
         origin_price = PACKAGE_CONFIG[new_package]["price"]
 
         final_price = max(0, origin_price - remaining_value)
-
+        order_id = generate_order_id()
         new_payment = Payment(
             user_id=user_id,
+            order_id=order_id,
             package_name=new_package,
             amount=origin_price,
             customer_name=current_user.name or current_user.email,
@@ -108,6 +278,7 @@ class PaymentService:
             end_date=active_payment.end_date,
             total_link=PACKAGE_CONFIG[new_package]["total_link"],
             total_create=PACKAGE_CONFIG[new_package]["total_create"],
+            description=f"{new_package} 추가 기능을 구매하세요",
         )
         db.session.add(new_payment)
         db.session.commit()
@@ -188,3 +359,518 @@ class PaymentService:
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
         return pagination
+
+    @staticmethod
+    def calculate_addon_price(user_id, addon_count=1):
+        try:
+            today = datetime.now().date()
+            payment_basic = (
+                Payment.query.filter(
+                    Payment.user_id == user_id,
+                    Payment.package_name == "BASIC",
+                    # Payment.status == "PAID",
+                    Payment.end_date >= today,
+                )
+                .order_by(Payment.end_date.desc())
+                .first()
+            )
+
+            if not payment_basic:
+                return {
+                    "user_id": user_id,
+                    "can_buy": 0,
+                    "message": "유효한 BASIC 요금제가 없거나 만료되었습니다.",
+                    "message_en": "There is no active or valid BASIC plan, or it has expired.",
+                    "price": 0,
+                    "remaining_days": 0,
+                }
+
+            payment_addons = PaymentService.get_payment_basic_addon(payment_basic.id)
+            end_date = payment_basic.end_date.date()
+            remaining_days = min((end_date - today).days, 30)
+            if remaining_days < 1:
+                return {
+                    "can_buy": 0,
+                    "message": "Gói BASIC đã hết hạn.",
+                    "price": 0,
+                    "remaining_days": 0,
+                }
+
+            # Tính tiền addon
+            addon_price = const.PACKAGE_CONFIG["BASIC"]["addon"]["EXTRA_CHANNEL"][
+                "price"
+            ]
+
+            basic_price = const.PACKAGE_CONFIG["BASIC"]["price"]
+
+            total_amount = addon_price * addon_count
+            duration = const.BASIC_DURATION_DAYS
+            price_to_pay = int(total_amount / duration * remaining_days)
+            price_discount = total_amount - price_to_pay
+
+            return {
+                "addon_count": addon_count,
+                "payment_addons": [
+                    payment_addon_detail._to_json()
+                    for payment_addon_detail in payment_addons
+                ],
+                "can_buy": 1,
+                "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày. calculate_addon_price",
+                "duration": duration,
+                "amount": total_amount,
+                "discount": price_discount,
+                "price": price_to_pay,
+                "addon_price": total_amount,
+                "total_discount": price_discount * addon_count,
+                "price_discount": price_discount,
+                "price_payment": price_to_pay,
+                "remaining_days": remaining_days,
+                "basic_payment_id": payment_basic.id,
+                "basic_price": basic_price,
+                "basic_end_date": end_date.strftime("%Y-%m-%d"),
+            }
+        except Exception as ex:
+
+            traceback.print_exc()
+            logger.error(f"Error calculating addon price: {ex}")
+            return {
+                "can_buy": 0,
+                "message": "Có lỗi xảy ra khi tính giá addon.",
+                "price": 0,
+                "remaining_days": 0,
+            }
+
+    @staticmethod
+    def calculate_price_with_addon(user_id, addon_count=1):
+        try:
+            today = datetime.now().date()
+
+            end_date_default = today + timedelta(days=30)
+            # Tính tiền addon
+            addon_price = const.PACKAGE_CONFIG["BASIC"]["addon"]["EXTRA_CHANNEL"][
+                "price"
+            ]
+
+            basic_price = const.PACKAGE_CONFIG["BASIC"]["price"]
+            remaining_days = 30
+            total_amount = addon_price * addon_count
+            duration = const.BASIC_DURATION_DAYS
+            price_to_pay = total_amount + basic_price
+            price_discount = 0
+
+            return {
+                "addon_count": addon_count,
+                "payment_addons": [],
+                "can_buy": 1,
+                "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày. calculate_price_with_addon",
+                "duration": duration,
+                "amount": price_to_pay,
+                "discount": 0,
+                "price": price_to_pay,
+                "addon_price": addon_price,
+                "total_discount": price_discount * addon_count,
+                "price_discount": 0,
+                "price_payment": price_to_pay,
+                "remaining_days": remaining_days,
+                "basic_payment_id": 0,
+                "basic_price": basic_price,
+                "basic_end_date": end_date_default.strftime("%Y-%m-%d"),
+            }
+        except Exception as ex:
+
+            traceback.print_exc()
+            logger.error(f"Error calculating addon price: {ex}")
+            return {
+                "can_buy": 0,
+                "message": "Có lỗi xảy ra khi tính giá addon.",
+                "price": 0,
+                "remaining_days": 0,
+            }
+
+    @staticmethod
+    def deletePayment(post_ids):
+        try:
+            UserHistory.query.filter(
+                UserHistory.type == "payment", UserHistory.object_id.in_(post_ids)
+            ).delete(synchronize_session=False)
+
+            PaymentDetail.query.filter(PaymentDetail.payment_id.in_(post_ids)).delete(
+                synchronize_session=False
+            )
+
+            Payment.query.filter(Payment.id.in_(post_ids)).delete(
+                synchronize_session=False
+            )
+            db.session.commit()
+        except Exception as ex:
+            db.session.rollback()
+            return 0
+        return 1
+
+    @staticmethod
+    def deletePaymentPending(post_ids):
+        try:
+            UserHistory.query.filter(
+                UserHistory.type == "payment", UserHistory.object_id.in_(post_ids)
+            ).delete(synchronize_session=False)
+
+            PaymentDetail.query.filter(PaymentDetail.payment_id.in_(post_ids)).delete(
+                synchronize_session=False
+            )
+
+            Payment.query.filter(Payment.id.in_(post_ids)).delete(
+                synchronize_session=False
+            )
+            db.session.commit()
+        except Exception as ex:
+            db.session.rollback()
+            return 0
+        return 1
+
+    @staticmethod
+    def calculate_upgrade_price(user_id, new_package, addon_count=0):
+        try:
+            today = datetime.now().date()
+            start_date_default = today
+            end_date_default = today + timedelta(days=30)
+            logger.info(addon_count)
+
+            # Kiểm tra gói mới có hợp lệ không
+            new_package_info = const.PACKAGE_CONFIG.get(new_package)
+            if not new_package_info:
+                return {
+                    "can_upgrade": 0,
+                    "code": 201,
+                    "message": "업그레이드 플랜이 유효하지 않습니다.",
+                    "message_en": "Invalid upgrade package.",
+                    "current_package": None,
+                    "remaining_days": 0,
+                    "used_days": 0,
+                    "discount": 0,
+                    "upgrade_price": 0,
+                    "amount": 0,
+                    "price": 0,
+                    "new_package_price": 0,
+                    "new_package_price_origin": 0,
+                    "start_date": start_date_default.strftime("%Y-%m-%d"),
+                    "end_date": end_date_default.strftime("%Y-%m-%d"),
+                    "next_payment": (end_date_default + timedelta(days=1)).strftime(
+                        "%Y-%m-%d"
+                    ),
+                }
+
+            # Lấy payment hiện tại còn hạn
+            current_payment = (
+                Payment.query.filter(
+                    Payment.user_id == user_id,
+                    Payment.package_name != "ADDON",
+                    Payment.end_date >= today,
+                )
+                .order_by(Payment.end_date.desc())
+                .first()
+            )
+            amount = new_package_info["price"]
+            price_addon = 0
+            if addon_count > 0 and new_package == "BASIC":
+                price_addon = (
+                    new_package_info["addon"]["EXTRA_CHANNEL"]["price"] * addon_count
+                )
+                logger.info(
+                    f"addon_count  : {addon_count}  price_addon: {price_addon} "
+                )
+
+            new_package_price_origin = new_package_info["price_origin"]
+            new_package_price = new_package_info["price"]
+            discount_welcome = new_package_price_origin - new_package_price
+
+            if not current_payment:
+                return {
+                    "can_upgrade": 1,
+                    "code": 200,
+                    "message": "플랜을 업그레이드할 수 있습니다.",
+                    "message_en": "You can upgrade your plan.Not have current_payment",
+                    "current_package": None,
+                    "remaining_days": 0,
+                    "used_days": 0,
+                    "discount": 0,
+                    "upgrade_price": 0,
+                    "amount": amount,
+                    "price": amount + price_addon,
+                    "new_package_price_origin": new_package_price_origin,
+                    "new_package_price": new_package_price,
+                    "discount_welcome": discount_welcome,
+                    "start_date": start_date_default.strftime("%Y-%m-%d"),
+                    "end_date": end_date_default.strftime("%Y-%m-%d"),
+                    "next_payment": (end_date_default + timedelta(days=1)).strftime(
+                        "%Y-%m-%d"
+                    ),
+                }
+
+            current_package = current_payment.package_name
+            start_date = (
+                current_payment.start_date.date()
+                if current_payment.start_date
+                else None
+            )
+            end_date = (
+                current_payment.end_date.date() if current_payment.end_date else None
+            )
+
+            used_days = (today - start_date).days if start_date else 0
+
+            new_package_price_origin = new_package_info["price_origin"]
+            new_package_price = new_package_info["price"]
+            discount_welcome = new_package_price_origin - new_package_price
+
+            if current_package == new_package:
+                return {
+                    "can_upgrade": 0,
+                    "code": 200,
+                    "message": "현재 이 플랜을 사용 중입니다. 업그레이드할 수 없습니다.",
+                    "message_en": "You are already using this plan. Upgrade is not possible.",
+                    "current_package": current_package,
+                    "remaining_days": 0,
+                    "used_days": used_days,
+                    "discount": 0,
+                    "upgrade_price": 0,
+                    "amount": new_package_info["price"],
+                    "price": new_package_info["price"],
+                    "new_package_price": new_package_info["price"],
+                    "new_package_price_origin": new_package_info["price_origin"],
+                    "discount_welcome": discount_welcome,
+                    "start_date": (
+                        start_date.strftime("%Y-%m-%d") if start_date else None
+                    ),
+                    "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
+                    "next_payment": (
+                        (end_date + timedelta(days=1)).strftime("%Y-%m-%d")
+                        if end_date
+                        else None
+                    ),
+                }
+
+            remaining_days = min(
+                (end_date - today).days if end_date and today else 0, 30
+            )
+
+            if remaining_days <= 0:
+                return {
+                    "can_upgrade": 0,
+                    "code": 201,
+                    "message": "현재 이용 중인 요금제가 만료되었습니다.",
+                    "message_en": "Your current package has expired.",
+                    "current_package": current_package,
+                    "remaining_days": 0,
+                    "used_days": used_days,
+                    "discount": 0,
+                    "upgrade_price": new_package_info["price"],
+                    "amount": new_package_info["price"],
+                    "price": new_package_info["price"],
+                    "new_package_price": new_package_info["price"],
+                    "new_package_price_origin": new_package_info["price_origin"],
+                    "discount_welcome": discount_welcome,
+                    "start_date": (
+                        start_date.strftime("%Y-%m-%d") if start_date else None
+                    ),
+                    "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
+                    "next_payment": (
+                        (end_date + timedelta(days=1)).strftime("%Y-%m-%d")
+                        if end_date
+                        else None
+                    ),
+                }
+
+            current_package_detail = const.PACKAGE_CONFIG[current_package]
+
+            # tính tiền basic và addon
+
+            current_price = PaymentService.get_total_price(current_payment.id)
+
+            current_days = current_package_detail.get("duration_days", 30)
+            discount = int(current_price / current_days * remaining_days)
+            new_package_price = new_package_info["price"]
+            upgrade_price = max(0, new_package_price - discount)
+            amount = upgrade_price
+            discount_welcome = (
+                new_package_info["price_origin"] - new_package_info["price"]
+            )
+
+            return {
+                "can_upgrade": 1,
+                "code": 200,
+                "message": "업그레이드하실 수 있습니다.",
+                "message_en": f"You can upgrade. {new_package}",
+                "upgrade_package": new_package,
+                "upgrade_origin_price": new_package_price,
+                "current_package": current_package,
+                "current_price": current_price,
+                "remaining_days": remaining_days,
+                "used_days": used_days,
+                "discount": discount,
+                "amount": new_package_price,
+                "price": upgrade_price,
+                "new_package_price": new_package_price,
+                "new_package_price_origin": new_package_info["price_origin"],
+                "discount_welcome": discount_welcome,
+                "start_date": start_date.strftime("%Y-%m-%d") if start_date else None,
+                "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
+                "next_payment": (
+                    (end_date + timedelta(days=1)).strftime("%Y-%m-%d")
+                    if end_date
+                    else None
+                ),
+                "current_package_detail": current_package_detail,
+                "current_days": current_days,
+            }
+        except Exception as ex:
+            tb_str = traceback.format_exc()
+            logger.error(f"[calculate_upgrade_price] {ex}\n{tb_str}")
+            return {
+                "can_upgrade": 0,
+                "code": 201,
+                "message": "Có lỗi xảy ra khi tính toán nâng cấp.",
+                "message_en": "Error occurred while calculating upgrade.",
+            }
+
+    @staticmethod
+    def confirm_payment_toss(payment_key, order_id, amount):
+        TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY")
+        url = "https://api.tosspayments.com/v1/payments/confirm"
+        auth = base64.b64encode(f"{TOSS_SECRET_KEY}:".encode()).decode()
+
+        headers = {"Authorization": f"Basic {auth}", "Content-Type": "application/json"}
+
+        payload = {"paymentKey": payment_key, "orderId": order_id, "amount": amount}
+
+        try:
+            res = requests.post(url, json=payload, headers=headers)
+            return res.json(), res.status_code
+        except requests.RequestException as e:
+            return {"message": f"TossPayments 연결 오류: {str(e)}"}, 500
+
+    @staticmethod
+    def approvalPayment(payment_id):
+        try:
+            today = datetime.now().date()
+            payment_detail = PaymentService.find_payment(payment_id)
+            if not payment_detail:
+                return Response(
+                    message="결제 정보가 존재하지 않습니다.",
+                    message_en="Payment does not exist",
+                    code=201,
+                ).to_dict()
+
+            package_name = payment_detail.package_name
+            if package_name == "ADDON":
+                payment_parent_detail = PaymentService.find_payment(
+                    payment_detail.parent_id
+                )
+                if payment_parent_detail:
+                    payment_parent_end_date = payment_parent_detail.end_date.date()
+                    payment_parent_status = payment_parent_detail.status
+                    if payment_parent_status != "PAID":
+                        return Response(
+                            message="구매하신 Basic 요금제가 아직 결제되지 않았습니다.",
+                            message_en="Your Basic plan has not been paid for yet.",
+                            code=201,
+                        ).to_dict()
+                    if payment_parent_end_date <= today:
+                        return Response(
+                            message="Basic 요금제가 만료되었습니다.",
+                            message_en="Your Basic plan has expired.",
+                            code=201,
+                        ).to_dict()
+
+            payment = PaymentService.update_payment(payment_id, status="PAID")
+            if payment:
+                user_id = payment.user_id
+                package_name = payment.package_name
+                user_detail = UserService.find_user(user_id)
+                if package_name == "ADDON":
+
+                    if user_detail:
+                        total_link_active = user_detail.total_link_active
+                        data_update = {
+                            "total_link_active": total_link_active + payment.total_link,
+                        }
+
+                        UserService.update_user(user_id, **data_update)
+                        data_user_history = {
+                            "user_id": user_id,
+                            "type": "payment",
+                            "type_2": package_name,
+                            "object_id": payment.id,
+                            "object_start_time": payment.start_date,
+                            "object_end_time": payment.end_date,
+                            "title": "Basic 추가 기능을 구매하세요.",
+                            "description": "Basic 추가 기능을 구매하세요.",
+                            "value": 0,
+                            "num_days": 0,
+                        }
+                        UserService.create_user_history(**data_user_history)
+                else:
+                    package_data = const.PACKAGE_CONFIG.get(package_name)
+                    if not package_data:
+                        return Response(
+                            message="유효하지 않은 패키지입니다.", code=201
+                        ).to_dict()
+
+                    subscription_expired = payment.end_date
+
+                    batch_total = UserService.get_total_batch_total(user_id)
+                    login_user_subscription = user_detail.subscription
+                    batch_remain = 0
+                    if login_user_subscription != "FREE":
+                        batch_remain = user_detail.batch_remain
+
+                    batch_remain = batch_remain + package_data["batch_remain"]
+                    total_link_active = user_detail.total_link_active
+                    data_update = {
+                        "subscription": package_name,
+                        "subscription_expired": subscription_expired,
+                        "batch_total": batch_total + payment.total_create,
+                        "batch_remain": batch_remain,
+                        "total_link_active": min(
+                            total_link_active + payment.total_link, 7
+                        ),
+                    }
+
+                    UserService.update_user(user_id, **data_update)
+                    data_user_history = {
+                        "user_id": user_id,
+                        "type": "payment",
+                        "object_id": payment.id,
+                        "object_start_time": payment.start_date,
+                        "object_end_time": subscription_expired,
+                        "title": package_data["pack_name"],
+                        "description": package_data["pack_description"],
+                        "value": package_data["batch_total"],
+                        "num_days": package_data["batch_remain"],
+                    }
+                    UserService.create_user_history(**data_user_history)
+            else:
+                return Response(
+                    message="결제 정보가 존재하지 않습니다",
+                    message_en="Payment does not exist",
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                message="승인이 완료되었습니다.",
+                message_en="Approval has been completed",
+                data={"payment": payment._to_json()},
+                code=200,
+            ).to_dict()
+        except requests.RequestException as e:
+            return Response(
+                message=f"유효하지 않은 패키지입니다. {str(e)}", code=201
+            ).to_dict()
+
+    @staticmethod
+    def get_total_price(payment_id):
+        total = (
+            Payment.query.with_entities(func.sum(Payment.price))
+            .filter((Payment.id == payment_id) | (Payment.parent_id == payment_id))
+            .scalar()
+        )
+        return total or 0

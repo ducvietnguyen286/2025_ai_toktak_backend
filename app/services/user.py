@@ -8,13 +8,14 @@ from app.models.social_account import SocialAccount
 from app.models.notification import Notification
 from app.models.memberprofile import MemberProfile
 from app.models.referral_history import ReferralHistory
+from app.models.payment import Payment
+from app.models.payment_detail import PaymentDetail
 from app.extensions import db
 from app.lib.logger import logger
 from sqlalchemy import select, update, delete, or_, func
 from app.lib.query import (
     select_with_filter,
     select_by_id,
-    select_with_pagination,
     select_with_filter_one,
     update_by_id,
 )
@@ -171,12 +172,10 @@ class UserService:
 
     @staticmethod
     def find_user_link(link_id=0, user_id=0):
-        user_link = (
-            UserLink.query.where(UserLink.user_id == user_id).where(
-                UserLink.link_id == link_id
-            )
-            # .where(UserLink.status == 1)
-            .first()
+        user_link = select_with_filter_one(
+            UserLink,
+            [UserLink.link_id == link_id, UserLink.user_id == user_id],
+            [],
         )
         return user_link
 
@@ -297,9 +296,15 @@ class UserService:
     @staticmethod
     def delete_users_by_ids(user_ids):
         try:
-            Post.objects(user_id__in=user_ids).delete()
-            Batch.objects(user_id__in=user_ids).delete()
-            Notification.objects(user_id__in=user_ids).delete()
+            Post.query.filter(Post.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+            Batch.query.filter(Batch.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+            Notification.query.filter(Notification.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
 
             SocialAccount.query.filter(SocialAccount.user_id.in_(user_ids)).delete(
                 synchronize_session=False
@@ -314,9 +319,18 @@ class UserService:
             ReferralHistory.query.filter(
                 ReferralHistory.referrer_user_id.in_(user_ids)
             ).delete(synchronize_session=False)
+
             ReferralHistory.query.filter(
                 ReferralHistory.referred_user_id.in_(user_ids)
             ).delete(synchronize_session=False)
+
+            PaymentDetail.query.filter(PaymentDetail.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+
+            Payment.query.filter(Payment.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
 
             User.query.filter(User.id.in_(user_ids)).delete(synchronize_session=False)
 
@@ -368,25 +382,6 @@ class UserService:
         return user
 
     @staticmethod
-    def auto_extend_free_subscriptions():
-        today = datetime.today().date()
-
-        expired_users = User.query.filter(
-            User.subscription == "FREE", func.date(User.subscription_expired) < today
-        ).all()
-
-        extended = 0
-        for user in expired_users:
-            new_expiry = datetime.now() + relativedelta(months=1)
-            user.subscription_expired = new_expiry
-            user.batch_total = 10
-            user.batch_remain = 10
-            extended += 1
-
-        db.session.commit()
-        return extended
-
-    @staticmethod
     def find_user_by_referral_code(referral_code):
         user = User.query.filter(User.referral_code == referral_code).first()
         return user
@@ -407,7 +402,7 @@ class UserService:
         return [user_history._to_json() for user_history in user_histories]
 
     @staticmethod
-    def get_total_batch_remain(user_id):
+    def get_total_batch_total(user_id):
         batch_total = (
             UserHistory.query.with_entities(func.sum(UserHistory.value))
             .filter(UserHistory.user_id == user_id)
@@ -421,3 +416,31 @@ class UserService:
             type="USED_COUPON", user_id=current_user_id, type_2=type_2
         ).first()
         return user if user else None
+
+    @staticmethod
+    def find_user_history_valid(current_user_id):
+        current_date = datetime.now().date()
+        histories = UserHistory.query.filter(
+            UserHistory.type == "referral",
+            UserHistory.type_2 == "STANDARD",
+            UserHistory.user_id == current_user_id,
+            # UserHistory.object_start_time <= current_date,
+            UserHistory.object_end_time >= current_date,
+        )
+
+        total = histories.count()
+        max_end_time = histories.with_entities(
+            func.max(UserHistory.object_end_time)
+        ).scalar()
+        batch_remain = (
+            histories.with_entities(func.sum(UserHistory.value)).scalar() or 0
+        )
+
+        return {
+            "total": total,
+            "batch_remain": batch_remain,
+            "max_object_end_time": (
+                max_end_time.strftime("%Y-%m-%d") if max_end_time else None
+            ),
+            "histories": [history_detail._to_json() for history_detail in histories],
+        }

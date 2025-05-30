@@ -18,7 +18,7 @@ class APIListYoutubeClient(Resource):
     def get(self):
         youtube_clients = YoutubeClientService.get_youtube_clients()
         return Response(
-            data=[youtube_client.to_json() for youtube_client in youtube_clients],
+            data=[youtube_client._to_json() for youtube_client in youtube_clients],
             message="Lấy danh sách thành công",
         ).to_dict()
 
@@ -36,7 +36,7 @@ class APIFindYoutubeClient(Resource):
             ).to_dict()
 
         return Response(
-            data=youtube_client.to_json(),
+            data=youtube_client._to_json(),
             message="Lây youtube_client thành công",
         ).to_dict()
 
@@ -65,11 +65,11 @@ class APICreateYoutubeClient(Resource):
         )
 
         all_clients = YoutubeClientService.get_youtube_clients()
-        all_clients = [client.to_json() for client in all_clients]
+        all_clients = [client._to_json() for client in all_clients]
         redis_client.set("toktak:all_clients", json.dumps(all_clients))
 
         return Response(
-            data=youtube_client.to_json(),
+            data=youtube_client._to_json(),
             message="Tạo youtube_client thành công",
         ).to_dict()
 
@@ -81,7 +81,7 @@ class APIUpdateYoutubeClient(Resource):
     @parameters(
         type="object",
         properties={
-            "id": {"type": "string"},
+            "id": {"type": ["string", "number", "null"]},
             "project_name": {"type": "string"},
             "client_id": {"type": "string"},
             "client_secret": {"type": "string"},
@@ -90,6 +90,7 @@ class APIUpdateYoutubeClient(Resource):
     )
     def put(self, args):
         id = args.pop("id", None)
+        id = int(id) if id else 0
         if not id:
             return Response(
                 message="ID không hợp lệ",
@@ -99,11 +100,11 @@ class APIUpdateYoutubeClient(Resource):
         youtube_client = YoutubeClientService.update_youtube_client(id, **args)
 
         all_clients = YoutubeClientService.get_youtube_clients()
-        all_clients = [client.to_json() for client in all_clients]
+        all_clients = [client._to_json() for client in all_clients]
         redis_client.set("toktak:all_clients", json.dumps(all_clients))
 
         return Response(
-            data=youtube_client.to_json(),
+            data=youtube_client._to_json(),
             message="Tạo youtube_client thành công",
         ).to_dict()
 
@@ -115,12 +116,13 @@ class APIUpdateUsersToClient(Resource):
     @parameters(
         type="object",
         properties={
-            "id": {"type": "string"},
+            "id": {"type": ["string", "number", "null"]},
         },
         required=[],
     )
     def put(self, args):
         id = args.pop("id", None)
+        id = int(id) if id else 0
         if not id:
             return Response(
                 message="ID không hợp lệ",
@@ -136,7 +138,7 @@ class APIUpdateUsersToClient(Resource):
 
         users = UserService.all_users()
         user_ids = [user.get("id") for user in users]
-        youtube_client.user_ids = user_ids
+        youtube_client.user_ids = json.dumps(user_ids)
         youtube_client.member_count = len(user_ids)
         youtube_client.save()
 
@@ -150,10 +152,10 @@ class APIUpdateUsersToClient(Resource):
         if youtube_link:
             UserService.update_by_link_multiple_user_links(
                 youtube_link.get("id"),
-                youtube_client=json.dumps(youtube_client.to_json()),
+                youtube_client=json.dumps(youtube_client._to_json()),
             )
 
         return Response(
-            data=youtube_client.to_json(),
+            data=youtube_client._to_json(),
             message="Tạo youtube_client thành công",
         ).to_dict()

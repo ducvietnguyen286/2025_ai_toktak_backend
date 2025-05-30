@@ -7,8 +7,10 @@ class Payment(db.Model, BaseModel):
     __tablename__ = "payments"
 
     id = db.Column(db.Integer, primary_key=True)
+
+    parent_id = db.Column(db.Integer, db.ForeignKey("payments.id"), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    order_id = db.Column(db.Integer, nullable=False)
+    order_id = db.Column(db.String(255), nullable=False)
     customer_name = db.Column(db.String(255), nullable=False)
     method = db.Column(db.String(255), nullable=False)
     package_name = db.Column(db.String(50), nullable=False)
@@ -27,6 +29,9 @@ class Payment(db.Model, BaseModel):
     requested_at = db.Column(db.DateTime, nullable=False)
     approved_at = db.Column(db.DateTime, nullable=False)
     fail_reason = db.Column(db.String(255), nullable=False)
+    payment_key = db.Column(db.String(255), nullable=False)
+    payment_data = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
     updated_at = db.Column(
@@ -34,6 +39,7 @@ class Payment(db.Model, BaseModel):
     )
 
     user = db.relationship("User", lazy="joined")
+    parent = db.relationship("Payment", remote_side=[id], lazy="joined")
 
     def to_dict(self):
         return {
@@ -41,6 +47,8 @@ class Payment(db.Model, BaseModel):
             "current_user_subscription": self.user.subscription if self.user else None,
             "id": self.id,
             "order_id": self.order_id,
+            "payment_key": self.payment_key,
+            "payment_data": self.payment_data,
             "method": self.method,
             "user_id": self.user_id,
             "customer_name": self.customer_name,
@@ -52,8 +60,9 @@ class Payment(db.Model, BaseModel):
             "status": self.status,
             "total_link": self.total_link,
             "total_create": self.total_create,
-            "status": self.status,
+            "parent_id": self.parent_id,
             "fail_reason": self.fail_reason,
+            "description": self.description,
             "requested_at": (
                 self.requested_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.requested_at

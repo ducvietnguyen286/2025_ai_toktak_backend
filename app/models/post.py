@@ -1,37 +1,43 @@
-import json
-from app.models.base_mongo import BaseDocument
+from app.extensions import db
+from app.models.base import BaseModel
+from datetime import datetime
 import pytz
-from mongoengine import StringField, IntField, ObjectIdField, DateTimeField
-from datetime import timezone, datetime
 
 
-class Post(BaseDocument):
-    meta = {"collection": "posts"}
+class Post(db.Model, BaseModel):
+    __tablename__ = "posts"
 
-    user_id = IntField(required=True, default=0)
-    batch_id = ObjectIdField(required=True)
-    thumbnail = StringField(default="")
-    captions = StringField()
-    images = StringField()
-    title = StringField(default="")
-    subtitle = StringField(default="")
-    content = StringField()
-    description = StringField()
-    hashtag = StringField()
-    hooking = StringField()
-    video_url = StringField(default="")
-    docx_url = StringField(default="")
-    file_size = IntField(default=0)
-    mime_type = StringField(default="")
-    type = StringField(default="video")
-    status = IntField(default=1)
-    status_sns = IntField(default=0)
-    process_number = IntField(default=0)
-    render_id = StringField(default="")
-    video_path = StringField(default="")
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    batch_id = db.Column(db.Integer, db.ForeignKey("batchs.id"), nullable=False)
+    thumbnail = db.Column(db.String(500), nullable=False, default="")
+    captions = db.Column(db.Text, nullable=True)
+    images = db.Column(db.Text, nullable=True)
+    title = db.Column(db.String(500), nullable=False, default="")
+    subtitle = db.Column(db.String(500), nullable=False, default="")
+    content = db.Column(db.Text, nullable=False, default="")
+    description = db.Column(db.Text, default="")
+    hashtag = db.Column(db.Text, nullable=True)
+    video_url = db.Column(db.String(255), nullable=False, default="")
+    docx_url = db.Column(db.String(255), default="")
+    file_size = db.Column(db.String(50), default="")
+    mime_type = db.Column(db.String(250), default="")
+    type = db.Column(db.String(10), default="video", index=True)
+    status = db.Column(db.Integer, default=1)
+    status_sns = db.Column(db.Integer, default=0)
+    process_number = db.Column(db.Integer, default=0)
+    render_id = db.Column(db.String(500), nullable=False, default="")
+    video_path = db.Column(db.String(255), nullable=False, default="")
 
-    social_sns_description = StringField(default="")
-    schedule_date = DateTimeField(default=datetime.utcnow)
+    social_sns_description = db.Column(db.Text, nullable=True)
+    schedule_date = db.Column(db.DateTime)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )  #
+
+    user = db.relationship("User", lazy="joined")
 
     to_json_parse = "images"
     to_json_filter = "captions"
@@ -43,7 +49,7 @@ class Post(BaseDocument):
             "batch_id": self.batch_id,
             "thumbnail": self.thumbnail,
             "captions": self.captions,
-            "images": json.loads(self.images) if self.images else [],
+            "images": self.images,
             "title": self.title,
             "subtitle": self.subtitle,
             "content": self.content,
@@ -60,8 +66,20 @@ class Post(BaseDocument):
             "render_id": self.render_id,
             "video_path": self.video_path,
             "social_sns_description": self.social_sns_description,
-            "user_email": None,  # Lấy email từ user
-            "schedule_date": self.schedule_date,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
+            "user_email": self.user.email if self.user else None,  # Lấy email từ user
+            "schedule_date": (
+                pytz.utc.localize(self.schedule_date).strftime("%Y-%m-%dT%H:%M:%SZ")
+                if self.schedule_date
+                else None
+            ),
+            "created_at": (
+                self.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.created_at
+                else None
+            ),
+            "updated_at": (
+                self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.updated_at
+                else None
+            ),
         }

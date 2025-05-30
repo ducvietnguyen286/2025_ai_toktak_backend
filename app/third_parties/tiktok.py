@@ -37,7 +37,7 @@ class TiktokTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="fetch_user_info",
                 request="{}",
@@ -87,13 +87,18 @@ class TiktokTokenService:
                         unique_values
                         and unique_values[-1].decode("utf-8") != unique_value
                     ):
-                        time.sleep(1)
+                        time.sleep(2)
                         is_refresing = redis_client.get(redis_key_check)
                         if is_refresing:
                             break
-                is_refresing = redis_client.get(redis_key_check)
+                    else:
+                        is_refresing = redis_client.get(redis_key_check)
+                else:
+                    is_refresing = redis_client.get(redis_key_check)
 
-            if is_refresing:
+            check_refresh = is_refresing.decode("utf-8") if is_refresing else None
+
+            if check_refresh:
                 while True:
                     refresh_done = redis_client.get(redis_key_done)
                     refresh_done_str = (
@@ -136,7 +141,7 @@ class TiktokTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="refresh_token",
                 request=json.dumps(r_data),
@@ -181,7 +186,7 @@ class TiktokService(BaseService):
         self.progress = 10
         self.batch_id = None
         self.link_id = None
-        self.social_post_id = ""
+        self.social_post_id = 0
         self.service = "TIKTOK"
         self.key_log = ""
 
@@ -194,15 +199,15 @@ class TiktokService(BaseService):
         self.post = post
         self.social_post = SocialPostService.find_social_post(social_post_id)
         self.link_id = link.id
-        self.post_id = str(post.id)
-        self.batch_id = str(post.batch_id)
-        self.social_post_id = str(self.social_post.id)
+        self.post_id = post.id
+        self.batch_id = post.batch_id
+        self.social_post_id = self.social_post.id
         self.key_log = f"{self.post_id} - {self.social_post.session_key}"
 
         try:
             self.save_uploading(0)
             log_tiktok_message(
-                f"------------ READY TO SEND POST: {post.to_json()} ----------------"
+                f"------------ READY TO SEND POST: {post._to_json()} ----------------"
             )
             if post.type == "video":
                 self.upload_video(post)

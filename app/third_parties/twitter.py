@@ -21,7 +21,7 @@ from app.extensions import redis_client
 
 PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 
-MEDIA_ENDPOINT_URL = "https://api.x.com/2/media/upload"
+MEDIA_ENDPOINT_URL = "https://api.twitter.com/2/media/upload"
 X_POST_TO_X_URL = "https://api.x.com/2/tweets"
 TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
@@ -52,7 +52,7 @@ class TwitterTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="X-TWITTER",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="fetch_user_info",
                 request="{}",
@@ -102,7 +102,7 @@ class TwitterTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="X-TWITTER",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="authorization_code",
                 request=json.dumps(r_data),
@@ -141,8 +141,10 @@ class TwitterTokenService:
 
             redis_key_done = f"toktak:users:{user_id}:refreshtoken-done:X"
             redis_key_check = f"toktak:users:{user_id}:refresh-token:X"
+            redis_key_result = f"toktak:users:{user_id}:refresh-token-result:X"
             unique_value = f"{time.time()}_{user_id}_{uuid.uuid4()}"
             redis_key_check_count = f"toktak:users:{user_id}:logging:X"
+
             redis_client.rpush(redis_key_check_count, unique_value)
             redis_client.expire(redis_key_check_count, 300)
 
@@ -156,13 +158,21 @@ class TwitterTokenService:
                         unique_values
                         and unique_values[-1].decode("utf-8") != unique_value
                     ):
-                        time.sleep(1)
+                        time.sleep(2)
                         is_refresing = redis_client.get(redis_key_check)
                         if is_refresing:
                             break
-                is_refresing = redis_client.get(redis_key_check)
+                    else:
+                        is_refresing = redis_client.get(redis_key_check)
+                else:
+                    is_refresing = redis_client.get(redis_key_check)
 
-            if is_refresing:
+            check_refresh = is_refresing.decode("utf-8") if is_refresing else None
+
+            is_done = ""
+            result_redis = None
+
+            if check_refresh:
                 while True:
                     refresh_done = redis_client.get(redis_key_done)
                     refresh_done_str = (
@@ -171,11 +181,20 @@ class TwitterTokenService:
                     if refresh_done_str:
                         redis_client.delete(redis_key_check)
                         redis_client.delete(redis_key_done)
-                        if refresh_done_str == "failled":
-                            return False
-                        return True
+                        is_done = refresh_done_str
+                        break
 
                     time.sleep(1)
+
+            log_twitter_message(
+                f"Check refresh token status: {check_refresh}, is_done: {is_done}"
+            )
+            if is_done and is_done != "":
+                result_redis = redis_client.get(redis_key_result)
+                result_redis = json.loads(result_redis) if result_redis else None
+                if is_done == "failled":
+                    return {"status": "failled", "result": result_redis}
+                return {"status": "success", "result": result_redis}
 
             redis_client.set(redis_key_check, 1, ex=300)
 
@@ -200,7 +219,7 @@ class TwitterTokenService:
 
             RequestSocialLogService.create_request_social_log(
                 social="X-TWITTER",
-                social_post_id="",
+                social_post_id=0,
                 user_id=user_link.user_id,
                 type="refresh_token",
                 request=json.dumps(r_data),
@@ -213,16 +232,17 @@ class TwitterTokenService:
                 # user_link.save()
 
                 redis_client.set(redis_key_done, "failled", ex=300)
-
-                return False
+                redis_client.set(redis_key_result, json.dumps(data), ex=300)
+                return {"status": "failled", "result": data}
 
             user_link_meta.update(data)
             user_link.meta = json.dumps(user_link_meta)
             user_link.save()
 
             redis_client.set(redis_key_done, "success", ex=300)
+            redis_client.set(redis_key_result, json.dumps(data), ex=300)
 
-            return True
+            return {"status": "success", "result": data}
         except Exception as e:
             traceback.print_exc()
             log_twitter_message(e)
@@ -241,7 +261,7 @@ class TwitterService(BaseService):
         self.link_id = None
         self.post_id = None
         self.batch_id = None
-        self.social_post_id = ""
+        self.social_post_id = 0
         self.service = "X-TWITTER"
         self.key_log = ""
 
@@ -252,16 +272,16 @@ class TwitterService(BaseService):
         self.meta = json.loads(self.user_link.meta)
         self.social_post = SocialPostService.find_social_post(social_post_id)
         self.link_id = link.id
-        self.post_id = str(post.id)
-        self.batch_id = str(post.batch_id)
+        self.post_id = post.id
+        self.batch_id = post.batch_id
         self.user_id = self.user.id or 0
-        self.social_post_id = str(self.social_post.id)
+        self.social_post_id = self.social_post.id
         self.key_log = f"{self.post_id} - {self.social_post.session_key}"
 
         try:
             self.save_uploading(0)
             log_twitter_message(
-                f"------------ READY TO SEND POST: {post.to_json()} ----------------"
+                f"------------ READY TO SEND POST: {post._to_json()} ----------------"
             )
             if post.type == "image":
                 self.send_post_social(post, link)
@@ -277,8 +297,10 @@ class TwitterService(BaseService):
         if images:
             images = json.loads(images)
         else:
-            images = [post.thumbnail]
+            images = [post.thumbnail, post.thumbnail]
         images = images[:4]
+        if len(images) == 1:
+            images.append(post.thumbnail)
 
         media_ids = []
         for img in images:
@@ -299,9 +321,11 @@ class TwitterService(BaseService):
             hashtag = " ".join(hashtags)
 
             text = post.description + "\n\n " + hashtag
+            while len(text) > 180 and len(hashtags) > 0:
+                hashtags.pop()
+                hashtag = " ".join(hashtags)
+                text = post.description + "\n\n " + hashtag
 
-            if len(text) > 250:
-                text = text[:250]
             data = {
                 "text": text,
                 "media": {"media_ids": media_ids},
@@ -343,11 +367,9 @@ class TwitterService(BaseService):
                 refreshed = TwitterTokenService().refresh_token(
                     link=self.link, user=self.user
                 )
-                if refreshed:
-                    self.user_link = UserService.find_user_link(
-                        link_id=self.link.id, user_id=self.user.id
-                    )
-                    self.meta = json.loads(self.user_link.meta)
+                if refreshed["status"] == "success":
+                    new_meta = refreshed["result"]
+                    self.meta = new_meta
                     return self.send_post_images(media_ids, post, link, retry + 1)
                 else:
                     self.save_errors(
@@ -432,8 +454,10 @@ class TwitterService(BaseService):
             hashtag = " ".join(hashtags)
 
             text = post.description + "\n\n " + hashtag
-            if len(text) > 250:
-                text = text[:250]
+            while len(text) > 180 and len(hashtags) > 0:
+                hashtags.pop()
+                hashtag = " ".join(hashtags)
+                text = post.description + "\n\n " + hashtag
             data = {
                 "text": text,
                 "media": {"media_ids": [media_id]},
@@ -474,11 +498,9 @@ class TwitterService(BaseService):
                 refreshed = TwitterTokenService().refresh_token(
                     link=self.link, user=self.user
                 )
-                if refreshed:
-                    self.user_link = UserService.find_user_link(
-                        link_id=self.link.id, user_id=self.user.id
-                    )
-                    self.meta = json.loads(self.user_link.meta)
+                if refreshed["status"] == "success":
+                    new_meta = refreshed["result"]
+                    self.meta = new_meta
                     return self.send_post_video_to_x(
                         media, post, link, media_id, retry + 1
                     )
@@ -580,18 +602,18 @@ class TwitterService(BaseService):
             "Content-Type": "application/json",
         }
 
-        request_data = {
-            "command": "INIT",
-            "media_type": media_type,
-            "total_bytes": total_bytes,
+        payload = {
             "media_category": "tweet_video" if is_video else "tweet_image",
+            "media_type": media_type,
+            "shared": False,
+            "total_bytes": total_bytes,
         }
 
-        log_twitter_message(request_data)
+        log_twitter_message(payload)
 
         try:
             req = requests.post(
-                url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
+                url=f"{MEDIA_ENDPOINT_URL}/initialize", json=payload, headers=headers
             )
         except Exception as e:
             self.save_errors(
@@ -601,7 +623,7 @@ class TwitterService(BaseService):
             )
             return False
 
-        self.save_request_log("upload_media_init", request_data, req.json())
+        self.save_request_log("upload_media_init", payload, req.json())
 
         self.save_uploading(10)
 
@@ -622,11 +644,10 @@ class TwitterService(BaseService):
             refreshed = TwitterTokenService().refresh_token(
                 link=self.link, user=self.user
             )
-            if refreshed:
-                self.user_link = UserService.find_user_link(
-                    link_id=self.link_id, user_id=self.user.id
-                )
-                self.meta = json.loads(self.user_link.meta)
+            if refreshed["status"] == "success":
+                new_meta = refreshed["result"]
+                self.meta = new_meta
+
                 return self.upload_media_init(
                     media_type=media_type,
                     total_bytes=total_bytes,
@@ -675,19 +696,17 @@ class TwitterService(BaseService):
             files = {"media": ("chunk", chunk, "application/octet-stream")}
 
             data = {
-                "command": "APPEND",
-                "media_id": media_id,
                 "segment_index": segment_id,
             }
 
-            headers = {
-                "Authorization": f"Bearer {access_token}",
-                "User-Agent": "MediaUploadSampleCode",
-            }
+            headers = {"Authorization": f"Bearer {access_token}"}
 
             try:
                 req = requests.post(
-                    url=MEDIA_ENDPOINT_URL, data=data, files=files, headers=headers
+                    url=f"{MEDIA_ENDPOINT_URL}/{media_id}/append",
+                    data=data,
+                    files=files,
+                    headers=headers,
                 )
             except Exception as e:
                 self.save_errors(
@@ -718,11 +737,9 @@ class TwitterService(BaseService):
                 refreshed = TwitterTokenService().refresh_token(
                     link=self.link, user=self.user
                 )
-                if refreshed:
-                    self.user_link = UserService.find_user_link(
-                        link_id=self.link.id, user_id=self.user.id
-                    )
-                    self.meta = json.loads(self.user_link.meta)
+                if refreshed["status"] == "success":
+                    new_meta = refreshed["result"]
+                    self.meta = new_meta
                     return self.upload_append(
                         media_id=media_id,
                         content=content,
@@ -758,11 +775,12 @@ class TwitterService(BaseService):
             "Content-Type": "application/json",
         }
 
-        request_data = {"command": "FINALIZE", "media_id": media_id}
+        request_data = {"media_id": media_id}
 
         try:
             req = requests.post(
-                url=MEDIA_ENDPOINT_URL, params=request_data, headers=headers
+                url=f"{MEDIA_ENDPOINT_URL}/{media_id}/finalize",
+                headers=headers,
             )
         except Exception as e:
             self.save_errors(
@@ -790,11 +808,9 @@ class TwitterService(BaseService):
             refreshed = TwitterTokenService().refresh_token(
                 link=self.link, user=self.user
             )
-            if refreshed:
-                self.user_link = UserService.find_user_link(
-                    link_id=self.link.id, user_id=self.user.id
-                )
-                self.meta = json.loads(self.user_link.meta)
+            if refreshed["status"] == "success":
+                new_meta = refreshed["result"]
+                self.meta = new_meta
                 return self.upload_finalize(media_id=media_id, retry=retry + 1)
             else:
                 self.save_errors(
@@ -839,10 +855,7 @@ class TwitterService(BaseService):
         if self.processing_info is None:
             return False
 
-        headers = {
-            "Authorization": "Bearer {}".format(access_token),
-            "Content-Type": "application/json",
-        }
+        headers = {"Authorization": "Bearer {}".format(access_token)}
 
         state = self.processing_info["state"]
 
@@ -886,11 +899,9 @@ class TwitterService(BaseService):
             refreshed = TwitterTokenService().refresh_token(
                 link=self.link, user=self.user
             )
-            if refreshed:
-                self.user_link = UserService.find_user_link(
-                    link_id=self.link.id, user_id=self.user.id
-                )
-                self.meta = json.loads(self.user_link.meta)
+            if refreshed["status"] == "success":
+                new_meta = refreshed["result"]
+                self.meta = new_meta
                 return self.check_status(
                     media_id=media_id, count=count, retry=retry + 1
                 )

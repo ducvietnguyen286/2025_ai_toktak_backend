@@ -5,6 +5,7 @@ from app.lib.logger import logger
 from app.models.social_account import SocialAccount
 from app.models.user import User
 from app.services.referral_service import ReferralService
+from app.services.payment_services import PaymentService
 from app.services.user import UserService
 from flask_jwt_extended import (
     create_access_token,
@@ -18,14 +19,14 @@ from google.auth.transport import requests as google_requests
 from app.lib.string import get_level_images
 import json
 import const
-from sqlalchemy import select
+from sqlalchemy import select, update, delete, or_, func
 from app.extensions import db
 import secrets
 import string
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
-import time
 from app.extensions import redis_client
+from gevent import sleep
 
 
 class AuthService:
@@ -118,6 +119,10 @@ class AuthService:
                     "num_days": 30,
                 }
                 UserService.create_user_history(**data_new_user_history)
+
+                # payment history
+                payment = PaymentService.create_new_payment(user, "BASIC", "PAID")
+
             else:
                 user = User.query.filter_by(email=email).first()
 
@@ -158,6 +163,10 @@ class AuthService:
                     "num_days": 30,
                 }
                 UserService.create_user_history(**data_new_user_history)
+
+                # payment history
+                payment = PaymentService.create_new_payment(user, "BASIC", "PAID")
+
                 is_new_user = 1
 
                 if referral_code != "":
@@ -193,7 +202,7 @@ class AuthService:
         WEB_CLIENT_ID = os.environ.get("AUTH_GOOGLE_CLIENT_ID")
         IS_LOCAL = os.environ.get("FLASK_CONFIG") == "develop"
         if IS_LOCAL:
-            time.sleep(3)
+            sleep(3)
         idinfo = id_token.verify_oauth2_token(
             access_token, google_requests.Request(), WEB_CLIENT_ID
         )
@@ -303,18 +312,57 @@ class AuthService:
         return new_user
 
     @staticmethod
-    def reset_free_user(user_id):
-
+    def reset_free_user(user_detail):
+        if not user_detail:
+            return None
+        subscription = "FREE"
+        total_link_active = 0
+        batch_total = const.LIMIT_BATCH[subscription]
+        batch_remain = const.LIMIT_BATCH[subscription]
         subscription_expired = datetime.now() + relativedelta(months=1)
+        user_id = user_detail.id
+        user_subscription = user_detail.subscription
+        if user_subscription == "STANDARD":
+            history = UserService.find_user_history_valid(user_id)
+            total = history["total"]
+            if total > 0:
+                batch_remain = history["batch_remain"]
+                subscription_expired = history["max_object_end_time"]
+                subscription = "BASIC"
+                total_link_active = 1
+                batch_total = UserService.get_total_batch_total(user_id)
+
         user_detail = AuthService.update(
             user_id,
-            subscription="FREE",
+            subscription=subscription,
             subscription_expired=subscription_expired,
-            batch_total=const.LIMIT_BATCH["FREE"],
-            batch_remain=const.LIMIT_BATCH["FREE"],
+            batch_total=batch_total,
+            batch_remain=batch_remain,
             batch_sns_total=0,
             batch_sns_remain=0,
             batch_no_limit_sns=0,
-            total_link_active=0,
+            total_link_active=total_link_active,
         )
         return user_detail
+
+    @staticmethod
+    def auto_extend_free_subscriptions():
+        today = datetime.today().date()
+
+        expired_users = User.query.filter(
+            func.date(User.subscription_expired) < today
+        ).all()
+
+        extended = 0
+        current_date = datetime.now().date()
+        for user_detail in expired_users:
+            expired_date = (
+                user_detail.subscription_expired.date()
+                if user_detail.subscription_expired
+                else None
+            )
+            if expired_date and expired_date < current_date:
+                user_detail = AuthService.reset_free_user(user_detail)
+
+            extended += 1
+        return extended

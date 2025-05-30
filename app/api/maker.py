@@ -32,6 +32,7 @@ from app.lib.string import (
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
+from app.rabbitmq.producer import send_create_content_message
 from app.scraper import Scraper
 import traceback
 import random
@@ -92,12 +93,12 @@ def validater_create_batch(current_user, is_advance, url=""):
         if current_user.subscription == "FREE":
             if is_advance:
                 return Response(
-                    message=MessageError.REQUIRED_COUPON.value["message"],
+                    message=MessageError.REQUIRED_BILLING.value["message"],
                     data={
-                        "error_message": MessageError.REQUIRED_COUPON.value[
+                        "error_message": MessageError.REQUIRED_BILLING.value[
                             "error_message"
                         ],
-                        "error_message_en": MessageError.REQUIRED_COUPON.value[
+                        "error_message_en": MessageError.REQUIRED_BILLING.value[
                             "error_message_en"
                         ],
                     },
@@ -145,6 +146,167 @@ class APICheckCreateBatch(Resource):
 
 
 @ns.route("/create-batch")
+class APICreateBatchSync(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "url": {"type": "string"},
+            "voice": {"type": ["string", "null"]},
+            "narration": {"type": ["string", "null"]},
+            "is_advance": {"type": "boolean"},
+            "is_paid_advertisements": {"type": "integer"},
+        },
+        required=["url"],
+    )
+    def post(self, args):
+        url = args.get("url", "")
+        is_advance = args.get("is_advance", False)
+        current_month = time.strftime("%Y-%m", time.localtime())
+        current_user = AuthService.get_current_identity(no_cache=True) or None
+
+        user_id_login = current_user.id if current_user else 0
+
+        try:
+            batch_type = const.TYPE_NORMAL
+
+            errors = validater_create_batch(current_user, is_advance, url)
+            if errors:
+                return errors
+
+            if current_user:
+                user_id_login = current_user.id
+
+                if (
+                    current_user.subscription != "FREE"
+                    and current_user.subscription_expired.date()
+                    >= datetime.date.today()
+                ):
+                    batch_type = const.TYPE_PRO
+
+                redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
+                redis_client.set(
+                    redis_user_batch_key, current_user.batch_remain - 1, ex=180
+                )
+                if current_user.batch_of_month != current_month:
+                    UserService.update_user(
+                        user_id_login,
+                        batch_of_month=current_month,
+                    )
+
+            narration = args.get("narration", "female")
+            if narration == "female":
+                voice = 3
+            else:
+                voice = 2
+
+            is_paid_advertisements = args.get("is_paid_advertisements", 0)
+
+            data = Scraper().scraper({"url": url})
+
+            if not data:
+                NotificationServices.create_notification(
+                    user_id=user_id_login,
+                    status=const.NOTIFICATION_FALSE,
+                    title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                    description=f"Scraper False {url}",
+                )
+
+                redis_client.set(
+                    redis_user_batch_key, current_user.batch_remain + 1, ex=180
+                )
+
+                return Response(
+                    message=MessageError.NO_ANALYZE_URL.value["message"],
+                    data={
+                        "error_message": MessageError.NO_ANALYZE_URL.value[
+                            "error_message"
+                        ]
+                    },
+                    code=201,
+                ).to_dict()
+
+            thumbnail_url = data.get("image", "")
+            thumbnails = data.get("thumbnails", [])
+
+            data["input_url"] = url
+            data["base_url"] = ""
+            data["shorten_link"] = ""
+            if "text" not in data:
+                data["text"] = ""
+            if "iframes" not in data:
+                data["iframes"] = []
+            data["cleared_images"] = []
+            data["narration"] = narration
+
+            post_types = ["video", "image", "blog"]
+
+            template_info = get_template_info(is_advance, is_paid_advertisements)
+            batch = BatchService.create_batch(
+                user_id=user_id_login,
+                url=url,
+                shorten_link="",
+                thumbnail=thumbnail_url,
+                thumbnails=json.dumps(thumbnails),
+                content=json.dumps(data),
+                type=batch_type,
+                count_post=len(post_types),
+                status=0,
+                process_status="PENDING",
+                voice_google=voice,
+                is_paid_advertisements=is_paid_advertisements,
+                is_advance=is_advance,
+                template_info=template_info,
+            )
+
+            posts = []
+            for post_type in post_types:
+                post = PostService.create_post(
+                    user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
+                )
+                post.save()
+
+                post_res = post._to_json()
+                posts.append(post_res)
+
+            batch_res = batch._to_json()
+            batch_res["posts"] = posts
+
+            batch_id = batch.id
+
+            if not is_advance:
+                message = {
+                    "action": "CREATE_BATCH",
+                    "message": {"batch_id": batch_id, "data": data},
+                }
+                send_create_content_message(message)
+
+            return Response(
+                data=batch_res,
+                message=MessageSuccess.CREATE_BATCH.value,
+            ).to_dict()
+
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            if current_user:
+                user_id_login = current_user.id
+                redis_user_batch_key = f"toktak:users:batch_remain:{user_id_login}"
+                redis_client.delete(f"toktak:users:free:used:{user_id_login}")
+                redis_client.set(
+                    redis_user_batch_key, current_user.batch_remain + 1, ex=180
+                )
+            return Response(
+                message=MessageError.NO_ANALYZE_URL.value["message"],
+                data={
+                    "error_message": MessageError.NO_ANALYZE_URL.value["error_message"]
+                },
+                code=201,
+            ).to_dict()
+
+
+@ns.route("/create-batch-1")
 class APICreateBatch(Resource):
     @jwt_required()
     @parameters(
@@ -204,6 +366,8 @@ class APICreateBatch(Resource):
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
             data = Scraper().scraper({"url": url})
+
+            print(f"Scraper data: {data}")
 
             if not data:
                 NotificationServices.create_notification(
@@ -275,19 +439,18 @@ class APICreateBatch(Resource):
 
                 post.save()
 
-                post_res = post.to_json()
+                post_res = post._to_json()
                 post_res["url_run"] = (
                     f"{current_domain}/api/v1/maker/make-post/{post.id}"
                 )
                 posts.append(post_res)
 
-            batch_res = batch.to_json()
+            batch_res = batch._to_json()
             batch_res["posts"] = posts
 
             # Save batch for batch-make-image
             batch_id = batch.id
             redis_key = f"batch_info_{batch_id}"
-            print(posts)
             redis_client.set(redis_key, json.dumps(posts), ex=3600)
 
             if current_user:
@@ -368,13 +531,14 @@ class APIBatchMakeImage(Resource):
     @parameters(
         type="object",
         properties={
-            "batch_id": {"type": "string"},
+            "batch_id": {"type": ["string", "number", "null"]},
         },
         required=["batch_id"],
     )
     def post(self, args):
         try:
             batch_id = args.get("batch_id", 0)
+            batch_id = int(batch_id) if batch_id else 0
             posts = []
 
             batch_detail = BatchService.find_batch(batch_id)
@@ -383,6 +547,19 @@ class APIBatchMakeImage(Resource):
                     message="Batch không tồn tại",
                     code=201,
                 ).to_dict()
+
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+
+            posts = PostService.get_posts_by_batch_id(batch_id)
+            for post in posts:
+                post["url_run"] = (
+                    f"{current_domain}/api/v1/maker/make-post/{post['id']}"
+                )
+
+            return Response(
+                data=posts,
+                message="제품 정보를 성공적으로 가져왔습니다.",
+            ).to_dict()
 
             content = json.loads(batch_detail.content)
             batch_thumbails = batch_detail.thumbnails
@@ -417,12 +594,10 @@ class APIBatchMakeImage(Resource):
                 else:
                     thumbnails = base_thumbnails
 
-                logger.info(f"images: {images}")
                 for image in images:
                     sam_cuted_image = ImageMaker.cut_out_long_height_images_by_sam(
                         image, batch_id=batch_id
                     )
-                    logger.info(f"sam_cuted_image: {sam_cuted_image}")
                     if not sam_cuted_image or (
                         sam_cuted_image and "is_cut_out" not in sam_cuted_image
                     ):
@@ -506,7 +681,7 @@ class APIUpdateTemplateVideoUser(Resource):
     @parameters(
         type="object",
         properties={
-            "batch_id": {"type": "string"},
+            "batch_id": {"type": ["string", "number", "null"]},
             "is_paid_advertisements": {"type": "integer"},
             "product_name": {"type": "string"},
             "is_product_name": {"type": "integer"},
@@ -521,7 +696,7 @@ class APIUpdateTemplateVideoUser(Resource):
             "is_video_hooking": {"type": ["integer", "null"]},
             "is_caption_top": {"type": ["integer", "null"]},
             "is_caption_last": {"type": ["integer", "null"]},
-            "image_template_id": {"type": ["string", "null"]},
+            "image_template_id": {"type": ["string", "number", "null"]},
             "comment": {"type": "string"},
             "hashtag": {"type": "array", "items": {"type": "string"}},
             "is_comment": {"type": ["integer", "null"]},
@@ -531,7 +706,8 @@ class APIUpdateTemplateVideoUser(Resource):
     )
     def post(self, args):
         try:
-            batch_id = args.get("batch_id", "")
+            batch_id = args.get("batch_id", 0)
+            batch_id = int(batch_id) if batch_id else 0
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
             product_name = args.get("product_name", "")
             is_product_name = args.get("is_product_name", 0)
@@ -547,6 +723,7 @@ class APIUpdateTemplateVideoUser(Resource):
             is_caption_top = args.get("is_caption_top", 0)
             is_caption_last = args.get("is_caption_last", 0)
             image_template_id = args.get("image_template_id", 0)
+            image_template_id = int(image_template_id) if image_template_id else 0
             is_comment = args.get("is_comment", 0)
             is_hashtag = args.get("is_hashtag", 0)
             comment = args.get("comment", "")
@@ -632,6 +809,14 @@ class APIUpdateTemplateVideoUser(Resource):
                 current_user.batch_total if current_user else 0
             )
 
+            data = json.loads(batch_detail.content)
+
+            message = {
+                "action": "CREATE_BATCH",
+                "message": {"batch_id": batch_id, "data": data},
+            }
+            send_create_content_message(message)
+
             return Response(
                 data=user_template_data,
                 message="제품 정보를 성공적으로 가져왔습니다.",
@@ -655,6 +840,16 @@ class APIMakePost(Resource):
         required=[],
     )
     def post(self, id, **kwargs):
+        post = PostService.find_post(id)
+        if not post:
+            return Response(
+                message="Post không tồn tại",
+                status=201,
+            ).to_dict()
+        return Response(
+            data=post._to_json(),
+            message="Post đã được tạo thành công",
+        ).to_dict()
         args = kwargs.get("req_args", False)
         verify_jwt_in_request(optional=True)
         current_user_id = 0
@@ -1071,7 +1266,7 @@ class APIMakePost(Resource):
             post = PostService.find_post(post.id)
 
             return Response(
-                data=post.to_json(),
+                data=post._to_json(),
                 message=message,
             ).to_dict()
         except Exception as e:
@@ -1126,7 +1321,7 @@ class APIGetBatch(Resource):
 
             posts = PostService.get_posts_by_batch_id(batch.id)
 
-            batch_res = batch.to_json()
+            batch_res = batch._to_json()
             batch_res["posts"] = posts
 
             user_login = AuthService.get_current_identity()
@@ -1173,7 +1368,7 @@ class APIBatchs(Resource):
         }, 200
 
 
-@ns.route("/get-status-upload-by-sync-id/<string:id>")
+@ns.route("/get-status-upload-by-sync-id/<id>")
 class APIGetStatusUploadBySyncId(Resource):
 
     def get(self, id):
@@ -1296,7 +1491,7 @@ class APIGetStatusUploadBySyncId(Resource):
             ).to_dict()
 
 
-@ns.route("/get-status-upload-with-batch-id/<string:id>")
+@ns.route("/get-status-upload-with-batch-id/<id>")
 class APIGetStatusUploadWithBatch(Resource):
 
     def get(self, id):
@@ -1408,7 +1603,7 @@ class APIGetStatusUploadWithBatch(Resource):
                     traceback.print_exc()
                     logger.error(f"Lỗi xử lý post {post_id}: {e}", exc_info=True)
 
-            batch_res = batch.to_json()
+            batch_res = batch._to_json()
             batch_res["posts"] = show_posts
 
             return Response(
@@ -1425,7 +1620,7 @@ class APIGetStatusUploadWithBatch(Resource):
             ).to_dict()
 
 
-@ns.route("/save_draft_batch/<string:id>")
+@ns.route("/save_draft_batch/<id>")
 class APIUpdateStatusBatch(Resource):
 
     @jwt_required()
@@ -1459,7 +1654,7 @@ class APIUpdateStatusBatch(Resource):
             )
 
             return Response(
-                data=batch_detail.to_json(),
+                data=batch_detail._to_json(),
                 message=message,
                 code=200,
             ).to_dict()
@@ -1512,7 +1707,7 @@ class APIHistories(Resource):
                         ),
                     }
                     for post in posts.get("items", [])
-                    if (post_json := post.to_json())
+                    if (post_json := post._to_json())
                 ],
             }, 200
         except Exception as e:
@@ -1586,8 +1781,30 @@ class APITemplateVideo(Resource):
 
             if not user_template:
                 user_template = PostService.create_user_template_make_video(
-                    user_id=current_user.id
+                    user_id=current_user.id,
+                    image_template_id=(
+                        image_templates[0]["id"] if len(image_templates) > 0 else 0
+                    ),
+                    image_template=json.dumps(image_templates),
                 )
+            else:
+                image_templates = ImageTemplateService.get_image_templates()
+                template_id = (
+                    image_templates[0]["id"] if len(image_templates) > 0 else 0
+                )
+                if user_template.image_template_id:
+                    try:
+                        user_template_id = int(user_template.image_template_id)
+                    except (ValueError, TypeError):
+                        user_template_id = 0
+                else:
+                    user_template_id = 0
+                if user_template_id != template_id:
+                    user_template = PostService.update_template(
+                        user_template.id,
+                        image_template_id=template_id,
+                        image_template=json.dumps(image_templates),
+                    )
             user_template_data = user_template.to_dict()
 
             if batch_id:
@@ -1703,13 +1920,14 @@ class APICopyBlog(Resource):
     @parameters(
         type="object",
         properties={
-            "blog_id": {"type": "string"},
+            "blog_id": {"type": ["string", "number", "null"]},
         },
         required=["blog_id"],
     )
     def post(self, args):
         try:
-            blog_id = args.get("blog_id", "")
+            blog_id = args.get("blog_id", 0)
+            blog_id = int(blog_id) if blog_id else 0
             message = "블로그 업데이트 성공"
             post = PostService.update_post(
                 blog_id, status=const.UPLOADED, status_sns=const.UPLOADED
