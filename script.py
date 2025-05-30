@@ -7,6 +7,7 @@ from werkzeug.exceptions import default_exceptions
 
 from app.models.month_text import MonthText
 from app.models.youtube_client import YoutubeClient
+from app.scripts.migrage_batch import import_batch_data
 from app.services.link import LinkService
 from app.services.notification import NotificationServices
 from app.services.user import UserService
@@ -49,9 +50,11 @@ def create_app():
 
 
 def main():
-    import_image_template()
-    import_month_text()
-    import_youtube_client()
+    app = create_app()
+    import_batch_data(app)
+    # import_image_template()
+    # import_month_text()
+    # import_youtube_client()
 
 
 def import_image_template():
