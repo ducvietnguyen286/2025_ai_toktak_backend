@@ -71,7 +71,6 @@ class AliExpressScraper:
             "https://s.click.aliexpress.com/" in self.url
             or "https://a.aliexpress.com/" in self.url
         ):
-
             request_url = self.un_shortend_url(self.url)
         else:
             request_url = self.url
@@ -89,6 +88,7 @@ class AliExpressScraper:
         try:
             parsed_url = urlparse(request_url)
             real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
+
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
             exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
             if exist_data:
@@ -116,6 +116,7 @@ class AliExpressScraper:
             response = requests.get(url, headers=headers, params=querystring)
             res = response.json()
             data = res.get("result", {})
+
             if not data:
                 return {}
 
@@ -205,6 +206,8 @@ class AliExpressScraper:
                 "store_name": store_name,
                 "show_free_shipping": 0,
                 "meta_url": "",
+                "item_id": product_id,
+                "vendor_id": "",
                 "images": image_datas,
                 "text": text,
                 "iframes": iframes,
@@ -345,6 +348,8 @@ class AliExpressScraper:
                 "store_name": store_name,
                 "show_free_shipping": 0,
                 "meta_url": "",
+                "item_id": product_id,
+                "vendor_id": "",
                 "images": image_datas,
                 "text": text,
                 "iframes": iframes,
@@ -458,6 +463,8 @@ class AliExpressScraper:
                 "store_name": store_name,
                 "show_free_shipping": 0,
                 "meta_url": "",
+                "item_id": product_id,
+                "vendor_id": "",
                 "images": image_datas,
                 "text": text,
                 "iframes": iframes,

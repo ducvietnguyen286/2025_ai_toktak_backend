@@ -25,8 +25,8 @@ import secrets
 import string
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
-import time
 from app.extensions import redis_client
+from gevent import sleep
 
 
 class AuthService:
@@ -202,7 +202,7 @@ class AuthService:
         WEB_CLIENT_ID = os.environ.get("AUTH_GOOGLE_CLIENT_ID")
         IS_LOCAL = os.environ.get("FLASK_CONFIG") == "develop"
         if IS_LOCAL:
-            time.sleep(3)
+            sleep(3)
         idinfo = id_token.verify_oauth2_token(
             access_token, google_requests.Request(), WEB_CLIENT_ID
         )

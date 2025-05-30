@@ -6,7 +6,6 @@ import shutil
 from datetime import datetime
 from logging import DEBUG
 from logging.handlers import TimedRotatingFileHandler
-from mongoengine import Q
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -27,7 +26,7 @@ from app.schedules.exchange_facebook_token import exchange_facebook_token
 from app.schedules.exchange_instagram_token import exchange_instagram_token
 from app.schedules.exchange_thread_token import exchange_thread_token
 from app.errors.handler import api_error_handler
-from app.extensions import redis_client, db, db_mongo
+from app.extensions import redis_client, db
 from app.models.batch import Batch
 from app.models.post import Post
 from app.models.notification import Notification
@@ -63,7 +62,6 @@ def create_app():
 
     db.init_app(app)
     redis_client.init_app(app)
-    db_mongo.init_app(app)
 
     configure_logging(app)
     configure_error_handlers(app)
@@ -151,12 +149,14 @@ def send_telegram_notifications(app):
     with app.app_context():
         try:
             notifications = (
-                Notification.objects(
-                    send_telegram=0,
-                    status=const.NOTIFICATION_FALSE,
+                db.session.query(Notification)
+                .filter(
+                    Notification.send_telegram == 0,
+                    Notification.status == const.NOTIFICATION_FALSE,
                 )
-                .order_by("created_at")
+                .order_by(Notification.created_at)
                 .limit(10)
+                .all()
             )
 
             if not notifications:
@@ -215,27 +215,28 @@ def translate_notification(app):
     with app.app_context():
         try:
             notifications = (
-                Notification.objects(
-                    status=const.NOTIFICATION_FALSE,  # status bằng giá trị constant
-                    description__ne="",  # description khác chuỗi rỗng
-                )
+                db.session.query(Notification)
                 .filter(
-                    Q(
-                        description_korea__exists=False
-                    )  # description_korea không tồn tại
-                    | Q(description_korea="")  # hoặc bằng chuỗi rỗng
+                    Notification.status == const.NOTIFICATION_FALSE,
+                    Notification.description != "",
+                    or_(
+                        Notification.description_korea == None,
+                        Notification.description_korea == "",
+                    ),
                 )
-                .order_by("-id")  # sort theo id giảm dần
-                .limit(10)  # giới hạn 10 kết quả
+                .order_by(Notification.id.desc())
+                .limit(10)
+                .all()
             )
 
             if not notifications:
                 return
 
             notification_data = [
-                {"id": notification_detail.id, "text": notification_detail.description}
-                for notification_detail in notifications
+                {"id": notification.id, "text": notification.description}
+                for notification in notifications
             ]
+
             translated_results = translate_notifications_batch(notification_data)
             if translated_results:
                 NotificationServices.update_translated_notifications(translated_results)
@@ -252,47 +253,52 @@ def cleanup_pending_batches(app):
             has_more_batches = True
 
             while has_more_batches:
-                with db.session.begin():
-                    batches = Batch.objects(process_status="PENDING").limit(100)
-                    has_more_batches = bool(batches)
+                batches = (
+                    db.session.query(Batch)
+                    .filter(Batch.process_status == "PENDING")
+                    .order_by(Batch.created_at.asc())
+                    .limit(100)
+                    .all()
+                )
+                has_more_batches = bool(batches)
 
-                    deleted_batch_ids = []
+                deleted_batch_ids = []
 
-                    for batch in batches:
-                        try:
-                            batch_date = batch.created_at.strftime("%Y_%m_%d")
+                for batch in batches:
+                    try:
+                        app.logger.info(
+                            f"Deleting batch {batch.id} with process_status 'PENDING'"
+                        )
+
+                        batch_date = batch.created_at.strftime("%Y_%m_%d")
+
+                        # Delete related posts
+                        posts = (
+                            db.session.query(Post)
+                            .filter(Post.batch_id == batch.id)
+                            .all()
+                        )
+                        for post in posts:
+                            post.delete()
                             app.logger.info(
-                                f"Deleting batch {batch.id} with process_status 'PENDING'"
+                                f"Deleted post {post.id} related to batch {batch.id}"
                             )
 
-                            # Delete related posts
-                            posts = Post.objects(batch_id=batch.id)
-                            for post in posts:
-                                try:
-                                    app.logger.info(
-                                        f"Deleting post {post.id} related to batch {batch.id}"
-                                    )
-                                    post.delete()
-                                except Exception as post_error:
-                                    app.logger.error(
-                                        f"Error deleting post {post.id}: {str(post_error)}"
-                                    )
+                        batch.delete()
 
-                            batch.delete()
+                        upload_folder = os.path.join(
+                            UPLOAD_BASE_PATH, batch_date, str(batch.id)
+                        )
+                        voice_folder = os.path.join(
+                            VOICE_BASE_PATH, batch_date, str(batch.id)
+                        )
+                        delete_folder_if_exists(upload_folder, app)
+                        delete_folder_if_exists(voice_folder, app)
 
-                            upload_folder = os.path.join(
-                                UPLOAD_BASE_PATH, batch_date, str(batch.id)
-                            )
-                            voice_folder = os.path.join(
-                                VOICE_BASE_PATH, batch_date, str(batch.id)
-                            )
-                            delete_folder_if_exists(upload_folder, app)
-                            delete_folder_if_exists(voice_folder, app)
-
-                        except Exception as batch_error:
-                            app.logger.error(
-                                f"Error processing batch {batch.id}: {str(batch_error)}"
-                            )
+                    except Exception as batch_error:
+                        app.logger.error(
+                            f"Error processing batch {batch.id}: {str(batch_error)}"
+                        )
 
             if deleted_batch_ids:
                 app.logger.info(

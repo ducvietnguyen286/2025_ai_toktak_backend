@@ -14,7 +14,7 @@ import const
 load_dotenv(override=False)
 
 from app.errors.handler import api_error_handler
-from app.extensions import redis_client, db, db_mongo
+from app.extensions import redis_client, db
 from app.config import configs as config
 from threading import Thread
 import uuid
@@ -28,7 +28,6 @@ def __config_logging(app):
 def __init_app(app):
     db.init_app(app)
     redis_client.init_app(app)
-    db_mongo.init_app(app)
 
 
 def __config_error_handlers(app):

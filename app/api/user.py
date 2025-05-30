@@ -7,7 +7,6 @@ import time
 import traceback
 from urllib.parse import urlencode
 import uuid
-from bson import ObjectId
 from flask import redirect, request
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
@@ -209,7 +208,7 @@ class APISendPosts(Resource):
                 "items": {
                     "type": "object",
                     "properties": {
-                        "id": {"type": "string"},
+                        "id": {"type": ["string", "number", "null"]},
                         "is_all": {"type": "integer"},
                         "link_ids": {
                             "type": "array",
@@ -266,6 +265,7 @@ class APISendPosts(Resource):
             ids = []
             for post in id_posts:
                 post_id = post.get("id", 0)
+                post_id = int(post_id) if post_id else 0
                 id_links = post.get("link_ids", [])
 
                 ids.append(post_id)
@@ -336,19 +336,19 @@ class APISendPosts(Resource):
 
             social_sync = SocialPostService.create_social_sync(
                 user_id=current_user.id,
-                in_post_ids=id_posts,
-                post_ids=post_ids,
+                in_post_ids=json.dumps(id_posts),
+                post_ids=json.dumps(post_ids),
                 status="PROCESSING",
             )
 
-            sync_id = str(social_sync.id)
+            sync_id = social_sync.id
 
             social_post_ids = []
             upload = []
 
             for post in posts:
-                post_id = str(post.id)
-                batch_id = str(post.batch_id)
+                post_id = post.id
+                batch_id = post.batch_id
                 timestamp = int(time.time())
                 unique_id = uuid.uuid4().hex
 
@@ -376,8 +376,8 @@ class APISendPosts(Resource):
                     social_post = SocialPostService.create_social_post(
                         link_id=link_id,
                         user_id=current_user.id,
-                        post_id=ObjectId(post.id),
-                        batch_id=ObjectId(batch_id),
+                        post_id=post.id,
+                        batch_id=batch_id,
                         session_key=session_key,
                         sync_id=sync_id,
                         status="PROCESSING",
@@ -409,7 +409,7 @@ class APISendPosts(Resource):
                             "link_id": link_id,
                             "post_id": post_id,
                             "user_id": current_user.id,
-                            "social_post_id": str(social_post.id),
+                            "social_post_id": social_post.id,
                             "page_id": "",
                             "is_all": 1,
                         },
@@ -438,7 +438,7 @@ class APISendPosts(Resource):
                 "upload": upload,
             }
 
-            social_sync.social_post_ids = social_post_ids
+            social_sync.social_post_ids = json.dumps(social_post_ids)
             social_sync.save()
             redis_client.set(
                 f"toktak:progress-sync:{sync_id}", json.dumps(progress), ex=1800
@@ -483,7 +483,7 @@ class APIPostToLinks(Resource):
                 "items": {"type": "integer"},
                 "uniqueItems": True,
             },
-            "post_id": {"type": "string"},
+            "post_id": {"type": ["string", "number", "null"]},
             "page_id": {"type": "string"},
             "disable_comment": {"type": "boolean"},
             "disable_duet": {"type": "boolean"},
@@ -513,6 +513,7 @@ class APIPostToLinks(Resource):
         try:
             is_all = args.get("is_all", 0)
             post_id = args.get("post_id", 0)
+            post_id = int(post_id) if post_id else 0
             page_id = args.get("page_id", "")
             link_ids = args.get("link_ids", [])
             disable_comment = args.get("disable_comment", False)
@@ -1153,7 +1154,7 @@ class APIYoutubeLogin(Resource):
                 #     client = random.choice(all_clients) if all_clients else None
                 # else:
                 client = YoutubeClientService.get_random_client()
-                client = client.to_json() if client else None
+                client = client._to_json() if client else None
 
             if not client:
                 PAGE_PROFILE = (
@@ -1314,11 +1315,17 @@ class APIGetCallbackYoutube(Resource):
                 user_link.name = name
                 user_link.avatar = avatar
                 user_link.url = url
-                user_link.youtube_client = json.dumps(client.to_json())
+                user_link.youtube_client = json.dumps(client._to_json())
                 user_link.status = 1
                 user_link.save()
 
-                client.user_ids.append(user_id)
+                current_user_ids = client.user_ids
+                current_user_ids = (
+                    json.loads(current_user_ids) if current_user_ids else []
+                )
+                current_user_ids.append(int_user_id)
+
+                client.user_ids = json.dumps(current_user_ids)
                 client.member_count += 1
                 client.save()
             else:
@@ -1815,8 +1822,13 @@ class APICheckActiveLinkSns(Resource):
     def get(self):
         current_user = AuthService.get_current_identity(no_cache=True)
         total_user_links = UserService.get_total_link(current_user.id)
-        total_link_active = current_user.total_link_active
-        if total_user_links >= total_link_active:
+        total_user_link = total_user_links if total_user_links else 0
+        total_link_active = (
+            current_user.total_link_active
+            if current_user and current_user.total_link_active
+            else 0
+        )
+        if total_user_link >= total_link_active:
             return Response(
                 data={},
                 message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
@@ -1825,7 +1837,7 @@ class APICheckActiveLinkSns(Resource):
 
         return Response(
             data={
-                "total_user_links": total_user_links,
+                "total_user_links": total_user_link,
                 "total_link_active": total_link_active,
             },
             message="You can add active new link",

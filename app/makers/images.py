@@ -1,7 +1,7 @@
-from concurrent.futures import ThreadPoolExecutor
+from hashlib import sha1
 import io
+import json
 import os
-import threading
 import time
 import datetime
 import traceback
@@ -13,24 +13,20 @@ import requests
 import cv2
 
 # from ultralytics import YOLO, FastSAM
-from google.cloud import vision
+# from google.cloud import vision
 
 # import torch
-import multiprocessing
-from multiprocessing import Pool
-import numpy as np
+# import numpy as np
 from app.enums.blocked_text import BlockedText
+from app.lib.link import get_item_id, get_link_type, get_vendor_id
 from app.lib.logger import logger
 
 # from app.extensions import sam_model
 
 from app.lib.header import generate_desktop_user_agent
-from app.lib.string import is_json
+from app.services.ocr_result import OCRResultService
 from app.third_parties.google import GoogleVision
-
-gpu_semaphore = threading.Semaphore(2)
-
-multiprocessing.set_start_method("spawn", force=True)
+from gevent import sleep
 
 
 FONT_FOLDER = os.path.join(os.getcwd(), "app/makers/fonts")
@@ -127,31 +123,16 @@ def process_beauty_image(image_path):
                 image_path, width, height
             )
 
-            logger.info(
-                f"Full text: {full_text}, Ratio: {ratio}, Length labels: {length_labels}"
-            )
-
-            if not full_text:
-                return {
-                    "image_path": image_path,
-                    "is_remove": True,
-                }
-
             # logger.info(f"Beauty Result OCR Text: {full_text}, Ratio: {ratio}")
 
-            if full_text == "":
-                return {
-                    "image_path": image_path,
-                    "is_remove": True,
-                }
-
-            blocked_texts = BlockedText.BLOCKED_TEXT.value
-            for blocked_text in blocked_texts:
-                if blocked_text in full_text:
-                    return {
-                        "image_path": image_path,
-                        "is_remove": True,
-                    }
+            if full_text and full_text != "":
+                blocked_texts = BlockedText.BLOCKED_TEXT.value
+                for blocked_text in blocked_texts:
+                    if blocked_text in full_text:
+                        return {
+                            "image_path": image_path,
+                            "is_remove": True,
+                        }
 
             if length_labels <= 0:
                 return {
@@ -159,7 +140,7 @@ def process_beauty_image(image_path):
                     "is_remove": True,
                 }
 
-            if len(full_text) > 0 and length_labels <= 3:
+            if full_text and len(full_text) > 0 and length_labels <= 3:
                 return {
                     "image_path": image_path,
                     "is_remove": True,
@@ -267,35 +248,41 @@ class ImageMaker:
 
         process_images = []
         base_images = []
+        image_with_base = {}
 
         downloaded_images = list(
             map(
                 lambda url: ImageMaker.save_image_url_get_path(
-                    url, batch_id, is_avif=is_avif
+                    url, batch_id, is_avif=is_avif, get_base=True
                 ),
                 images,
             )
         )
 
-        print(f"Downloaded images: {downloaded_images}")
+        sleep(1)
 
-        time.sleep(1)
-
-        for image_path in downloaded_images:
-            if not image_path:
+        for image_base in downloaded_images:
+            if not image_base:
                 continue
             try:
+                image_path = image_base.get("image_path", None)
+                if not image_path or not os.path.exists(image_path):
+                    continue
+                image_url = image_base.get("image_url", None)
+
+                extension = image_path.split(".")[-1].lower()
+                if extension == "gif":
+                    image_with_base[image_path] = image_url
+                    base_images.append(image_path)
+                    continue
                 image_cv = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+
+                if image_cv is None:
+                    continue
+
                 image_height, image_width = image_cv.shape[:2]
 
                 if image_height <= (image_width * 3):
-                    extension = image_path.split(".")[-1].lower()
-                    if extension == "gif":
-                        base_images.append(image_path)
-                        continue
-
-                    if image_cv is None:
-                        continue
 
                     if not image_path.lower().endswith(".jpg"):
                         new_image_path = image_path.rsplit(".", 1)[0] + ".jpg"
@@ -308,24 +295,21 @@ class ImageMaker:
                         cv2.imwrite(
                             image_path, image_cv, [cv2.IMWRITE_JPEG_QUALITY, 90]
                         )
-
                     process_images.append(image_path)
                 else:
+                    image_with_base[image_path] = image_url
                     base_images.append(image_path)
             except IOError:
                 print(f"Cannot identify image file {image_path}")
-                time.sleep(0.5)
+                sleep(0.5)
                 os.remove(image_path)
                 continue
 
-        time.sleep(1)
-
-        logger.info(f"Process images: {process_images}")
+        sleep(1)
 
         cleared_images = []
         for image_path in process_images:
             result = process_beauty_image(image_path)
-            logger.info(f"Result: {result}")
             if "is_remove" in result and result["is_remove"]:
                 image_path = result["image_path"]
                 if os.path.exists(image_path):
@@ -337,10 +321,10 @@ class ImageMaker:
 
         cleared_images.extend(base_images)
 
-        return cleared_images
+        return cleared_images, image_with_base
 
     @staticmethod
-    def cut_out_long_height_images_by_sam(image_path, batch_id=0):
+    def cut_out_long_height_images_by_sam(image_path, batch_id=0, base_image={}):
         date_create, upload_folder = ImageMaker.get_current_date_str()
         extension = image_path.split(".")[-1].lower()
         if extension == "gif":
@@ -355,7 +339,7 @@ class ImageMaker:
         timeout = 10
         start_time = time.time()
         while not os.path.exists(image_path) and (time.time() - start_time < timeout):
-            time.sleep(0.5)
+            sleep(0.5)
 
         if not os.path.exists(image_path):
             return {"image_urls": [], "is_cut_out": False}
@@ -379,15 +363,43 @@ class ImageMaker:
 
         try:
             # results = process_inference(image_path=image_path)
-            response = requests.post(
-                SAM_CHECK_IMAGE_URL, json={"image_path": image_path}
-            )
-            json_response = response.json()
 
-            logger.info(f"Response from SAM: {json_response}")
-            logger.info(f"IMAGE PATH: {image_path}")
+            image_url_root = base_image.get(image_path, None)
+            response = None
+            if image_url_root:
+                image_hash = sha1(image_url_root.encode("utf-8")).hexdigest()
+                response = OCRResultService.find_one_ocr_result_by_filter(
+                    image_hash=image_hash
+                )
+            if response:
+                response_data = json.loads(response.response) if response else None
+                logger.info(f"Response from OCR DATABASE: {response_data}")
+                if response_data and "images" in response_data:
+                    results = response_data["images"]
+                else:
+                    results = []
+            else:
+                response = requests.post(
+                    SAM_CHECK_IMAGE_URL, json={"image_path": image_path}, timeout=30
+                )
+                json_response = response.json()
+                if image_url_root and response.status_code == 200:
+                    OCRResultService.create_ocr_result(
+                        image_url=image_url_root,
+                        image_hash=image_hash,
+                        response=json.dumps(json_response),
+                    )
+                results = json_response.get("images", [])
 
-            results = json_response.get("images", [])
+            if not results or len(results) == 0:
+                image_name = os.path.basename(image_path)
+                image_url = (
+                    f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+                )
+                return {
+                    "image_urls": [image_url],
+                    "is_cut_out": False,
+                }
 
             image_cv = cv2.imread(image_path)
             if image_cv is None:
@@ -430,25 +442,6 @@ class ImageMaker:
                     unique_id = uuid.uuid4().hex
                     new_name = f"{timestamp}_{unique_id}.jpg"
                     cropped_path = os.path.join(output_folder, new_name)
-
-                    # Resize the cropped image to the target size (1350x1080)
-                    # target_size = (1350, 1080)
-                    # h, w, _ = cropped.shape
-                    # scale = min(target_size[1] / h, target_size[0] / w)
-                    # new_w = int(w * scale)
-                    # new_h = int(h * scale)
-                    # resized = cv2.resize(
-                    #     cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
-                    # )
-
-                    # cropped_resized = np.zeros(
-                    #     (target_size[1], target_size[0], 3), dtype=np.uint8
-                    # )
-                    # y_offset = (target_size[1] - new_h) // 2
-                    # x_offset = (target_size[0] - new_w) // 2
-                    # cropped_resized[
-                    #     y_offset : y_offset + new_h, x_offset : x_offset + new_w
-                    # ] = resized
 
                     cv2.imwrite(cropped_path, cropped)  # Save the resized image
 
@@ -516,238 +509,238 @@ class ImageMaker:
                 "is_cut_out": False,
             }
 
-    @staticmethod
-    def cut_out_long_height_images_by_google(image_url, batch_id=0):
-        date_create, upload_folder = ImageMaker.get_current_date_str()
-        image_path = ImageMaker.save_image_url_get_path(image_url, batch_id=batch_id)
-        if not image_path:
-            return {
-                "image_urls": [],
-                "is_cut_out": False,
-            }
-        extension = image_path.split(".")[-1].lower()
-        output_folder = f"{upload_folder}/{batch_id}"
-        print(f"Cut out long height images: {image_path}")
+    # @staticmethod
+    # def cut_out_long_height_images_by_google(image_url, batch_id=0):
+    #     date_create, upload_folder = ImageMaker.get_current_date_str()
+    #     image_path = ImageMaker.save_image_url_get_path(image_url, batch_id=batch_id)
+    #     if not image_path:
+    #         return {
+    #             "image_urls": [],
+    #             "is_cut_out": False,
+    #         }
+    #     extension = image_path.split(".")[-1].lower()
+    #     output_folder = f"{upload_folder}/{batch_id}"
+    #     print(f"Cut out long height images: {image_path}")
 
-        while not os.path.exists(image_path):
-            time.sleep(0.5)
+    #     while not os.path.exists(image_path):
+    #         sleep(0.5)
 
-        try:
-            image = Image.open(image_path)
-            image = image.convert("RGB")
-            image.save(image_path)
-        except IOError:
-            print(f"Cannot identify image file {image_path}")
-            image_name = image_path.split("/")[-1]
-            image_url = f"{CURRENT_DOMAIN}/{date_create}/{batch_id}/{image_name}"
-            return [image_url]
+    #     try:
+    #         image = Image.open(image_path)
+    #         image = image.convert("RGB")
+    #         image.save(image_path)
+    #     except IOError:
+    #         print(f"Cannot identify image file {image_path}")
+    #         image_name = image_path.split("/")[-1]
+    #         image_url = f"{CURRENT_DOMAIN}/{date_create}/{batch_id}/{image_name}"
+    #         return [image_url]
 
-        image_width, image_height = image.size
+    #     image_width, image_height = image.size
 
-        print(f"Image size: {image_width}x{image_height}")
+    #     print(f"Image size: {image_width}x{image_height}")
 
-        if image_height > (image_width * 2):
-            try:
-                key_path = os.path.join(os.getcwd(), "google-cloud-vision.json")
-                client = vision.ImageAnnotatorClient.from_service_account_file(key_path)
-                with io.open(image_path, "rb") as image_file:
-                    content = image_file.read()
+    #     if image_height > (image_width * 2):
+    #         try:
+    #             key_path = os.path.join(os.getcwd(), "google-cloud-vision.json")
+    #             client = vision.ImageAnnotatorClient.from_service_account_file(key_path)
+    #             with io.open(image_path, "rb") as image_file:
+    #                 content = image_file.read()
 
-                image = vision.Image(content=content)
-                response = client.object_localization(image=image)
+    #             image = vision.Image(content=content)
+    #             response = client.object_localization(image=image)
 
-                excluded_labels = ["Barcode", "QR code", "Text", "Logo"]
+    #             excluded_labels = ["Barcode", "QR code", "Text", "Logo"]
 
-                print(
-                    f"Found {len(response.localized_object_annotations)} objects in image"
-                )
+    #             print(
+    #                 f"Found {len(response.localized_object_annotations)} objects in image"
+    #             )
 
-                original_image = Image.open(image_path)
-                cropped_images = []
-                for idx, obj in enumerate(response.localized_object_annotations):
-                    name = obj.name
+    #             original_image = Image.open(image_path)
+    #             cropped_images = []
+    #             for idx, obj in enumerate(response.localized_object_annotations):
+    #                 name = obj.name
 
-                    print(f"Object {image_path}: {name}")
+    #                 print(f"Object {image_path}: {name}")
 
-                    if name in excluded_labels:
-                        continue
+    #                 if name in excluded_labels:
+    #                     continue
 
-                    vertices = [
-                        (
-                            int(vertex.x * original_image.width),
-                            int(vertex.y * original_image.height),
-                        )
-                        for vertex in obj.bounding_poly.normalized_vertices
-                    ]
+    #                 vertices = [
+    #                     (
+    #                         int(vertex.x * original_image.width),
+    #                         int(vertex.y * original_image.height),
+    #                     )
+    #                     for vertex in obj.bounding_poly.normalized_vertices
+    #                 ]
 
-                    x1, y1 = vertices[0]
-                    x2, y2 = vertices[2]
-                    cropped_image = original_image.crop((x1, y1, x2, y2))
-                    cropped_resized = cropped_image.resize((640, 640), Image.LANCZOS)
-                    timestamp = int(time.time())
-                    unique_id = uuid.uuid4().hex
-                    new_name = f"{timestamp}_{unique_id}.jpg"
-                    output_path = os.path.join(output_folder, new_name)
-                    cropped_resized.save(output_path)
+    #                 x1, y1 = vertices[0]
+    #                 x2, y2 = vertices[2]
+    #                 cropped_image = original_image.crop((x1, y1, x2, y2))
+    #                 cropped_resized = cropped_image.resize((640, 640), Image.LANCZOS)
+    #                 timestamp = int(time.time())
+    #                 unique_id = uuid.uuid4().hex
+    #                 new_name = f"{timestamp}_{unique_id}.jpg"
+    #                 output_path = os.path.join(output_folder, new_name)
+    #                 cropped_resized.save(output_path)
 
-                    cropped_url = (
-                        f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
-                    )
-                    cropped_images.append(cropped_url)
-                if cropped_images:
-                    os.remove(image_path)
-                    return cropped_images
+    #                 cropped_url = (
+    #                     f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
+    #                 )
+    #                 cropped_images.append(cropped_url)
+    #             if cropped_images:
+    #                 os.remove(image_path)
+    #                 return cropped_images
 
-            except Exception as e:
-                print(f"Error: {e}")
-                image_name = image_path.split("/")[-1]
-                image_url = (
-                    f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
-                )
-                return [image_url]
+    #         except Exception as e:
+    #             print(f"Error: {e}")
+    #             image_name = image_path.split("/")[-1]
+    #             image_url = (
+    #                 f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+    #             )
+    #             return [image_url]
 
-        image_name = image_path.split("/")[-1]
-        base_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+    #     image_name = image_path.split("/")[-1]
+    #     base_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
 
-        if extension == "gif":
-            return {
-                "image_urls": [base_url],
-                "is_cut_out": False,
-            }
-        output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
+    #     if extension == "gif":
+    #         return {
+    #             "image_urls": [base_url],
+    #             "is_cut_out": False,
+    #         }
+    #     output_folder = f"{UPLOAD_FOLDER}/{batch_id}"
 
-        timeout = 10
-        start_time = time.time()
-        while not os.path.exists(image_path) and (time.time() - start_time < timeout):
-            time.sleep(0.5)
+    #     timeout = 10
+    #     start_time = time.time()
+    #     while not os.path.exists(image_path) and (time.time() - start_time < timeout):
+    #         sleep(0.5)
 
-        image_cv = cv2.imread(image_path)
-        if image_cv is None:
-            if os.path.exists(image_path):
-                os.remove(image_path)
-            return {
-                "image_urls": [],
-                "is_cut_out": False,
-            }
+    #     image_cv = cv2.imread(image_path)
+    #     if image_cv is None:
+    #         if os.path.exists(image_path):
+    #             os.remove(image_path)
+    #         return {
+    #             "image_urls": [],
+    #             "is_cut_out": False,
+    #         }
 
-        image_height, image_width = image_cv.shape[:2]
+    #     image_height, image_width = image_cv.shape[:2]
 
-        if image_height <= (image_width * 3):
-            return {"image_urls": [base_url], "is_cut_out": False}
+    #     if image_height <= (image_width * 3):
+    #         return {"image_urls": [base_url], "is_cut_out": False}
 
-        try:
-            results = GoogleVision().detect_objects(image_path=image_path)
-            if not results:
-                if os.path.exists(image_path):
-                    os.remove(image_path)
-                return {
-                    "image_urls": [],
-                    "is_cut_out": False,
-                }
-            cropped_images = []
-            needed_length = 5
-            current_image_count = 1
+    #     try:
+    #         results = GoogleVision().detect_objects(image_path=image_path)
+    #         if not results:
+    #             if os.path.exists(image_path):
+    #                 os.remove(image_path)
+    #             return {
+    #                 "image_urls": [],
+    #                 "is_cut_out": False,
+    #             }
+    #         cropped_images = []
+    #         needed_length = 5
+    #         current_image_count = 1
 
-            for result in results:
-                if current_image_count >= needed_length:
-                    break
+    #         for result in results:
+    #             if current_image_count >= needed_length:
+    #                 break
 
-                pts = []
-                bounding_poly = result["bounding_poly"]
-                conf = result["confidence"]
-                name = result["name"] or ""
+    #             pts = []
+    #             bounding_poly = result["bounding_poly"]
+    #             conf = result["confidence"]
+    #             name = result["name"] or ""
 
-                for point in bounding_poly:
-                    x_norm, y_norm = point
-                    x_pixel = int(x_norm * image_width)
-                    y_pixel = int(y_norm * image_height)
-                    pts.append((x_pixel, y_pixel))
-                pts = np.array(pts)
-                x, y, w, h = cv2.boundingRect(pts)
-                cropped = image_cv[y : y + h, x : x + w]
-                if cropped is None:
-                    continue
-                if w < 200 or h < 200 or w * h < 50000:
-                    continue
+    #             for point in bounding_poly:
+    #                 x_norm, y_norm = point
+    #                 x_pixel = int(x_norm * image_width)
+    #                 y_pixel = int(y_norm * image_height)
+    #                 pts.append((x_pixel, y_pixel))
+    #             pts = np.array(pts)
+    #             x, y, w, h = cv2.boundingRect(pts)
+    #             cropped = image_cv[y : y + h, x : x + w]
+    #             if cropped is None:
+    #                 continue
+    #             if w < 200 or h < 200 or w * h < 50000:
+    #                 continue
 
-                # target_size = (1350, 1080)
-                # h, w, _ = cropped.shape
-                # scale = min(target_size[1] / h, target_size[0] / w)
-                # new_w = int(w * scale)
-                # new_h = int(h * scale)
-                # resized = cv2.resize(
-                #     cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
-                # )
+    #             # target_size = (1350, 1080)
+    #             # h, w, _ = cropped.shape
+    #             # scale = min(target_size[1] / h, target_size[0] / w)
+    #             # new_w = int(w * scale)
+    #             # new_h = int(h * scale)
+    #             # resized = cv2.resize(
+    #             #     cropped, (new_w, new_h), interpolation=cv2.INTER_AREA
+    #             # )
 
-                # cropped_resized = np.zeros(
-                #     (target_size[1], target_size[0], 3), dtype=np.uint8
-                # )
-                # y_offset = (target_size[1] - new_h) // 2
-                # x_offset = (target_size[0] - new_w) // 2
-                # cropped_resized[
-                #     y_offset : y_offset + new_h, x_offset : x_offset + new_w
-                # ] = resized
+    #             # cropped_resized = np.zeros(
+    #             #     (target_size[1], target_size[0], 3), dtype=np.uint8
+    #             # )
+    #             # y_offset = (target_size[1] - new_h) // 2
+    #             # x_offset = (target_size[0] - new_w) // 2
+    #             # cropped_resized[
+    #             #     y_offset : y_offset + new_h, x_offset : x_offset + new_w
+    #             # ] = resized
 
-                timestamp = int(time.time())
-                unique_id = uuid.uuid4().hex
-                new_name = f"{timestamp}_{unique_id}.jpg"
-                cropped_path = os.path.join(output_folder, new_name)
-                cv2.imwrite(cropped_path, cropped)
+    #             timestamp = int(time.time())
+    #             unique_id = uuid.uuid4().hex
+    #             new_name = f"{timestamp}_{unique_id}.jpg"
+    #             cropped_path = os.path.join(output_folder, new_name)
+    #             cv2.imwrite(cropped_path, cropped)
 
-                if os.environ.get("USE_OCR") == "true":
-                    result = process_beauty_image(cropped_path)
-                    if "is_remove" in result and result["is_remove"]:
-                        cropped_image_path = result["image_path"]
-                        if os.path.exists(cropped_image_path):
-                            os.remove(cropped_image_path)
-                        continue
-                    if "is_remove" in result and result["is_remove"] == False:
-                        cropped_image_path = result["image_path"]
-                        file_name = cropped_image_path.split("/")[-1]
-                        cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
-                        cropped_images.append((cropped_url, conf))
-                        current_image_count += 1
-                else:
-                    file_name = cropped_path.split("/")[-1]
-                    cropped_url = (
-                        f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
-                    )
-                    cropped_images.append((cropped_url, conf))
-                    current_image_count += 1
-            if cropped_images and len(cropped_images) > 0:
-                cropped_data_sorted = sorted(
-                    cropped_images, key=lambda x: x[1], reverse=True
-                )
-                top = [url for url, c in cropped_data_sorted[:needed_length]]
-                for cropped_url, _ in cropped_images[needed_length:]:
-                    cropped_image_path = os.path.join(
-                        output_folder, os.path.basename(cropped_url)
-                    )
-                    if os.path.exists(cropped_image_path):
-                        os.remove(cropped_image_path)
-                if os.path.exists(image_path):
-                    os.remove(image_path)
+    #             if os.environ.get("USE_OCR") == "true":
+    #                 result = process_beauty_image(cropped_path)
+    #                 if "is_remove" in result and result["is_remove"]:
+    #                     cropped_image_path = result["image_path"]
+    #                     if os.path.exists(cropped_image_path):
+    #                         os.remove(cropped_image_path)
+    #                     continue
+    #                 if "is_remove" in result and result["is_remove"] == False:
+    #                     cropped_image_path = result["image_path"]
+    #                     file_name = cropped_image_path.split("/")[-1]
+    #                     cropped_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
+    #                     cropped_images.append((cropped_url, conf))
+    #                     current_image_count += 1
+    #             else:
+    #                 file_name = cropped_path.split("/")[-1]
+    #                 cropped_url = (
+    #                     f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}"
+    #                 )
+    #                 cropped_images.append((cropped_url, conf))
+    #                 current_image_count += 1
+    #         if cropped_images and len(cropped_images) > 0:
+    #             cropped_data_sorted = sorted(
+    #                 cropped_images, key=lambda x: x[1], reverse=True
+    #             )
+    #             top = [url for url, c in cropped_data_sorted[:needed_length]]
+    #             for cropped_url, _ in cropped_images[needed_length:]:
+    #                 cropped_image_path = os.path.join(
+    #                     output_folder, os.path.basename(cropped_url)
+    #                 )
+    #                 if os.path.exists(cropped_image_path):
+    #                     os.remove(cropped_image_path)
+    #             if os.path.exists(image_path):
+    #                 os.remove(image_path)
 
-                return {
-                    "image_urls": top,
-                    "is_cut_out": True,
-                }
-            else:
-                return {
-                    "image_urls": [],
-                    "is_cut_out": False,
-                }
-        except Exception as e:
-            print(f"Error processing {image_path}: {e}")
-            logger.error(f"Error processing {image_path}: {e}")
-            traceback.print_exc()
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            if os.path.exists(image_path):
-                os.remove(image_path)
-            return {
-                "image_urls": [],
-                "is_cut_out": False,
-            }
+    #             return {
+    #                 "image_urls": top,
+    #                 "is_cut_out": True,
+    #             }
+    #         else:
+    #             return {
+    #                 "image_urls": [],
+    #                 "is_cut_out": False,
+    #             }
+    #     except Exception as e:
+    #         print(f"Error processing {image_path}: {e}")
+    #         logger.error(f"Error processing {image_path}: {e}")
+    #         traceback.print_exc()
+    #         logger.error(f"Traceback: {traceback.format_exc()}")
+    #         if os.path.exists(image_path):
+    #             os.remove(image_path)
+    #         return {
+    #             "image_urls": [],
+    #             "is_cut_out": False,
+    #         }
 
     @staticmethod
     def save_images(images):
@@ -781,7 +774,7 @@ class ImageMaker:
         image_name = image_path.split("/")[-1]
 
         while not os.path.exists(image_path):
-            time.sleep(0.5)
+            sleep(0.5)
 
         try:
             image = Image.open(image_path)
@@ -871,7 +864,6 @@ class ImageMaker:
 
             image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
         else:
-            logger.info(f"Old image path: {image_path}")
             timestamp = int(time.time())
             unique_id = uuid.uuid4().hex
             new_image_name = f"{timestamp}_{unique_id}.jpg"
@@ -879,7 +871,6 @@ class ImageMaker:
             image.save(new_image_path)
 
             image_path = new_image_path
-            logger.info(f"New image path: {image_path}")
 
             image_url = (
                 f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_image_name}"
@@ -1014,7 +1005,7 @@ class ImageMaker:
         image_name = image_path.split("/")[-1]
 
         while not os.path.exists(image_path):
-            time.sleep(0.5)
+            sleep(0.5)
 
         try:
             image = Image.open(image_path)
@@ -1295,7 +1286,7 @@ class ImageMaker:
         return image_url
 
     @staticmethod
-    def save_image_url_get_path(image_url, batch_id=0, is_avif=False):
+    def save_image_url_get_path(image_url, batch_id=0, is_avif=False, get_base=False):
         if "toktak.ai" in image_url:
             return ImageMaker.get_image_path_from_url(image_url)
         date_create, upload_folder = ImageMaker.get_current_date_str()
@@ -1342,8 +1333,10 @@ class ImageMaker:
                 temp_image = temp_image.convert("RGB")
                 temp_image.save(image_path, "JPEG", quality=90, optimize=True)
 
-            time.sleep(0.1)
+            sleep(0.1)
             os.remove(image_temp_path)
+        if get_base:
+            return {"image_path": image_path, "image_url": image_url}
         return image_path
 
     @staticmethod
@@ -1408,7 +1401,6 @@ class ImageMaker:
                     f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
                 )
             else:
-                logger.info(f"Old image path: {image_path}")
                 timestamp = int(time.time())
                 unique_id = uuid.uuid4().hex
                 new_image_name = f"{timestamp}_{unique_id}.jpg"
@@ -1418,12 +1410,10 @@ class ImageMaker:
                     f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_image_name}"
                 )
                 image_path = new_image_path
-                logger.info(f"New image path: {image_path}")
 
             return image_url
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
-            logger.error(f"Error processing {image_path}: {e}")
             traceback.print_exc()
             logger.error(f"Traceback: {traceback.format_exc()}")
             image_name = image_path.split("/")[-1]
@@ -1446,7 +1436,7 @@ class ImageMaker:
         image_name = image_path.split("/")[-1]
 
         while not os.path.exists(image_path):
-            time.sleep(0.5)
+            sleep(0.5)
 
         try:
             image = Image.open(image_path)

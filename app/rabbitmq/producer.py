@@ -18,6 +18,13 @@ connection_params = pika.ConnectionParameters(
 )
 
 
+def send_create_content_message(message):
+    RABBITMQ_QUEUE_CREATE_CONTENT = os.environ.get(
+        "RABBITMQ_QUEUE_CREATE_CONTENT", "hello"
+    )
+    send_message(RABBITMQ_QUEUE_CREATE_CONTENT, message)
+
+
 def send_facebook_message(message):
     RABBITMQ_QUEUE_FACEBOOK = os.environ.get("RABBITMQ_QUEUE_FACEBOOK", "hello")
     send_message(RABBITMQ_QUEUE_FACEBOOK, message)

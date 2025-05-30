@@ -29,7 +29,6 @@ def parse_mobile_response(html, url, base_url):
             return {}
         data = json.loads(ld_json.text)
 
-
         name = data.get("name")
         description = data.get("description")
         images = data.get("image")
@@ -70,6 +69,8 @@ def parse_mobile_response(html, url, base_url):
         query_params_dict = parse_qs(query_params)
         item_id = query_params_dict.get("itemId")
         vendor_item_id = query_params_dict.get("vendorItemId")
+        show_item_id = ""
+        show_vendor_item_id = ""
 
         if (
             not item_id
@@ -86,6 +87,9 @@ def parse_mobile_response(html, url, base_url):
                 item_detail = properties.get("itemDetail")
                 item_id = item_detail.get("itemId")
                 vendor_item_id = item_detail.get("vendorItemId")
+
+                show_item_id = item_id
+                show_vendor_item_id = vendor_item_id
 
                 meta_url = "{0}?itemId={1}&vendorItemId={2}".format(
                     meta_base_url, item_id, vendor_item_id
@@ -107,6 +111,10 @@ def parse_mobile_response(html, url, base_url):
             if (not item_id or len(item_id) == 0) and len(vendor_item_id) > 0:
                 break_sku = sku.split("-")
                 item_id = break_sku[-1]
+
+                show_item_id = item_id
+                show_vendor_item_id = vendor_item_id[0]
+
                 meta_url = "{0}?itemId={1}&vendorItemId={2}".format(
                     meta_base_url, item_id, vendor_item_id[0]
                 )
@@ -129,6 +137,8 @@ def parse_mobile_response(html, url, base_url):
             "store_name": store_name,
             "show_free_shipping": 0,
             "meta_url": meta_url if meta_url else "",
+            "item_id": show_item_id,
+            "vendor_id": show_vendor_item_id,
         }
     except Exception as e:
         logger.log(logging.ERROR, "Exception: {0}".format(str(e)))

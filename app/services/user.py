@@ -11,12 +11,11 @@ from app.models.referral_history import ReferralHistory
 from app.models.payment import Payment
 from app.models.payment_detail import PaymentDetail
 from app.extensions import db
-from app.lib.logger import logger 
+from app.lib.logger import logger
 from sqlalchemy import select, update, delete, or_, func
 from app.lib.query import (
     select_with_filter,
     select_by_id,
-    select_with_pagination,
     select_with_filter_one,
     update_by_id,
 )
@@ -173,12 +172,10 @@ class UserService:
 
     @staticmethod
     def find_user_link(link_id=0, user_id=0):
-        user_link = (
-            UserLink.query.where(UserLink.user_id == user_id).where(
-                UserLink.link_id == link_id
-            )
-            # .where(UserLink.status == 1)
-            .first()
+        user_link = select_with_filter_one(
+            UserLink,
+            [UserLink.link_id == link_id, UserLink.user_id == user_id],
+            [],
         )
         return user_link
 
@@ -299,9 +296,15 @@ class UserService:
     @staticmethod
     def delete_users_by_ids(user_ids):
         try:
-            Post.objects(user_id__in=user_ids).delete()
-            Batch.objects(user_id__in=user_ids).delete()
-            Notification.objects(user_id__in=user_ids).delete()
+            Post.query.filter(Post.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+            Batch.query.filter(Batch.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+            Notification.query.filter(Notification.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
 
             SocialAccount.query.filter(SocialAccount.user_id.in_(user_ids)).delete(
                 synchronize_session=False
@@ -324,7 +327,7 @@ class UserService:
             PaymentDetail.query.filter(PaymentDetail.user_id.in_(user_ids)).delete(
                 synchronize_session=False
             )
-            
+
             Payment.query.filter(Payment.user_id.in_(user_ids)).delete(
                 synchronize_session=False
             )
@@ -377,8 +380,6 @@ class UserService:
     def check_phone_verify_nice(mobileno):
         user = User.query.filter(User.phone == mobileno, User.is_auth_nice == 1).first()
         return user
-
-    
 
     @staticmethod
     def find_user_by_referral_code(referral_code):
