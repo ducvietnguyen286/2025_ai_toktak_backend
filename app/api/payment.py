@@ -417,7 +417,8 @@ class APIGetPaymentDetail(Resource):
             data={},
             code=201,
         ).to_dict()
- 
+
+
 @ns.route("/confirm")
 class APIPaymentConfirm(Resource):
     @jwt_required()
@@ -548,3 +549,109 @@ class APIPaymentLogFail(Resource):
             data={},
             code=201,
         ).to_dict()
+
+
+@ns.route("/save-card")
+class APIBillingAuthorizations(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            data = request.get_json()
+            authKey = data.get("authKey")
+            customerKey = data.get("customerKey")
+            amount = data.get("amount")
+            message = ""
+            current_user = AuthService.get_current_identity()
+            user_id_login = current_user.id
+        
+            user_detail = UserService.find_user_by_referral_code(customerKey)
+            if not user_detail:
+                return Response(
+                    message="사용자가 존재하지 않습니다.",
+                    message_en="User does not exist.",
+                    code=201,
+                ).to_dict()
+
+            payment_data, status_code = PaymentService.billing_authorizations_toss(
+                authKey, customerKey
+            )
+
+            payment_data_log = {
+                "status_code": status_code,
+                "response_json": json.dumps(payment_data, ensure_ascii=False),
+            }
+
+            PaymentService.create_payment_log(**payment_data_log)
+            logger.info("_------------------------------------payment_data_log")
+            logger.info(payment_data_log)
+            logger.info(payment_data)
+
+            if status_code == 200:
+                # Thanh toán thành công, cập nhật DB
+                data_update_user = {
+                    "card_info": json.dumps(payment_data),
+                }
+                UserService.update_user(
+                    user_detail.id, **data_update_user
+                )
+                
+                return Response(
+                    message="Tosspayment 결제가 완료되었습니다",
+                    message_en="Payment completed successfully via Tosspayment",
+                    data={
+                        "payment_data": payment_data,
+                    },
+                ).to_dict()
+
+            return Response(
+                message=message,
+                data={
+                    "status": "FAILED",
+                    "fail_reason": payment_data.get("message", "Thanh toán thất bại"),
+                    "code": payment_data.get("code"),
+                },
+                code=201,
+            ).to_dict()
+        except Exception as ex:
+            tb_str = traceback.format_exc()
+            logger.error(f"[APIBillingAuthorizations] Lỗi: {ex}\n{tb_str}")
+            return Response(
+                message="결제 확인 중 오류가 발생했습니다.",
+                message_en="An error occurred during payment confirmation.",
+                code=201,
+            ).to_dict()
+
+
+@ns.route("/save-card/fail")
+class APIBillingAuthorizationsFail(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            data = request.get_json()
+            code = data.get("code")
+            message = data.get("message")
+            payment_data_log = {
+                "status_code": code,
+                "response_json": message,
+            }
+
+            PaymentService.create_payment_log(**payment_data_log)
+            logger.info("_------------------------------------APIBillingAuthorizationsFail")
+            logger.info(payment_data_log)
+            logger.info(payment_data)
+
+            return Response(
+                message="",
+                data={
+                    "status": "FAILED",
+                },
+                code=201,
+            ).to_dict()
+        except Exception as ex:
+            tb_str = traceback.format_exc()
+            logger.error(f"[APIBillingAuthorizationsFail] Lỗi: {ex}\n{tb_str}")
+            return Response(
+                message="결제 확인 중 오류가 발생했습니다.",
+                message_en="An error occurred during payment confirmation.",
+                code=201,
+            ).to_dict()
