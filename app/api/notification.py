@@ -176,7 +176,7 @@ class APIAdminNotificationHistories(Resource):
             "page": result["page"],
             "per_page": result["per_page"],
             "total_pages": result["pages"],
-            "data": [item for item in result["items"]],
+            "data": [item._to_json() for item in result["items"]],
         }, 200
 
 
