@@ -94,3 +94,8 @@ sudo systemctl status toktak_watchdog.service
 sudo systemctl status rabbitmq-serve
 
 
+양훈탁
+
+780109 - 1 
+
+01029020640
