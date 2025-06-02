@@ -41,6 +41,8 @@ class CoupangScraper:
         if not selected_proxy.startswith("http"):
             selected_proxy = f"http://{auth}@{selected_proxy}"
 
+        logger.info("Selected Proxy: {0}".format(selected_proxy))
+
         return {
             "http": selected_proxy,
             "https": selected_proxy,
