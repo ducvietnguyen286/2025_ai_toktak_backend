@@ -265,9 +265,12 @@ class PostService:
 
     @staticmethod
     def update_template(id, *args, **kwargs):
-        user_template = select_by_id(UserVideoTemplates, id)
+        user_template = UserVideoTemplates.query.get(id)
+        if not user_template:
+            return None
         user_template.update(**kwargs)
         return user_template
+    
 
     @staticmethod
     def admin_get_posts_upload(data_search):
@@ -399,7 +402,7 @@ class PostService:
             user_id=user_id,
             video_hooks=json.dumps(video_hooks),
             image_template_id=(
-                image_templates[0]["id"] if len(image_templates) > 0 else 0
+                image_templates[0]["id"] if len(image_templates) > 0 else 1
             ),
             image_template=json.dumps(image_templates),
             viral_messages=json.dumps(viral_messages),
