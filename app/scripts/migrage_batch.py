@@ -91,7 +91,7 @@ def import_batch_data():
                 else:
                     key_by_batch_id_notifications[batch_id].append(notif)
 
-    db.session.execute(text("TRUNCATE TABLE batchs;"))
+    db.session.execute(text("TRUNCATE TABLE notifications;"))
     db.session.execute(text("TRUNCATE TABLE batchs;"))
     db.session.execute(text("TRUNCATE TABLE posts;"))
     db.session.execute(text("TRUNCATE TABLE social_posts;"))
