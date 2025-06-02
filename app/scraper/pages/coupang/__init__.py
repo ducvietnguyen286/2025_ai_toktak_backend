@@ -1,5 +1,6 @@
 from http.cookiejar import CookieJar
 import json
+import os
 import random
 import traceback
 from app.lib.header import generate_desktop_user_agent, generate_user_agent
@@ -24,20 +25,22 @@ class CoupangScraper:
         return self.run_crawler()
 
     def proxies(self):
-        auth = "dyhnvzbd:ikzxkk88sckd"
+        auth = "hekqlibd:llv12cujeqjr"
 
-        proxy_list = [
-            f"http://{auth}@198.23.239.134:6540",
-            f"http://{auth}@107.172.163.27:6543",
-            f"http://{auth}@207.244.217.165:6712",
-            f"http://{auth}@161.123.152.115:6360",
-            f"http://{auth}@23.94.138.75:6349",
-            f"http://{auth}@216.10.27.159:6837",
-            f"http://{auth}@136.0.207.84:6661",
-            f"http://{auth}@64.64.118.149:6732",
-            f"http://{auth}@142.147.128.93:6593",
-        ]
+        proxy_path = os.path.join(os.getcwd(), "app/scraper/coupang/proxies.txt")
+
+        if not os.path.exists(proxy_path):
+            logger.error("Proxy file not found: {0}".format(proxy_path))
+            return {}
+
+        with open(proxy_path, "r") as file:
+            proxy_list = file.read().splitlines()
+
         selected_proxy = random.choice(proxy_list)
+
+        if not selected_proxy.startswith("http"):
+            selected_proxy = f"http://{auth}@{selected_proxy}"
+
         return {
             "http": selected_proxy,
             "https": selected_proxy,
