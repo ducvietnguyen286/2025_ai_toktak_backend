@@ -747,6 +747,23 @@ class PaymentService:
             return res.json(), res.status_code
         except requests.RequestException as e:
             return {"message": f"TossPayments 연결 오류: {str(e)}"}, 500
+        
+        
+    @staticmethod
+    def billing_authorizations_toss(auth_key, customer_key):
+        TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY")
+        url = "https://api.tosspayments.com//v1/billing/authorizations/issue"
+        auth = base64.b64encode(f"{TOSS_SECRET_KEY}:".encode()).decode()
+
+        headers = {"Authorization": f"Basic {auth}", "Content-Type": "application/json"}
+
+        payload = {"authKey": auth_key, "customerKey": customer_key}
+
+        try:
+            res = requests.post(url, json=payload, headers=headers)
+            return res.json(), res.status_code
+        except requests.RequestException as e:
+            return {"message": f"TossPayments 연결 오류: {str(e)}"}, 500
 
     @staticmethod
     def approvalPayment(payment_id):

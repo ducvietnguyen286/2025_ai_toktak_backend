@@ -35,6 +35,7 @@ class User(db.Model, BaseModel):
 
     level = db.Column(db.Integer, default=0)
     level_info = db.Column(db.Text, nullable=False)
+    card_info = db.Column(db.Text, nullable=False)
 
     is_auth_nice = db.Column(db.Integer, default=0)
     is_verify_email = db.Column(db.Integer, default=0)
@@ -73,6 +74,7 @@ class User(db.Model, BaseModel):
             "contact": self.contact,
             "level": self.level,
             "level_info": self.level_info,
+            "card_info": self.card_info,
             "company_name": self.company_name,
             "batch_sns_total": self.batch_sns_total,
             "is_auth_nice": self.is_auth_nice,

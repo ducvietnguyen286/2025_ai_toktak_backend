@@ -127,7 +127,7 @@ class ProductUpdateAPI(Resource):
             "product_image": {"type": "string"},
             "price": {"type": "string"},
         },
-        required=["product_url", "product_name", "product_image", "price"],
+        required=["product_url", "product_name", "product_image"],
     )
     def post(self, args):
         try:
