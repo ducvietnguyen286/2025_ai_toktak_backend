@@ -1,6 +1,8 @@
 import json
 import os
 import traceback
+
+from sqlalchemy import text
 from app.extensions import db
 from app.models.batch import Batch
 from app.models.post import Post
@@ -55,6 +57,10 @@ def import_batch_data():
                     key_by_batch_id_social[batch_id][post_id] = []
 
                 key_by_batch_id_social[batch_id][post_id].append(social_post)
+
+    db.session.execute(text("TRUNCATE TABLE batchs;"))
+    db.session.execute(text("TRUNCATE TABLE posts;"))
+    db.session.execute(text("TRUNCATE TABLE social_posts;"))
 
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
