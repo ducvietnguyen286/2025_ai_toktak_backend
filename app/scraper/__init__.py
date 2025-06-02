@@ -60,7 +60,12 @@ class Scraper:
                     crawl_url_hash = hashlib.sha1(params["url"].encode()).hexdigest()
                     # Check exists với crawl_url_hash
                     exists = CrawlDataService.find_crawl_data(crawl_url_hash)
-                    if not exists:
+                    if (
+                        not exists
+                        and response
+                        and "images" in response
+                        and len(response["images"]) > 0
+                    ):
                         CrawlDataService.create_crawl_data(
                             site=params["netloc"],
                             input_url=params["url"],
