@@ -27,7 +27,7 @@ class CoupangScraper:
     def proxies(self):
         auth = "hekqlibd:llv12cujeqjr"
 
-        proxy_path = os.path.join(os.getcwd(), "app/scraper/coupang/proxies.txt")
+        proxy_path = os.path.join(os.getcwd(), "app/scraper/pages/coupang/proxies.txt")
 
         if not os.path.exists(proxy_path):
             logger.error("Proxy file not found: {0}".format(proxy_path))
