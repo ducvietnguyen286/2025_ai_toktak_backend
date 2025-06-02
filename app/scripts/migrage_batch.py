@@ -5,6 +5,7 @@ import traceback
 from sqlalchemy import text
 from app.extensions import db
 from app.models.batch import Batch
+from app.models.notification import Notification
 from app.models.post import Post
 from app.models.social_post import SocialPost
 from datetime import datetime
@@ -24,11 +25,16 @@ def import_batch_data():
     if not os.path.exists(social_path):
         print(f"File not found: {post_path}")
         return
+    notification_path = os.path.join(
+        os.getcwd(), "data_scripts", "toktak.notifications.json"
+    )
 
     with open(post_path, "r", encoding="utf-8") as f:
         posts_data = json.load(f)
     with open(social_path, "r", encoding="utf-8") as f:
         social_data = json.load(f)
+    with open(notification_path, "r", encoding="utf-8") as f:
+        notification_data = json.load(f)
 
     key_by_batch_id_posts = {}
     for post in posts_data:
@@ -58,6 +64,34 @@ def import_batch_data():
 
                 key_by_batch_id_social[batch_id][post_id].append(social_post)
 
+    key_by_batch_id_by_post_notifications = {}
+    key_by_batch_id_notifications = {}
+    for notification in notification_data:
+        batch_id = notification.get("batch_id")
+        if batch_id:
+            batch_id = batch_id.get("$oid") if isinstance(batch_id, dict) else batch_id
+            if batch_id not in key_by_batch_id_notifications:
+                key_by_batch_id_notifications[batch_id] = []
+            if batch_id not in key_by_batch_id_by_post_notifications:
+                key_by_batch_id_by_post_notifications[batch_id] = {}
+
+            notifications = notification.get("notifications", [])
+            for notif in notifications:
+                post_id = notif.get("post_id") if "post_id" in notif else None
+                if post_id:
+                    post_id = (
+                        post_id.get("$oid") if isinstance(post_id, dict) else post_id
+                    )
+                    if post_id not in key_by_batch_id_by_post_notifications[batch_id]:
+                        key_by_batch_id_by_post_notifications[batch_id][post_id] = []
+
+                    key_by_batch_id_by_post_notifications[batch_id][post_id].append(
+                        notif
+                    )
+                else:
+                    key_by_batch_id_notifications[batch_id].append(notif)
+
+    db.session.execute(text("TRUNCATE TABLE batchs;"))
     db.session.execute(text("TRUNCATE TABLE batchs;"))
     db.session.execute(text("TRUNCATE TABLE posts;"))
     db.session.execute(text("TRUNCATE TABLE social_posts;"))
@@ -109,6 +143,57 @@ def import_batch_data():
 
                 posts = key_by_batch_id_posts.get(batch_id, [])
                 social_posts = key_by_batch_id_social.get(batch_id, [])
+                notification_by_batch = key_by_batch_id_notifications.get(batch_id, [])
+                notification_by_posts = key_by_batch_id_by_post_notifications.get(
+                    batch_id, {}
+                )
+
+                if notification_by_batch:
+                    for notification in notification_by_batch:
+                        new_notification = {
+                            "batch_id": batch.id,
+                            "post_id": 0,
+                            "user_id": notification.get("user_id"),
+                            "thumbnail": notification.get("thumbnail", ""),
+                            "images": notification.get("images", ""),
+                            "captions": notification.get("captions", ""),
+                            "content": notification.get("content", ""),
+                            "description": notification.get("description", ""),
+                            "description_korea": notification.get(
+                                "description_korea", ""
+                            ),
+                            "hashtag": notification.get("hashtag", ""),
+                            "video_url": notification.get("video_url", ""),
+                            "render_id": notification.get("render_id", ""),
+                            "title": notification.get("title", ""),
+                            "notification_type": notification.get(
+                                "notification_type", ""
+                            ),
+                            "status_sns": notification.get("status_sns", 0),
+                            "status": notification.get("status", 1),
+                            "is_read": notification.get("is_read", 0),
+                            "send_telegram": notification.get("send_telegram", 0),
+                            "social_sns_description": notification.get(
+                                "social_sns_description", ""
+                            ),
+                            "created_at": datetime.fromisoformat(
+                                notification.get("created_at", {})
+                                .get("$date", "1970-01-01T00:00:00Z")
+                                .replace("Z", "+00:00")
+                            ),
+                            "updated_at": datetime.fromisoformat(
+                                notification.get("updated_at", {})
+                                .get("$date", "1970-01-01T00:00:00Z")
+                                .replace("Z", "+00:00")
+                            ),
+                        }
+                        new_notification = Notification(**new_notification)
+                        new_notification.save()
+
+                        print(
+                            f"Notification {new_notification.id} for Batch {batch.id} saved successfully."
+                        )
+
                 for post in posts:
                     post_id = post.get("_id")
                     post_id = (
@@ -167,6 +252,52 @@ def import_batch_data():
                     new_post.save()
 
                     print(f"Post {new_post.id} saved successfully.")
+
+                    if post_id in notification_by_posts:
+                        for notification in notification_by_posts[post_id]:
+                            new_notification = {
+                                "batch_id": batch.id,
+                                "post_id": new_post.id,
+                                "user_id": notification.get("user_id"),
+                                "thumbnail": notification.get("thumbnail", ""),
+                                "images": notification.get("images", ""),
+                                "captions": notification.get("captions", ""),
+                                "content": notification.get("content", ""),
+                                "description": notification.get("description", ""),
+                                "description_korea": notification.get(
+                                    "description_korea", ""
+                                ),
+                                "hashtag": notification.get("hashtag", ""),
+                                "video_url": notification.get("video_url", ""),
+                                "render_id": notification.get("render_id", ""),
+                                "title": notification.get("title", ""),
+                                "notification_type": notification.get(
+                                    "notification_type", ""
+                                ),
+                                "status_sns": notification.get("status_sns", 0),
+                                "status": notification.get("status", 1),
+                                "is_read": notification.get("is_read", 0),
+                                "send_telegram": notification.get("send_telegram", 0),
+                                "social_sns_description": notification.get(
+                                    "social_sns_description", ""
+                                ),
+                                "created_at": datetime.fromisoformat(
+                                    notification.get("created_at", {})
+                                    .get("$date", "1970-01-01T00:00:00Z")
+                                    .replace("Z", "+00:00")
+                                ),
+                                "updated_at": datetime.fromisoformat(
+                                    notification.get("updated_at", {})
+                                    .get("$date", "1970-01-01T00:00:00Z")
+                                    .replace("Z", "+00:00")
+                                ),
+                            }
+                            new_notification = Notification(**new_notification)
+                            new_notification.save()
+
+                            print(
+                                f"Notification {new_notification.id} for Post {new_post.id} saved successfully."
+                            )
 
                     if post_id in social_posts:
                         for social in social_posts[post_id]:
