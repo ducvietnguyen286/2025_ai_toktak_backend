@@ -72,8 +72,10 @@ class TiktokTokenService:
 
             redis_key_done = f"toktak:users:{user_id}:refreshtoken-done:TIKTOK"
             redis_key_check = f"toktak:users:{user_id}:refresh-token:TIKTOK"
+            redis_key_result = f"toktak:users:{user_id}:refresh-token-result:TIKTOK"
             unique_value = f"{time.time()}_{user_id}_{uuid.uuid4()}"
             redis_key_check_count = f"toktak:users:{user_id}:logging:TIKTOK"
+
             redis_client.rpush(redis_key_check_count, unique_value)
             redis_client.expire(redis_key_check_count, 300)
 
@@ -96,6 +98,7 @@ class TiktokTokenService:
                 else:
                     is_refresing = redis_client.get(redis_key_check)
 
+            is_done = ""
             check_refresh = is_refresing.decode("utf-8") if is_refresing else None
 
             if check_refresh:
@@ -107,11 +110,17 @@ class TiktokTokenService:
                     if refresh_done_str:
                         redis_client.delete(redis_key_check)
                         redis_client.delete(redis_key_done)
-                        if refresh_done_str == "failled":
-                            return False
-                        return True
+                        is_done = refresh_done_str
+                        break
 
                     time.sleep(1)
+
+            if is_done and is_done != "":
+                result_redis = redis_client.get(redis_key_result)
+                result_redis = json.loads(result_redis) if result_redis else None
+                if is_done == "failled":
+                    return {"status": "failled", "result": result_redis}
+                return {"status": "success", "result": result_redis}
 
             redis_client.set(redis_key_check, 1, ex=300)
 
@@ -151,20 +160,18 @@ class TiktokTokenService:
             data_token = token_data.get("data")
 
             if not token_data or not data_token or not data_token.get("access_token"):
-                # user_link.status = 0
-                # user_link.save()
-
                 redis_client.set(redis_key_done, "failled", ex=300)
-
-                return False
+                redis_client.set(redis_key_result, json.dumps(data_token), ex=300)
+                return {"status": "failled", "result": data_token}
 
             meta.update(data_token)
             user_link.meta = json.dumps(meta)
             user_link.save()
 
             redis_client.set(redis_key_done, "success", ex=300)
+            redis_client.set(redis_key_result, json.dumps(data_token), ex=300)
 
-            return True
+            return {"status": "success", "result": data_token}
         except Exception as e:
             traceback.print_exc()
             log_tiktok_message(e)
@@ -287,11 +294,9 @@ class TiktokService(BaseService):
                 refreshed = TiktokTokenService.refresh_token(
                     link=self.link, user=self.user
                 )
-                if refreshed:
-                    self.user_link = UserService.find_user_link(
-                        link_id=self.link.id, user_id=self.user.id
-                    )
-                    self.meta = json.loads(self.user_link.meta)
+                if refreshed["status"] == "success":
+                    new_meta = refreshed["result"]
+                    self.meta = new_meta
                     return self.upload_image(medias=json.dumps(medias), retry=retry + 1)
                 else:
                     self.save_errors(
@@ -428,11 +433,9 @@ class TiktokService(BaseService):
                 refreshed = TiktokTokenService.refresh_token(
                     link=self.link, user=self.user
                 )
-                if refreshed:
-                    self.user_link = UserService.find_user_link(
-                        link_id=self.link.id, user_id=self.user.id
-                    )
-                    self.meta = json.loads(self.user_link.meta)
+                if refreshed["status"] == "success":
+                    new_meta = refreshed["result"]
+                    self.meta = new_meta
                     return self.upload_video_by_url(
                         media_url=media_url, retry=retry + 1
                     )
@@ -521,11 +524,9 @@ class TiktokService(BaseService):
                 }
 
             refreshed = TiktokTokenService.refresh_token(link=self.link, user=self.user)
-            if refreshed:
-                self.user_link = UserService.find_user_link(
-                    link_id=self.link.id, user_id=self.user.id
-                )
-                self.meta = json.loads(self.user_link.meta)
+            if refreshed["status"] == "success":
+                new_meta = refreshed["result"]
+                self.meta = new_meta
 
                 if count <= 6:
                     self.save_uploading(self.progress + (count * 10))
@@ -670,11 +671,9 @@ class TiktokService(BaseService):
                 return False
 
             refreshed = TiktokTokenService.refresh_token(link=self.link, user=self.user)
-            if refreshed:
-                self.user_link = UserService.find_user_link(
-                    link_id=self.link.id, user_id=self.user.id
-                )
-                self.meta = json.loads(self.user_link.meta)
+            if refreshed["status"] == "success":
+                new_meta = refreshed["result"]
+                self.meta = new_meta
                 return self.upload_video_init(media=media, retry=retry + 1)
             else:
                 self.save_errors(
