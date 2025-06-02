@@ -363,7 +363,6 @@ class CreateContent:
                         description = json.dumps(docx)
                     if parse_response and "content" in parse_response:
                         content = parse_response.get("content", "")
-                        cleared_images = data.get("cleared_images", [])
 
                         for index, image_url in enumerate(process_images):
                             content = content.replace(f"IMAGE_URL_{index}", image_url)

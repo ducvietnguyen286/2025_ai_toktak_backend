@@ -930,8 +930,12 @@ class ImageMaker:
             stroke_width=template.stroke_width,
             bottom_margin=260,
         )
-        image.save(image_path)
-        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+
+        new_name = f"{int(time.time())}_{uuid.uuid4().hex}.jpg"
+        new_image_path = f"{upload_folder}/{batch_id}/{new_name}"
+
+        image.save(new_image_path)
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
 
         file_size = os.path.getsize(image_path)
         mime_type = "image/jpeg"
@@ -986,10 +990,13 @@ class ImageMaker:
             stroke_width=template.stroke_width,
         )
 
-        image.save(image_path)
-        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
+        new_name = f"{int(time.time())}_{uuid.uuid4().hex}.jpg"
+        new_image_path = f"{upload_folder}/{batch_id}/{new_name}"
 
-        file_size = os.path.getsize(image_path)
+        image.save(new_image_path)
+        image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
+
+        file_size = os.path.getsize(new_image_path)
         mime_type = "image/jpeg"
 
         return {
