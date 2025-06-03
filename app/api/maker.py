@@ -1781,7 +1781,7 @@ class APITemplateVideo(Resource):
 
             if not user_template:
                 user_template = PostService.create_user_template_make_video(
-                    user_id=current_user.id 
+                    user_id=current_user.id
                 )
 
             user_template_data = user_template.to_dict()
@@ -1881,7 +1881,7 @@ class APIAdminHistories(Resource):
             "search_text": search_text,
         }
         posts = PostService.admin_get_posts_upload(data_search)
-        
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
         return {
             "status": True,
             "message": "Success",
@@ -1889,9 +1889,21 @@ class APIAdminHistories(Resource):
             "page": posts.page,
             "per_page": posts.per_page,
             "total_pages": posts.pages,
-            "data": [post.to_dict() for post in posts.items],
+            "data": [
+                {
+                    **post_json,
+                    "video_path": convert_video_path(
+                        post_json.get("video_path", ""), current_domain
+                    ),
+                    "video_url": convert_video_path(
+                        post_json.get("video_path", ""), current_domain
+                    ),
+                }
+                for post in posts.items
+                if (post_json := post._to_json())
+            ],
         }, 200
-        
+
 
 @ns.route("/copy-blog")
 class APICopyBlog(Resource):
