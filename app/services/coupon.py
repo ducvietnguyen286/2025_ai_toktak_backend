@@ -191,6 +191,15 @@ class CouponService:
                 CouponCode.is_used == query_params["type_use_coupon"]
             )
 
+        if (
+            "category_id" in query_params
+            and query_params["category_id"]
+            and query_params["category_id"] != ""
+        ):
+            code_query = code_query.filter(
+                CouponCode.coupon_id == query_params["category_id"]
+            )
+
         if "coupon_id" in query_params and query_params["coupon_id"]:
             code_query = code_query.filter(
                 CouponCode.coupon_id == query_params["coupon_id"]
@@ -260,6 +269,71 @@ class CouponService:
             data = coupon_code.to_dict()
             coupon_codes.append(data)
 
+        return coupon_codes, total_codes
+
+    @staticmethod
+    def get_coupon_category(query_params={}):
+        code_query = Coupon.query
+        logger.info(query_params)
+
+        if (
+            "type_coupon" in query_params
+            and  query_params["type_coupon"] != ""
+        ):
+            code_query = code_query.filter(Coupon.type == query_params["type_coupon"])
+            
+
+        # Áp dụng các bộ lọc nếu có
+        if "code" in query_params and query_params["code"]:
+            search_term = f"%{query_params['code']}%"
+
+            code_query = code_query.filter(
+                or_(
+                    Coupon.description.ilike(search_term),
+                    Coupon.name.ilike(search_term),
+                )
+            )
+
+        if "from_expired" in query_params and query_params["from_expired"]:
+            code_query = code_query.filter(
+                Coupon.expired_from >= query_params["from_expired"]
+            )
+        if "to_expired" in query_params and query_params["to_expired"]:
+            code_query = code_query.filter(Coupon.expired <= query_params["to_expired"])
+        if "from_created_at" in query_params and query_params["from_created_at"]:
+            code_query = code_query.filter(
+                Coupon.created_at >= query_params["from_created_at"]
+            )
+        if "to_created_at" in query_params and query_params["to_created_at"]:
+            code_query = code_query.filter(
+                Coupon.created_at <= query_params["to_created_at"]
+            )
+        total_codes = code_query.count()
+
+        # Sắp xếp kết quả nếu có yêu cầu
+        if "type_order" in query_params and query_params["type_order"]:
+            sort = query_params["type_order"].split("_")
+            if len(sort) == 2:
+                field, order = sort
+                order = order.lower()
+                if order == "asc":
+                    code_query = code_query.order_by(getattr(Coupon, field).asc())
+                elif order == "desc":
+                    code_query = code_query.order_by(getattr(Coupon, field).desc())
+            else:
+                code_query = code_query.order_by(Coupon.id.desc())
+
+        # Phân trang nếu có yêu cầu
+        if "page" in query_params and "limit" in query_params:
+            page = int(query_params["page"])
+            limit = int(query_params["limit"])
+            code_query = code_query.offset((page - 1) * limit).limit(limit)
+
+        # Xử lý kết quả truy vấn
+        coupon_codes = []
+        for coupon_code in code_query.all():
+            data = coupon_code._to_json()
+            coupon_codes.append(data)
         return coupon_codes, total_codes
 
     @staticmethod
