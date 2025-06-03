@@ -874,15 +874,17 @@ class APITiktokLogin(Resource):
         properties={
             "user_id": {"type": "string"},
             "link_id": {"type": "string"},
+            "redirect_uri": {"type": "string"},
         },
-        required=["user_id", "link_id"],
+        required=["user_id", "link_id", "redirect_uri"],
     )
     def get(self, args):
         try:
             user_id = args.get("user_id")
             link_id = args.get("link_id")
+            redirect_uri = args.get("redirect_uri", "")
 
-            state_token = self.generate_state_token(user_id, link_id)
+            state_token = self.generate_state_token(user_id, link_id, redirect_uri)
             scope = "user.info.basic,user.info.profile,video.publish,video.upload"
 
             params = {
@@ -902,13 +904,14 @@ class APITiktokLogin(Resource):
             print(f"Error send post to link: {str(e)}")
             return False
 
-    def generate_state_token(self, user_id, link_id):
+    def generate_state_token(self, user_id, link_id, redirect_uri):
 
         nonce = secrets.token_urlsafe(16)
         payload = {
             "nonce": nonce,
             "user_id": user_id,
             "link_id": link_id,
+            "redirect_uri": redirect_uri,
             "exp": (datetime.datetime.now() + datetime.timedelta(days=30)).timestamp(),
         }
         token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
@@ -985,6 +988,7 @@ class APIGetCallbackTiktok(Resource):
             except Exception as e:
                 return f"Error parsing response: {e}", 500
 
+            redirect_uri = payload.get("redirect_uri", PAGE_PROFILE)
             user_id = payload.get("user_id")
             link_id = payload.get("link_id")
             int_user_id = int(user_id)
@@ -1000,7 +1004,7 @@ class APIGetCallbackTiktok(Resource):
             total_link_active = current_user.total_link_active
             if total_user_links >= total_link_active:
                 return redirect(
-                    PAGE_PROFILE
+                    redirect_uri
                     + f"?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=최대 {total_link_active}개의 채널만 설정할 수 있습니다."
                 )
 
@@ -1021,8 +1025,8 @@ class APIGetCallbackTiktok(Resource):
                 error = error_data.get("error_code")
                 error_description = error_data.get("description")
                 return redirect(
-                    PAGE_PROFILE
-                    + "?error="
+                    redirect_uri
+                    + "?tabIndex=2&error="
                     + error
                     + "&error_description="
                     + error_description
@@ -1067,7 +1071,7 @@ class APIGetCallbackTiktok(Resource):
                 user_link.url = url
                 user_link.save()
 
-            return redirect(PAGE_PROFILE + "?tabIndex=2&success=1")
+            return redirect(redirect_uri + "?tabIndex=2&success=1")
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
