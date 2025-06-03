@@ -1900,8 +1900,8 @@ class APIAdminHistories(Resource):
                     ),
                 }
                 for post in posts.items
-                if (post_json := post._to_json())
-            ],
+                if (post_json := post.to_dict())
+            ], 
         }, 200
 
 
