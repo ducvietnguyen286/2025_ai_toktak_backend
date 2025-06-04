@@ -360,9 +360,9 @@ def get_subscription_name(subscription):
         elif subscription == "COUPON_STANDARD":
             subscription_name = "기업형 스탠다드 플랜"
         elif subscription == "NEW_USER":
-            subscription_name = "신규 가입 선물"
+            subscription_name = "베이직 플랜"
         elif subscription == "COUPON_KOL":
-            subscription_name = "기업형 스탠다드 플랜"
+            subscription_name = "베이직 플랜"
         else:
             package_data = const.PACKAGE_CONFIG.get(subscription_name)
             if not package_data:

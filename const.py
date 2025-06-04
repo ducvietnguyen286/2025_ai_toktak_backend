@@ -160,7 +160,7 @@ BASIC_DURATION_DAYS = 30
 MAX_ADDON_PER_BASIC = 2
 PACKAGE_CONFIG = {
     "BASIC": {
-        "pack_name": "베이직",
+        "pack_name": "베이직 플랜",
         "pack_description": "SNS 홍보를 처음 시작하는 분",
         "order_index": 1,
         "total_create": 30,
@@ -193,7 +193,7 @@ PACKAGE_CONFIG = {
         "total_link_active": 1,
     },
     "STANDARD": {
-        "pack_name": "스탠다드",
+        "pack_name": "스탠다드 플랜",
         "pack_description": "SNS를 더 빠르게 성장시키고 싶은 분",
         "order_index": 2,
         "total_create": 60,
@@ -206,7 +206,7 @@ PACKAGE_CONFIG = {
         "total_link_active": 7,
     },
     "BUSINESS": {
-        "pack_name": "기업형 스탠다드",
+        "pack_name": "기업형 스탠다드 플랜",
         "pack_description": "브랜드, 플랫폼, 에이전시 고객을 위한 플랜",
         "order_index": 3,
         "total_create": 30,
