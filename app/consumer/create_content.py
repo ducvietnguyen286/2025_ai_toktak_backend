@@ -261,6 +261,9 @@ class CreateContent:
                 )
                 return None
 
+            post.process_status = const.POST_PROCESSING_STATUS["PROCESSING"]
+            post.save()
+
             is_paid_advertisements = batch.is_paid_advertisements
             template_info = json.loads(batch.template_info)
             data = json.loads(batch.content)
@@ -344,19 +347,55 @@ class CreateContent:
                         ) = result
 
                 elif type == "image":
-                    response, maker_images, captions, file_size, mime_type = (
-                        process_create_post_image(process_images, data, batch, post)
+                    result = process_create_post_image(
+                        process_images, data, batch, post
                     )
+                    if result is None:
+                        response, maker_images, captions, file_size, mime_type = (
+                            None,
+                            [],
+                            [],
+                            0,
+                            "",
+                        )
+                    else:
+                        (
+                            response,
+                            maker_images,
+                            captions,
+                            file_size,
+                            mime_type,
+                        ) = result
                 elif type == "blog":
-                    (
-                        response,
-                        docx_url,
-                        file_size,
-                        mime_type,
-                        maker_images,
-                        title,
-                        content,
-                    ) = process_create_post_blog(process_images, data, batch, post)
+                    result = process_create_post_blog(process_images, data, batch, post)
+                    if result is None:
+                        (
+                            response,
+                            docx_url,
+                            file_size,
+                            mime_type,
+                            maker_images,
+                            title,
+                            content,
+                        ) = (
+                            None,
+                            "",
+                            0,
+                            "",
+                            [],
+                            "",
+                            "",
+                        )
+                    else:
+                        (
+                            response,
+                            docx_url,
+                            file_size,
+                            mime_type,
+                            maker_images,
+                            title,
+                            content,
+                        ) = result
 
                 if response:
                     parse_caption = json.loads(response)
@@ -389,6 +428,10 @@ class CreateContent:
                         "image": MessageError.CREATE_POST_IMAGE.value,
                         "blog": MessageError.CREATE_POST_BLOG.value,
                     }
+
+                    post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+                    post.error_message = message_error.get(type, "")
+                    post.save()
 
                     return None
 
@@ -470,6 +513,9 @@ class CreateContent:
                         notification_type="blog",
                     )
 
+                post.process_status = const.POST_PROCESSING_STATUS["COMPLETED"]
+                post.save()
+
                 return post.id
             except Exception as e:
                 if type == "video":
@@ -503,6 +549,10 @@ class CreateContent:
                         f"Error make_single_post Traceback: {traceback}"
                     )
                 log_create_content_message(f"Error in make_single_post: {e}")
+                post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+                post.error_message = f"Create Post False {str(e)}"
+                post.save()
+
                 return None
 
 
