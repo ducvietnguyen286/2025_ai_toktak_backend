@@ -330,72 +330,41 @@ class CreateContent:
                         process_images, data, batch, post
                     )
                     if result is None:
-                        response, render_id, hooking, maker_images, captions = (
-                            None,
-                            "",
-                            [],
-                            [],
-                            [],
-                        )
-                    else:
-                        (
-                            response,
-                            render_id,
-                            hooking,
-                            maker_images,
-                            captions,
-                        ) = result
+                        return None
+                    (
+                        response,
+                        render_id,
+                        hooking,
+                        maker_images,
+                        captions,
+                    ) = result
 
                 elif type == "image":
                     result = process_create_post_image(
                         process_images, data, batch, post
                     )
                     if result is None:
-                        response, maker_images, captions, file_size, mime_type = (
-                            None,
-                            [],
-                            [],
-                            0,
-                            "",
-                        )
-                    else:
-                        (
-                            response,
-                            maker_images,
-                            captions,
-                            file_size,
-                            mime_type,
-                        ) = result
+                        return None
+                    (
+                        response,
+                        maker_images,
+                        captions,
+                        file_size,
+                        mime_type,
+                    ) = result
                 elif type == "blog":
                     result = process_create_post_blog(process_images, data, batch, post)
                     if result is None:
-                        (
-                            response,
-                            docx_url,
-                            file_size,
-                            mime_type,
-                            maker_images,
-                            title,
-                            content,
-                        ) = (
-                            None,
-                            "",
-                            0,
-                            "",
-                            [],
-                            "",
-                            "",
-                        )
-                    else:
-                        (
-                            response,
-                            docx_url,
-                            file_size,
-                            mime_type,
-                            maker_images,
-                            title,
-                            content,
-                        ) = result
+                        return None
+                    (
+                        response,
+                        docx_url,
+                        file_size,
+                        mime_type,
+                        maker_images,
+                        title,
+                        content,
+                    ) = result
 
                 if response:
                     parse_caption = json.loads(response)
@@ -601,15 +570,12 @@ def process_create_post_blog(process_images, data, batch, post):
         else:
             message_error = MessageError.CREATE_POST_BLOG.value
             log_create_content_message(f"Error creating blog post: {message_error}")
-            return (
-                None,
-                docx_url,
-                file_size,
-                mime_type,
-                process_images,
-                docx_title,
-                docx_content,
-            )
+
+            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+            post.error_message = message_error
+            post.save()
+
+            return None
 
         return (
             response,
@@ -627,15 +593,10 @@ def process_create_post_blog(process_images, data, batch, post):
                 f"Error in process_create_post_blog: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
             )
         logger.error(f"Error in process_create_post_blog: {e}")
-        return (
-            None,
-            docx_url,
-            file_size,
-            mime_type,
-            process_images,
-            docx_title,
-            docx_content,
-        )
+        post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+        post.error_message = str(e)
+        post.save()
+        return None
 
 
 def process_create_post_image(process_images, data, batch, post):
@@ -652,6 +613,11 @@ def process_create_post_image(process_images, data, batch, post):
         template_info = json.loads(batch.template_info)
         image_template_id = template_info.get("image_template_id", "")
         if image_template_id == "":
+            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+            post.error_message = (
+                "Image template ID is required for image post creation."
+            )
+            post.save()
             return None
 
         is_avif = check_is_avif(data)
@@ -679,7 +645,12 @@ def process_create_post_image(process_images, data, batch, post):
         else:
             message_error = MessageError.CREATE_POST_IMAGE.value
             log_create_content_message(f"Error creating image post: {message_error}")
-            return None, maker_images, captions, file_size, mime_type
+
+            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+            post.error_message = message_error
+            post.save()
+
+            return None
 
         return response, maker_images, captions, file_size, mime_type
     except Exception as e:
@@ -689,7 +660,10 @@ def process_create_post_image(process_images, data, batch, post):
                 f"process_create_post_image Traceback: {traceback}"
             )
         logger.error(f"Error in process_create_post_image: {e}")
-        return response, maker_images, captions, file_size, mime_type
+        post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+        post.error_message = str(e)
+        post.save()
+        return None
 
 
 def process_create_post_video(process_images, data, batch, post):
@@ -777,23 +751,35 @@ def process_create_post_video(process_images, data, batch, post):
                     maker_images = []
                     captions = []
                     log_create_content_message(f"Error creating video post, {result}")
-                    return response, render_id, hooking, maker_images, captions
+
+                    post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+                    post.error_message = result.get("message", "Unknown error")
+                    post.save()
+
+                    return None
 
             else:
                 render_id = ""
                 hooking = []
                 maker_images = []
                 captions = []
+
                 message_error = MessageError.CREATE_POST_VIDEO.value
-                log_create_content_message(
-                    f"Error creating video post: {message_error}"
-                )
-                return response, render_id, hooking, maker_images, captions
+                post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+                post.error_message = message_error
+                post.save()
+
+                return None
 
         else:
             message_error = MessageError.CREATE_POST_VIDEO.value
-            log_create_content_message(f"Error creating video post: {message_error}")
-            return response, render_id, hooking, maker_images, captions
+            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+            post.error_message = message_error
+            post.save()
+            log_create_content_message(
+                f"Error creating video post {post.id}: {message_error} ------ CHATGPT"
+            )
+            return None
 
         return response, render_id, hooking, maker_images, captions
     except Exception as e:
@@ -803,4 +789,9 @@ def process_create_post_video(process_images, data, batch, post):
                 f"process_create_post_video Traceback: {traceback}"
             )
         logger.error(f"Error in process_create_post_video: {e}")
-        return response, render_id, hooking, maker_images, captions
+
+        post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+        post.error_message = str(e)
+        post.save()
+
+        return None
