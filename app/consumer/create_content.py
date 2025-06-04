@@ -119,7 +119,7 @@ class CreateContent:
             traceback = e.__traceback__
             if traceback:
                 log_create_content_message(
-                    f"Error creating batch content: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                    f"Error creating batch content Traceback: {traceback}"
                 )
             log_create_content_message(f"Error creating batch content: {e}")
             return None
@@ -210,7 +210,7 @@ class CreateContent:
             traceback = e.__traceback__
             if traceback:
                 log_create_content_message(
-                    f"Error in create_images: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                    f"Error creating create_images Traceback: {traceback}"
                 )
             log_create_content_message(f"Error in create_images: {e}")
             return None
@@ -246,7 +246,7 @@ class CreateContent:
             traceback = e.__traceback__
             if traceback:
                 log_create_content_message(
-                    f"Error finding batch: {e} at line {traceback.tb_lineno}"
+                    f"Error finding batch Traceback: {traceback}"
                 )
             log_create_content_message(f"Error finding batch: {e}")
             return None
@@ -323,9 +323,26 @@ class CreateContent:
                 description = ""
 
                 if type == "video":
-                    response, render_id, hooking, maker_images, captions = (
-                        process_create_post_video(process_images, data, batch, post)
+                    result = process_create_post_video(
+                        process_images, data, batch, post
                     )
+                    if result is None:
+                        response, render_id, hooking, maker_images, captions = (
+                            None,
+                            "",
+                            [],
+                            [],
+                            [],
+                        )
+                    else:
+                        (
+                            response,
+                            render_id,
+                            hooking,
+                            maker_images,
+                            captions,
+                        ) = result
+
                 elif type == "image":
                     response, maker_images, captions, file_size, mime_type = (
                         process_create_post_image(process_images, data, batch, post)
@@ -483,10 +500,9 @@ class CreateContent:
                 traceback = e.__traceback__
                 if traceback:
                     log_create_content_message(
-                        f"Error in make_single_post: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                        f"Error make_single_post Traceback: {traceback}"
                     )
                 log_create_content_message(f"Error in make_single_post: {e}")
-                self.retry(exc=e, countdown=5, max_retries=1)
                 return None
 
 
@@ -620,7 +636,7 @@ def process_create_post_image(process_images, data, batch, post):
         traceback = e.__traceback__
         if traceback:
             log_create_content_message(
-                f"Error in process_create_post_image: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                f"process_create_post_image Traceback: {traceback}"
             )
         logger.error(f"Error in process_create_post_image: {e}")
         return response, maker_images, captions, file_size, mime_type
@@ -711,7 +727,7 @@ def process_create_post_video(process_images, data, batch, post):
                     maker_images = []
                     captions = []
                     log_create_content_message(f"Error creating video post")
-                    return None, render_id, hooking, maker_images, captions
+                    return response, render_id, hooking, maker_images, captions
 
             else:
                 render_id = ""
@@ -722,19 +738,19 @@ def process_create_post_video(process_images, data, batch, post):
                 log_create_content_message(
                     f"Error creating video post: {message_error}"
                 )
-                return None, render_id, hooking, maker_images, captions
+                return response, render_id, hooking, maker_images, captions
 
         else:
             message_error = MessageError.CREATE_POST_VIDEO.value
             log_create_content_message(f"Error creating video post: {message_error}")
-            return None, render_id, hooking, maker_images, captions
+            return response, render_id, hooking, maker_images, captions
 
         return response, render_id, hooking, maker_images, captions
     except Exception as e:
         traceback = e.__traceback__
         if traceback:
             log_create_content_message(
-                f"Error in process_create_post_video: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                f"process_create_post_video Traceback: {traceback}"
             )
         logger.error(f"Error in process_create_post_video: {e}")
         return response, render_id, hooking, maker_images, captions
