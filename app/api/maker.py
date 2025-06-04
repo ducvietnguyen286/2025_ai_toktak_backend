@@ -1086,15 +1086,27 @@ class APIAdminHistories(Resource):
             "search_text": search_text,
         }
         posts = PostService.admin_get_posts_upload(data_search)
+        current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
         return {
-            "current_user": current_user.id,
             "status": True,
             "message": "Success",
-            "total": posts.get("total", 0),
-            "page": posts.get("page", 1),
-            "per_page": posts.get("per_page", 10),
-            "total_pages": posts.get("pages", 1),
-            "data": posts.get("items", []),
+            "total": posts.total,
+            "page": posts.page,
+            "per_page": posts.per_page,
+            "total_pages": posts.pages,
+            "data": [
+                {
+                    **post_json,
+                    "video_path": convert_video_path(
+                        post_json.get("video_path", ""), current_domain
+                    ),
+                    "video_url": convert_video_path(
+                        post_json.get("video_path", ""), current_domain
+                    ),
+                }
+                for post in posts.items
+                if (post_json := post.to_dict())
+            ], 
         }, 200
 
 

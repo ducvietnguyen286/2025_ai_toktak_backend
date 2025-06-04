@@ -168,16 +168,16 @@ class APIAdminNotificationHistories(Resource):
             "type_notification": type_notification,
             "search_key": search_key,
         }
-        result = NotificationServices.get_admin_notifications(data_search)
+        notifications = NotificationServices.get_admin_notifications(data_search)
         return {
             "status": True,
             "message": "Success",
-            "total": result["total"],
-            "page": result["page"],
-            "per_page": result["per_page"],
-            "total_pages": result["pages"],
-            "data": [item._to_json() for item in result["items"]],
-        }, 200
+            "total": notifications.total,
+            "page": notifications.page,
+            "per_page": notifications.per_page,
+            "total_pages": notifications.pages,
+            "data": [notification.to_dict() for notification in notifications.items],
+        }, 200 
 
 
 @ns.route("/admin/delete_notification")
