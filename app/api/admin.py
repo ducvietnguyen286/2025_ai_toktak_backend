@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.lib.logger import logger
 import json
-from flask import request
+from flask import request, send_file
 from app.services.auth import AuthService
 from app.services.referral_service import ReferralService
 from app.lib.string import get_level_images
@@ -16,6 +16,9 @@ import const
 import os
 import secrets
 import string
+import pandas as pd
+from io import BytesIO
+import traceback
 
 from app.services.social_post import SocialPostService
 
@@ -395,5 +398,78 @@ class APIAdminSaveUser(Resource):
             logger.error(f"Exception: Updated User Fail  :  {str(e)}")
             return Response(
                 message="Updated User Fail",
+                code=201,
+            ).to_dict()
+
+
+@ns.route("/download-excel")
+class APIDownloadUserExcel(Resource):
+    def post(self):
+        try:
+            data = request.get_json()
+            type_order = data.get("type_order")
+            type_post = data.get("type_post")
+            time_range = data.get("time_range")
+            search = data.get("search")
+            member_type = data.get("member_type")
+            status = data.get("status")
+
+            data_search = {
+                "page": 1,
+                "per_page": 99999999999,
+                "status": status,
+                "type_order": type_order,
+                "type_post": type_post,
+                "time_range": time_range,
+                "search": search,
+                "member_type": member_type,
+            }
+            users = UserService.admin_search_users(data_search)
+
+            data = users.items
+
+            # Convert data thành DataFrame
+            df = pd.DataFrame(
+                [
+                    {
+                        "ID": u.id,
+                        "Name": u.name,
+                        "Email": u.email,
+                        "Subscription": u.subscription,
+                        "Created At": (
+                            u.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                            if u.created_at
+                            else ""
+                        ),
+                        "Subscription Expired At": (
+                            u.subscription_expired.strftime("%Y-%m-%d %H:%M:%S")
+                            if u.subscription_expired
+                            else ""
+                        ),
+                    }
+                    for u in data
+                ]
+            )
+
+            # Ghi vào bộ nhớ tạm
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False, sheet_name="Users")
+
+            output.seek(0)
+
+            filename = f"users_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            return send_file(
+                output,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                download_name=filename,
+            )
+
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message=f"download-excel.(Error code : ) {str(e)}",
                 code=201,
             ).to_dict()

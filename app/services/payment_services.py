@@ -152,7 +152,7 @@ class PaymentService:
         return active_payment
 
     @staticmethod
-    def create_new_payment(current_user, package_name, status="PENDING", addon_count=0):
+    def create_new_payment(current_user, package_name, status="PENDING", addon_count=0 , method="REQUEST" ):
         now = datetime.now()
         origin_price = PACKAGE_CONFIG[package_name]["price"]
         start_date = now
@@ -169,7 +169,7 @@ class PaymentService:
             "end_date": end_date,
             "customer_name": current_user.name or current_user.email,
             "total_create": PACKAGE_CONFIG[package_name]["total_create"],
-            "method": "REQUEST",
+            "method": method,
             "requested_at": start_date,
             "total_link": PACKAGE_CONFIG[package_name]["total_link"],
             "description": f"{package_name} 패키지를 구매하기",
@@ -302,9 +302,7 @@ class PaymentService:
 
     @staticmethod
     def get_admin_billings(data_search):
-        # Query cơ bản với các điều kiện
-        query = Payment.query
-
+        query = Payment.query.filter(Payment.method != "NEW_USER")
         search_key = data_search.get("search_key", "")
 
         if search_key != "":

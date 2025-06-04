@@ -121,7 +121,9 @@ class AuthService:
                 UserService.create_user_history(**data_new_user_history)
 
                 # payment history
-                payment = PaymentService.create_new_payment(user, "BASIC", "PAID")
+                payment = PaymentService.create_new_payment(
+                    user, "BASIC", "PAID", 0, "NEW_USER"
+                )
 
             else:
                 user = User.query.filter_by(email=email).first()
@@ -165,7 +167,9 @@ class AuthService:
                 UserService.create_user_history(**data_new_user_history)
 
                 # payment history
-                payment = PaymentService.create_new_payment(user, "BASIC", "PAID")
+                payment = PaymentService.create_new_payment(
+                    user, "BASIC", "PAID", 0, "NEW_USER"
+                )
 
                 is_new_user = 1
 
