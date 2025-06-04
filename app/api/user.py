@@ -859,7 +859,7 @@ class APISelectFacebookPage(Resource):
 
 
 TIKTOK_REDIRECT_URL = (
-    os.environ.get("CURRENT_DOMAIN") + "/api/v1/user/oauth/tiktok-callback"
+    "https://apitoktak.voda-play.com/api/v1/user/oauth/tiktok-callback"
 )
 TIKTOK_AUTHORIZATION_URL = "https://www.tiktok.com/v2/auth/authorize/"
 TIKTOK_CLIENT_KEY = os.environ.get("TIKTOK_CLIENT_KEY") or ""
