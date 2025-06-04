@@ -152,7 +152,9 @@ class PaymentService:
         return active_payment
 
     @staticmethod
-    def create_new_payment(current_user, package_name, status="PENDING", addon_count=0 , method="REQUEST" ):
+    def create_new_payment(
+        current_user, package_name, status="PENDING", addon_count=0, method="REQUEST"
+    ):
         now = datetime.now()
         origin_price = PACKAGE_CONFIG[package_name]["price"]
         start_date = now
@@ -352,6 +354,15 @@ class PaymentService:
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
             query = query.filter(Payment.created_at >= start_date)
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                query = query.filter(Payment.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                query = query.filter(Payment.created_at < to_date)
 
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
@@ -745,8 +756,7 @@ class PaymentService:
             return res.json(), res.status_code
         except requests.RequestException as e:
             return {"message": f"TossPayments 연결 오류: {str(e)}"}, 500
-        
-        
+
     @staticmethod
     def billing_authorizations_toss(auth_key, customer_key):
         TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY")

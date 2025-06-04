@@ -36,6 +36,8 @@ class UserProductApi(Resource):
             type_notification = request.args.get("type_notification", "", type=str)
             search_key = request.args.get("search_key", "", type=str)
             user_id = request.args.get("user_id", "", type=str)
+            from_date = request.args.get("from_date", "", type=str)
+            to_date = request.args.get("to_date", "", type=str)
             data_search = {
                 "page": page,
                 "per_page": per_page,
@@ -46,6 +48,8 @@ class UserProductApi(Resource):
                 "type_notification": type_notification,
                 "search_key": search_key,
                 "user_id": user_id,
+                "from_date": from_date,
+                "to_date": to_date,
             }
             products = ProductService.get_products(data_search)
             return {

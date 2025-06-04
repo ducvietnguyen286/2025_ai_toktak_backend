@@ -231,6 +231,13 @@ class TiktokService(BaseService):
             access_token = self.meta.get("access_token")
             medias = json.loads(medias)
 
+            replace_url = "https://apitoktak.voda-play.com/"
+            need_replace_url = "https://api.toktak.ai/"
+
+            for media in medias:
+                if media.startswith(need_replace_url):
+                    media = media.replace(need_replace_url, replace_url)
+
             URL_IMAGE_UPLOAD = (
                 "https://open.tiktokapis.com/v2/post/publish/content/init/"
             )
@@ -598,27 +605,25 @@ class TiktokService(BaseService):
 
         disable_comment = (
             self.social_post.disable_comment
-            if "disable_comment" in self.social_post
+            if self.social_post.disable_comment
             else False
         )
         privacy_level = (
             self.social_post.privacy_level
-            if "privacy_level" in self.social_post
+            if self.social_post.privacy_level
             else "SELF_ONLY"
         )
         auto_add_music = (
             self.social_post.auto_add_music
-            if "auto_add_music" in self.social_post
+            if self.social_post.auto_add_music
             else False
         )
         disable_duet = (
-            self.social_post.disable_duet
-            if "disable_duet" in self.social_post
-            else False
+            self.social_post.disable_duet if self.social_post.disable_duet else False
         )
         disable_stitch = (
             self.social_post.disable_stitch
-            if "disable_stitch" in self.social_post
+            if self.social_post.disable_stitch
             else False
         )
 
