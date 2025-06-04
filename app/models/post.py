@@ -25,6 +25,8 @@ class Post(db.Model, BaseModel):
     type = db.Column(db.String(10), default="video", index=True)
     status = db.Column(db.Integer, default=1)
     status_sns = db.Column(db.Integer, default=0)
+    process_status = db.Column(db.String(45), default="PENDING")
+    error_message = db.Column(db.Text)
     process_number = db.Column(db.Integer, default=0)
     render_id = db.Column(db.String(500), nullable=False, default="")
     video_path = db.Column(db.String(255), nullable=False, default="")
