@@ -238,6 +238,8 @@ class TiktokService(BaseService):
                 if media.startswith(need_replace_url):
                     media = media.replace(need_replace_url, replace_url)
 
+            log_tiktok_message(f"POST {self.key_log} UPLOAD IMAGE - medias: {medias}")
+
             URL_IMAGE_UPLOAD = (
                 "https://open.tiktokapis.com/v2/post/publish/content/init/"
             )
