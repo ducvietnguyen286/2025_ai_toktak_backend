@@ -257,7 +257,7 @@ class TiktokService(BaseService):
                     "description": self.post.description
                     + "\n\n  #tiktok "
                     + self.post.hashtag,
-                    "privacy_level": "SELF_ONLY",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
+                    "privacy_level": "PUBLIC_TO_EVERYONE",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
                     "disable_duet": False,
                     "disable_comment": False,
                     "disable_stitch": False,
