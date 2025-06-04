@@ -231,6 +231,13 @@ class TiktokService(BaseService):
             access_token = self.meta.get("access_token")
             medias = json.loads(medias)
 
+            replace_url = "https://apitoktak.voda-play.com/"
+            need_replace_url = "https://api.toktak.ai/"
+
+            for media in medias:
+                if media.startswith(need_replace_url):
+                    media = media.replace(need_replace_url, replace_url)
+
             URL_IMAGE_UPLOAD = (
                 "https://open.tiktokapis.com/v2/post/publish/content/init/"
             )
