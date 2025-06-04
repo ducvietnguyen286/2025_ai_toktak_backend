@@ -225,18 +225,20 @@ class TiktokService(BaseService):
             self.save_errors("ERRORED", f"SEND POST {self.key_log}: {str(e)}")
             return True
 
-    def upload_image(self, medias, retry=0):
+    def upload_image(self, input_medias, retry=0):
         try:
             log_tiktok_message(f"Upload POST: {self.key_log} image to Tiktok")
             access_token = self.meta.get("access_token")
-            medias = json.loads(medias)
+            base_medias = json.loads(input_medias)
 
             replace_url = "https://apitoktak.voda-play.com/"
             need_replace_url = "https://api.toktak.ai/"
 
-            for media in medias:
-                if media.startswith(need_replace_url):
-                    media = media.replace(need_replace_url, replace_url)
+            medias = []
+
+            for media in base_medias:
+                media = media.replace(need_replace_url, replace_url)
+                medias.append(media)
 
             log_tiktok_message(f"POST {self.key_log} UPLOAD IMAGE - medias: {medias}")
 
