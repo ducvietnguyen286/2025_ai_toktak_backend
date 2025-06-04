@@ -119,7 +119,7 @@ class CreateContent:
             traceback = e.__traceback__
             if traceback:
                 log_create_content_message(
-                    f"Error creating batch content Traceback: {traceback}"
+                    f"Error creating batch content Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                 )
             log_create_content_message(f"Error creating batch content: {e}")
             return None
@@ -210,8 +210,9 @@ class CreateContent:
             traceback = e.__traceback__
             if traceback:
                 log_create_content_message(
-                    f"Error creating create_images Traceback: {traceback}"
+                    f"Error creating create_images Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                 )
+
             log_create_content_message(f"Error in create_images: {e}")
             return None
 
@@ -246,8 +247,9 @@ class CreateContent:
             traceback = e.__traceback__
             if traceback:
                 log_create_content_message(
-                    f"Error finding batch Traceback: {traceback}"
+                    f"Error finding batch Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                 )
+
             log_create_content_message(f"Error finding batch: {e}")
             return None
 
@@ -515,7 +517,7 @@ class CreateContent:
                 traceback = e.__traceback__
                 if traceback:
                     log_create_content_message(
-                        f"Error make_single_post Traceback: {traceback}"
+                        f"Error make_single_post Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                     )
                 log_create_content_message(f"Error in make_single_post: {e}")
                 post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
@@ -590,7 +592,7 @@ def process_create_post_blog(process_images, data, batch, post):
         traceback = e.__traceback__
         if traceback:
             log_create_content_message(
-                f"Error in process_create_post_blog: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                f"Error in process_create_post_blog: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
             )
         logger.error(f"Error in process_create_post_blog: {e}")
         post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
@@ -657,7 +659,7 @@ def process_create_post_image(process_images, data, batch, post):
         traceback = e.__traceback__
         if traceback:
             log_create_content_message(
-                f"process_create_post_image Traceback: {traceback}"
+                f"process_create_post_image Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
             )
         logger.error(f"Error in process_create_post_image: {e}")
         post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
@@ -786,7 +788,7 @@ def process_create_post_video(process_images, data, batch, post):
         traceback = e.__traceback__
         if traceback:
             log_create_content_message(
-                f"process_create_post_video Traceback: {traceback}"
+                f"process_create_post_video Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
             )
         logger.error(f"Error in process_create_post_video: {e}")
 
