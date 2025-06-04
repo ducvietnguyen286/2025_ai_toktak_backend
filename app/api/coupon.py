@@ -647,6 +647,7 @@ class APIListCouponCodes(Resource):
             "page": {"type": ["string", "null"]},
             "limit": {"type": ["string", "null"]},
             "type_order": {"type": "string"},
+            "category_id": {"type": "string"},
         },
         required=[],
     )
@@ -666,6 +667,7 @@ class APIListCouponCodes(Resource):
         page = int(args.get("page", 1)) if args.get("page") else 1
         limit = int(args.get("per_page", 10)) if args.get("per_page") else 10
         type_order = args.get("type_order", "id_desc")
+        category_id = args.get("category_id", "")
 
         if from_created_at:
             from_created_at = datetime.datetime.strptime(
@@ -714,8 +716,124 @@ class APIListCouponCodes(Resource):
             "page": page,
             "limit": limit,
             "type_order": type_order,
+            "category_id": category_id,
         }
         coupon_codes, total_codes = CouponService.get_coupon_codes(query_params)
+
+        total_pages = total_codes // limit + (1 if total_codes % limit > 0 else 0)
+        pagination = {
+            "page": page,
+            "limit": limit,
+            "total": total_codes,
+            "total_pages": total_pages,
+            "has_next": total_codes > page * limit,
+            "has_prev": page > 1,
+        }
+
+        return {
+            "status": True,
+            "message": "Lấy danh sách coupon thành công",
+            "total": total_codes,
+            "page": page,
+            "per_page": limit,
+            "total_pages": total_pages,
+            "data": coupon_codes,
+        }, 200
+
+
+
+@ns.route("/category")
+class APIListCouponCodes(Resource):
+
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "coupon_id": {"type": ["string", "null"]},
+            "code": {"type": "string"},
+            "is_used": {"type": ["string", "null"]},
+            "is_active": {"type": "boolean"},
+            "from_created_at": {"type": "string"},
+            "to_created_at": {"type": "string"},
+            "from_expired": {"type": "string"},
+            "to_expired": {"type": "string"},
+            "used_by": {"type": ["string", "null"]},
+            "from_used_at": {"type": "string"},
+            "to_used_at": {"type": "string"},
+            "type_coupon": {"type": ["string", "null"]},
+            "type_use_coupon": {"type": ["string", "null"]},
+            "page": {"type": ["string", "null"]},
+            "limit": {"type": ["string", "null"]},
+            "type_order": {"type": "string"},
+        },
+        required=[],
+    )
+    def get(self, args):
+        coupon_id = args.get("coupon_id", None)
+        code = args.get("code", None)
+        is_used = args.get("is_used", None)
+        is_active = args.get("is_active", None)
+        from_created_at = args.get("from_created_at", None)
+        to_created_at = args.get("to_created_at", None)
+        from_expired = args.get("from_expired", None)
+        to_expired = args.get("to_expired", None)
+        used_by = args.get("used_by", None)
+        from_used_at = args.get("from_used_at", None)
+        to_used_at = args.get("to_used_at", None)
+        type_coupon = args.get("type_coupon", "")
+        page = int(args.get("page", 1)) if args.get("page") else 1
+        limit = int(args.get("per_page", 10)) if args.get("per_page") else 10
+        type_order = args.get("type_order", "id_desc")
+
+        if from_created_at:
+            from_created_at = datetime.datetime.strptime(
+                from_created_at, "%Y-%m-%dT%H:%M:%SZ"
+            )
+        if to_created_at:
+            to_created_at = datetime.datetime.strptime(
+                to_created_at, "%Y-%m-%dT%H:%M:%SZ"
+            )
+        if from_expired:
+            from_expired = datetime.datetime.strptime(
+                from_expired, "%Y-%m-%dT%H:%M:%SZ"
+            )
+        if to_expired:
+            to_expired = datetime.datetime.strptime(to_expired, "%Y-%m-%dT%H:%M:%SZ")
+        if from_used_at:
+            from_used_at = datetime.datetime.strptime(
+                from_used_at, "%Y-%m-%dT%H:%M:%SZ"
+            )
+        if to_used_at:
+            to_used_at = datetime.datetime.strptime(to_used_at, "%Y-%m-%dT%H:%M:%SZ")
+        if coupon_id:
+            coupon_id = int(coupon_id)
+
+        if is_used:
+            is_used = bool(is_used)
+
+        if is_active:
+            is_active = bool(is_active)
+        if used_by:
+            used_by = int(used_by)
+
+        query_params = {
+            "coupon_id": coupon_id,
+            "code": code,
+            "is_used": is_used,
+            "is_active": is_active,
+            "from_created_at": from_created_at,
+            "to_created_at": to_created_at,
+            "from_expired": from_expired,
+            "to_expired": to_expired,
+            "used_by": used_by,
+            "from_used_at": from_used_at,
+            "to_used_at": to_used_at,
+            "type_coupon": type_coupon,
+            "page": page,
+            "limit": limit,
+            "type_order": type_order,
+        }
+        coupon_codes, total_codes = CouponService.get_coupon_category(query_params)
 
         total_pages = total_codes // limit + (1 if total_codes % limit > 0 else 0)
         pagination = {

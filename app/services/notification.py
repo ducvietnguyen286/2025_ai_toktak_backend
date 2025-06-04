@@ -1,5 +1,6 @@
 from bson import ObjectId
 from app.models.notification import Notification
+from app.models.user import User
 from datetime import datetime, timedelta
 from app.services.user import UserService
 import const
@@ -132,59 +133,66 @@ class NotificationServices:
 
     @staticmethod
     def get_admin_notifications(data_search):
-        filters = []
+        # Query cơ bản với các điều kiện
+        query = Notification.query
+        type_notification = int(data_search.get("type_notification", ""))
+        if type_notification == 0:
+            query = query.filter(Notification.status == const.NOTIFICATION_FALSE)
+        elif type_notification == 1:
+            query = query.filter(Notification.status == const.NOTIFICATION_SUCCESS)
 
-        t_notif = data_search.get("type_notification")
-        if t_notif is not None and t_notif != "":
-            t_notif = int(t_notif)
-            if t_notif == 0:
-                filters.append(Notification.status == const.NOTIFICATION_FALSE)
-            elif t_notif == 1:
-                filters.append(Notification.status == const.NOTIFICATION_SUCCESS)
+        search_key = data_search.get("search_key", "")
 
-        sk = data_search.get("search_key", "").strip()
-        if sk:
-            filters.append(
+        if search_key != "":
+            search_pattern = f"%{search_key}%"
+            query = query.filter(
                 or_(
-                    Notification.title.ilike(f"%{sk}%"),
-                    Notification.description.ilike(f"%{sk}%"),
+                    Notification.title.ilike(search_pattern),
+                    Notification.description.ilike(search_pattern),
+                    Notification.user.has(User.email.ilike(search_pattern)),
                 )
             )
 
-        tp = data_search.get("type_post")
-        if tp in ("video", "image", "blog"):
-            filters.append(Notification.notification_type == tp)
+        # Xử lý type_order
+        if data_search["type_order"] == "id_asc":
+            query = query.order_by(Notification.id.asc())
+        elif data_search["type_order"] == "id_desc":
+            query = query.order_by(Notification.id.desc())
+        else:
+            query = query.order_by(Notification.id.desc())
 
-        tr = data_search.get("time_range")
-        if tr:
-            now = datetime.utcnow()
-            if tr == "today":
-                start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            elif tr == "last_week":
-                start = now - timedelta(days=7)
-            elif tr == "last_month":
-                start = now - timedelta(days=30)
-            elif tr == "last_year":
-                start = now - timedelta(days=365)
-            else:
-                start = None
+        # Xử lý type_post
+        if data_search["type_post"] == "video":
+            query = query.filter(Notification.type == "video")
+        elif data_search["type_post"] == "image":
+            query = query.filter(Notification.type == "image")
+        elif data_search["type_post"] == "blog":
+            query = query.filter(Notification.type == "blog")
 
-            if start:
-                filters.append(Notification.created_at >= start)
+        time_range = data_search.get("time_range")  # Thêm biến time_range
+        # Lọc theo khoảng thời gian
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            query = query.filter(Notification.created_at >= start_date)
 
-        order = data_search.get("type_order", "id_desc")
-        order_by = (
-            [asc(Notification.id)] if order == "id_asc" else [desc(Notification.id)]
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            query = query.filter(Notification.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            query = query.filter(Notification.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            query = query.filter(Notification.created_at >= start_date)
+
+        pagination = query.paginate(
+            page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
-
-        return select_with_pagination(
-            Notification,
-            page=max(int(data_search.get("page", 1)), 1),
-            per_page=max(int(data_search.get("per_page", 10)), 1),
-            filters=filters,
-            order_by=order_by,
-            eager_opts=[joinedload(Notification.user)],
-        )
+        return pagination
 
     @staticmethod
     def update_translated_notifications(translations: dict):
