@@ -79,6 +79,8 @@ class APIUsers(Resource):
         time_range = request.args.get("time_range", "", type=str)
         search = request.args.get("search", "", type=str)
         member_type = request.args.get("member_type", "", type=str)
+        from_date = request.args.get("from_date", "", type=str)
+        to_date = request.args.get("to_date", "", type=str)
         data_search = {
             "page": page,
             "per_page": per_page,
@@ -88,6 +90,8 @@ class APIUsers(Resource):
             "time_range": time_range,
             "search": search,
             "member_type": member_type,
+            "from_date": from_date,
+            "to_date": to_date,
         }
         users = UserService.admin_search_users(data_search)
         return {
@@ -249,6 +253,8 @@ class GetDetailLog(Resource):
             time_range = request.args.get("time_range", "", type=str)
             type_status = request.args.get("type_status", "", type=str)
             search_key = request.args.get("search_key", "", type=str)
+            from_date = request.args.get("from_date", "", type=str)
+            to_date = request.args.get("to_date", "", type=str)
             data_search = {
                 "page": page,
                 "per_page": per_page,
@@ -258,6 +264,8 @@ class GetDetailLog(Resource):
                 "time_range": time_range,
                 "type_status": type_status,
                 "search_key": search_key,
+                "from_date": from_date,
+                "to_date": to_date,
             }
             billings = ReferralService.get_admin_referral_history(data_search)
             return {

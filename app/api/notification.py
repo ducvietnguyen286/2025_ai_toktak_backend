@@ -158,6 +158,8 @@ class APIAdminNotificationHistories(Resource):
         time_range = request.args.get("time_range", "", type=str)
         type_notification = request.args.get("type_notification", "", type=str)
         search_key = request.args.get("search_key", "", type=str)
+        from_date = request.args.get("from_date", "", type=str)
+        to_date = request.args.get("to_date", "", type=str)
         data_search = {
             "page": page,
             "per_page": per_page,
@@ -167,6 +169,8 @@ class APIAdminNotificationHistories(Resource):
             "time_range": time_range,
             "type_notification": type_notification,
             "search_key": search_key,
+            "from_date": from_date,
+            "to_date": to_date,
         }
         notifications = NotificationServices.get_admin_notifications(data_search)
         return {
