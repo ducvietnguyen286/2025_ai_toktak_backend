@@ -224,6 +224,15 @@ class PostService:
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
             filters.append(Post.created_at >= start_date)
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                query = query.filter(Post.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                query = query.filter(Post.created_at < to_date)
 
         pagination = select_with_pagination(
             Post,
@@ -342,6 +351,16 @@ class PostService:
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
             query = query.filter(Post.created_at >= start_date)
+        
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                query = query.filter(Post.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                query = query.filter(Post.created_at < to_date)
 
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False

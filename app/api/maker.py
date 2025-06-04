@@ -1679,6 +1679,8 @@ class APIHistories(Resource):
             type_order = request.args.get("type_order", "", type=str)
             type_post = request.args.get("type_post", "", type=str)
             time_range = request.args.get("time_range", "", type=str)
+            from_date = request.args.get("from_date", "", type=str)
+            to_date = request.args.get("to_date", "", type=str)
             data_search = {
                 "page": page,
                 "per_page": per_page,
@@ -1687,6 +1689,8 @@ class APIHistories(Resource):
                 "type_post": type_post,
                 "time_range": time_range,
                 "user_id": current_user.id,
+                "from_date": from_date,
+                "to_date": to_date,
             }
             posts = PostService.get_posts_upload(data_search)
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -1871,6 +1875,8 @@ class APIAdminHistories(Resource):
         type_post = request.args.get("type_post", "", type=str)
         time_range = request.args.get("time_range", "", type=str)
         search_text = request.args.get("search_text", "", type=str)
+        from_date = request.args.get("from_date", "", type=str)
+        to_date = request.args.get("to_date", "", type=str)
         data_search = {
             "page": page,
             "per_page": per_page,
@@ -1879,6 +1885,8 @@ class APIAdminHistories(Resource):
             "type_post": type_post,
             "time_range": time_range,
             "search_text": search_text,
+            "from_date": from_date,
+            "to_date": to_date,
         }
         posts = PostService.admin_get_posts_upload(data_search)
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
@@ -1901,7 +1909,7 @@ class APIAdminHistories(Resource):
                 }
                 for post in posts.items
                 if (post_json := post.to_dict())
-            ], 
+            ],
         }, 200
 
 
