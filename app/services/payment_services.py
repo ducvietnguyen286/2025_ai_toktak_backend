@@ -134,10 +134,10 @@ class PaymentService:
 
     @staticmethod
     def has_active_subscription(user_id):
-        now = datetime.now()
+        today = datetime.now().date() 
         active_payment = (
             Payment.query.filter_by(user_id=user_id)
-            .filter(Payment.end_date > now)
+            .filter(func.date(Payment.end_date) >= today)
             .filter(Payment.package_name != "ADDON")
             .order_by(Payment.end_date.desc())
             .first()

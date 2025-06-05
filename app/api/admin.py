@@ -4,7 +4,8 @@ from flask_restx import Namespace, Resource
 from app.decorators import parameters, admin_required
 from app.lib.response import Response
 from app.services.user import UserService
-from datetime import datetime
+from app.services.payment_services import PaymentService
+from datetime import datetime, timedelta
 
 from app.lib.logger import logger
 import json
@@ -397,6 +398,19 @@ class APIAdminSaveUser(Resource):
                 "total_link_active": total_link_active,
             }
             user_info = UserService.update_user(userId, **data_update)
+
+            if subscription == "FREE":
+                # update hết payment
+                active = PaymentService.has_active_subscription(userId)
+                if active:
+                    end_date = datetime.now().date() - timedelta(days=1)
+                    data_update_payment = {
+                        "end_date": end_date,
+                    }
+
+                    payment = PaymentService.update_payment(
+                        active.id, **data_update_payment
+                    )
 
             return Response(
                 # data=user_info,

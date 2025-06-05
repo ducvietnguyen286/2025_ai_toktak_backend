@@ -1500,11 +1500,11 @@ class APICheckSNSLink(Resource):
 
             if current_user.subscription == "FREE":
                 return Response(
-                    message=MessageError.REQUIRED_COUPON.value["message"],
+                    message="⚠️ 플랜 구매 후 이용 할 수 있어요!",
+                    message_en="⚠️ You can use it after purchasing a plan!",
                     data={
-                        "error_message": MessageError.REQUIRED_COUPON.value[
-                            "error_message"
-                        ]
+                        "error_message":  "🎟️ 요금제 메뉴를 확인하세요. 😊",
+                        "message_title":  "⚠️ 플랜 구매 후 이용 할 수 있어요!",
                     },
                     code=201,
                 ).to_dict()
