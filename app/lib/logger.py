@@ -277,3 +277,32 @@ def log_mongo_database(message):
     custom_logger.info(message)
     custom_logger.removeHandler(custom_handler)
     custom_handler.close()
+
+
+def log_reset_user_message(message):
+    now_date = datetime.datetime.now()
+    new_filename = now_date.strftime("%d-%m-%Y")
+    custom_handler = None  # Khởi tạo biến custom_handler
+    try:
+        custom_handler = handlers.RotatingFileHandler(
+            "logs/reset_user-{0}.log".format(new_filename),
+            backupCount=14,
+            encoding="utf-8",
+        )
+        custom_handler.setLevel(logging.INFO)
+        custom_handler.setFormatter(formatter)
+
+        custom_logger = logging.getLogger("WebHookLogger")
+        custom_logger.setLevel(logging.INFO)
+        custom_logger.addHandler(custom_handler)
+
+        custom_logger.info(message)
+        custom_logger.removeHandler(custom_handler)
+
+    except Exception as e:
+        # Xử lý ngoại lệ nếu có lỗi xảy ra
+        print(f"Đã xảy ra lỗi khi ghi log: {e}")
+    finally:
+        # Đảm bảo đóng handler sau khi sử dụng
+        if custom_handler:
+            custom_handler.close()
