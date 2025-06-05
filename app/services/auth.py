@@ -99,6 +99,7 @@ class AuthService:
                     name=name,
                     avatar=avatar,
                     level=level,
+                    contact=provider,
                     subscription_expired=subscription_expired,
                     level_info=json.dumps(level_info),
                 )
@@ -138,6 +139,7 @@ class AuthService:
                     name=name,
                     avatar=avatar,
                     level=level,
+                    contact=provider,
                     subscription="NEW_USER",
                     subscription_expired=subscription_expired,
                     batch_total=const.PACKAGE_CONFIG["BASIC"]["batch_total"],
