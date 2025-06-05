@@ -9,7 +9,8 @@ from flask import Flask
 from functools import partial
 from werkzeug.exceptions import default_exceptions
 
-load_dotenv(override=False)
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path=dotenv_path, override=True)
 
 from app.consumer.create_content import CreateContent
 from app.lib.logger import log_create_content_message

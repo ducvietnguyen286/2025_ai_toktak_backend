@@ -43,6 +43,7 @@ from app.rabbitmq.producer import (
     send_twitter_message,
     send_youtube_message,
 )
+import asyncio
 from app.third_parties.youtube import YoutubeTokenService
 import const
 
@@ -416,17 +417,17 @@ class APISendPosts(Resource):
                     }
 
                     if link.type == "FACEBOOK":
-                        send_facebook_message(message)
+                        asyncio.run(send_facebook_message(message))
                     if link.type == "TIKTOK":
-                        send_tiktok_message(message)
+                        asyncio.run(send_tiktok_message(message))
                     if link.type == "X":
-                        send_twitter_message(message)
+                        asyncio.run(send_twitter_message(message))
                     if link.type == "YOUTUBE":
-                        send_youtube_message(message)
+                        asyncio.run(send_youtube_message(message))
                     if link.type == "THREAD":
-                        send_thread_message(message)
+                        asyncio.run(send_thread_message(message))
                     if link.type == "INSTAGRAM":
-                        send_instagram_message(message)
+                        asyncio.run(send_instagram_message(message))
 
             progress = {
                 "sync_id": sync_id,
@@ -719,17 +720,17 @@ class APIPostToLinks(Resource):
                 }
 
                 if link.type == "FACEBOOK":
-                    send_facebook_message(message)
+                    asyncio.run(send_facebook_message(message))
                 if link.type == "TIKTOK":
-                    send_tiktok_message(message)
+                    asyncio.run(send_tiktok_message(message))
                 if link.type == "X":
-                    send_twitter_message(message)
+                    asyncio.run(send_twitter_message(message))
                 if link.type == "YOUTUBE":
-                    send_youtube_message(message)
+                    asyncio.run(send_youtube_message(message))
                 if link.type == "THREAD":
-                    send_thread_message(message)
+                    asyncio.run(send_thread_message(message))
                 if link.type == "INSTAGRAM":
-                    send_instagram_message(message)
+                    asyncio.run(send_instagram_message(message))
 
             key_progress = f"{batch_id}_{current_user.id}"
 

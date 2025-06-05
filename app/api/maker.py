@@ -18,7 +18,7 @@ from app.lib.string import (
 from app.rabbitmq.producer import send_create_content_message
 from app.scraper import Scraper
 import traceback
-import random
+import asyncio
 
 from app.services.batch import BatchService
 from app.services.image_template import ImageTemplateService
@@ -261,7 +261,7 @@ class APICreateBatchSync(Resource):
                     "action": "CREATE_BATCH",
                     "message": {"batch_id": batch_id, "data": data},
                 }
-                send_create_content_message(message)
+                asyncio.run(send_create_content_message(message))
 
             return Response(
                 data=batch_res,
@@ -472,7 +472,7 @@ class APIUpdateTemplateVideoUser(Resource):
                 "action": "CREATE_BATCH",
                 "message": {"batch_id": batch_id, "data": data},
             }
-            send_create_content_message(message)
+            asyncio.run(send_create_content_message(message))
 
             return Response(
                 data=user_template_data,
@@ -1106,7 +1106,7 @@ class APIAdminHistories(Resource):
                 }
                 for post in posts.items
                 if (post_json := post.to_dict())
-            ], 
+            ],
         }, 200
 
 
