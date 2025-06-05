@@ -4,7 +4,7 @@ from app.models.user_video_templates import UserVideoTemplates
 from app.models.link import Link
 from app.models.social_post import SocialPost
 from app.models.product import Product
-from app.extensions import db
+from app.extensions import db,redis_client
 from sqlalchemy import and_, func, or_
 from flask import jsonify
 from datetime import datetime, timedelta
@@ -18,6 +18,7 @@ import hashlib
 from app.models.batch import Batch
 from app.lib.logger import logger
 from app.services.profileservices import ProfileServices
+
 
 
 class ProductService:
@@ -197,3 +198,4 @@ class ProductService:
             logger.error(f"Exception: create_sns_product   :  {str(ex)}")
             return None
         return True
+    
