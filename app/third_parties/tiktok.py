@@ -615,7 +615,7 @@ class TiktokService(BaseService):
         privacy_level = (
             self.social_post.privacy_level
             if self.social_post.privacy_level
-            else "SELF_ONLY"
+            else "PUBLIC_TO_EVERYONE"
         )
         auto_add_music = (
             self.social_post.auto_add_music
