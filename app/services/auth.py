@@ -79,9 +79,6 @@ class AuthService:
             provider_user_id = user_info.get("sub")
         email = user_info.get("email")
         
-        if provider == "FACEBOOK":
-            email = None
-            
         name = user_info.get("name")
         avatar = user_info.get("picture")
         if type(avatar) == dict:
