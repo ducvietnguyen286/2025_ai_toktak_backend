@@ -111,16 +111,23 @@ async def process_message_with_retry(message: IncomingMessage, app, semaphore):
     Xử lý message với retry logic (đã được bao bọc trong hàm process_message_sync).
     Dùng semaphore để giới hạn số lượng tác vụ song song.
     """
-    async with message.process():  # Đảm bảo ACK message khi xử lý xong
-        body = message.body.decode()
-        log_create_content_message(f"Received message: {body}")
-        try:
-            async with semaphore:
-                result = await process_message_async(body, app)
-            return result
-        except Exception as e:
-            log_create_content_message(f"Message processing failed after retries: {e}")
-            return False
+    try:
+        async with message.process():  # Đảm bảo ACK message khi xử lý xong
+            body = message.body.decode()
+            log_create_content_message(f"Received message: {body}")
+            try:
+                async with semaphore:
+                    result = await process_message_async(body, app)
+                return result
+            except Exception as e:
+                log_create_content_message(
+                    f"Message processing failed after retries: {e}"
+                )
+                return False
+    except Exception as e:
+        print(f"Lỗi khi vào context: {str(e)}")
+        print(f"Loại lỗi: {type(e)}")
+        return False
 
 
 async def connect_rabbitmq_with_retry(rabbitmq_url, max_attempts=5):
@@ -151,6 +158,10 @@ async def on_message(message: IncomingMessage, app, semaphore):
 async def main():
     RABBITMQ_URL = (
         f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/"
+    )
+
+    print(
+        f"Connecting to RabbitMQ at {RABBITMQ_URL} with queue {RABBITMQ_QUEUE_CREATE_CONTENT}"
     )
 
     app = create_app()

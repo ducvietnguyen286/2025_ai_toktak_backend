@@ -15,6 +15,7 @@ RABBITMQ_URL = (
 
 async def send_message(queue: str, message: dict):
     try:
+        print(f" [x] Sending to [{queue}] with URL: {RABBITMQ_URL}")
         connection = await aio_pika.connect_robust(RABBITMQ_URL)
         async with connection:
             channel = await connection.channel()
