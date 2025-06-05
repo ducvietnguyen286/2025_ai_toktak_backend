@@ -78,6 +78,7 @@ class AuthService:
         if not provider_user_id:
             provider_user_id = user_info.get("sub")
         email = user_info.get("email")
+        
         name = user_info.get("name")
         avatar = user_info.get("picture")
         if type(avatar) == dict:
@@ -86,6 +87,82 @@ class AuthService:
         social_account = SocialAccount.query.filter_by(
             provider=provider, provider_user_id=provider_user_id
         ).first()
+        
+        # BEGIN LOGIN USER
+        login_user_id = 0
+        if social_account:
+            login_user_id = social_account.user_id;
+        
+        user = None
+        if login_user_id > 0:
+            user = User.query.get(login_user_id)
+            
+        if not user:
+            level = 0
+            level_info = get_level_images(level)
+
+            subscription_expired = datetime.now() + relativedelta(months=1)
+            user = User(
+                email=email,
+                name=name,
+                avatar=avatar,
+                level=level,
+                contact=provider,
+                subscription="NEW_USER",
+                subscription_expired=subscription_expired,
+                batch_total=const.PACKAGE_CONFIG["BASIC"]["batch_total"],
+                batch_remain=const.PACKAGE_CONFIG["BASIC"]["batch_remain"],
+                total_link_active=const.PACKAGE_CONFIG["BASIC"][
+                    "total_link_active"
+                ],
+                level_info=json.dumps(level_info),
+            )
+
+            user.save()
+
+            # Create Basic for new User
+            object_start_time = datetime.now()
+            data_new_user_history = {
+                "user_id": user.id,
+                "type": "user",
+                "type_2": "NEW_USER",
+                "object_id": user.id,
+                "object_start_time": object_start_time,
+                "object_end_time": subscription_expired,
+                "title": "신규 가입 선물",
+                "description": "신규 가입 선물",
+                "value": 30,
+                "num_days": 30,
+            }
+            UserService.create_user_history(**data_new_user_history)
+
+            # payment history
+            payment = PaymentService.create_new_payment(
+                user, "BASIC", "PAID", 0, "NEW_USER"
+            )
+
+            is_new_user = 1
+
+            if referral_code != "":
+                user_history = ReferralService.use_referral_code(
+                    referral_code, user
+                )
+                if user_history:
+                    new_user_referral_code = 1
+        
+        if not social_account:
+            social_account = SocialAccount(
+                user_id=user.id,
+                provider=provider,
+                provider_user_id=provider_user_id,
+                access_token=access_token,
+            )
+            social_account.save()
+        
+        return user, new_user_referral_code, is_new_user      
+            
+            
+        
 
         if social_account:
             user = User.query.get(social_account.user_id)
@@ -99,6 +176,7 @@ class AuthService:
                     name=name,
                     avatar=avatar,
                     level=level,
+                    contact=provider,
                     subscription_expired=subscription_expired,
                     level_info=json.dumps(level_info),
                 )
@@ -138,6 +216,7 @@ class AuthService:
                     name=name,
                     avatar=avatar,
                     level=level,
+                    contact=provider,
                     subscription="NEW_USER",
                     subscription_expired=subscription_expired,
                     batch_total=const.PACKAGE_CONFIG["BASIC"]["batch_total"],

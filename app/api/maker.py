@@ -61,6 +61,7 @@ import const
 from flask_jwt_extended import (
     verify_jwt_in_request,
 )
+from app.services.nice_services import NiceAuthService
 
 ns = Namespace(name="maker", description="Maker API")
 
@@ -2104,6 +2105,51 @@ class ApiScheduleBatch(Resource):
         return {
             "message": f"Đã lên lịch gọi API sau {hours} giờ {minutes} phút {seconds} giây"
         }
+
+
+@ns.route("/encrypt")
+class APIEncrypt(Resource):
+    @parameters(
+        type="object",
+        properties={
+            "user_id": {"type": ["integer", "null"]},
+        },
+        required=["user_id"],
+    )
+    def post(self, args):
+        try:
+            logger.info(args)
+            user_id = args.get("user_id", "")
+            data_nice = NiceAuthService.get_nice_auth(user_id)
+            return data_nice
+
+        except Exception as e:
+            return Response(
+                message="Ping not Oke",
+                code=201,
+            ).to_dict()
+
+
+@ns.route("/decrypt")
+class APIDecrypt(Resource):
+    def get(self):
+        try:
+            enc_data = request.args.get("EncodeData")
+            user_id = request.args.get("user_id")
+            result_item = {
+                "EncodeData": enc_data,
+            }
+
+            logger.info("----------decrypt")
+            logger.info(user_id)
+            logger.info(result_item)
+            data_nice = NiceAuthService.checkplus_success(user_id, result_item)
+            return data_nice
+        except Exception as e:
+            return Response(
+                message="Ping not Oke",
+                code=201,
+            ).to_dict()
 
 
 def _cleanup_zip(zip_path, tmp_dir, response):

@@ -8,7 +8,7 @@ from app.services.user import UserService
 from app.services.referral_service import ReferralService
 from datetime import datetime
 
-from app.lib.logger import logger
+from app.lib.logger import log_reset_user_message, logger
 import json
 
 from app.services.auth import AuthService
@@ -96,7 +96,7 @@ class APISocialLogin(Resource):
                     code=202,
                 ).to_dict()
 
-        user, new_user_referral_code , is_new_user = AuthService.social_login(
+        user, new_user_referral_code, is_new_user = AuthService.social_login(
             provider=provider,
             access_token=access_token,
             person_id=person_id,
@@ -232,6 +232,9 @@ class APIMe(Resource):
                 else None
             )
             if expired_date and expired_date < current_date:
+                log_reset_user_message(
+                    f"Reset User : {user_login.id}  from {user_login.subscription} expired_date :  {expired_date}  current_date : {current_date}"
+                )
                 user_login = AuthService.reset_free_user(user_login)
 
             subscription_name = get_subscription_name(user_login.subscription)
