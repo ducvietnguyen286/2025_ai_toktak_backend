@@ -158,16 +158,36 @@ class APIDeleteUser(Resource):
 
 @ns.route("/socialposts")
 class APISocialPost(Resource):
-
     @jwt_required()
     @admin_required()
     def get(self):
-
         filters = request.args.to_dict()  # Convert query string to dict
         data = SocialPostService.getTotalRunning(filters)
-
         return Response(message="", code=200, data=data).to_dict()
 
+
+
+@ns.route("/report_dashboard")
+class APIReportDashboard(Resource):
+    @jwt_required()
+    @admin_required()
+    def get(self):
+        selected_date_type = request.args.get("selected_date_type", "", type=str)
+        from_date = request.args.get("from_date", "", type=str)
+        to_date = request.args.get("to_date", "", type=str)
+        data_search = {
+            "type" : "user",
+            "type_2" : "NEW_USER",
+            "time_range" : selected_date_type,
+            "from_date" : from_date,
+            "to_date" : to_date,
+        }
+        new_users = UserService.report_user_by_type(data_search)
+        logger.info(new_users)
+        data = {} 
+        data['new_users'] = new_users
+
+        return Response(message="", code=200, data=data).to_dict()
 
 @ns.route("/logs")
 class GetListFileLogs(Resource):

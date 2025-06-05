@@ -453,3 +453,47 @@ class UserService:
             ),
             "histories": [history_detail._to_json() for history_detail in histories],
         }
+
+    @staticmethod
+    def report_user_by_type(data_search):
+        
+        histories = UserHistory.query
+        type = data_search.get("type", "")
+        type_2 = data_search.get("type_2", "")
+        
+        if type != "":
+            histories = histories.filter(UserHistory.type == type)
+        if type_2 != "":
+            histories = histories.filter(UserHistory.type_2 == type_2)
+        time_range = data_search.get("time_range", "")
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            histories = histories.filter(UserHistory.created_at >= start_date)
+
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            histories = histories.filter(UserHistory.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            histories = histories.filter(UserHistory.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            histories = histories.filter(UserHistory.created_at >= start_date)
+
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                histories = histories.filter(UserHistory.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                histories = histories.filter(UserHistory.created_at < to_date)
+
+        total = histories.count()
+
+        return total
