@@ -612,11 +612,6 @@ class TiktokService(BaseService):
             if self.social_post.disable_comment
             else False
         )
-        privacy_level = (
-            self.social_post.privacy_level
-            if self.social_post.privacy_level
-            else "PUBLIC_TO_EVERYONE"
-        )
         auto_add_music = (
             self.social_post.auto_add_music
             if self.social_post.auto_add_music
@@ -634,7 +629,7 @@ class TiktokService(BaseService):
         payload = {
             "post_info": {
                 "title": self.post.description + "\n\n  #tiktok " + self.post.hashtag,
-                "privacy_level": privacy_level,  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
+                "privacy_level": "PUBLIC_TO_EVERYONE",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
                 "disable_duet": disable_duet,
                 "disable_comment": disable_comment,
                 "disable_stitch": disable_stitch,
