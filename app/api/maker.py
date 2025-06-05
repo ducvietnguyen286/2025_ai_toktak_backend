@@ -106,6 +106,20 @@ def validater_create_batch(current_user, is_advance, url=""):
                     code=201,
                 ).to_dict()
 
+        if current_user.batch_remain == 0:
+            return Response(
+                message=MessageError.NO_BATCH_REMAINING.value["message"],
+                data={
+                    "error_message": MessageError.NO_BATCH_REMAINING.value[
+                        "error_message"
+                    ],
+                    "error_message_en": MessageError.NO_BATCH_REMAINING.value[
+                        "error_message_en"
+                    ],
+                },
+                code=201,
+            ).to_dict()
+
         return None
     except Exception as e:
         traceback.print_exc()

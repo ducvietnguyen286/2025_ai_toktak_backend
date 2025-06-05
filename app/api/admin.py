@@ -183,9 +183,50 @@ class APIReportDashboard(Resource):
             "to_date" : to_date,
         }
         new_users = UserService.report_user_by_type(data_search)
-        logger.info(new_users)
+        
+        data_search_coupon = {
+            "type" : "USED_COUPON",
+            "type_2" : "",
+            "time_range" : selected_date_type,
+            "from_date" : from_date,
+            "to_date" : to_date,
+        }
+        
+        total_user_use_coupon = UserService.report_user_by_type(data_search_coupon)
+        
+        data_search_payment = {
+            "package_name" : "",
+            "type_2" : "",
+            "time_range" : selected_date_type,
+            "from_date" : from_date,
+            "to_date" : to_date,
+        }
+        total_user_payment = PaymentService.report_payment_by_type(data_search_payment)
+        
+        data_search_payment_paid = {
+            "package_name" : "",
+            "status" : "PAID",
+            "time_range" : selected_date_type,
+            "from_date" : from_date,
+            "to_date" : to_date,
+        }
+        total_user_paid_payment = PaymentService.report_payment_by_type(data_search_payment_paid)
+        
+        data_search_pending_payment = {
+            "package_name" : "",
+            "status" : "PENDING",
+            "time_range" : selected_date_type,
+            "from_date" : from_date,
+            "to_date" : to_date,
+        }
+        total_user_pending_payment = PaymentService.report_payment_by_type(data_search_pending_payment)
+        
         data = {} 
         data['new_users'] = new_users
+        data['total_user_use_coupon'] = total_user_use_coupon
+        data['total_user_payment'] = total_user_payment
+        data['total_user_paid_payment'] = total_user_paid_payment
+        data['total_user_pending_payment'] = total_user_pending_payment
 
         return Response(message="", code=200, data=data).to_dict()
 
