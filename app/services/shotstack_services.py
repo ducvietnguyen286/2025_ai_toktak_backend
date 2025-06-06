@@ -961,7 +961,11 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
         audio_files = []
         audio_duration = 0
 
+        log_make_video_message(f"text: {text}")
+
         for text_chunk, index in text:
+            log_make_video_message(f"text_chunk: {text_chunk}")
+
             payload = {
                 "text": text_chunk,
                 "lang": "auto",
