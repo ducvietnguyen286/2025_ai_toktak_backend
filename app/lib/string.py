@@ -382,6 +382,8 @@ def generate_order_id():
     return re.sub(r"[^a-zA-Z0-9_-]", "", raw_id)
 
 
+def format_price_won(price):
+    return "{:,.0f}₩".format(price)
 def limit_text_to_100(text):
     """
     Giới hạn văn bản tối đa 100 ký tự.
