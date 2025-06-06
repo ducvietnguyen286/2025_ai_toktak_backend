@@ -1,3 +1,4 @@
+import traceback
 import requests
 import json
 import os
@@ -1032,8 +1033,8 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
 
             # Giải mã Base64 và lưu file MP3
             # audio_content = base64.b64decode(response_json["audioContent"])
-            output_file = f"{disk_path}/google_voice_output_{index}.mp3"
-            with open(output_file, "wb") as audio_file:
+            output_file_temp = f"{disk_path}/google_voice_output_{index}.mp3"
+            with open(output_file_temp, "wb") as audio_file:
                 audio_file.write(audio_content.content)
                 # audio_file.write(audio_content)
 
@@ -1041,10 +1042,10 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
             # audio_duration = get_audio_duration(output_file)
 
             log_make_video_message(
-                f"Đã tạo file âm thanh ({korean_voice['name']}): {output_file} (Thời gian: {file_duration:.2f}s) với đoạn text dài {text_count} ký tự"
+                f"Đã tạo file âm thanh ({korean_voice['name']}): {output_file_temp} (Thời gian: {file_duration:.2f}s) với đoạn text dài {text_count} ký tự"
             )
 
-            audio_files.append(output_file)
+            audio_files.append(output_file_temp)
             audio_duration += file_duration
 
         if len(audio_files) > 1:
@@ -1054,9 +1055,14 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
         else:
             output_file = audio_files[0]
 
+        print(f"output_file: {output_file}")
+        print(f"audio_duration: {audio_duration}")
+
         return output_file, audio_duration
 
     except Exception as e:
+        traceback.print_exc()
+        print(f"Exception text_to_speech_kr : {str(e)}")
         log_make_video_message(f"Exception text_to_speech_kr : {str(e)}")
         return "", 0.0
 
@@ -1230,8 +1236,6 @@ def get_korean_voice(voice_id):
         log_make_video_message("Không thể lấy danh sách giọng nói từ Typecast.")
         return False
 
-    print(f"typecast_voices: {typecast_voices}")
-    print(f"voice_id: {voice_id}")
     for voice in typecast_voices:
         if "actor_id" in voice and voice["actor_id"] == voice_id:
             return voice
