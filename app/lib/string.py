@@ -380,3 +380,7 @@ def get_subscription_name(subscription):
 def generate_order_id():
     raw_id = f"order_{uuid.uuid4().hex[:16]}"
     return re.sub(r"[^a-zA-Z0-9_-]", "", raw_id)
+
+
+def format_price_won(price):
+    return "{:,.0f}₩".format(price)
