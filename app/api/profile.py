@@ -73,6 +73,7 @@ class MemberProfileUpdateAPI(Resource):
             current_user = AuthService.get_current_identity()
             form = request.form
             file = request.files.get("member_avatar")
+            file_background = request.files.get("member_background")
 
             # Lấy dữ liệu text fields
             data_update = {
@@ -95,6 +96,16 @@ class MemberProfileUpdateAPI(Resource):
                 product_image_path = f"{current_domain}/{output_caption_file}"
 
                 data_update["member_avatar"] = product_image_path
+                
+            if file_background:
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                filename = f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{file_background.filename}"
+                path = os.path.join(UPLOAD_FOLDER, filename)
+                file_background.save(path)
+                output_caption_file = path.replace("static/", "").replace("\\", "/")
+                member_background_path = f"{current_domain}/{output_caption_file}"
+
+                data_update["member_background"] = member_background_path
             profile = ProfileServices.update_profile_by_user_id(
                 current_user.id, **data_update
             )

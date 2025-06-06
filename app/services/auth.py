@@ -78,10 +78,7 @@ class AuthService:
         if not provider_user_id:
             provider_user_id = user_info.get("sub")
         email = user_info.get("email")
-        
-        if provider == "FACEBOOK":
-            email = None
-            
+
         name = user_info.get("name")
         avatar = user_info.get("picture")
         if type(avatar) == dict:
@@ -90,16 +87,16 @@ class AuthService:
         social_account = SocialAccount.query.filter_by(
             provider=provider, provider_user_id=provider_user_id
         ).first()
-        
+
         # BEGIN LOGIN USER
         login_user_id = 0
         if social_account:
-            login_user_id = social_account.user_id;
-        
+            login_user_id = social_account.user_id
+
         user = None
         if login_user_id > 0:
             user = User.query.get(login_user_id)
-            
+
         if not user:
             level = 0
             level_info = get_level_images(level)
@@ -115,9 +112,7 @@ class AuthService:
                 subscription_expired=subscription_expired,
                 batch_total=const.PACKAGE_CONFIG["BASIC"]["batch_total"],
                 batch_remain=const.PACKAGE_CONFIG["BASIC"]["batch_remain"],
-                total_link_active=const.PACKAGE_CONFIG["BASIC"][
-                    "total_link_active"
-                ],
+                total_link_active=const.PACKAGE_CONFIG["BASIC"]["total_link_active"],
                 level_info=json.dumps(level_info),
             )
 
@@ -147,12 +142,10 @@ class AuthService:
             is_new_user = 1
 
             if referral_code != "":
-                user_history = ReferralService.use_referral_code(
-                    referral_code, user
-                )
+                user_history = ReferralService.use_referral_code(referral_code, user)
                 if user_history:
                     new_user_referral_code = 1
-        
+
         if not social_account:
             social_account = SocialAccount(
                 user_id=user.id,
@@ -161,11 +154,8 @@ class AuthService:
                 access_token=access_token,
             )
             social_account.save()
-        
-        return user, new_user_referral_code, is_new_user      
-            
-            
-        
+
+        return user, new_user_referral_code, is_new_user
 
         if social_account:
             user = User.query.get(social_account.user_id)
@@ -325,8 +315,29 @@ class AuthService:
             user_id = int(subject)
 
             if no_cache:
+                try:
+                    stmt = select(User).filter_by(id=user_id)
+                    user = db.session.execute(stmt).scalar_one_or_none()
+                    if user:
+                        user_dict = user.to_dict()
+                        redis_client.set(
+                            f"toktak:current_user:{user_id}",
+                            json.dumps(user_dict),
+                            ex=const.REDIS_EXPIRE_TIME,
+                        )
+                    return user if user else None
+                finally:
+                    db.session.close()
+
+            user_cache = redis_client.get(f"toktak:current_user:{user_id}")
+            if user_cache:
+                user = json.loads(user_cache)
+                return User(**user)
+
+            try:
                 stmt = select(User).filter_by(id=user_id)
                 user = db.session.execute(stmt).scalar_one_or_none()
+
                 if user:
                     user_dict = user.to_dict()
                     redis_client.set(
@@ -334,25 +345,10 @@ class AuthService:
                         json.dumps(user_dict),
                         ex=const.REDIS_EXPIRE_TIME,
                     )
+
                 return user if user else None
-
-            user_cache = redis_client.get(f"toktak:current_user:{user_id}")
-            if user_cache:
-                user = json.loads(user_cache)
-                return User(**user)
-
-            stmt = select(User).filter_by(id=user_id)
-            user = db.session.execute(stmt).scalar_one_or_none()
-
-            if user:
-                user_dict = user.to_dict()
-                redis_client.set(
-                    f"toktak:current_user:{user_id}",
-                    json.dumps(user_dict),
-                    ex=const.REDIS_EXPIRE_TIME,
-                )
-
-            return user if user else None
+            finally:
+                db.session.close()
 
         except Exception as ex:
             logger.exception(f"get_current_identity : {ex}")

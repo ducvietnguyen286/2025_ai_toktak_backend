@@ -17,6 +17,7 @@ import const
 import hashlib
 
 from app.services.product import ProductService
+from app.services.group_product_services import GroupProductService
 
 ns = Namespace(name="product", description="Member profile operations")
 
@@ -283,4 +284,179 @@ class MultiProductCreateApi(Resource):
             logger.error(f"Create multiple products error: {str(e)}")
             return Response(
                 message="제품 추가 중 오류가 발생했습니다.", code=201
+            ).to_dict()
+
+
+@ns.route("/group_create")
+class GroupCreateApi(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "group_name": {"type": "string"},
+            "order_no": {"type": "integer"},
+        },
+        required=["group_name"],
+    )
+    def post(self, args):
+        try:
+            current_user = AuthService.get_current_identity()
+            user_id = current_user.id
+            group_name = args.get("group_name")
+            order_no = args.get("order_no", 0)
+
+            group = GroupProductService.create_group_product(
+                user_id=user_id,
+                name=group_name,
+                order_no=order_no,
+            )
+            if not group:
+                return Response(
+                    message="그룹 생성에 실패했습니다.",
+                    message_en="Failed to create group.",
+                    code=500,
+                ).to_dict()
+
+            return Response(
+                data=group.to_dict(),
+                message="그룹이 성공적으로 생성되었습니다.",
+                message_en="Group created successfully.",
+                code=200,
+            ).to_dict()
+        except Exception as e:
+            logger.error(f"Create group error: {str(e)}")
+            return Response(
+                message="그룹 생성 중 오류가 발생했습니다.",
+                message_en="An error occurred while creating the group.",
+                code=500,
+            ).to_dict()
+
+
+@ns.route("/group_update/<int:group_id>")
+class GroupUpdateApi(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "group_name": {"type": "string"},
+            "order_no": {"type": "integer"},
+        },
+        required=[],
+    )
+    def put(self, args, group_id):
+        try:
+            current_user = AuthService.get_current_identity()
+            user_id = current_user.id
+            group_name = args.get("group_name")
+            order_no = args.get("order_no")
+
+            group = GroupProductService.update_group_product(
+                group_id,
+                name=group_name,
+                order_no=order_no,
+            )
+            if not group:
+                return Response(
+                    message="그룹을 찾을 수 없습니다.",
+                    message_en="Group not found.",
+                    code=404,
+                ).to_dict()
+
+            return Response(
+                data=group.to_dict(),
+                message="그룹이 성공적으로 수정되었습니다.",
+                message_en="Group updated successfully.",
+                code=200,
+            ).to_dict()
+        except Exception as e:
+            logger.error(f"Update group error: {str(e)}")
+            return Response(
+                message="그룹 수정 중 오류가 발생했습니다.",
+                message_en="An error occurred while updating the group.",
+                code=500,
+            ).to_dict()
+
+
+@ns.route("/group_delete/<int:group_id>")
+class GroupDeleteApi(Resource):
+    @jwt_required()
+    def delete(self, group_id):
+        try:
+            current_user = AuthService.get_current_identity()
+            user_id = current_user.id
+
+            success = GroupProductService.delete_group_product(group_id)
+            if not success:
+                return Response(
+                    message="그룹을 찾을 수 없습니다.",
+                    message_en="Group not found.",
+                    code=404,
+                ).to_dict()
+
+            return Response(
+                message="그룹이 성공적으로 삭제되었습니다.",
+                message_en="Group deleted successfully.",
+                code=200,
+            ).to_dict()
+        except Exception as e:
+            logger.error(f"Delete group error: {str(e)}")
+            return Response(
+                message="그룹 삭제 중 오류가 발생했습니다.",
+                message_en="An error occurred while deleting the group.",
+                code=500,
+            ).to_dict()
+
+
+@ns.route("/group_list")
+class GroupListApi(Resource):
+    @jwt_required()
+    def get(self):
+        try:
+            current_user = AuthService.get_current_identity()
+            user_id = current_user.id
+            groups = GroupProductService.get_groups_by_user_id(user_id)
+            return Response(
+                data=[g.to_dict() for g in groups],
+                message="그룹 리스트를 성공적으로 불러왔습니다.",
+                message_en="Group list loaded successfully.",
+                code=200,
+            ).to_dict()
+        except Exception as e:
+            logger.error(f"List group error: {str(e)}")
+            return Response(
+                message="그룹 리스트 불러오기 중 오류가 발생했습니다.",
+                message_en="An error occurred while loading group list.",
+                code=500,
+            ).to_dict()
+
+
+@ns.route("/user_group_products")
+class GroupListWithProductsApi(Resource):
+    @jwt_required()
+    def get(self):
+        try:
+            current_user = AuthService.get_current_identity()
+            user_id = current_user.id
+            try:
+                product_limit = int(request.args.get("product_limit", 20))
+                if product_limit < 1 or product_limit > 200:
+                    product_limit = 20
+            except Exception:
+                product_limit = 20
+
+            data = GroupProductService.get_groups_with_products(
+                user_id=user_id, product_limit=product_limit, cache_timeout=60
+            )
+            return Response(
+                data=data,
+                message="그룹 및 제품 리스트를 성공적으로 불러왔습니다.",
+                message_en="Groups and products list loaded successfully.",
+                code=200,
+            ).to_dict()
+        except Exception as e:
+            logger.error(f"Group list with products error: {str(e)}")
+            return Response(
+                message="그룹 및 제품 리스트 불러오기 중 오류가 발생했습니다.",
+                message_en="An error occurred while loading groups and products.",
+                code=500,
             ).to_dict()

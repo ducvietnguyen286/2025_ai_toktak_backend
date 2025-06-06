@@ -7,6 +7,7 @@ class Product(db.Model, BaseModel):
     __tablename__ = "products"
 
     id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey("groups_product.id"), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     product_name = db.Column(db.String(500), nullable=False, default="")
     product_url = db.Column(db.String(500), nullable=False, default="")
@@ -15,6 +16,7 @@ class Product(db.Model, BaseModel):
     shorten_link = db.Column(db.String(500), nullable=False, default="")
     content = db.Column(db.Text, nullable=False, default="")
     description = db.Column(db.Text, default="")
+    order_no = db.Column(db.Integer, default=0)
     
     product_url_hash = db.Column(db.String(255), index=True, nullable=False)
 
@@ -25,12 +27,15 @@ class Product(db.Model, BaseModel):
     )  #
 
     user = db.relationship("User", lazy="joined")
+    group = db.relationship("GroupProduct", lazy="joined")
 
     to_json_parse = "content"
     # to_json_filter = "captions"
 
     def to_dict(self):
         return {
+            "group_id": self.group_id,
+            "group_name": self.group.name if self.group else None,
             "id": self.id,
             "user_id": self.user_id,
             "product_name": self.product_name,
