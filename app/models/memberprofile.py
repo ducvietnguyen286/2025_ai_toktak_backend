@@ -20,6 +20,20 @@ class MemberProfile(db.Model, BaseModel):
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )  #
+    
+    
+    social_is_thread = db.Column(db.Integer, default=0)
+    social_thread_url = db.Column(db.String(500), nullable=False, default="")
+    social_is_youtube = db.Column(db.Integer, default=0)
+    social_youtube_url = db.Column(db.String(500), nullable=False, default="")
+    social_is_x = db.Column(db.Integer, default=0)
+    social_x_url = db.Column(db.String(500), nullable=False, default="")
+    social_is_instagram = db.Column(db.Integer, default=0)
+    social_instalgram_url = db.Column(db.String(500), nullable=False, default="")
+    social_is_tiktok = db.Column(db.Integer, default=0)
+    social_tiktok_url = db.Column(db.String(500), nullable=False, default="")
+    social_is_facebook = db.Column(db.Integer, default=0)
+    social_facebook_url = db.Column(db.String(500), nullable=False, default="")
 
     user = db.relationship("User", lazy="joined")
 
@@ -40,6 +54,18 @@ class MemberProfile(db.Model, BaseModel):
             "design_settings": design_settings,
             "description": self.description,
             "status": self.status,
+            "social_is_thread": self.social_is_thread,
+            "social_thread_url": self.social_thread_url,
+            "social_is_youtube": self.social_is_youtube,
+            "social_youtube_url": self.social_youtube_url,
+            "social_is_x": self.social_is_x,
+            "social_x_url": self.social_x_url,
+            "social_is_instagram": self.social_is_instagram,
+            "social_instalgram_url": self.social_instalgram_url,
+            "social_is_tiktok": self.social_is_tiktok,
+            "social_tiktok_url": self.social_tiktok_url,
+            "social_is_facebook": self.social_is_facebook,
+            "social_facebook_url": self.social_facebook_url,
             "user_email": self.user.email if self.user else None,  # Lấy email từ user
             "created_at": (
                 self.created_at.strftime("%Y-%m-%d %H:%M:%S")
