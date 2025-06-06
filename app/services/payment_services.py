@@ -940,6 +940,11 @@ class PaymentService:
                 ) + timedelta(days=1)
                 histories = histories.filter(Payment.created_at < to_date)
 
+        
         total = histories.count()
+        total_price = histories.with_entities(func.coalesce(func.sum(Payment.price), 0)).scalar()
 
-        return total
+        return {
+            "total": total,
+            "total_price": total_price
+        }
