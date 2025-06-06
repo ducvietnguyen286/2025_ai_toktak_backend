@@ -2,6 +2,12 @@ from pydub import AudioSegment
 import os
 from app.lib.logger import logger
 
+# Cấu hình đường dẫn ffmpeg
+FFMPEG_PATH = "/usr/bin/ffmpeg"
+
+# Cấu hình AudioSegment để sử dụng đường dẫn tùy chỉnh
+AudioSegment.converter = FFMPEG_PATH
+
 
 def merge_audio_files(audio_files, output_path):
     """
