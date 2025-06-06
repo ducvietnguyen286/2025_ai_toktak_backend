@@ -119,7 +119,7 @@ class CreateContent:
             traceback = e.__traceback__
             if traceback:
                 log_create_content_message(
-                    f"Error creating batch content: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                    f"Error creating batch content Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                 )
             log_create_content_message(f"Error creating batch content: {e}")
             return None
@@ -210,8 +210,9 @@ class CreateContent:
             traceback = e.__traceback__
             if traceback:
                 log_create_content_message(
-                    f"Error in create_images: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                    f"Error creating create_images Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                 )
+
             log_create_content_message(f"Error in create_images: {e}")
             return None
 
@@ -246,8 +247,9 @@ class CreateContent:
             traceback = e.__traceback__
             if traceback:
                 log_create_content_message(
-                    f"Error finding batch: {e} at line {traceback.tb_lineno}"
+                    f"Error finding batch Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                 )
+
             log_create_content_message(f"Error finding batch: {e}")
             return None
 
@@ -260,6 +262,9 @@ class CreateContent:
                     f"Batch or Post not found for batch_id={batch_id}, post_id={post_id}"
                 )
                 return None
+
+            post.process_status = const.POST_PROCESSING_STATUS["PROCESSING"]
+            post.save()
 
             is_paid_advertisements = batch.is_paid_advertisements
             template_info = json.loads(batch.template_info)
@@ -323,14 +328,36 @@ class CreateContent:
                 description = ""
 
                 if type == "video":
-                    response, render_id, hooking, maker_images, captions = (
-                        process_create_post_video(process_images, data, batch, post)
+                    result = process_create_post_video(
+                        process_images, data, batch, post
                     )
+                    if result is None:
+                        return None
+                    (
+                        response,
+                        render_id,
+                        hooking,
+                        maker_images,
+                        captions,
+                    ) = result
+
                 elif type == "image":
-                    response, maker_images, captions, file_size, mime_type = (
-                        process_create_post_image(process_images, data, batch, post)
+                    result = process_create_post_image(
+                        process_images, data, batch, post
                     )
+                    if result is None:
+                        return None
+                    (
+                        response,
+                        maker_images,
+                        captions,
+                        file_size,
+                        mime_type,
+                    ) = result
                 elif type == "blog":
+                    result = process_create_post_blog(process_images, data, batch, post)
+                    if result is None:
+                        return None
                     (
                         response,
                         docx_url,
@@ -339,7 +366,7 @@ class CreateContent:
                         maker_images,
                         title,
                         content,
-                    ) = process_create_post_blog(process_images, data, batch, post)
+                    ) = result
 
                 if response:
                     parse_caption = json.loads(response)
@@ -372,6 +399,10 @@ class CreateContent:
                         "image": MessageError.CREATE_POST_IMAGE.value,
                         "blog": MessageError.CREATE_POST_BLOG.value,
                     }
+
+                    post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+                    post.error_message = message_error.get(type, "")
+                    post.save()
 
                     return None
 
@@ -453,6 +484,9 @@ class CreateContent:
                         notification_type="blog",
                     )
 
+                post.process_status = const.POST_PROCESSING_STATUS["COMPLETED"]
+                post.save()
+
                 return post.id
             except Exception as e:
                 if type == "video":
@@ -483,10 +517,13 @@ class CreateContent:
                 traceback = e.__traceback__
                 if traceback:
                     log_create_content_message(
-                        f"Error in make_single_post: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                        f"Error make_single_post Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                     )
                 log_create_content_message(f"Error in make_single_post: {e}")
-                self.retry(exc=e, countdown=5, max_retries=1)
+                post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+                post.error_message = f"Create Post False {str(e)}"
+                post.save()
+
                 return None
 
 
@@ -535,15 +572,12 @@ def process_create_post_blog(process_images, data, batch, post):
         else:
             message_error = MessageError.CREATE_POST_BLOG.value
             log_create_content_message(f"Error creating blog post: {message_error}")
-            return (
-                None,
-                docx_url,
-                file_size,
-                mime_type,
-                process_images,
-                docx_title,
-                docx_content,
-            )
+
+            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+            post.error_message = message_error
+            post.save()
+
+            return None
 
         return (
             response,
@@ -558,18 +592,13 @@ def process_create_post_blog(process_images, data, batch, post):
         traceback = e.__traceback__
         if traceback:
             log_create_content_message(
-                f"Error in process_create_post_blog: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                f"Error in process_create_post_blog: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
             )
         logger.error(f"Error in process_create_post_blog: {e}")
-        return (
-            None,
-            docx_url,
-            file_size,
-            mime_type,
-            process_images,
-            docx_title,
-            docx_content,
-        )
+        post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+        post.error_message = str(e)
+        post.save()
+        return None
 
 
 def process_create_post_image(process_images, data, batch, post):
@@ -586,6 +615,11 @@ def process_create_post_image(process_images, data, batch, post):
         template_info = json.loads(batch.template_info)
         image_template_id = template_info.get("image_template_id", "")
         if image_template_id == "":
+            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+            post.error_message = (
+                "Image template ID is required for image post creation."
+            )
+            post.save()
             return None
 
         is_avif = check_is_avif(data)
@@ -613,17 +647,25 @@ def process_create_post_image(process_images, data, batch, post):
         else:
             message_error = MessageError.CREATE_POST_IMAGE.value
             log_create_content_message(f"Error creating image post: {message_error}")
-            return None, maker_images, captions, file_size, mime_type
+
+            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+            post.error_message = message_error
+            post.save()
+
+            return None
 
         return response, maker_images, captions, file_size, mime_type
     except Exception as e:
         traceback = e.__traceback__
         if traceback:
             log_create_content_message(
-                f"Error in process_create_post_image: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                f"process_create_post_image Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
             )
         logger.error(f"Error in process_create_post_image: {e}")
-        return response, maker_images, captions, file_size, mime_type
+        post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+        post.error_message = str(e)
+        post.save()
+        return None
 
 
 def process_create_post_video(process_images, data, batch, post):
@@ -669,6 +711,7 @@ def process_create_post_video(process_images, data, batch, post):
                 product_name = data["name"]
 
                 voice_google = batch.voice_google or 1
+                voice_typecast = batch.voice_typecast or ""
 
                 product_video_url = data.get("video_url", "")
                 if product_video_url != "":
@@ -681,6 +724,7 @@ def process_create_post_video(process_images, data, batch, post):
                     "template_info": batch.template_info,
                     "batch_type": batch.type,
                     "voice_google": voice_google,
+                    "voice_typecast": voice_typecast,
                     "origin_caption": origin_caption,
                     "images_url": image_renders,
                     "images_slider_url": image_renders_sliders,
@@ -710,31 +754,48 @@ def process_create_post_video(process_images, data, batch, post):
                     hooking = []
                     maker_images = []
                     captions = []
-                    log_create_content_message(f"Error creating video post")
-                    return None, render_id, hooking, maker_images, captions
+                    log_create_content_message(f"Error creating video post, {result}")
+
+                    post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+                    post.error_message = result.get("message", "Unknown error")
+                    post.save()
+
+                    return None
 
             else:
                 render_id = ""
                 hooking = []
                 maker_images = []
                 captions = []
+
                 message_error = MessageError.CREATE_POST_VIDEO.value
-                log_create_content_message(
-                    f"Error creating video post: {message_error}"
-                )
-                return None, render_id, hooking, maker_images, captions
+                post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+                post.error_message = message_error
+                post.save()
+
+                return None
 
         else:
             message_error = MessageError.CREATE_POST_VIDEO.value
-            log_create_content_message(f"Error creating video post: {message_error}")
-            return None, render_id, hooking, maker_images, captions
+            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+            post.error_message = message_error
+            post.save()
+            log_create_content_message(
+                f"Error creating video post {post.id}: {message_error} ------ CHATGPT"
+            )
+            return None
 
         return response, render_id, hooking, maker_images, captions
     except Exception as e:
         traceback = e.__traceback__
         if traceback:
             log_create_content_message(
-                f"Error in process_create_post_video: {e} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
+                f"process_create_post_video Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
             )
         logger.error(f"Error in process_create_post_video: {e}")
-        return response, render_id, hooking, maker_images, captions
+
+        post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
+        post.error_message = str(e)
+        post.save()
+
+        return None
