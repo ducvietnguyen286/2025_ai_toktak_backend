@@ -382,14 +382,57 @@ def generate_order_id():
     return re.sub(r"[^a-zA-Z0-9_-]", "", raw_id)
 
 
-def limit_text_to_100(text):
+def cutting_text_when_exceed_450(text):
     """
-    Giới hạn văn bản tối đa 100 ký tự.
-    Nếu văn bản dài hơn 100 ký tự, sẽ cắt bớt và thêm dấu ... vào cuối.
+    Cắt văn bản khi vượt quá 450 ký tự.
+    Sử dụng hàm split_text_by_words để tách văn bản.
 
-    :param text: Văn bản đầu vào
-    :return: Văn bản đã được giới hạn độ dài
+    :param text: Văn bản cần cắt
+    :return: Danh sách các đoạn văn bản
     """
-    if len(text) <= 495:
-        return text
-    return text[:495]
+    return split_text_by_words(text, max_length=450)
+
+
+def split_text_by_words(text, max_length=450):
+    """
+    Tách văn bản thành các đoạn, mỗi đoạn tối đa max_length ký tự.
+    Đảm bảo không cắt giữa từ, chỉ cắt tại khoảng trắng giữa các từ.
+
+    :param text: Văn bản cần tách
+    :param max_length: Độ dài tối đa của mỗi đoạn (mặc định 450)
+    :return: Danh sách các đoạn văn bản
+    """
+    if not text:
+        return []
+
+    words = text.split()
+    chunks = []
+    current_chunk = []
+    current_length = 0
+
+    for word in words:
+        word_length = len(word) + (1 if current_chunk else 0)
+
+        if current_length + word_length > max_length:
+            if current_chunk:
+                chunks.append(" ".join(current_chunk))
+                current_chunk = []
+                current_length = 0
+
+            if len(word) > max_length:
+                chunks.append(word[:max_length])
+                word = word[max_length:]
+                while word:
+                    chunks.append(word[:max_length])
+                    word = word[max_length:]
+            else:
+                current_chunk = [word]
+                current_length = len(word)
+        else:
+            current_chunk.append(word)
+            current_length += word_length
+
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+
+    return chunks

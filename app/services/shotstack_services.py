@@ -2,7 +2,8 @@ import requests
 import json
 import os
 import random
-from app.lib.string import limit_text_to_100
+from app.lib.audio import merge_audio_files
+from app.lib.string import cutting_text_when_exceed_450
 from app.models.video_create import VideoCreate
 from app.models.video_viral import VideoViral
 from app.models.captions import Caption
@@ -955,85 +956,99 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
             "Authorization": f"Bearer {TYPECAST_API_KEY}",
         }
 
-        text = limit_text_to_100(text)
+        text = cutting_text_when_exceed_450(text)
 
-        payload = {
-            "text": text,
-            "lang": "auto",
-            "actor_id": korean_voice["actor_id"],
-            "xapi_hd": False,
-            "model_version": "latest",
-            "xapi_audio_format": "mp3",
-            "volumn": 100,
-            "speed_x": 1,
-            "max_seconds": 60,
-        }
-
-        response = requests.post(
-            "https://typecast.ai/api/speak", json=payload, headers=headers
-        )
-
-        # headers = {"Content-Type": "application/json"}
-        # response = requests.post(
-        #     f"{api_url}?key={api_key}", json=payload, headers=headers
-        # )
-
-        if response.status_code != 200:
-            print(f"Response status code: {response.status_code}")
-            print(f"Response text: {response.text}")
-            log_make_video_message(f"Lỗi từ Google API payload: {payload}")
-            log_make_video_message(f"Lỗi từ Google API: {response.text}")
-            return "", 0.0
-
-        response_json = response.json()
-
-        result_speak = response_json.get("result", {})
-        if not result_speak:
-            log_make_video_message("Lỗi: Không nhận được kết quả từ API.")
-            return "", 0.0
-
-        check_status_speak = result_speak.get("speak_v2_url", "")
-
-        download_url = ""
+        audio_files = []
         audio_duration = 0
-        text_count = 0
 
-        while True:
-            response_check = requests.get(check_status_speak, headers=headers)
-            if response_check.status_code == 200:
-                result_check = response_check.json().get("result", {})
-                if result_check.get("status") == "done":
-                    download_url = result_check.get("audio_download_url", "")
-                    audio_duration = result_check.get("duration", 0)
-                    text_count = result_check.get("text_count", 0)
-                    break
-                elif result_check.get("status") == "failed":
-                    log_make_video_message("Lỗi: Tạo giọng nói thất bại.")
-                    return "", 0.0
-            else:
-                log_make_video_message(
-                    f"Lỗi kiểm tra trạng thái: {response_check.text}"
-                )
+        for text_chunk, index in text:
+            payload = {
+                "text": text_chunk,
+                "lang": "auto",
+                "actor_id": korean_voice["actor_id"],
+                "xapi_hd": False,
+                "model_version": "latest",
+                "xapi_audio_format": "mp3",
+                "volumn": 100,
+                "speed_x": 1,
+                "max_seconds": 60,
+            }
+
+            response = requests.post(
+                "https://typecast.ai/api/speak", json=payload, headers=headers
+            )
+
+            # headers = {"Content-Type": "application/json"}
+            # response = requests.post(
+            #     f"{api_url}?key={api_key}", json=payload, headers=headers
+            # )
+
+            if response.status_code != 200:
+                print(f"Response status code: {response.status_code}")
+                print(f"Response text: {response.text}")
+                log_make_video_message(f"Lỗi từ Google API payload: {payload}")
+                log_make_video_message(f"Lỗi từ Google API: {response.text}")
                 return "", 0.0
 
-        audio_content = requests.get(download_url)
+            response_json = response.json()
 
-        # if "audioContent" not in response_json:
-        #     log_make_video_message("Lỗi: Không nhận được dữ liệu âm thanh từ API.")
-        #     return "", 0.0
+            result_speak = response_json.get("result", {})
+            if not result_speak:
+                log_make_video_message("Lỗi: Không nhận được kết quả từ API.")
+                return "", 0.0
 
-        # Giải mã Base64 và lưu file MP3
-        # audio_content = base64.b64decode(response_json["audioContent"])
-        with open(output_file, "wb") as audio_file:
-            audio_file.write(audio_content.content)
-            # audio_file.write(audio_content)
+            check_status_speak = result_speak.get("speak_v2_url", "")
 
-        # Lấy thời gian audio bằng ffmpeg
-        # audio_duration = get_audio_duration(output_file)
+            download_url = ""
+            text_count = 0
+            file_duration = 0
 
-        log_make_video_message(
-            f"Đã tạo file âm thanh ({korean_voice['name']}): {output_file} (Thời gian: {audio_duration:.2f}s) với đoạn text dài {text_count} ký tự"
-        )
+            while True:
+                response_check = requests.get(check_status_speak, headers=headers)
+                if response_check.status_code == 200:
+                    result_check = response_check.json().get("result", {})
+                    if result_check.get("status") == "done":
+                        download_url = result_check.get("audio_download_url", "")
+                        file_duration = result_check.get("duration", 0)
+                        text_count = result_check.get("text_count", 0)
+                        break
+                    elif result_check.get("status") == "failed":
+                        log_make_video_message("Lỗi: Tạo giọng nói thất bại.")
+                        return "", 0.0
+                else:
+                    log_make_video_message(
+                        f"Lỗi kiểm tra trạng thái: {response_check.text}"
+                    )
+                    return "", 0.0
+
+            audio_content = requests.get(download_url)
+
+            # if "audioContent" not in response_json:
+            #     log_make_video_message("Lỗi: Không nhận được dữ liệu âm thanh từ API.")
+            #     return "", 0.0
+
+            # Giải mã Base64 và lưu file MP3
+            # audio_content = base64.b64decode(response_json["audioContent"])
+            output_file = f"{disk_path}/google_voice_output_{index}.mp3"
+            with open(output_file, "wb") as audio_file:
+                audio_file.write(audio_content.content)
+                # audio_file.write(audio_content)
+
+            # Lấy thời gian audio bằng ffmpeg
+            # audio_duration = get_audio_duration(output_file)
+
+            log_make_video_message(
+                f"Đã tạo file âm thanh ({korean_voice['name']}): {output_file} (Thời gian: {file_duration:.2f}s) với đoạn text dài {text_count} ký tự"
+            )
+
+            audio_files.append(output_file)
+            audio_duration += file_duration
+
+        if len(audio_files) > 1:
+            merge_audio_files(audio_files, output_file)
+        else:
+            output_file = audio_files[0]
+
         return output_file, audio_duration
 
     except Exception as e:
