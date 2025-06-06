@@ -962,11 +962,8 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
         audio_files = []
         audio_duration = 0
 
-        log_make_video_message(f"text: {text}")
-
         for index in range(len(text)):
             text_chunk = text[index]
-            log_make_video_message(f"text_chunk: {text_chunk}")
 
             payload = {
                 "text": text_chunk,
@@ -1054,9 +1051,6 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
                 os.remove(audio_file)
         else:
             output_file = audio_files[0]
-
-        print(f"output_file: {output_file}")
-        print(f"audio_duration: {audio_duration}")
 
         return output_file, audio_duration
 
