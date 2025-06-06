@@ -86,9 +86,9 @@ def get_from_database(type, data):
 
 
 def call_chatgpt_create_caption(images=[], data={}, post_id=""):
-    response_database = get_from_database("video", data)
-    if response_database:
-        return response_database
+    # response_database = get_from_database("video", data)
+    # if response_database:
+    #     return response_database
     prompt = """[역할]
 당신은 SNS 숏폼 콘텐츠 전문가입니다.
 사용자의 Pain Point(불편함, 고민, 불만 등)를 중심으로 문제를 제시하고,
@@ -243,9 +243,9 @@ hashtag:
 
 
 def call_chatgpt_create_blog(images=[], data={}, post_id=0):
-    response_database = get_from_database("blog", data)
-    if response_database:
-        return response_database
+    # response_database = get_from_database("blog", data)
+    # if response_database:
+    #     return response_database
 
     prompt = """업로드된 이미지들을 참고하여, 제품의 다음 세부 정보를 반영한 블로그 게시글을 작성해 주세요.
 
@@ -410,9 +410,9 @@ Note:
 
 
 def call_chatgpt_create_social(images=[], data={}, post_id=0):
-    response_database = get_from_database("image", data)
-    if response_database:
-        return response_database
+    # response_database = get_from_database("image", data)
+    # if response_database:
+    #     return response_database
 
     prompt = """[역할]  
 당신은 SNS 바이럴 콘텐츠 제작 전문가입니다.  
