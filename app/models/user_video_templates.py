@@ -41,6 +41,7 @@ class UserVideoTemplates(db.Model, BaseModel):
 
     is_hashtag = db.Column(db.Integer, default=0, nullable=False)
     hashtag = db.Column(db.Text, nullable=False, default="[]")
+    typecast_voice = db.Column(db.String(100), default="")
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(

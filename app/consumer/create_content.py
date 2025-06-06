@@ -711,6 +711,7 @@ def process_create_post_video(process_images, data, batch, post):
                 product_name = data["name"]
 
                 voice_google = batch.voice_google or 1
+                voice_typecast = batch.voice_typecast or ""
 
                 product_video_url = data.get("video_url", "")
                 if product_video_url != "":
@@ -723,6 +724,7 @@ def process_create_post_video(process_images, data, batch, post):
                     "template_info": batch.template_info,
                     "batch_type": batch.type,
                     "voice_google": voice_google,
+                    "voice_typecast": voice_typecast,
                     "origin_caption": origin_caption,
                     "images_url": image_renders,
                     "images_slider_url": image_renders_sliders,

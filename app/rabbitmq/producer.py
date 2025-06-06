@@ -1,6 +1,9 @@
 import aio_pika
 import json
 import os
+import asyncio
+import random
+from app.lib.logger import logger
 
 # Cấu hình kết nối RabbitMQ
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST", "localhost")
@@ -13,10 +16,38 @@ RABBITMQ_URL = (
 )
 
 
+async def connect_with_retry(max_attempts=5):
+    """
+    Kết nối đến RabbitMQ với retry logic.
+    Nếu kết nối thất bại, sẽ cố gắng kết nối lại theo exponential backoff.
+    """
+    attempt = 0
+    while attempt < max_attempts:
+        try:
+            connection = await aio_pika.connect_robust(
+                RABBITMQ_URL, heartbeat=60, timeout=10, reconnect_interval=5
+            )
+            logger.info("Connected to RabbitMQ successfully")
+            return connection
+        except Exception as e:
+            attempt += 1
+            logger.error(f"Connection attempt {attempt} failed: {e}")
+            if attempt == max_attempts:
+                raise Exception(
+                    f"Failed to connect to RabbitMQ after {max_attempts} attempts: {e}"
+                )
+            sleep_time = 2**attempt + random.uniform(0, 1)
+            await asyncio.sleep(sleep_time)
+
+
 async def send_message(queue: str, message: dict):
+    """
+    Gửi message đến queue với retry logic.
+    """
     try:
-        print(f" [x] Sending to [{queue}] with URL: {RABBITMQ_URL}")
-        connection = await aio_pika.connect_robust(RABBITMQ_URL)
+        logger.info(f"Attempting to send message to queue [{queue}]")
+        connection = await connect_with_retry()
+
         async with connection:
             channel = await connection.channel()
             await channel.declare_queue(queue, durable=True)
@@ -29,9 +60,11 @@ async def send_message(queue: str, message: dict):
                 ),
                 routing_key=queue,
             )
-            print(f" [x] Sent to [{queue}]: {message}")
+            logger.info(f"Successfully sent message to [{queue}]: {message}")
+            return True
     except Exception as e:
-        print(f"Error sending message to {queue}: {e}")
+        logger.error(f"Error sending message to {queue}: {e}")
+        return False
 
 
 async def send_create_content_message(message):

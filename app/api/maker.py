@@ -43,7 +43,7 @@ from app.services.image_template import ImageTemplateService
 from app.services.post import PostService
 from app.services.social_post import SocialPostService
 from app.services.video_service import VideoService
-from app.services.shotstack_services import ShotStackService
+from app.services.shotstack_services import ShotStackService, get_typecast_voices
 from app.services.shorten_services import ShortenServices
 from app.services.notification import NotificationServices
 from app.services.user import UserService
@@ -197,6 +197,7 @@ class APICreateBatchSync(Resource):
                     )
 
             narration = args.get("narration", "female")
+            voice_typecast = args.get("voice", "")
             if narration == "female":
                 voice = 3
             else:
@@ -256,6 +257,7 @@ class APICreateBatchSync(Resource):
                 status=0,
                 process_status="PENDING",
                 voice_google=voice,
+                voice_typecast=voice_typecast,
                 is_paid_advertisements=is_paid_advertisements,
                 is_advance=is_advance,
                 template_info=template_info,
@@ -693,7 +695,7 @@ class APIUpdateTemplateVideoUser(Resource):
             "purchase_guide": {"type": "string"},
             "is_purchase_guide": {"type": "integer"},
             "voice_gender": {"type": ["integer", "null"]},
-            "voice_id": {"type": ["integer", "null"]},
+            "voice_id": {"type": ["string", "null"]},
             "is_video_hooking": {"type": ["integer", "null"]},
             "is_caption_top": {"type": ["integer", "null"]},
             "is_caption_last": {"type": ["integer", "null"]},
@@ -719,7 +721,7 @@ class APIUpdateTemplateVideoUser(Resource):
             is_product_pin = args.get("is_product_pin", 0)
             product_pin = args.get("product_pin", "")
             voice_gender = args.get("voice_gender", 0)
-            voice_id = args.get("voice_id", 0)
+            voice_id = args.get("voice_id", "")
             is_video_hooking = args.get("is_video_hooking", 0)
             is_caption_top = args.get("is_caption_top", 0)
             is_caption_last = args.get("is_caption_last", 0)
@@ -752,13 +754,14 @@ class APIUpdateTemplateVideoUser(Resource):
                 "purchase_guide": purchase_guide,
                 "is_purchase_guide": is_purchase_guide,
                 "voice_gender": voice_gender,
-                "voice_id": voice_id,
+                "voice_id": 0,
                 "is_video_hooking": is_video_hooking,
                 "is_caption_top": is_caption_top,
                 "is_caption_last": is_caption_last,
                 "image_template_id": image_template_id,
                 "is_comment": is_comment,
                 "is_hashtag": is_hashtag,
+                "typecast_voice": voice_id,
                 "comment": comment,
                 "hashtag": json.dumps(hashtag),
             }
@@ -781,7 +784,8 @@ class APIUpdateTemplateVideoUser(Resource):
 
             data_update_batch = {
                 "is_paid_advertisements": is_paid_advertisements,
-                "voice_google": voice_id,
+                "voice_google": 0,
+                "voice_typecast": voice_id,
                 "template_info": json.dumps(data_update_template),
             }
             BatchService.update_batch(batch_id, **data_update_batch)
@@ -1786,6 +1790,9 @@ class APITemplateVideo(Resource):
                 )
 
             user_template_data = user_template.to_dict()
+
+            if "audios" not in user_template_data:
+                user_template_data["audios"] = get_typecast_voices()
 
             if batch_id:
                 batch_info = BatchService.find_batch(batch_id)

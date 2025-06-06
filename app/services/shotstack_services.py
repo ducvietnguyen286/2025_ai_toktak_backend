@@ -2,6 +2,7 @@ import requests
 import json
 import os
 import random
+from app.lib.string import limit_text_to_100
 from app.models.video_create import VideoCreate
 from app.models.video_viral import VideoViral
 from app.models.captions import Caption
@@ -34,6 +35,7 @@ class ShotStackService:
         is_advance = data_make_video["is_advance"]
         template_info = data_make_video["template_info"]
         voice_google = data_make_video["voice_google"]
+        voice_typecast = data_make_video["voice_typecast"]
         origin_caption = data_make_video["origin_caption"]
         images_url = data_make_video["images_url"]
         images_slider_url = data_make_video["images_slider_url"]
@@ -83,17 +85,11 @@ class ShotStackService:
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
         # Chọn giọng nói ngẫu nhiên
-        korean_voice = get_korean_voice(voice_google)
-
-        print(f"korean_voice: {korean_voice}")
-        print(f"origin_caption: {origin_caption}")
+        korean_voice = get_korean_voice(voice_typecast)
 
         mp3_file, audio_duration = text_to_speech_kr(
             korean_voice, origin_caption, dir_path, config
         )
-
-        print(f"audio_duration: {audio_duration}")
-        print(f"mp3_file: {mp3_file}")
 
         video_urls = ShotStackService.get_random_videos(2)
 
@@ -959,16 +955,17 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
             "Authorization": f"Bearer {TYPECAST_API_KEY}",
         }
 
+        text = limit_text_to_100(text)
+
         payload = {
             "text": text,
-            "lang": "ko-kr",
+            "lang": "auto",
             "actor_id": korean_voice["actor_id"],
             "xapi_hd": False,
             "model_version": "latest",
             "xapi_audio_format": "mp3",
             "volumn": 100,
             "speed_x": 1,
-            "tempo": 1,
             "max_seconds": 60,
         }
 
@@ -982,6 +979,8 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
         # )
 
         if response.status_code != 200:
+            print(f"Response status code: {response.status_code}")
+            print(f"Response text: {response.text}")
             log_make_video_message(f"Lỗi từ Google API payload: {payload}")
             log_make_video_message(f"Lỗi từ Google API: {response.text}")
             return "", 0.0
@@ -996,6 +995,8 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
         check_status_speak = result_speak.get("speak_v2_url", "")
 
         download_url = ""
+        audio_duration = 0
+        text_count = 0
 
         while True:
             response_check = requests.get(check_status_speak, headers=headers)
@@ -1003,6 +1004,8 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
                 result_check = response_check.json().get("result", {})
                 if result_check.get("status") == "done":
                     download_url = result_check.get("audio_download_url", "")
+                    audio_duration = result_check.get("duration", 0)
+                    text_count = result_check.get("text_count", 0)
                     break
                 elif result_check.get("status") == "failed":
                     log_make_video_message("Lỗi: Tạo giọng nói thất bại.")
@@ -1020,16 +1023,16 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
         #     return "", 0.0
 
         # Giải mã Base64 và lưu file MP3
-        audio_content = base64.b64decode(response_json["audioContent"])
+        # audio_content = base64.b64decode(response_json["audioContent"])
         with open(output_file, "wb") as audio_file:
             audio_file.write(audio_content.content)
             # audio_file.write(audio_content)
 
         # Lấy thời gian audio bằng ffmpeg
-        audio_duration = get_audio_duration(output_file)
+        # audio_duration = get_audio_duration(output_file)
 
         log_make_video_message(
-            f"Đã tạo file âm thanh ({korean_voice['name']}): {output_file} (Thời gian: {audio_duration:.2f}s)"
+            f"Đã tạo file âm thanh ({korean_voice['name']}): {output_file} (Thời gian: {audio_duration:.2f}s) với đoạn text dài {text_count} ký tự"
         )
         return output_file, audio_duration
 
