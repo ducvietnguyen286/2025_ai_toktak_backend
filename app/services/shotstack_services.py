@@ -963,7 +963,8 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
 
         log_make_video_message(f"text: {text}")
 
-        for text_chunk, index in text:
+        for index in range(len(text)):
+            text_chunk = text[index]
             log_make_video_message(f"text_chunk: {text_chunk}")
 
             payload = {
@@ -988,8 +989,6 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
             # )
 
             if response.status_code != 200:
-                print(f"Response status code: {response.status_code}")
-                print(f"Response text: {response.text}")
                 log_make_video_message(f"Lỗi từ Google API payload: {payload}")
                 log_make_video_message(f"Lỗi từ Google API: {response.text}")
                 return "", 0.0
@@ -1049,7 +1048,9 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
             audio_duration += file_duration
 
         if len(audio_files) > 1:
-            merge_audio_files(audio_files, output_file)
+            output_file = merge_audio_files(audio_files, output_file)
+            for audio_file in audio_files:
+                os.remove(audio_file)
         else:
             output_file = audio_files[0]
 

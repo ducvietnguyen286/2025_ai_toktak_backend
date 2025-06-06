@@ -12,6 +12,13 @@ def merge_audio_files(audio_files, output_path):
     :return: Đường dẫn đến file âm thanh đã ghép
     """
     try:
+        # Chuyển đổi input thành list nếu là string
+        if isinstance(audio_files, str):
+            audio_files = [audio_files]
+        elif not isinstance(audio_files, list):
+            logger.error("audio_files must be a string or list")
+            return None
+
         if not audio_files:
             logger.error("No audio files provided for merging")
             return None
@@ -23,12 +30,12 @@ def merge_audio_files(audio_files, output_path):
         combined = AudioSegment.from_file(audio_files[0])
 
         # Ghép các file còn lại
-        for audio_file in audio_files[1:]:
+        for i in range(1, len(audio_files)):
             try:
-                next_segment = AudioSegment.from_file(audio_file)
+                next_segment = AudioSegment.from_file(audio_files[i])
                 combined += next_segment
             except Exception as e:
-                logger.error(f"Error processing audio file {audio_file}: {str(e)}")
+                logger.error(f"Error processing audio file {audio_files[i]}: {str(e)}")
                 continue
 
         # Xuất file đã ghép
@@ -53,6 +60,13 @@ def merge_audio_files_with_silence(audio_files, output_path, silence_duration=50
     :return: Đường dẫn đến file âm thanh đã ghép
     """
     try:
+        # Chuyển đổi input thành list nếu là string
+        if isinstance(audio_files, str):
+            audio_files = [audio_files]
+        elif not isinstance(audio_files, list):
+            logger.error("audio_files must be a string or list")
+            return None
+
         if not audio_files:
             logger.error("No audio files provided for merging")
             return None
@@ -67,12 +81,12 @@ def merge_audio_files_with_silence(audio_files, output_path, silence_duration=50
         combined = AudioSegment.from_file(audio_files[0])
 
         # Ghép các file còn lại với khoảng lặng
-        for audio_file in audio_files[1:]:
+        for i in range(1, len(audio_files)):
             try:
-                next_segment = AudioSegment.from_file(audio_file)
+                next_segment = AudioSegment.from_file(audio_files[i])
                 combined += silence + next_segment
             except Exception as e:
-                logger.error(f"Error processing audio file {audio_file}: {str(e)}")
+                logger.error(f"Error processing audio file {audio_files[i]}: {str(e)}")
                 continue
 
         # Xuất file đã ghép
