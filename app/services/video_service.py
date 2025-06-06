@@ -1306,7 +1306,7 @@ def get_audio_duration(audio_file):
     try:
         result = subprocess.run(
             [
-                "/usr/bin/ffprobe",
+                "ffprobe",
                 "-i",
                 audio_file,
                 "-show_entries",

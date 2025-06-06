@@ -1253,7 +1253,7 @@ def get_audio_duration(file_path):
     try:
         result = subprocess.run(
             [
-                "/usr/bin/ffprobe",
+                "ffprobe",
                 "-i",
                 file_path,
                 "-show_entries",
@@ -1394,7 +1394,7 @@ def get_media_duration(url):
     try:
         result = subprocess.run(
             [
-                "/usr/bin/ffprobe",
+                "ffprobe",
                 "-i",
                 url,
                 "-show_entries",
