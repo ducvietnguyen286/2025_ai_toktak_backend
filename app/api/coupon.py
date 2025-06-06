@@ -130,7 +130,7 @@ class APIUsedCoupon(Resource):
 
         coupon.expunge()
         coupon_code.expunge()
-        current_user.expunge()
+        # current_user.expunge()
 
         with Session(bind=db.engine) as session:
             try:
