@@ -58,11 +58,12 @@ class GroupProductService:
         )
 
     @staticmethod
-    def get_groups_with_products(user_id, product_limit=20, cache_timeout=86400):
+    def get_groups_with_products(user_id, product_limit=10, cache_timeout=86400):
         cache_key = f"group_products:{user_id}:{product_limit}"
+        redis_client.delete(cache_key)
         cached_data = redis_client.get(cache_key)
         if cached_data:
-            return json.loads(cached_data)
+            return json.loads(cached_data.decode("utf-8"))
 
         groups = (
             GroupProduct.query.filter_by(user_id=user_id)
@@ -70,6 +71,30 @@ class GroupProductService:
             .all()
         )
         group_list = []
+        ungroupped_products = (
+            Product.query.filter_by(user_id=user_id, group_id=0)
+            .order_by(Product.order_no)
+            .limit(product_limit)
+            .all()
+        )
+        total_ungroupped = Product.query.filter_by(user_id=user_id, group_id=0).count()
+        group_list.append(
+            {
+                "group": {
+                    "id": 0,
+                    "user_id": user_id,
+                    "name": "",
+                    "order_no": 0,
+                    "description": "",
+                },
+                "products": [
+                    product_detail.to_dict() for product_detail in ungroupped_products
+                ],
+                "total_products": total_ungroupped,
+            }
+        )
+
+        # Lấy group thật từ DB
         for group in groups:
             products = (
                 Product.query.filter_by(group_id=group.id)
@@ -85,7 +110,6 @@ class GroupProductService:
                     "total_products": total_products,
                 }
             )
-
         redis_client.setex(
             cache_key, cache_timeout, json.dumps(group_list, ensure_ascii=False)
         )
