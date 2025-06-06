@@ -202,7 +202,7 @@ def replace_phrases_in_text(text, phrase_mapping):
         "Access token invalid": "액세스 토큰이 유효하지 않습니다.",
         "The parameter video_url is required": "video_url 파라미터는 필수입니다.",
         "You are not permitted to perform this action.": "이 작업을 수행할 권한이 없습니다.",
-        "I scream. You scream. We all scream... for us to fix this page. We’ll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
+        "I scream. You scream. We all scream... for us to fix this page. We'll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
         "This page is down": "이 페이지는 현재 작동하지 않습니다.",
     }
 
@@ -237,7 +237,7 @@ def replace_phrases_in_text(text):
         "Access token invalid": "액세스 토큰이 유효하지 않습니다.",
         "The parameter video_url is required": "video_url 파라미터는 필수입니다.",
         "You are not permitted to perform this action.": "이 작업을 수행할 권한이 없습니다.",
-        "I scream. You scream. We all scream... for us to fix this page. We’ll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
+        "I scream. You scream. We all scream... for us to fix this page. We'll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
         "This page is down": "이 페이지는 현재 작동하지 않습니다.",
     }
 
@@ -380,3 +380,16 @@ def get_subscription_name(subscription):
 def generate_order_id():
     raw_id = f"order_{uuid.uuid4().hex[:16]}"
     return re.sub(r"[^a-zA-Z0-9_-]", "", raw_id)
+
+
+def limit_text_to_100(text):
+    """
+    Giới hạn văn bản tối đa 100 ký tự.
+    Nếu văn bản dài hơn 100 ký tự, sẽ cắt bớt và thêm dấu ... vào cuối.
+
+    :param text: Văn bản đầu vào
+    :return: Văn bản đã được giới hạn độ dài
+    """
+    if len(text) <= 495:
+        return text
+    return text[:495]
