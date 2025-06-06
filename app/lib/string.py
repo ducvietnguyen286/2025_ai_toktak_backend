@@ -382,6 +382,10 @@ def generate_order_id():
     return re.sub(r"[^a-zA-Z0-9_-]", "", raw_id)
 
 
+def format_price_won(price):
+    return "{:,.0f}₩".format(price)
+
+
 def cutting_text_when_exceed_450(text):
     """
     Cắt văn bản khi vượt quá 450 ký tự.

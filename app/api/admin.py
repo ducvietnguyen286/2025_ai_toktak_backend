@@ -12,7 +12,7 @@ import json
 from flask import request, send_file
 from app.services.auth import AuthService
 from app.services.referral_service import ReferralService
-from app.lib.string import get_level_images
+from app.lib.string import format_price_won, get_level_images
 import const
 import os
 import secrets
@@ -22,6 +22,8 @@ from io import BytesIO
 import traceback
 
 from app.services.social_post import SocialPostService
+from app.services.product import ProductService
+from app.services.batch import BatchService
 
 ns = Namespace(name="admin", description="Admin API")
 
@@ -166,7 +168,6 @@ class APISocialPost(Resource):
         return Response(message="", code=200, data=data).to_dict()
 
 
-
 @ns.route("/report_dashboard")
 class APIReportDashboard(Resource):
     @jwt_required()
@@ -176,59 +177,152 @@ class APIReportDashboard(Resource):
         from_date = request.args.get("from_date", "", type=str)
         to_date = request.args.get("to_date", "", type=str)
         data_search = {
-            "type" : "user",
-            "type_2" : "NEW_USER",
-            "time_range" : selected_date_type,
-            "from_date" : from_date,
-            "to_date" : to_date,
+            "type": "user",
+            "type_2": "NEW_USER",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
         }
         new_users = UserService.report_user_by_type(data_search)
         
+        
+        data_search = {
+            "subscription": "FREE",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_free = UserService.report_user_by_subscription(data_search)
+        
+        data_search = {
+            "subscription": "BASIC",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_basic = UserService.report_user_by_subscription(data_search)
+
+
+        data_search = {
+            "subscription": "STANDARD",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_standard = UserService.report_user_by_subscription(data_search)
+
+        
+        data_search = {
+            "subscription": "NEW_USER",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_new_user = UserService.report_user_by_subscription(data_search)
+        
+        data_search = {
+            "subscription": "BUSINESS",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_business = UserService.report_user_by_subscription(data_search)
+
+
+
+
         data_search_coupon = {
-            "type" : "USED_COUPON",
-            "type_2" : "",
-            "time_range" : selected_date_type,
-            "from_date" : from_date,
-            "to_date" : to_date,
+            "type": "USED_COUPON",
+            "type_2": "",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
         }
-        
+
         total_user_use_coupon = UserService.report_user_by_type(data_search_coupon)
-        
+
         data_search_payment = {
-            "package_name" : "",
-            "type_2" : "",
-            "time_range" : selected_date_type,
-            "from_date" : from_date,
-            "to_date" : to_date,
+            "package_name": "",
+            "type_2": "",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
         }
-        total_user_payment = PaymentService.report_payment_by_type(data_search_payment)
-        
+        data_user_payment = PaymentService.report_payment_by_type(data_search_payment)
+        total_user_payment = data_user_payment["total"]
+        total_user_payment_price = data_user_payment["total_price"]
+
         data_search_payment_paid = {
-            "package_name" : "",
-            "status" : "PAID",
-            "time_range" : selected_date_type,
-            "from_date" : from_date,
-            "to_date" : to_date,
+            "package_name": "",
+            "status": "PAID",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
         }
-        total_user_paid_payment = PaymentService.report_payment_by_type(data_search_payment_paid)
-        
+        data_user_paid_payment = PaymentService.report_payment_by_type(
+            data_search_payment_paid
+        )
+        total_user_paid_payment = data_user_paid_payment["total"]
+        total_user_paid_payment_price = data_user_paid_payment["total_price"]
+
         data_search_pending_payment = {
-            "package_name" : "",
-            "status" : "PENDING",
-            "time_range" : selected_date_type,
-            "from_date" : from_date,
-            "to_date" : to_date,
+            "package_name": "",
+            "status": "PENDING",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
         }
-        total_user_pending_payment = PaymentService.report_payment_by_type(data_search_pending_payment)
-        
-        data = {} 
-        data['new_users'] = new_users
-        data['total_user_use_coupon'] = total_user_use_coupon
-        data['total_user_payment'] = total_user_payment
-        data['total_user_paid_payment'] = total_user_paid_payment
-        data['total_user_pending_payment'] = total_user_pending_payment
+        data_user_pending_payment = PaymentService.report_payment_by_type(
+            data_search_pending_payment
+        )
+        total_user_pending_payment = data_user_pending_payment["total"]
+        total_user_pending_payment_price = data_user_pending_payment["total_price"]
+
+        data_search_products = {
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_products = ProductService.report_product_by_type(
+            data_search_products
+        )
+
+        data_search_contents = {
+            "process_status": "",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_batchs = BatchService.report_batch_by_type(data_search_contents)
+
+        data_search_contents = {
+            "process_status": "DRAFT",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_batch_drafts = BatchService.report_batch_by_type(data_search_contents)
+
+        data = {}
+        data["total_user_free"] = total_user_free
+        data["total_user_basic"] = total_user_basic
+        data["total_user_standard"] = total_user_standard
+        data["total_user_new_user"] = total_user_new_user
+        data["total_user_business"] = total_user_business
+        data["new_users"] = new_users
+        data["total_user_use_coupon"] = total_user_use_coupon
+        data["total_user_payment"] = total_user_payment
+        data["total_user_paid_payment"] = total_user_paid_payment
+        data["total_user_pending_payment"] = total_user_pending_payment
+        data["total_user_products"] = total_user_products
+        data["total_batchs"] = total_batchs
+        data["total_batch_drafts"] =total_batch_drafts
+        data["total_user_payment_price"] = format_price_won(total_user_paid_payment_price) 
+        data["total_user_paid_payment_price"] = format_price_won(total_user_paid_payment_price)
+        data["total_user_pending_payment_price"] = format_price_won(total_user_pending_payment_price)
 
         return Response(message="", code=200, data=data).to_dict()
+
 
 @ns.route("/logs")
 class GetListFileLogs(Resource):
