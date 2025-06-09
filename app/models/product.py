@@ -7,7 +7,7 @@ class Product(db.Model, BaseModel):
     __tablename__ = "products"
 
     id = db.Column(db.Integer, primary_key=True)
-    group_id = db.Column(db.Integer, db.ForeignKey("groups_product.id"), nullable=True)
+    group_id = db.Column(db.Integer, db.ForeignKey("groups_product.id"), nullable=True, default=0)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     product_name = db.Column(db.String(500), nullable=False, default="")
     product_url = db.Column(db.String(500), nullable=False, default="")
