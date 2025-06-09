@@ -173,7 +173,6 @@ class GroupProductService:
             )
             db.session.add(product)
             return product
-<<<<<<< HEAD
 
     @staticmethod
     def delete_groups_and_products(group_ids, user_id):
@@ -189,5 +188,3 @@ class GroupProductService:
         except Exception as e:
             db.session.rollback()
             return False
-=======
->>>>>>> 36c60b2006fd7b161b6b12bfc163651531d66972
