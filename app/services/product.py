@@ -69,6 +69,9 @@ class ProductService:
 
         if "user_id" in data_search and data_search["user_id"]:
             query = query.filter(Product.user_id == data_search["user_id"])
+            
+        if "group_id" in data_search and data_search["group_id"]:
+            query = query.filter(Product.group_id == data_search["group_id"])
 
         # Xử lý type_order
         if data_search["type_order"] == "id_asc":

@@ -40,6 +40,7 @@ class UserProductApi(Resource):
             user_id = request.args.get("user_id", "", type=str)
             from_date = request.args.get("from_date", "", type=str)
             to_date = request.args.get("to_date", "", type=str)
+            group_id = request.args.get("group_id", 0, type=int)
             data_search = {
                 "page": page,
                 "per_page": per_page,
@@ -52,6 +53,7 @@ class UserProductApi(Resource):
                 "user_id": user_id,
                 "from_date": from_date,
                 "to_date": to_date,
+                "group_id": group_id,
             }
             products = ProductService.get_products(data_search)
             return {
