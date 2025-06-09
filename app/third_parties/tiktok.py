@@ -217,7 +217,7 @@ class TiktokService(BaseService):
                 f"------------ READY TO SEND POST: {post._to_json()} ----------------"
             )
             if post.type == "video":
-                self.upload_video(post)
+                self.upload_video_by_url(post)
             if post.type == "image":
                 self.upload_image(post.images)
             return True
@@ -380,9 +380,21 @@ class TiktokService(BaseService):
             self.save_errors("ERRORED", f"POST {self.key_log} UPLOAD VIDEO: {str(e)}")
             return False
 
-    def upload_video_by_url(self, media_url, retry=0):
+    def upload_video_by_url(self, post, retry=0):
         try:
-            log_tiktok_message(f"POST {self.key_log} Upload video to Tiktok")
+            log_tiktok_message(f"POST {self.key_log} Upload video by URL to Tiktok")
+
+            video_path = post.video_path
+            time_waited = 0
+            while not video_path and time_waited < 30:
+                time.sleep(2)
+                time_waited += 2
+                post = PostService.find_post(post.id)
+                video_path = post.video_path
+
+            path_video_url = video_path.replace("/mnt/", "")
+            media_url = f"https://apitoktak.voda-play.com/voice/{path_video_url}"
+
             URL_VIDEO_UPLOAD = "https://open.tiktokapis.com/v2/post/publish/video/init/"
             access_token = self.meta.get("access_token")
 
