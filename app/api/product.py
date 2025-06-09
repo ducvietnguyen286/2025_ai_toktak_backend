@@ -509,6 +509,7 @@ class MultiGroupCreateApi(Resource):
                 code=500
             ).to_dict()
         
+<<<<<<< HEAD
     @ns.route("/group_delete")
     class GroupDeleteApi(Resource):
         @jwt_required()
@@ -554,3 +555,6 @@ class MultiGroupCreateApi(Resource):
                     message_en="An error occurred while processing the request.",
                     code=500
                 ).to_dict()
+=======
+    
+>>>>>>> 36c60b2006fd7b161b6b12bfc163651531d66972
