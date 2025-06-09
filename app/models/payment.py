@@ -24,7 +24,7 @@ class Payment(db.Model, BaseModel):
     total_link = db.Column(db.Integer, default=0)
     total_create = db.Column(db.Integer, default=10)
 
-    start_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    start_date = db.Column(db.DateTime, nullable=False, default=datetime.now)
     end_date = db.Column(db.DateTime, nullable=False)
     requested_at = db.Column(db.DateTime, nullable=False)
     approved_at = db.Column(db.DateTime, nullable=False)
@@ -33,9 +33,9 @@ class Payment(db.Model, BaseModel):
     payment_data = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text, nullable=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )
 
     user = db.relationship("User", lazy="joined")

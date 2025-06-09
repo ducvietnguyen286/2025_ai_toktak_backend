@@ -48,9 +48,9 @@ class User(db.Model, BaseModel):
     ali_express_active = db.Column(db.Boolean, default=False)
     ali_express_info = db.Column(db.Text)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
-    last_activated = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
+    last_activated = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
+    updated_at = db.Column(db.DateTime, default=datetime.now)
     deleted_at = db.Column(db.DateTime)
 
     print_filter = ("password",)

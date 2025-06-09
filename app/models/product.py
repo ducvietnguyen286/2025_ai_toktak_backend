@@ -21,9 +21,9 @@ class Product(db.Model, BaseModel):
     product_url_hash = db.Column(db.String(255), index=True, nullable=False)
 
     status = db.Column(db.Integer, default=1)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )  #
 
     user = db.relationship("User", lazy="joined")
