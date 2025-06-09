@@ -58,8 +58,11 @@ class BaseModel:
                     response[column] = json.loads(value)
             elif isinstance(value, datetime):
                 if value.tzinfo is None:
-                    value = pytz.utc.localize(value)  # Fix lỗi lệch giờ
-                response[column] = value.astimezone(tz).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    value = pytz.timezone("Asia/Seoul").localize(value)
+                    response[column] = value.isoformat()
+                # if value.tzinfo is None:
+                #     value = pytz.utc.localize(value)  # Fix lỗi lệch giờ
+                # response[column] = value.astimezone(tz).strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
                 response[column] = value
 
