@@ -257,6 +257,7 @@ class InstagramService(BaseService):
         self.link_id = link.id
         self.post_id = post.id
         self.batch_id = post.batch_id
+        self.post = post
         self.social_post_id = self.social_post.id
         self.istagram_user_id = self.user_link.social_id
         self.key_log = f"{self.post_id} - {self.social_post.session_key}"
@@ -527,7 +528,7 @@ class InstagramService(BaseService):
             GET_STATUS_URL = f"https://graph.instagram.com/v22.0/{media_id}"
             params = {
                 "access_token": self.access_token,
-                "fields": "status,status_code",
+                "fields": "status,status_code,error_message",
             }
 
             try:
@@ -558,7 +559,12 @@ class InstagramService(BaseService):
                     error = result["error"] if "error" in result else {}
                     error_message = error["message"] if "message" in error else ""
                     if error_message == "":
+                        error_message = (
+                            result["error_message"] if "error_message" in result else ""
+                        )
+                    if error_message == "":
                         error_message = "Error occurred while uploading media"
+
                     self.save_errors(
                         "ERRORED",
                         f"ERROR GET UPLOAD STATUS {self.key_log}: {error_message}",

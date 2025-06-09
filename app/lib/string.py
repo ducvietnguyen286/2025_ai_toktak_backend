@@ -1,13 +1,19 @@
+from http.cookiejar import CookieJar
 import json
 import random
 import re
+import urllib.parse
 
 import hashlib
 import base64
 import string
+import traceback
+from app.lib.header import generate_desktop_user_agent
 import const
 import uuid
 from app.lib.logger import logger
+import requests
+from urllib.parse import urljoin
 
 
 def is_json(data):
@@ -202,7 +208,7 @@ def replace_phrases_in_text(text, phrase_mapping):
         "Access token invalid": "액세스 토큰이 유효하지 않습니다.",
         "The parameter video_url is required": "video_url 파라미터는 필수입니다.",
         "You are not permitted to perform this action.": "이 작업을 수행할 권한이 없습니다.",
-        "I scream. You scream. We all scream... for us to fix this page. We’ll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
+        "I scream. You scream. We all scream... for us to fix this page. We'll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
         "This page is down": "이 페이지는 현재 작동하지 않습니다.",
     }
 
@@ -237,7 +243,7 @@ def replace_phrases_in_text(text):
         "Access token invalid": "액세스 토큰이 유효하지 않습니다.",
         "The parameter video_url is required": "video_url 파라미터는 필수입니다.",
         "You are not permitted to perform this action.": "이 작업을 수행할 권한이 없습니다.",
-        "I scream. You scream. We all scream... for us to fix this page. We’ll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
+        "I scream. You scream. We all scream... for us to fix this page. We'll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
         "This page is down": "이 페이지는 현재 작동하지 않습니다.",
     }
 
@@ -384,3 +390,81 @@ def generate_order_id():
 
 def format_price_won(price):
     return "{:,.0f}₩".format(price)
+
+
+def extract_redirect_url_from_script(html_content):
+    """
+    Trích xuất giá trị window.runParams.redirectUrl từ nội dung script trong HTML
+
+    :param html_content: Nội dung HTML của trang web
+    :return: URL redirect nếu tìm thấy, None nếu không tìm thấy
+    """
+    try:
+        script_pattern = r"<script[^>]*>(.*?)</script>"
+        scripts = re.findall(script_pattern, html_content, re.DOTALL)
+
+        for script in scripts:
+            redirect_pattern = (
+                r'window\.runParams\.redirectUrl\s*=\s*[\'"]([^\'"]+)[\'"]'
+            )
+            match = re.search(redirect_pattern, script)
+            if match:
+                redirect_url = match.group(1)
+                return urllib.parse.unquote(redirect_url)
+
+        return None
+
+    except Exception as e:
+        logger.error(f"Error extracting redirect URL from script: {str(e)}")
+        return None
+
+
+def un_shotend_url(url):
+    """
+    Lấy URL gốc từ URL rút gọn.
+    Kiểm tra và theo dõi tất cả các redirect cho đến khi tìm được URL cuối cùng.
+
+    :param url: URL rút gọn cần kiểm tra
+    :return: URL gốc sau khi đã theo dõi tất cả redirect
+    """
+    try:
+        cookie_jar = CookieJar()
+        session = requests.Session()
+        session.cookies = cookie_jar
+        user_agent = generate_desktop_user_agent()
+        headers = {
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en",
+            "priority": "u=0, i",
+            "referer": "",
+            "upgrade-insecure-requests": "1",
+            "user-agent": user_agent,
+        }
+        response = session.get(url, headers=headers, allow_redirects=False)
+
+        while response.status_code in (301, 302, 303, 307, 308):
+            redirect_url = response.headers.get("Location")
+            if not redirect_url:
+                break
+
+            if not redirect_url.startswith(("http://", "https://")):
+                redirect_url = urljoin(url, redirect_url)
+
+            response = session.get(redirect_url, headers=headers, allow_redirects=False)
+
+            if redirect_url.startswith("https://star.aliexpress.com"):
+                redirect_url_from_script = extract_redirect_url_from_script(
+                    response.text
+                )
+                if redirect_url_from_script:
+                    return redirect_url_from_script
+                return urllib.parse.unquote(redirect_url)
+
+            url = redirect_url
+
+        return urllib.parse.unquote(url)
+
+    except Exception as e:
+        logger.error(f"Error unshortening URL {url}: {str(e)}")
+        return url
