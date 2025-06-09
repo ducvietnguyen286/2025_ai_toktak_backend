@@ -27,9 +27,9 @@ class Notification(db.Model, BaseModel):
     render_id = db.Column(db.String(500), nullable=False, default="")
 
     social_sns_description = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )  #
 
     user = db.relationship("User", lazy="joined")
