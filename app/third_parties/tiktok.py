@@ -332,13 +332,6 @@ class TiktokService(BaseService):
                 self.save_publish("PUBLISHED", permalink)
                 return True
             else:
-                error_message = status.get("message")
-                self.save_errors(
-                    "ERRORED",
-                    f"POST {self.key_log} UPLOAD IMAGE: {error_message}",
-                    base_message=error_message,
-                )
-
                 return False
 
         except Exception as e:
@@ -478,12 +471,6 @@ class TiktokService(BaseService):
                 self.save_publish("PUBLISHED", permalink)
                 return True
             else:
-                error_message = status.get("message")
-                self.save_errors(
-                    "ERRORED",
-                    f"POST {self.key_log} UPLOAD VIDEO: {error_message}",
-                    base_message=error_message,
-                )
                 return False
         except Exception as e:
             self.save_errors(
@@ -576,6 +563,11 @@ class TiktokService(BaseService):
                 "publicaly_available_post_id": publicaly_available_post_id,
             }
         if status == "FAILED":
+            self.save_errors(
+                "ERRORED",
+                f"POST {self.key_log} CHECK STATUS - GET ERROR: {res_json.get('data').get('fail_reason')}",
+                base_message=res_json.get("data").get("fail_reason"),
+            )
             return {
                 "status": False,
                 "message": res_json.get("data").get("fail_reason"),
