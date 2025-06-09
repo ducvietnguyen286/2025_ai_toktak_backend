@@ -706,7 +706,7 @@ class TiktokService(BaseService):
             else:
                 start_bytes = i * chunk_size
                 end_bytes = min(start_bytes + chunk_size, media_size) - 1
-                current_chunk_size = start_bytes - end_bytes + 1
+                current_chunk_size = chunk_size
 
             chunk_data = media_content[start_bytes:end_bytes]
 
