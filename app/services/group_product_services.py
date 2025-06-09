@@ -114,3 +114,62 @@ class GroupProductService:
             cache_key, cache_timeout, json.dumps(group_list, ensure_ascii=False)
         )
         return group_list
+
+    @staticmethod
+    def upsert_group(group_data, user_id):
+        group_id = group_data["id"]
+        is_new = isinstance(group_id, str) and "group-" in group_id
+        group = None
+        if not is_new:
+            group = GroupProduct.query.filter_by(id=group_id, user_id=user_id).first()
+
+        if group:
+            group.name = group_data.get("title", group.name)
+            group.order_no = group_data.get("order_no", group.order_no or 0)
+            group.description = group_data.get("description", group.description or "")
+            group.title_type = group_data.get("titleType", group.titleType or "")
+            return group
+        else:
+            group = GroupProduct(
+                user_id=user_id,
+                name=group_data.get("title", ""),
+                order_no=group_data.get("order_no", 0),
+                description=group_data.get("description", ""),
+                title_type=group_data.get("titleType", "right"),
+            )
+            db.session.add(group)
+            db.session.flush()
+            return group
+
+    @staticmethod
+    def upsert_product(product_data, user_id, group_id):
+        product_info = product_data.get("product", {})
+        prod_id =  product_info.get("id", "")
+        is_new = isinstance(prod_id, str) and "temp" in prod_id 
+        product = None
+        if not is_new:
+            product = Product.query.filter_by(id=prod_id, user_id=user_id).first()
+        if product:
+            product.product_name = product_info.get("product_name", product.product_name)
+            product.price = product_info.get("price", product.price)
+            product.product_image = product_info.get("product_image", product.product_image)
+            product.product_url = product_info.get("product_url", product.product_url)
+            product.group_id = group_id
+            product.order_no = product_info.get("order_no", product.order_no or 0)
+            return product
+        else:
+            product_url = product_info.get("product_url", "")
+            product_url_hash = hashlib.sha1(product_url.encode()).hexdigest()
+
+            product = Product(
+                user_id=user_id,
+                product_url_hash=product_url_hash,
+                product_name=product_info.get("product_name", ""),
+                price=product_info.get("price", ""),
+                product_image=product_info.get("product_image", ""),
+                product_url=product_info.get("product_url", ""),
+                group_id=group_id,
+                order_no=product_info.get("order_no", 0),
+            )
+            db.session.add(product)
+            return product
