@@ -71,29 +71,28 @@ class GroupProductService:
             .all()
         )
         group_list = []
-        ungroupped_products = (
-            Product.query.filter_by(user_id=user_id, group_id=0)
-            .order_by(Product.order_no)
-            .limit(product_limit)
-            .all()
-        )
-        total_ungroupped = Product.query.filter_by(user_id=user_id, group_id=0).count()
-        group_list.append(
-            {
-                "group": {
-                    "id": 0,
-                    "user_id": user_id,
-                    "name": "",
-                    "order_no": 0,
-                    "description": "",
-                },
-                "products": [
-                    product_detail.to_dict() for product_detail in ungroupped_products
-                ],
-                "total_products": total_ungroupped,
-            }
-        )
-
+        # ungroupped_products = (
+        #     Product.query.filter_by(user_id=user_id, group_id=0)
+        #     .order_by(Product.order_no)
+        #     .limit(product_limit)
+        #     .all()
+        # )
+        # total_ungroupped = Product.query.filter_by(user_id=user_id, group_id=0).count()
+        # group_list.append(
+        #     {
+        #         "group": {
+        #             "id": 0,
+        #             "user_id": user_id,
+        #             "name": "",
+        #             "order_no": 0,
+        #             "description": "",
+        #         },
+        #         "products": [
+        #             product_detail.to_dict() for product_detail in ungroupped_products
+        #         ],
+        #         "total_products": total_ungroupped,
+        #     }
+        # )
         # Lấy group thật từ DB
         for group in groups:
             products = (
@@ -173,7 +172,6 @@ class GroupProductService:
             )
             db.session.add(product)
             return product
-<<<<<<< HEAD
 
     @staticmethod
     def delete_groups_and_products(group_ids, user_id):
@@ -189,5 +187,3 @@ class GroupProductService:
         except Exception as e:
             db.session.rollback()
             return False
-=======
->>>>>>> 36c60b2006fd7b161b6b12bfc163651531d66972
