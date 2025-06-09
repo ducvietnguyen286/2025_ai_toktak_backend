@@ -337,7 +337,7 @@ class GroupCreateApi(Resource):
             ).to_dict()
 
 
-@ns.route("/group_update/<int:group_id>")
+@ns.route("/group_update_detail/<int:group_id>")
 class GroupUpdateApi(Resource):
     @jwt_required()
     @parameters(
@@ -469,6 +469,8 @@ class GroupListWithProductsApi(Resource):
 
 
 
+
+
 @ns.route("/multi_group_create")
 class MultiGroupCreateApi(Resource):
     @jwt_required()
@@ -488,6 +490,98 @@ class MultiGroupCreateApi(Resource):
                 # Lưu hoặc update group
                 group = GroupProductService.upsert_group(group_data, user_id)
                 result["groups"].append(group.to_dict())
+
+                # Lưu các product con trong group
+                for product_data in group_data.get("children", []):
+                    logger.info(f"group: {group.id}")
+                    logger.info(f"Processing product: {product_data}")
+                    prod = GroupProductService.upsert_product(product_data, user_id, group.id)
+                    result["products"].append(prod.to_dict())
+
+            db.session.commit()
+            return Response(
+                data=result,
+                message="그룹과 상품이 성공적으로 저장되었습니다.",
+                message_en="Groups and products saved successfully.",
+                code=200
+            ).to_dict() 
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Create group error: {str(e)}")
+            return Response(
+                message="저장 중 오류가 발생했습니다.",
+                message_en="An error occurred while saving data.",
+                code=500
+            ).to_dict()
+        
+    @ns.route("/group_delete")
+    class GroupDeleteApi(Resource):
+        @jwt_required()
+        def post(self):
+            try:
+                data = request.get_json() or {}
+                ids_raw = data.get("ids", "")  # "1,2,3" hoặc [1,2,3]
+                current_user = AuthService.get_current_identity()
+                user_id = current_user.id
+
+                # Chuẩn hóa list group_id
+                if isinstance(ids_raw, str):
+                    group_ids = [int(i.strip()) for i in ids_raw.split(",") if i.strip()]
+                elif isinstance(ids_raw, list):
+                    group_ids = [int(i) for i in ids_raw if str(i).strip()]
+                else:
+                    return Response(
+                        message="ids 형식이 잘못되었습니다.",
+                        message_en="Invalid ids format.",
+                        code=400,
+                    ).to_dict()
+
+                # Gọi service
+                try:
+                    GroupProductService.delete_groups_and_products(group_ids, user_id)
+                except Exception as e:
+                    logger.error(f"Error deleting groups: {str(e)}")
+                    return Response(
+                        message="그룹 삭제 중 오류가 발생했습니다.",
+                        message_en="An error occurred while deleting groups.",
+                        code=500
+                    ).to_dict()
+
+                return Response(
+                    message="그룹과 해당 상품이 성공적으로 삭제되었습니다.",
+                    message_en="Groups and their products deleted successfully.",
+                    code=200
+                ).to_dict()
+            except Exception as e:
+                logger.error(f"Group delete API error: {str(e)}")
+                return Response(
+                    message="요청 처리 중 오류가 발생했습니다.",
+                    message_en="An error occurred while processing the request.",
+                    code=500
+                ).to_dict()
+
+
+@ns.route("/group_update")
+class MultiGroupUpdateApi(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            current_user = AuthService.get_current_identity()
+            user_id = current_user.id
+
+            data = request.get_json()
+            groups = data.get("products", [])
+            result = {
+                "groups": [],
+                "products": []
+            }
+
+            for group_data in groups:
+                # Lưu hoặc update group
+                group = GroupProductService.upsert_group(group_data, user_id)
+                result["groups"].append(group.to_dict())
+                
+                logger.info(f"Received groups data: {group}")
 
                 # Lưu các product con trong group
                 for product_data in group_data.get("children", []):
