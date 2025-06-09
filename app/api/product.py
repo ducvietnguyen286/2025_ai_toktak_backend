@@ -269,6 +269,7 @@ class MultiProductCreateApi(Resource):
                         product_image=product_image,
                         price=price,
                         description="",
+                        group_id=0,
                         product_url_hash=product_url_hash,
                         content=json.dumps([]),
                     )
