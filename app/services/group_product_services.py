@@ -173,3 +173,21 @@ class GroupProductService:
             )
             db.session.add(product)
             return product
+<<<<<<< HEAD
+
+    @staticmethod
+    def delete_groups_and_products(group_ids, user_id):
+        try:
+            Product.query.filter(
+                Product.group_id.in_(group_ids), Product.user_id == user_id
+            ).delete(synchronize_session=False)
+            GroupProduct.query.filter(
+                GroupProduct.id.in_(group_ids), GroupProduct.user_id == user_id
+            ).delete(synchronize_session=False)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            return False
+=======
+>>>>>>> 36c60b2006fd7b161b6b12bfc163651531d66972
