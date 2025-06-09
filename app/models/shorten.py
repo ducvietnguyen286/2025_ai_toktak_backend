@@ -11,9 +11,9 @@ class ShortenURL(db.Model, BaseModel):
     original_url_hash = db.Column(db.String(100), nullable=False, index=True)
     short_code = db.Column(db.String(10), unique=True, nullable=False)
     status = db.Column(db.Integer, default=1)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now)
     updated_at = db.Column(
-        db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
+        db.DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
 
     def to_dict(self):

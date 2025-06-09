@@ -16,9 +16,9 @@ class Schedules(db.Model, BaseModel):
     status = db.Column(db.Integer, default=1)
     template_info = db.Column(db.Text, nullable=True) 
     link_sns = db.Column(db.Text, nullable=True) 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )
 
     # to_json_filter = ("template_info",)
