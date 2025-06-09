@@ -10,7 +10,7 @@ class Setting(db.Model, BaseModel):
     setting_name = db.Column(db.String(500), nullable=False)  # Tên sản phẩm
     setting_value = db.Column(db.String(500), nullable=False)
     status = db.Column(db.Integer, default=1)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )

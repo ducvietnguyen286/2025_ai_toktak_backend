@@ -10,7 +10,7 @@ class PaymentLog(db.Model, BaseModel):
     payment_id = db.Column(db.Integer, db.ForeignKey("payments.id"), nullable=True)
     status_code = db.Column(db.Integer)
     response_json = db.Column(db.Text)  # Toàn bộ phản hồi từ Toss
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     # Quan hệ 1-n với Payment
     payment = db.relationship("Payment", backref="logs")
