@@ -46,6 +46,7 @@ class Product(db.Model, BaseModel):
             "content": self.content,
             "description": self.description,
             "status": self.status,
+            "order_no": self.order_no,
             "product_url_hash": self.product_url_hash,
             "user_email": self.user.email if self.user else None,
             "created_at": (

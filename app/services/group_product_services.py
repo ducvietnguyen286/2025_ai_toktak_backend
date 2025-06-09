@@ -126,7 +126,7 @@ class GroupProductService:
             group.name = group_data.get("title", group.name)
             group.order_no = group_data.get("order_no", group.order_no or 0)
             group.description = group_data.get("description", group.description or "")
-            group.title_type = group_data.get("titleType", group.titleType or "")
+            group.title_type = group_data.get("titleType", group.title_type or "")
             return group
         else:
             group = GroupProduct(
