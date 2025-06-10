@@ -70,11 +70,20 @@ class GroupProductService:
         if cached_data:
             return json.loads(cached_data.decode("utf-8"))
 
-        groups = (
-            GroupProduct.query.filter_by(user_id=user_id)
-            .order_by(GroupProduct.order_no)
-            .all()
-        )
+        redis_key = f"group_products:{user_id}_groups"
+        cached_group = redis_client.get(redis_key)
+        if cached_group:
+            groups = json.loads(cached_group.decode("utf-8"))
+        else:
+            groups_data = (
+                GroupProduct.query.filter_by(user_id=user_id)
+                .order_by(GroupProduct.order_no)
+                .all()
+            )
+            groups = [g.to_dict() for g in groups_data]
+            redis_client.setex(
+                redis_key, cache_timeout, json.dumps(groups, ensure_ascii=False)
+            )
         group_list = []
 
         data_search = {
@@ -107,23 +116,21 @@ class GroupProductService:
         )
         # Lấy group thật từ DB
         for group in groups:
-            logger.info(f"Processing group: {group.id}, {group.name}")
             data_search = {
                 "page": 1,
                 "per_page": product_limit,
                 "search_key": search_key,
                 "user_id": user_id,
-                "group_id": group.id,
+                "group_id": group["id"],
                 "type_order": "order_no_asc",
             }
             products = ProductService.get_products(data_search)
             total_products = products.total
             group_list.append(
                 {
-                    "group": group.to_dict(),
+                    "group": group,
                     "products": [
-                        product_detail.to_dict()
-                        for product_detail in products.items
+                        product_detail.to_dict() for product_detail in products.items
                     ],
                     "total_products": total_products,
                 }
