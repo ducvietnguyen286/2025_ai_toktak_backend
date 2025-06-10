@@ -146,7 +146,6 @@ class MultiProductCreateApi(Resource):
                     "price": request.form.get(f"{prefix}[price]", ""),
                     "order_no": request.form.get(f"{prefix}[order_no]", 0),
                 }
-                logger.info(f"Processing product: {idx} :  {prod}")
 
                 # Nhận file nếu có
                 file = request.files.get(f"{prefix}[product_file]")
@@ -235,7 +234,6 @@ class ProductMultiUpdateAPI(Resource):
                     "price": request.form.get(f"{prefix}[price]", ""),
                     "order_no": request.form.get(f"{prefix}[order_no]", 0),
                 }
-                logger.info(f"Processing product: {idx} :  {prod}")
 
                 # Nhận file nếu có
                 file = request.files.get(f"{prefix}[product_file]")
@@ -358,7 +356,6 @@ class ProductDeleteAPI(Resource):
             user_id = current_user.id
             product_ids = args.get("product_ids", "")
             id_list = [int(id.strip()) for id in product_ids.split(",") if id.strip()]
-            logger.info(f"product_ids: {id_list}")
 
             if not id_list:
                 return Response(
@@ -582,9 +579,6 @@ class MultiGroupCreateApi(Resource):
                 # Lưu các product con trong group
                 order_no = 0
                 for product_data in group_data.get("children", []):
-                    logger.info(f"group: {group.id}")
-                    logger.info(f"Processing product: {product_data}")
-
                     prod = GroupProductService.upsert_product(
                         product_data, user_id, group.id
                     )
@@ -673,12 +667,8 @@ class MultiGroupCreateApi(Resource):
                     group = GroupProductService.upsert_group(group_data, user_id)
                     result["groups"].append(group.to_dict())
 
-                    logger.info(f"Received groups data: {group}")
-
                     # Lưu các product con trong group
                     for product_data in group_data.get("children", []):
-                        logger.info(f"group: {group.id}")
-                        logger.info(f"Processing product: {product_data}")
                         prod = GroupProductService.upsert_product(
                             product_data, user_id, group.id
                         )
