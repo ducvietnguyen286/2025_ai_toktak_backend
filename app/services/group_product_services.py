@@ -107,6 +107,7 @@ class GroupProductService:
         )
         # Lấy group thật từ DB
         for group in groups:
+            logger.info(f"Processing group: {group.id}, {group.name}")
             data_search = {
                 "page": 1,
                 "per_page": product_limit,
@@ -116,14 +117,13 @@ class GroupProductService:
                 "type_order": "order_no_asc",
             }
             products = ProductService.get_products(data_search)
-
             total_products = products.total
             group_list.append(
                 {
                     "group": group.to_dict(),
                     "products": [
                         product_detail.to_dict()
-                        for product_detail in ungroupped_products.items
+                        for product_detail in products.items
                     ],
                     "total_products": total_products,
                 }
