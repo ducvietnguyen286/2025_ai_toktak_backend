@@ -29,6 +29,8 @@ class AliExpressScraper:
         else:
             request_url = self.url
 
+        # Push
+
         data = self.run_api_ali_data_hub_6(request_url)
         if not data:
             data = self.run_api_ali_data(request_url)
