@@ -1015,6 +1015,7 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
                         break
                     elif result_check.get("status") == "failed":
                         log_make_video_message("Lỗi: Tạo giọng nói thất bại.")
+                        log_make_video_message(f"Lỗi: {result_check}")
                         return "", 0.0
                 else:
                     log_make_video_message(
