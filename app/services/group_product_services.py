@@ -143,15 +143,19 @@ class GroupProductService:
     @staticmethod
     def upsert_product(product_data, user_id, group_id):
         product_info = product_data.get("product", {})
-        prod_id =  product_info.get("id", "")
-        is_new = isinstance(prod_id, str) and "temp" in prod_id 
+        prod_id = product_info.get("id", "")
+        is_new = isinstance(prod_id, str) and "temp" in prod_id
         product = None
         if not is_new:
             product = Product.query.filter_by(id=prod_id, user_id=user_id).first()
         if product:
-            product.product_name = product_info.get("product_name", product.product_name)
+            product.product_name = product_info.get(
+                "product_name", product.product_name
+            )
             product.price = product_info.get("price", product.price)
-            product.product_image = product_info.get("product_image", product.product_image)
+            product.product_image = product_info.get(
+                "product_image", product.product_image
+            )
             product.product_url = product_info.get("product_url", product.product_url)
             product.group_id = group_id
             product.order_no = product_info.get("order_no", product.order_no or 0)
@@ -178,7 +182,7 @@ class GroupProductService:
         try:
             Product.query.filter(
                 Product.group_id.in_(group_ids), Product.user_id == user_id
-            ).delete(synchronize_session=False)
+            ).update({Product.group_id: 0}, synchronize_session=False)
             GroupProduct.query.filter(
                 GroupProduct.id.in_(group_ids), GroupProduct.user_id == user_id
             ).delete(synchronize_session=False)
