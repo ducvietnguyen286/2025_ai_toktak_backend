@@ -45,7 +45,17 @@ def parse_response(html, base_url):
     domain = get_domain(base_url)
 
     core_price = html.find("div", {"id": "corePrice_feature_div"})
-    price = core_price.find("span", {"class": "a-offscreen"})
+    if core_price:
+        price = core_price.find("span", {"class": "a-offscreen"})
+    else:
+        core_desktop = html.find("div", {"id": "corePriceDisplay_desktop_feature_div"})
+        if core_desktop:
+            symbol = core_desktop.find("span", {"class": "a-price-symbol"})
+            price = core_desktop.find("span", {"class": "a-price-whole"})
+            price_fraction = core_desktop.find("span", {"class": "a-price-fraction"})
+            price = f"{symbol.text.strip()}{price.text.strip()}{price_fraction.text.strip()}"
+        else:
+            price = ""
 
     text = html.find("div", {"id": "productDescription"})
     gifs = []
