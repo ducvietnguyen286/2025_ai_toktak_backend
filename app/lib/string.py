@@ -14,6 +14,7 @@ import uuid
 from app.lib.logger import logger
 import requests
 from urllib.parse import urljoin
+from datetime import datetime
 
 
 def is_json(data):
@@ -468,3 +469,50 @@ def un_shotend_url(url):
     except Exception as e:
         logger.error(f"Error unshortening URL {url}: {str(e)}")
         return url
+
+
+def parse_date(date_str):
+    """
+    Parse date string to datetime object.
+    Hỗ trợ nhiều format ngày tháng khác nhau.
+
+    :param date_str: Chuỗi ngày tháng cần parse
+    :return: datetime object hoặc None nếu không parse được
+    """
+    if not date_str:
+        return None
+
+    # Danh sách các format có thể có
+    date_formats = [
+        "%Y-%m-%d %H:%M:%S",  # 2024-03-21 14:30:00
+        "%Y-%m-%d %H:%M",  # 2024-03-21 14:30
+        "%Y-%m-%d",  # 2024-03-21
+        "%d/%m/%Y %H:%M:%S",  # 21/03/2024 14:30:00
+        "%d/%m/%Y %H:%M",  # 21/03/2024 14:30
+        "%d/%m/%Y",  # 21/03/2024
+        "%m/%d/%Y %H:%M:%S",  # 03/21/2024 14:30:00
+        "%m/%d/%Y %H:%M",  # 03/21/2024 14:30
+        "%m/%d/%Y",  # 03/21/2024
+        "%Y/%m/%d %H:%M:%S",  # 2024/03/21 14:30:00
+        "%Y/%m/%d %H:%M",  # 2024/03/21 14:30
+        "%Y/%m/%d",  # 2024/03/21
+        "%Y-%m-%dT%H:%M:%SZ",  # 2024-03-21T14:30:00Z
+        "%Y-%m-%dT%H:%M:%S%z",  # 2024-03-21T14:30:00+0900
+        "%Y-%m-%dT%H:%M:%S.%f%z",  # 2024-03-21T14:30:00.123+0900
+    ]
+
+    # Thử parse với từng format
+    for date_format in date_formats:
+        try:
+            return datetime.strptime(date_str, date_format)
+        except ValueError:
+            continue
+
+    # Nếu không parse được với format nào, thử parse với dateutil
+    try:
+        from dateutil import parser
+
+        return parser.parse(date_str)
+    except:
+        logger.error(f"Could not parse date string: {date_str}")
+        return None

@@ -42,9 +42,9 @@ class UserVideoTemplates(db.Model, BaseModel):
     is_hashtag = db.Column(db.Integer, default=0, nullable=False)
     hashtag = db.Column(db.Text, nullable=False, default="[]")
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )
 
     def to_dict(self):
