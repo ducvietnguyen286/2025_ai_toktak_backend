@@ -8,6 +8,7 @@ import string
 import const
 import uuid
 from app.lib.logger import logger
+from datetime import datetime
 
 
 def is_json(data):
@@ -202,7 +203,7 @@ def replace_phrases_in_text(text, phrase_mapping):
         "Access token invalid": "액세스 토큰이 유효하지 않습니다.",
         "The parameter video_url is required": "video_url 파라미터는 필수입니다.",
         "You are not permitted to perform this action.": "이 작업을 수행할 권한이 없습니다.",
-        "I scream. You scream. We all scream... for us to fix this page. We’ll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
+        "I scream. You scream. We all scream... for us to fix this page. We'll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
         "This page is down": "이 페이지는 현재 작동하지 않습니다.",
     }
 
@@ -237,7 +238,7 @@ def replace_phrases_in_text(text):
         "Access token invalid": "액세스 토큰이 유효하지 않습니다.",
         "The parameter video_url is required": "video_url 파라미터는 필수입니다.",
         "You are not permitted to perform this action.": "이 작업을 수행할 권한이 없습니다.",
-        "I scream. You scream. We all scream... for us to fix this page. We’ll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
+        "I scream. You scream. We all scream... for us to fix this page. We'll stop making jokes and get things up and running soon.": "당신도, 나도, 우리 모두... 이 페이지를 고치기 위해 소리 지르고 있어요. 농담은 그만하고 곧 정상화하겠습니다.",
         "This page is down": "이 페이지는 현재 작동하지 않습니다.",
     }
 
@@ -384,3 +385,47 @@ def generate_order_id():
 
 def format_price_won(price):
     return "{:,.0f}₩".format(price)
+
+
+def parse_date(date_str):
+    """
+    Parse date string to datetime object.
+    Hỗ trợ nhiều format ngày tháng khác nhau.
+
+    :param date_str: Chuỗi ngày tháng cần parse
+    :return: datetime object hoặc None nếu không parse được
+    """
+    if not date_str:
+        return None
+
+    # Danh sách các format có thể có
+    date_formats = [
+        "%Y-%m-%d %H:%M:%S",  # 2024-03-21 14:30:00
+        "%Y-%m-%d %H:%M",  # 2024-03-21 14:30
+        "%Y-%m-%d",  # 2024-03-21
+        "%d/%m/%Y %H:%M:%S",  # 21/03/2024 14:30:00
+        "%d/%m/%Y %H:%M",  # 21/03/2024 14:30
+        "%d/%m/%Y",  # 21/03/2024
+        "%m/%d/%Y %H:%M:%S",  # 03/21/2024 14:30:00
+        "%m/%d/%Y %H:%M",  # 03/21/2024 14:30
+        "%m/%d/%Y",  # 03/21/2024
+        "%Y/%m/%d %H:%M:%S",  # 2024/03/21 14:30:00
+        "%Y/%m/%d %H:%M",  # 2024/03/21 14:30
+        "%Y/%m/%d",  # 2024/03/21
+    ]
+
+    # Thử parse với từng format
+    for date_format in date_formats:
+        try:
+            return datetime.strptime(date_str, date_format)
+        except ValueError:
+            continue
+
+    # Nếu không parse được với format nào, thử parse với dateutil
+    try:
+        from dateutil import parser
+
+        return parser.parse(date_str)
+    except:
+        logger.error(f"Could not parse date string: {date_str}")
+        return None
