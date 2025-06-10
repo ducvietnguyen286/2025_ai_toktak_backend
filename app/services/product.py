@@ -4,7 +4,7 @@ from app.models.user_video_templates import UserVideoTemplates
 from app.models.link import Link
 from app.models.social_post import SocialPost
 from app.models.product import Product
-from app.extensions import db,redis_client
+from app.extensions import db, redis_client
 from sqlalchemy import and_, func, or_
 from flask import jsonify
 from datetime import datetime, timedelta
@@ -18,7 +18,6 @@ import hashlib
 from app.models.batch import Batch
 from app.lib.logger import logger
 from app.services.profileservices import ProfileServices
-
 
 
 class ProductService:
@@ -66,11 +65,12 @@ class ProductService:
                     Product.user.has(User.email.ilike(search_pattern)),
                 )
             )
-
+ 
         if "user_id" in data_search and data_search["user_id"]:
             query = query.filter(Product.user_id == data_search["user_id"])
-            
-        if "group_id" in data_search and data_search["group_id"]:
+
+        if "group_id" in data_search  :
+            logger.info(f"data_search: {data_search}")
             query = query.filter(Product.group_id == data_search["group_id"])
 
         # Xử lý type_order
@@ -78,6 +78,10 @@ class ProductService:
             query = query.order_by(Product.id.asc())
         elif data_search["type_order"] == "id_desc":
             query = query.order_by(Product.id.desc())
+        elif data_search["type_order"] == "order_no_asc":
+            query = query.order_by(Product.order_no.asc())
+        elif data_search["type_order"] == "order_no_desc":
+            query = query.order_by(Product.order_no.desc())
         else:
             query = query.order_by(Product.id.desc())
 
@@ -99,7 +103,7 @@ class ProductService:
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
             query = query.filter(Product.created_at >= start_date)
-        
+
         elif time_range == "from_to":
             if "from_date" in data_search:
                 from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
@@ -109,7 +113,6 @@ class ProductService:
                     data_search["to_date"], "%Y-%m-%d"
                 ) + timedelta(days=1)
                 query = query.filter(Product.created_at < to_date)
-
 
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
@@ -142,6 +145,7 @@ class ProductService:
         # Thực hiện xóa
         products_to_delete.delete(synchronize_session=False)
         db.session.commit()
+        
         return True
 
     @staticmethod
@@ -197,19 +201,20 @@ class ProductService:
                     product_url_hash=product_url_hash,
                     content=batch_detail.content,
                 )
+                
+                ProductService.delete_group_products_cache(user_id)
         except Exception as ex:
             logger.error(f"Exception: create_sns_product   :  {str(ex)}")
             return None
         return True
-    
+
     @staticmethod
     def report_product_by_type(data_search):
-        
+
         histories = Product.query
         package_name = data_search.get("package_name", "")
         status = data_search.get("status", "")
-        
-            
+
         time_range = data_search.get("time_range", "")
         if time_range == "today":
             start_date = datetime.now().replace(
@@ -242,3 +247,17 @@ class ProductService:
         total = histories.count()
 
         return total
+
+    @staticmethod
+    def get_max_order_no(user_id):
+        max_order_no = (
+            db.session.query(func.max(Product.order_no))
+            .filter_by(user_id=user_id)
+            .scalar()
+        )
+        return max_order_no or 0
+    @staticmethod
+    def delete_group_products_cache(user_id):
+        pattern = f"group_products:{user_id}:*"
+        for key in redis_client.scan_iter(match=pattern):
+            redis_client.delete(key)
