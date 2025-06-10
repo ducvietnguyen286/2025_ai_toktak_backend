@@ -521,11 +521,11 @@ class GroupListApi(Resource):
 
 @ns.route("/user_group_products")
 class GroupListWithProductsApi(Resource):
-    @jwt_required()
     def get(self):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            
+            search_key = request.args.get("search_key", "", type=str)
+            user_id = request.args.get("user_id", "", type=str)
             try:
                 product_limit = int(request.args.get("product_limit", 20))
                 if product_limit < 1 or product_limit > 200:
@@ -534,7 +534,7 @@ class GroupListWithProductsApi(Resource):
                 product_limit = 20
 
             data = GroupProductService.get_groups_with_products(
-                user_id=user_id, product_limit=product_limit, cache_timeout=60
+                user_id=user_id, product_limit=product_limit,search_key = search_key , cache_timeout=60
             )
             return Response(
                 data=data,
@@ -644,49 +644,49 @@ class MultiGroupCreateApi(Resource):
                 ).to_dict()
 
 
-@ns.route("/group_update")
-class MultiGroupUpdateApi(Resource):
-    @jwt_required()
-    def post(self):
-        try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+    @ns.route("/group_update")
+    class MultiGroupUpdateApi(Resource):
+        @jwt_required()
+        def post(self):
+            try:
+                current_user = AuthService.get_current_identity()
+                user_id = current_user.id
 
-            data = request.get_json()
-            groups = data.get("products", [])
-            result = {"groups": [], "products": []}
+                data = request.get_json()
+                groups = data.get("products", [])
+                result = {"groups": [], "products": []}
 
-            for group_data in groups:
-                # Lưu hoặc update group
-                group = GroupProductService.upsert_group(group_data, user_id)
-                result["groups"].append(group.to_dict())
+                for group_data in groups:
+                    # Lưu hoặc update group
+                    group = GroupProductService.upsert_group(group_data, user_id)
+                    result["groups"].append(group.to_dict())
 
-                logger.info(f"Received groups data: {group}")
+                    logger.info(f"Received groups data: {group}")
 
-                # Lưu các product con trong group
-                for product_data in group_data.get("children", []):
-                    logger.info(f"group: {group.id}")
-                    logger.info(f"Processing product: {product_data}")
-                    prod = GroupProductService.upsert_product(
-                        product_data, user_id, group.id
-                    )
-                    result["products"].append(prod.to_dict())
+                    # Lưu các product con trong group
+                    for product_data in group_data.get("children", []):
+                        logger.info(f"group: {group.id}")
+                        logger.info(f"Processing product: {product_data}")
+                        prod = GroupProductService.upsert_product(
+                            product_data, user_id, group.id
+                        )
+                        result["products"].append(prod.to_dict())
 
-            db.session.commit()
-            return Response(
-                data=result,
-                message="그룹과 상품이 성공적으로 저장되었습니다.",
-                message_en="Groups and products saved successfully.",
-                code=200,
-            ).to_dict()
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Create group error: {str(e)}")
-            return Response(
-                message="저장 중 오류가 발생했습니다.",
-                message_en="An error occurred while saving data.",
-                code=500,
-            ).to_dict()
+                db.session.commit()
+                return Response(
+                    data=result,
+                    message="그룹과 상품이 성공적으로 저장되었습니다.",
+                    message_en="Groups and products saved successfully.",
+                    code=200,
+                ).to_dict()
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Create group error: {str(e)}")
+                return Response(
+                    message="저장 중 오류가 발생했습니다.",
+                    message_en="An error occurred while saving data.",
+                    code=500,
+                ).to_dict()
 
     @ns.route("/group_delete")
     class GroupDeleteApi(Resource):
