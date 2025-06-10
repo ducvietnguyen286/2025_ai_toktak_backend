@@ -202,7 +202,7 @@ class ProductService:
                     content=batch_detail.content,
                 )
                 
-                GroupProductService.delete_group_products_cache(user_id)
+                ProductService.delete_group_products_cache(user_id)
         except Exception as ex:
             logger.error(f"Exception: create_sns_product   :  {str(ex)}")
             return None
@@ -256,3 +256,8 @@ class ProductService:
             .scalar()
         )
         return max_order_no or 0
+    @staticmethod
+    def delete_group_products_cache(user_id):
+        pattern = f"group_products:{user_id}:*"
+        for key in redis_client.scan_iter(match=pattern):
+            redis_client.delete(key)
