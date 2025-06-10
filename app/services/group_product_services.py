@@ -70,7 +70,7 @@ class GroupProductService:
         if cached_data:
             return json.loads(cached_data.decode("utf-8"))
 
-        redis_key = f"group_products:{user_id}_groups"
+        redis_key = f"group_products:{user_id}:groups"
         cached_group = redis_client.get(redis_key)
         if cached_group:
             groups = json.loads(cached_group.decode("utf-8"))
