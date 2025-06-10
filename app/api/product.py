@@ -492,9 +492,11 @@ class MultiGroupCreateApi(Resource):
                 result["groups"].append(group.to_dict())
 
                 # Lưu các product con trong group
+                order_no = 0
                 for product_data in group_data.get("children", []):
                     logger.info(f"group: {group.id}")
                     logger.info(f"Processing product: {product_data}")
+                    
                     prod = GroupProductService.upsert_product(product_data, user_id, group.id)
                     result["products"].append(prod.to_dict())
 
@@ -520,7 +522,7 @@ class MultiGroupCreateApi(Resource):
         def post(self):
             try:
                 data = request.get_json() or {}
-                ids_raw = data.get("ids", "")  # "1,2,3" hoặc [1,2,3]
+                ids_raw = data.get("group_ids", "")  # "1,2,3" hoặc [1,2,3]
                 current_user = AuthService.get_current_identity()
                 user_id = current_user.id
 
