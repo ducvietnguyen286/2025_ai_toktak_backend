@@ -1,3 +1,4 @@
+from http.cookiejar import CookieJar
 import json
 import random
 import re
@@ -6,6 +7,7 @@ import urllib.parse
 import hashlib
 import base64
 import string
+from app.lib.header import generate_desktop_user_agent
 import const
 import uuid
 from app.lib.logger import logger
