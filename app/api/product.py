@@ -233,6 +233,7 @@ class ProductMultiUpdateAPI(Resource):
                     "product_url": request.form.get(f"{prefix}[product_url]", ""),
                     "price": request.form.get(f"{prefix}[price]", ""),
                     "order_no": request.form.get(f"{prefix}[order_no]", 0),
+                    "group_id": request.form.get(f"{prefix}[group_id]", 0),
                 }
 
                 # Nhận file nếu có
@@ -265,11 +266,13 @@ class ProductMultiUpdateAPI(Resource):
                     product_image = prod.get("product_image", "")
                     order_no = prod.get("order_no", 0)
                     price = prod.get("price", "")
+                    group_id = prod.get("group_id", 0)
                     data_update = {
                         "product_url": product_url,
                         "product_name": product_name,
                         "product_image": product_image,
                         "order_no": order_no,
+                        "group_id": group_id,
                         "price": price,
                     }
                     product_detail = ProductService.update_product(
