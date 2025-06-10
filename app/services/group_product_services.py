@@ -66,7 +66,6 @@ class GroupProductService:
             cache_key = f"group_products:{user_id}:{product_limit}:{search_key}"
         else:
             cache_key = f"group_products:{user_id}:{product_limit}"
-        redis_client.delete(cache_key)
         cached_data = redis_client.get(cache_key)
         if cached_data:
             return json.loads(cached_data.decode("utf-8"))
