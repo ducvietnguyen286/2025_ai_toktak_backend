@@ -16,6 +16,7 @@ import const
 import os
 import secrets
 import string
+from app.extensions import redis_client
 
 from app.services.social_post import SocialPostService
 
@@ -397,3 +398,15 @@ class APIAdminSaveUser(Resource):
                 message="Updated User Fail",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/clear-cache-typecast-voices")
+class APIAdminClearCacheTypecastVoices(Resource):
+    @jwt_required()
+    @admin_required()
+    def get(self):
+        redis_client.delete("typecast_voices")
+        return Response(
+            message="Clear Cache Typecast Voices Success",
+            code=200,
+        ).to_dict()
