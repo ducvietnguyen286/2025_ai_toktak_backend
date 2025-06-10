@@ -1,7 +1,9 @@
 import json
 import re
+import traceback
 from app.lib.logger import logger
 from urllib.parse import urlparse
+from app.lib.json_repair import loads
 
 
 def get_domain(url):
@@ -32,14 +34,13 @@ def extract_images_and_text(html):
 
 
 def parse_response(html, base_url):
-    name = html.find("h1", {"id": "productTitle"})
+    name = html.find("span", {"id": "productTitle"})
     description = html.find("div", {"id": "feature-bullets"})
     image = html.find("img", {"id": "landingImage"})
     amazon_thumbnails = extract_amazon_images(html)
 
-    print("--------------------------------")
-    print(amazon_thumbnails)
-    print("--------------------------------")
+    thumbnails = amazon_thumbnails.get("main_images", [])
+    images = amazon_thumbnails.get("large_images", [])
 
     domain = get_domain(base_url)
 
@@ -47,7 +48,6 @@ def parse_response(html, base_url):
     price = core_price.find("span", {"class": "a-offscreen"})
 
     text = html.find("div", {"id": "productDescription"})
-    images = []
     gifs = []
     iframes = []
 
@@ -58,15 +58,15 @@ def parse_response(html, base_url):
         "domain": domain,
         "brand": "",
         "image": image["src"],
-        "thumbnails": [image["src"]],
-        "price": price,
+        "thumbnails": thumbnails,
+        "price": price.text.strip() if price else "",
         "url": domain,
         "base_url": base_url,
         "store_name": "",
         "url_crawl": base_url,
         "show_free_shipping": 0,
         "images": images,
-        "text": text,
+        "text": text.text.strip() if text else "",
         "iframes": iframes,
         "gifs": gifs,
     }
@@ -77,96 +77,64 @@ def extract_amazon_images(html_content):
     Trích xuất danh sách ảnh sản phẩm từ trang chi tiết Amazon.
     Bao gồm cả thumbnail và ảnh lớn.
 
-    :param html_content: Nội dung HTML của trang Amazon
+    :param html_content: Nội dung HTML của trang Amazon (string hoặc bytes)
     :return: Dictionary chứa danh sách ảnh thumbnail và ảnh lớn
     """
     try:
-        # Tìm tất cả các script chứa dữ liệu ảnh
-        script_pattern = r"<script[^>]*>(.*?)</script>"
-        scripts = re.findall(script_pattern, html_content, re.DOTALL)
 
-        # Pattern để tìm dữ liệu ảnh trong script
-        image_data_pattern = r"ImageBlockATF.*?colorImages.*?initial\s*:\s*(\[.*?\])"
-        image_data_pattern_alt = (
-            r"ImageGalleryATF.*?colorImages.*?initial\s*:\s*(\[.*?\])"
-        )
+        scripts = html_content.find_all("script", text=re.compile(r"colorImages"))
+        json_str = None
 
-        # Tìm dữ liệu ảnh trong các script
-        image_data = None
         for script in scripts:
-            match = re.search(image_data_pattern, script, re.DOTALL)
-            if not match:
-                match = re.search(image_data_pattern_alt, script, re.DOTALL)
-            if match:
-                image_data = match.group(1)
-                break
+            script_text = script.text.strip()
+            if "ImageBlockATF" in script_text:
+                pattern = r"var data = ({.*?});"
+                match = re.search(pattern, script_text, re.DOTALL)
+                if match:
+                    json_str = match.group(1)
 
-        if not image_data:
-            return {"thumbnails": [], "large_images": []}
+        if not json_str:
+            return {"thumbnails": [], "large_images": [], "main_images": []}
 
-        # Parse JSON data
         try:
-            images = json.loads(image_data)
-        except json.JSONDecodeError:
-            # Nếu không parse được JSON, thử tìm ảnh trực tiếp từ HTML
-            return extract_amazon_images_from_html(html_content)
+            data = loads(json_str)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON data: {str(e)}")
+            return {"thumbnails": [], "large_images": [], "main_images": []}
 
-        # Trích xuất URL ảnh
+        if "colorImages" not in data or "initial" not in data["colorImages"]:
+            logger.warning("No colorImages.initial found in data")
+            return {"thumbnails": [], "large_images": [], "main_images": []}
+
+        images = data["colorImages"]["initial"]
+
         thumbnails = []
         large_images = []
+        main_images = []
 
         for img in images:
             if isinstance(img, dict):
-                # Lấy URL ảnh lớn
                 if "hiRes" in img:
                     large_images.append(img["hiRes"])
-                elif "large" in img:
-                    large_images.append(img["large"])
 
-                # Lấy URL thumbnail
                 if "thumb" in img:
                     thumbnails.append(img["thumb"])
-                elif "small" in img:
-                    thumbnails.append(img["small"])
 
+                if "main" in img and isinstance(img["main"], dict):
+                    main_images.extend(list(img["main"].keys()))
+
+        # Loại bỏ URL trùng lặp
         return {
-            "thumbnails": list(set(thumbnails)),  # Loại bỏ URL trùng lặp
+            "thumbnails": list(set(thumbnails)),
             "large_images": list(set(large_images)),
+            "main_images": list(set(main_images)),
         }
 
     except Exception as e:
-        logger.error(f"Error extracting Amazon images: {str(e)}")
-        return {"thumbnails": [], "large_images": []}
-
-
-def extract_amazon_images_from_html(html_content):
-    """
-    Trích xuất ảnh trực tiếp từ HTML khi không tìm thấy dữ liệu trong script
-    """
-    try:
-        # Pattern để tìm ảnh trong HTML
-        image_pattern = r'data-old-hires="([^"]+)"'
-        images = re.findall(image_pattern, html_content)
-
-        # Nếu không tìm thấy ảnh với pattern trên, thử pattern khác
-        if not images:
-            image_pattern = r'data-a-dynamic-image="([^"]+)"'
-            matches = re.findall(image_pattern, html_content)
-            if matches:
-                try:
-                    # Parse JSON string chứa thông tin ảnh
-                    image_data = json.loads(matches[0])
-                    images = list(image_data.keys())
-                except:
-                    pass
-
-        # Loại bỏ URL trùng lặp và trả về
-        unique_images = list(set(images))
-        return {"thumbnails": unique_images, "large_images": unique_images}
-
-    except Exception as e:
-        logger.error(f"Error extracting Amazon images from HTML: {str(e)}")
-        return {"thumbnails": [], "large_images": []}
+        logger.error(
+            f"Error extracting Amazon images: {str(e)}\n{traceback.format_exc()}"
+        )
+        return {"thumbnails": [], "large_images": [], "main_images": []}
 
 
 class Parser:

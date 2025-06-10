@@ -221,7 +221,6 @@ class APICreateBatchSync(Resource):
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
 
             data = Scraper().scraper({"url": url})
-            return data
 
             if not data:
                 NotificationServices.create_notification(

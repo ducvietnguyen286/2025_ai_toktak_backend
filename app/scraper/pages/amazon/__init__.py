@@ -1,3 +1,5 @@
+import hashlib
+import json
 import os
 import random
 import traceback
@@ -8,6 +10,7 @@ from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
 from app.lib.string import un_shotend_url
 from app.scraper.pages.amazon.parser import Parser
+from app.services.crawl_data import CrawlDataService
 
 
 class AmazonScraper:
@@ -44,15 +47,27 @@ class AmazonScraper:
         if "amzn." in request_url:
             request_url = un_shotend_url(request_url)
 
+        crawl_url_hash = hashlib.sha1(request_url.encode()).hexdigest()
+        exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+        if exist_data:
+            return json.loads(exist_data.response)
+
         html = self.get_page_html(request_url)
         if not html:
             return {}
 
         response = Parser(html).parse(request_url)
 
-        print(response)
+        CrawlDataService.create_crawl_data(
+            site="AMAZON",
+            input_url=self.url,
+            crawl_url=request_url,
+            crawl_url_hash=crawl_url_hash,
+            request=json.dumps({}),
+            response=json.dumps(response),
+        )
 
-        return {}
+        return response
 
     def get_page_html(self, url, count=0, added_headers=None):
         try:
