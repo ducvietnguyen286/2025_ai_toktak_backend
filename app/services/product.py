@@ -18,6 +18,7 @@ import hashlib
 from app.models.batch import Batch
 from app.lib.logger import logger
 from app.services.profileservices import ProfileServices
+from app.services.group_product_services import GroupProductService
 
 
 class ProductService:
@@ -65,11 +66,11 @@ class ProductService:
                     Product.user.has(User.email.ilike(search_pattern)),
                 )
             )
-
+ 
         if "user_id" in data_search and data_search["user_id"]:
             query = query.filter(Product.user_id == data_search["user_id"])
 
-        if "group_id" in data_search and data_search["group_id"]:
+        if "group_id" in data_search  :
             query = query.filter(Product.group_id == data_search["group_id"])
 
         # Xử lý type_order
@@ -77,6 +78,10 @@ class ProductService:
             query = query.order_by(Product.id.asc())
         elif data_search["type_order"] == "id_desc":
             query = query.order_by(Product.id.desc())
+        elif data_search["type_order"] == "order_no_asc":
+            query = query.order_by(Product.order_no.asc())
+        elif data_search["type_order"] == "order_no_desc":
+            query = query.order_by(Product.order_no.desc())
         else:
             query = query.order_by(Product.id.desc())
 
@@ -140,6 +145,7 @@ class ProductService:
         # Thực hiện xóa
         products_to_delete.delete(synchronize_session=False)
         db.session.commit()
+        
         return True
 
     @staticmethod
@@ -195,6 +201,8 @@ class ProductService:
                     product_url_hash=product_url_hash,
                     content=batch_detail.content,
                 )
+                
+                GroupProductService.delete_group_products_cache(user_id)
         except Exception as ex:
             logger.error(f"Exception: create_sns_product   :  {str(ex)}")
             return None

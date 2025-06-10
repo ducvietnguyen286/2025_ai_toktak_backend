@@ -91,6 +91,7 @@ class ProductCreateApi(Resource):
     def post(self, args):
         try:
             current_user = AuthService.get_current_identity()
+            user_id = current_user.id
             product_name = args.get("product_name", "")
             product_url = args.get("product_url", "")
             product_image = args.get("product_image", "")
@@ -99,7 +100,7 @@ class ProductCreateApi(Resource):
             product_url_hash = hashlib.sha1(product_url.encode()).hexdigest()
 
             product_detail = ProductService.create_product(
-                user_id=current_user.id,
+                user_id=user_id,
                 product_name=product_name,
                 product_url=product_url,
                 product_image=product_image,
@@ -108,6 +109,7 @@ class ProductCreateApi(Resource):
                 product_url_hash=product_url_hash,
                 content=json.dumps([]),
             )
+            GroupProductService.delete_group_products_cache(user_id)
             if not product_detail:
                 return Response(
                     message="프로필이 존재하지 않습니다", code=201
@@ -129,6 +131,7 @@ class MultiProductCreateApi(Resource):
     def post(self):
         try:
             current_user = AuthService.get_current_identity()
+            user_id = current_user.id
             products = []
             idx = 0
             today = datetime.now()
@@ -175,11 +178,11 @@ class MultiProductCreateApi(Resource):
                 product_url_hash = hashlib.sha1(product_url.encode()).hexdigest()
 
                 is_product_exist = ProductService.is_product_exist(
-                    current_user.id, product_url_hash
+                    user_id, product_url_hash
                 )
                 if not is_product_exist:
                     product_detail = ProductService.create_product(
-                        user_id=current_user.id,
+                        user_id=user_id,
                         product_name=product_name,
                         product_url=product_url,
                         product_image=product_image,
@@ -196,6 +199,8 @@ class MultiProductCreateApi(Resource):
 
             if not created_products:
                 return Response(message="제품 생성에 실패했습니다.", code=201).to_dict()
+
+            GroupProductService.delete_group_products_cache(user_id)
 
             return Response(
                 data=created_products,
@@ -215,6 +220,7 @@ class ProductMultiUpdateAPI(Resource):
     def post(self):
         try:
             current_user = AuthService.get_current_identity()
+            user_id = current_user.id
             products = []
             idx = 0
             today = datetime.now()
@@ -235,7 +241,7 @@ class ProductMultiUpdateAPI(Resource):
                 file = request.files.get(f"{prefix}[product_file]")
                 if file:
                     # Lưu file lên server, đổi tên nếu cần
-                    folder_path = f"static/voice/product_upload/{today.strftime('%Y_%m_%d')}/{current_user.id}"
+                    folder_path = f"static/voice/product_upload/{today.strftime('%Y_%m_%d')}/{user_id}"
                     os.makedirs(folder_path, exist_ok=True)
                     filename = file.filename
                     save_path = os.path.join(folder_path, filename)
@@ -253,7 +259,7 @@ class ProductMultiUpdateAPI(Resource):
             for prod in products:
                 product_id = prod.get("id", "")
                 product_detail = ProductService.find_post_by_user_id(
-                    product_id, current_user.id
+                    product_id, user_id
                 )
                 if product_detail:
                     product_url = prod.get("product_url", "")
@@ -271,6 +277,8 @@ class ProductMultiUpdateAPI(Resource):
                     product_detail = ProductService.update_product(
                         product_id, **data_update
                     )
+
+            GroupProductService.delete_group_products_cache(user_id)
             return Response(
                 message="제품 정보가 성공적으로 업데이트되었습니다.",
             ).to_dict()
@@ -299,10 +307,9 @@ class ProductUpdateAPI(Resource):
     def post(self, args):
         try:
             current_user = AuthService.get_current_identity()
+            user_id = current_user.id
             product_id = args.get("product_id", "")
-            product_detail = ProductService.find_post_by_user_id(
-                product_id, current_user.id
-            )
+            product_detail = ProductService.find_post_by_user_id(product_id, user_id)
             if product_detail:
                 product_url = args.get("product_url", "")
                 product_name = args.get("product_name", "")
@@ -322,6 +329,7 @@ class ProductUpdateAPI(Resource):
                     message="제품 정보 업데이트에 실패했습니다.", code=201
                 ).to_dict()
 
+            GroupProductService.delete_group_products_cache(user_id)
             return Response(
                 data=product_detail.to_dict(),
                 message="제품 정보가 성공적으로 업데이트되었습니다.",
@@ -347,6 +355,7 @@ class ProductDeleteAPI(Resource):
     def post(self, args):
         try:
             current_user = AuthService.get_current_identity()
+            user_id = current_user.id
             product_ids = args.get("product_ids", "")
             id_list = [int(id.strip()) for id in product_ids.split(",") if id.strip()]
             logger.info(f"product_ids: {id_list}")
@@ -357,14 +366,13 @@ class ProductDeleteAPI(Resource):
                     code=201,
                 ).to_dict()
 
-            product_update = ProductService.delete_product_by_user_id(
-                id_list, current_user.id
-            )
+            product_update = ProductService.delete_product_by_user_id(id_list, user_id)
             if not product_update:
                 return Response(
                     message="상품을 삭제하지 못했습니다.", code=201
                 ).to_dict()
 
+            GroupProductService.delete_group_products_cache(user_id)
             return Response(
                 data={},
                 message="상품을 성공적으로 삭제했습니다.",
@@ -373,7 +381,6 @@ class ProductDeleteAPI(Resource):
         except Exception as e:
             logger.error(f"delete product  error: {str(e)}")
             return Response(message="상품을 삭제하지 못했습니다.", code=201).to_dict()
-
 
 
 @ns.route("/group_create")
@@ -406,6 +413,7 @@ class GroupCreateApi(Resource):
                     code=500,
                 ).to_dict()
 
+            GroupProductService.delete_group_products_cache(user_id)
             return Response(
                 data=group.to_dict(),
                 message="그룹이 성공적으로 생성되었습니다.",
@@ -475,6 +483,7 @@ class GroupDeleteApi(Resource):
             user_id = current_user.id
 
             success = GroupProductService.delete_group_product(group_id)
+            GroupProductService.delete_group_products_cache(user_id)
             if not success:
                 return Response(
                     message="그룹을 찾을 수 없습니다.",
@@ -521,11 +530,11 @@ class GroupListApi(Resource):
 
 @ns.route("/user_group_products")
 class GroupListWithProductsApi(Resource):
-    @jwt_required()
     def get(self):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+
+            search_key = request.args.get("search_key", "", type=str)
+            user_id = request.args.get("user_id", "", type=str)
             try:
                 product_limit = int(request.args.get("product_limit", 20))
                 if product_limit < 1 or product_limit > 200:
@@ -534,7 +543,10 @@ class GroupListWithProductsApi(Resource):
                 product_limit = 20
 
             data = GroupProductService.get_groups_with_products(
-                user_id=user_id, product_limit=product_limit, cache_timeout=60
+                user_id=user_id,
+                product_limit=product_limit,
+                search_key=search_key,
+                cache_timeout=60,
             )
             return Response(
                 data=data,
@@ -580,6 +592,7 @@ class MultiGroupCreateApi(Resource):
                     result["products"].append(prod.to_dict())
 
             db.session.commit()
+            GroupProductService.delete_group_products_cache(user_id)
             return Response(
                 data=result,
                 message="그룹과 상품이 성공적으로 저장되었습니다.",
@@ -622,6 +635,7 @@ class MultiGroupCreateApi(Resource):
                 # Gọi service
                 try:
                     GroupProductService.delete_groups_and_products(group_ids, user_id)
+                    GroupProductService.delete_group_products_cache(user_id)
                 except Exception as e:
                     logger.error(f"Error deleting groups: {str(e)}")
                     return Response(
@@ -643,50 +657,50 @@ class MultiGroupCreateApi(Resource):
                     code=500,
                 ).to_dict()
 
+    @ns.route("/group_update")
+    class MultiGroupUpdateApi(Resource):
+        @jwt_required()
+        def post(self):
+            try:
+                current_user = AuthService.get_current_identity()
+                user_id = current_user.id
 
-@ns.route("/group_update")
-class MultiGroupUpdateApi(Resource):
-    @jwt_required()
-    def post(self):
-        try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+                data = request.get_json()
+                groups = data.get("products", [])
+                result = {"groups": [], "products": []}
 
-            data = request.get_json()
-            groups = data.get("products", [])
-            result = {"groups": [], "products": []}
+                for group_data in groups:
+                    # Lưu hoặc update group
+                    group = GroupProductService.upsert_group(group_data, user_id)
+                    result["groups"].append(group.to_dict())
 
-            for group_data in groups:
-                # Lưu hoặc update group
-                group = GroupProductService.upsert_group(group_data, user_id)
-                result["groups"].append(group.to_dict())
+                    logger.info(f"Received groups data: {group}")
 
-                logger.info(f"Received groups data: {group}")
+                    # Lưu các product con trong group
+                    for product_data in group_data.get("children", []):
+                        logger.info(f"group: {group.id}")
+                        logger.info(f"Processing product: {product_data}")
+                        prod = GroupProductService.upsert_product(
+                            product_data, user_id, group.id
+                        )
+                        result["products"].append(prod.to_dict())
 
-                # Lưu các product con trong group
-                for product_data in group_data.get("children", []):
-                    logger.info(f"group: {group.id}")
-                    logger.info(f"Processing product: {product_data}")
-                    prod = GroupProductService.upsert_product(
-                        product_data, user_id, group.id
-                    )
-                    result["products"].append(prod.to_dict())
-
-            db.session.commit()
-            return Response(
-                data=result,
-                message="그룹과 상품이 성공적으로 저장되었습니다.",
-                message_en="Groups and products saved successfully.",
-                code=200,
-            ).to_dict()
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Create group error: {str(e)}")
-            return Response(
-                message="저장 중 오류가 발생했습니다.",
-                message_en="An error occurred while saving data.",
-                code=500,
-            ).to_dict()
+                db.session.commit()
+                GroupProductService.delete_group_products_cache(user_id)
+                return Response(
+                    data=result,
+                    message="그룹과 상품이 성공적으로 저장되었습니다.",
+                    message_en="Groups and products saved successfully.",
+                    code=200,
+                ).to_dict()
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Create group error: {str(e)}")
+                return Response(
+                    message="저장 중 오류가 발생했습니다.",
+                    message_en="An error occurred while saving data.",
+                    code=500,
+                ).to_dict()
 
     @ns.route("/group_delete")
     class GroupDeleteApi(Resource):
@@ -715,6 +729,7 @@ class MultiGroupUpdateApi(Resource):
                 # Gọi service
                 try:
                     GroupProductService.delete_groups_and_products(group_ids, user_id)
+                    GroupProductService.delete_group_products_cache(user_id)
                 except Exception as e:
                     logger.error(f"Error deleting groups: {str(e)}")
                     return Response(

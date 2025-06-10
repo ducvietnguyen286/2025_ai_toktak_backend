@@ -19,6 +19,7 @@ from app.models.batch import Batch
 from app.lib.logger import logger
 from app.services.profileservices import ProfileServices
 from app.models.product import Product
+from app.services.product import ProductService
 
 
 class GroupProductService:
@@ -58,8 +59,13 @@ class GroupProductService:
         )
 
     @staticmethod
-    def get_groups_with_products(user_id, product_limit=10, cache_timeout=86400):
-        cache_key = f"group_products:{user_id}:{product_limit}"
+    def get_groups_with_products(
+        user_id, product_limit=10, search_key="", cache_timeout=86400
+    ):
+        if search_key != "":
+            cache_key = f"group_products:{user_id}:{product_limit}:{search_key}"
+        else:
+            cache_key = f"group_products:{user_id}:{product_limit}"
         redis_client.delete(cache_key)
         cached_data = redis_client.get(cache_key)
         if cached_data:
@@ -71,13 +77,19 @@ class GroupProductService:
             .all()
         )
         group_list = []
-        ungroupped_products = (
-            Product.query.filter_by(user_id=user_id, group_id=0)
-            .order_by(Product.order_no)
-            .limit(product_limit)
-            .all()
-        )
-        total_ungroupped = Product.query.filter_by(user_id=user_id, group_id=0).count()
+
+        data_search = {
+            "page": 1,
+            "per_page": product_limit,
+            "search_key": search_key,
+            "user_id": user_id,
+            "group_id": 0,
+            "type_order": "order_no_asc",
+        }
+
+        ungroupped_products = ProductService.get_products(data_search)
+
+        total_ungroupped = ungroupped_products.total
         group_list.append(
             {
                 "group": {
@@ -88,24 +100,32 @@ class GroupProductService:
                     "description": "",
                 },
                 "products": [
-                    product_detail.to_dict() for product_detail in ungroupped_products
+                    product_detail.to_dict()
+                    for product_detail in ungroupped_products.items
                 ],
                 "total_products": total_ungroupped,
             }
         )
         # Lấy group thật từ DB
         for group in groups:
-            products = (
-                Product.query.filter_by(group_id=group.id)
-                .order_by(Product.order_no)
-                .limit(product_limit)
-                .all()
-            )
-            total_products = Product.query.filter_by(group_id=group.id).count()
+            data_search = {
+                "page": 1,
+                "per_page": product_limit,
+                "search_key": search_key,
+                "user_id": user_id,
+                "group_id": group.id,
+                "type_order": "order_no_asc",
+            }
+            products = ProductService.get_products(data_search)
+
+            total_products = products.total
             group_list.append(
                 {
                     "group": group.to_dict(),
-                    "products": [p.to_dict() for p in products],
+                    "products": [
+                        product_detail.to_dict()
+                        for product_detail in ungroupped_products.items
+                    ],
                     "total_products": total_products,
                 }
             )
@@ -180,9 +200,13 @@ class GroupProductService:
     @staticmethod
     def delete_groups_and_products(group_ids, user_id):
         try:
+            # Product.query.filter(
+            #     Product.group_id.in_(group_ids), Product.user_id == user_id
+            # ).update({Product.group_id: 0}, synchronize_session=False)
             Product.query.filter(
                 Product.group_id.in_(group_ids), Product.user_id == user_id
-            ).update({Product.group_id: 0}, synchronize_session=False)
+            ).delete(synchronize_session=False)
+
             GroupProduct.query.filter(
                 GroupProduct.id.in_(group_ids), GroupProduct.user_id == user_id
             ).delete(synchronize_session=False)
@@ -191,3 +215,9 @@ class GroupProductService:
         except Exception as e:
             db.session.rollback()
             return False
+
+    @staticmethod
+    def delete_group_products_cache(user_id):
+        pattern = f"group_products:{user_id}:*"
+        for key in redis_client.scan_iter(match=pattern):
+            redis_client.delete(key)
