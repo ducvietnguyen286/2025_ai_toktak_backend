@@ -73,6 +73,8 @@ def validater_create_batch(current_user, is_advance, url=""):
             "coupang.com",
             "aliexpress.com",
             "domeggook.com",
+            "amazon.com",
+            "amzn.com",
         ]
         if url and url != "":
             if (
@@ -1332,11 +1334,24 @@ class APIGetBatch(Resource):
     @jwt_required()
     def get(self, id):
         try:
+            current_user = AuthService.get_current_identity()
+            if not current_user:
+                return Response(
+                    message="Bạn không có quyền truy cập",
+                    status=403,
+                ).to_dict()
+
             batch = BatchService.find_batch(id)
             if not batch:
                 return Response(
                     message="Batch không tồn tại",
                     status=404,
+                ).to_dict()
+
+            if current_user.id != batch.user_id:
+                return Response(
+                    message="Bạn không có quyền truy cập",
+                    status=403,
                 ).to_dict()
 
             posts = PostService.get_posts_by_batch_id(batch.id)
