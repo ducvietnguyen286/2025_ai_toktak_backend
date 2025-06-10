@@ -123,13 +123,133 @@ class ProductCreateApi(Resource):
             return Response(message="제품 추가에 실패했습니다.", code=201).to_dict()
 
 
+@ns.route("/multi_product_create")
+class MultiProductCreateApi(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            current_user = AuthService.get_current_identity()
+            products = []
+            idx = 0
+            today = datetime.now()
+            while True:
+                prefix = f"[{idx}]"
+                if f"{prefix}[id]" not in request.form:
+                    break  # Dừng nếu hết sản phẩm
+                prod = {
+                    "id": request.form.get(f"{prefix}[id]"),
+                    "product_name": request.form.get(f"{prefix}[product_name]", ""),
+                    "product_url": request.form.get(f"{prefix}[product_url]", ""),
+                    "price": request.form.get(f"{prefix}[price]", ""),
+                    "order_no": request.form.get(f"{prefix}[order_no]", 0),
+                }
+                logger.info(f"Processing product: {idx} :  {prod}")
+
+                # Nhận file nếu có
+                file = request.files.get(f"{prefix}[product_file]")
+                if file:
+                    # Lưu file lên server, đổi tên nếu cần
+                    folder_path = f"static/voice/product_upload/{today.strftime('%Y_%m_%d')}/{current_user.id}"
+                    os.makedirs(folder_path, exist_ok=True)
+                    filename = file.filename
+                    save_path = os.path.join(folder_path, filename)
+                    file.save(save_path)
+                    prod["product_image"] = save_path
+
+                else:
+                    prod["product_image"] = request.form.get(
+                        f"{prefix}[product_image]", ""
+                    )
+
+                products.append(prod)
+                idx += 1
+
+            created_products = []
+            for item in products:
+                product_url = item.get("product_url", "")
+                product_name = item.get("product_name", "")
+                product_image = item.get("product_image", "")
+                price = item.get("price", "")
+                order_no = item.get("order_no", 0)
+
+                product_url_hash = hashlib.sha1(product_url.encode()).hexdigest()
+
+                is_product_exist = ProductService.is_product_exist(
+                    current_user.id, product_url_hash
+                )
+                if not is_product_exist:
+                    product_detail = ProductService.create_product(
+                        user_id=current_user.id,
+                        product_name=product_name,
+                        product_url=product_url,
+                        product_image=product_image,
+                        price=price,
+                        description="",
+                        group_id=0,
+                        order_no=0,
+                        product_url_hash=product_url_hash,
+                        content=json.dumps([]),
+                    )
+
+                    if product_detail:
+                        created_products.append(product_detail.to_dict())
+
+            if not created_products:
+                return Response(message="제품 생성에 실패했습니다.", code=201).to_dict()
+
+            return Response(
+                data=created_products,
+                message="모든 제품이 성공적으로 추가되었습니다.",
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Create multiple products error: {str(e)}")
+            return Response(
+                message="제품 추가 중 오류가 발생했습니다.", code=201
+            ).to_dict()
+
+
 @ns.route("/product_update_multi")
 class ProductMultiUpdateAPI(Resource):
     @jwt_required()
     def post(self):
-        products = request.json.get("products", [])
         try:
             current_user = AuthService.get_current_identity()
+            products = []
+            idx = 0
+            today = datetime.now()
+            while True:
+                prefix = f"[{idx}]"
+                if f"{prefix}[id]" not in request.form:
+                    break  # Dừng nếu hết sản phẩm
+                prod = {
+                    "id": request.form.get(f"{prefix}[id]"),
+                    "product_name": request.form.get(f"{prefix}[product_name]", ""),
+                    "product_url": request.form.get(f"{prefix}[product_url]", ""),
+                    "price": request.form.get(f"{prefix}[price]", ""),
+                    "order_no": request.form.get(f"{prefix}[order_no]", 0),
+                }
+                logger.info(f"Processing product: {idx} :  {prod}")
+
+                # Nhận file nếu có
+                file = request.files.get(f"{prefix}[product_file]")
+                if file:
+                    # Lưu file lên server, đổi tên nếu cần
+                    folder_path = f"static/voice/product_upload/{today.strftime('%Y_%m_%d')}/{current_user.id}"
+                    os.makedirs(folder_path, exist_ok=True)
+                    filename = file.filename
+                    save_path = os.path.join(folder_path, filename)
+                    file.save(save_path)
+                    prod["product_image"] = save_path
+
+                else:
+                    prod["product_image"] = request.form.get(
+                        f"{prefix}[product_image]", ""
+                    )
+
+                products.append(prod)
+                idx += 1
+
             for prod in products:
                 product_id = prod.get("id", "")
                 product_detail = ProductService.find_post_by_user_id(
@@ -254,81 +374,6 @@ class ProductDeleteAPI(Resource):
             logger.error(f"delete product  error: {str(e)}")
             return Response(message="상품을 삭제하지 못했습니다.", code=201).to_dict()
 
-
-@ns.route("/multi_product_create")
-class MultiProductCreateApi(Resource):
-    @jwt_required()
-    @parameters(
-        type="object",
-        properties={
-            "products": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "product_url": {"type": "string"},
-                        "product_name": {"type": "string"},
-                        "product_image": {"type": "string"},
-                        "price": {"type": "string"},
-                    },
-                    "required": [
-                        "product_url",
-                        "product_name",
-                        "product_image",
-                        "price",
-                    ],
-                },
-            }
-        },
-        required=["products"],
-    )
-    def post(self, args):
-        try:
-            current_user = AuthService.get_current_identity()
-            products = args.get("products", [])
-
-            created_products = []
-
-            for item in products:
-                product_url = item.get("product_url", "")
-                product_name = item.get("product_name", "")
-                product_image = item.get("product_image", "")
-                price = item.get("price", "")
-
-                product_url_hash = hashlib.sha1(product_url.encode()).hexdigest()
-
-                is_product_exist = ProductService.is_product_exist(
-                    current_user.id, product_url_hash
-                )
-                if not is_product_exist:
-                    product_detail = ProductService.create_product(
-                        user_id=current_user.id,
-                        product_name=product_name,
-                        product_url=product_url,
-                        product_image=product_image,
-                        price=price,
-                        description="",
-                        group_id=0,
-                        product_url_hash=product_url_hash,
-                        content=json.dumps([]),
-                    )
-
-                    if product_detail:
-                        created_products.append(product_detail.to_dict())
-
-            if not created_products:
-                return Response(message="제품 생성에 실패했습니다.", code=201).to_dict()
-
-            return Response(
-                data=created_products,
-                message="모든 제품이 성공적으로 추가되었습니다.",
-            ).to_dict()
-
-        except Exception as e:
-            logger.error(f"Create multiple products error: {str(e)}")
-            return Response(
-                message="제품 추가 중 오류가 발생했습니다.", code=201
-            ).to_dict()
 
 
 @ns.route("/group_create")
