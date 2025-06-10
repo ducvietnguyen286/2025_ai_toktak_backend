@@ -11,6 +11,7 @@ class MemberProfile(db.Model, BaseModel):
     nick_name = db.Column(db.String(500), nullable=False, default="")
     member_name = db.Column(db.String(500), nullable=False, default="")
     member_avatar = db.Column(db.String(500), nullable=False, default="")
+    member_background = db.Column(db.String(500), nullable=False, default="")
     member_address = db.Column(db.Text, nullable=True)
     design_settings = db.Column(db.Text, nullable=True)
     content = db.Column(db.Text, nullable=False, default="")
@@ -22,14 +23,18 @@ class MemberProfile(db.Model, BaseModel):
     )  #
     
     
+    social_is_spotify = db.Column(db.Integer, default=0)
+    social_spotify_url = db.Column(db.String(500), nullable=False, default="")
+    
     social_is_thread = db.Column(db.Integer, default=0)
     social_thread_url = db.Column(db.String(500), nullable=False, default="")
+    
     social_is_youtube = db.Column(db.Integer, default=0)
     social_youtube_url = db.Column(db.String(500), nullable=False, default="")
     social_is_x = db.Column(db.Integer, default=0)
     social_x_url = db.Column(db.String(500), nullable=False, default="")
     social_is_instagram = db.Column(db.Integer, default=0)
-    social_instalgram_url = db.Column(db.String(500), nullable=False, default="")
+    social_instagram_url = db.Column(db.String(500), nullable=False, default="")
     social_is_tiktok = db.Column(db.Integer, default=0)
     social_tiktok_url = db.Column(db.String(500), nullable=False, default="")
     social_is_facebook = db.Column(db.Integer, default=0)
@@ -50,10 +55,13 @@ class MemberProfile(db.Model, BaseModel):
             "nick_name": self.nick_name,
             "member_name": self.member_name,
             "member_avatar": self.member_avatar,
+            "member_background": self.member_background,
             "content": self.content,
             "design_settings": design_settings,
             "description": self.description,
             "status": self.status,
+            "social_is_spotify": self.social_is_spotify,
+            "social_spotify_url": self.social_spotify_url,
             "social_is_thread": self.social_is_thread,
             "social_thread_url": self.social_thread_url,
             "social_is_youtube": self.social_is_youtube,
@@ -61,7 +69,7 @@ class MemberProfile(db.Model, BaseModel):
             "social_is_x": self.social_is_x,
             "social_x_url": self.social_x_url,
             "social_is_instagram": self.social_is_instagram,
-            "social_instalgram_url": self.social_instalgram_url,
+            "social_instagram_url": self.social_instagram_url,
             "social_is_tiktok": self.social_is_tiktok,
             "social_tiktok_url": self.social_tiktok_url,
             "social_is_facebook": self.social_is_facebook,
