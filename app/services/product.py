@@ -18,7 +18,6 @@ import hashlib
 from app.models.batch import Batch
 from app.lib.logger import logger
 from app.services.profileservices import ProfileServices
-from app.services.group_product_services import GroupProductService
 
 
 class ProductService:
