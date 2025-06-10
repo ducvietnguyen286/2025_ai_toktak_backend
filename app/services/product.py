@@ -65,14 +65,11 @@ class ProductService:
                     Product.user.has(User.email.ilike(search_pattern)),
                 )
             )
-
-        if "group_id" in data_search and data_search["group_id"]:
-            query = query.filter(Product.group_id == data_search["group_id"])
-            
+ 
         if "user_id" in data_search and data_search["user_id"]:
             query = query.filter(Product.user_id == data_search["user_id"])
 
-        if "group_id" in data_search and data_search["group_id"]:
+        if "group_id" in data_search  :
             query = query.filter(Product.group_id == data_search["group_id"])
 
         # Xử lý type_order
@@ -147,6 +144,7 @@ class ProductService:
         # Thực hiện xóa
         products_to_delete.delete(synchronize_session=False)
         db.session.commit()
+        
         return True
 
     @staticmethod
@@ -202,6 +200,8 @@ class ProductService:
                     product_url_hash=product_url_hash,
                     content=batch_detail.content,
                 )
+                
+                ProductService.delete_group_products_cache(user_id)
         except Exception as ex:
             logger.error(f"Exception: create_sns_product   :  {str(ex)}")
             return None
@@ -255,3 +255,8 @@ class ProductService:
             .scalar()
         )
         return max_order_no or 0
+    @staticmethod
+    def delete_group_products_cache(user_id):
+        pattern = f"group_products:{user_id}:*"
+        for key in redis_client.scan_iter(match=pattern):
+            redis_client.delete(key)
