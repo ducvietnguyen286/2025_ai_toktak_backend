@@ -532,7 +532,6 @@ class GroupListApi(Resource):
 class GroupListWithProductsApi(Resource):
     def get(self):
         try:
-
             search_key = request.args.get("search_key", "", type=str)
             user_id = request.args.get("user_id", "", type=str)
             try:

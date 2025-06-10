@@ -10,9 +10,7 @@ from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
 from app.services.crawl_data import CrawlDataService
 
-from app.lib.string import (
-    format_price_show,
-)
+from app.lib.string import un_shotend_url
 
 
 class AliExpressScraper:
@@ -22,58 +20,16 @@ class AliExpressScraper:
     def run(self):
         return self.run_scraper()
 
-    def un_shortend_url(self, url, retry=0):
-        try:
-            cookie_jar = CookieJar()
-            session = requests.Session()
-            session.cookies = cookie_jar
-            user_agent = generate_desktop_user_agent()
-            headers = {
-                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                "accept-encoding": "gzip, deflate, br, zstd",
-                "accept-language": "en",
-                "priority": "u=0, i",
-                "referer": "",
-                "upgrade-insecure-requests": "1",
-                "user-agent": user_agent,
-            }
-            logger.info("Unshortend URL: {0}".format(url))
-            response = session.get(
-                url, allow_redirects=False, headers=headers, timeout=5
-            )
-            # file_html = open("demo.html", "w", encoding="utf-8")
-            # file_html.write(response.content.decode("utf-8"))
-            # file_html.close()
-
-            # logger.info("Unshortend Text: {0}".format(response.content))
-            # print(response)
-            if "Location" in response.headers:
-                redirect_url = response.headers["Location"]
-                if not urlparse(redirect_url).netloc:
-                    redirect_url = (
-                        urlparse("https://ko.aliexpress.com")
-                        ._replace(path=redirect_url)
-                        .geturl()
-                    )
-                logger.info("Unshortend URL AFTER: {0}".format(redirect_url))
-                return redirect_url
-            else:
-                return url
-        except Exception as e:
-            logger.error("Exception: {0}".format(str(e)))
-            traceback.print_exc()
-            if retry < 3:
-                return self.un_shortend_url(url, retry + 1)
-            return url
-
     def run_scraper(self):
         if (
             "https://s.click.aliexpress.com/" in self.url
             or "https://a.aliexpress.com/" in self.url
         ):
-            request_url = self.un_shortend_url(self.url)
+            request_url = un_shotend_url(self.url)
         else:
             request_url = self.url
+
+        # Push
 
         data = self.run_api_ali_data_hub_6(request_url)
         if not data:

@@ -66,6 +66,10 @@ class GroupProductService:
             cache_key = f"group_products:{user_id}:{product_limit}:{search_key}"
         else:
             cache_key = f"group_products:{user_id}:{product_limit}"
+<<<<<<< HEAD
+=======
+        redis_client.delete(cache_key)
+>>>>>>> 4f1f17687d2c7617781641d8cd9c3b3d5bd9c0ba
         cached_data = redis_client.get(cache_key)
         if cached_data:
             return json.loads(cached_data.decode("utf-8"))
@@ -79,7 +83,11 @@ class GroupProductService:
 
         data_search = {
             "page": 1,
+<<<<<<< HEAD
             "per_page": product_limit,
+=======
+            "per_page": 20,
+>>>>>>> 4f1f17687d2c7617781641d8cd9c3b3d5bd9c0ba
             "search_key": search_key,
             "user_id": user_id,
             "group_id": 0,
@@ -109,7 +117,11 @@ class GroupProductService:
         for group in groups:
             data_search = {
                 "page": 1,
+<<<<<<< HEAD
                 "per_page": product_limit,
+=======
+                "per_page": 20,
+>>>>>>> 4f1f17687d2c7617781641d8cd9c3b3d5bd9c0ba
                 "search_key": search_key,
                 "user_id": user_id,
                 "group_id": group.id,

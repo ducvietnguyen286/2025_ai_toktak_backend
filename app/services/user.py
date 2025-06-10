@@ -1,3 +1,4 @@
+from app.lib.string import parse_date
 from app.models.coupon_code import CouponCode
 from app.models.user import User
 from app.models.user_link import UserLink
@@ -373,8 +374,8 @@ class UserService:
 
         used_date_range = ""
         if start_used and last_used:
-            start_used = datetime.strptime(start_used, "%Y-%m-%dT%H:%M:%SZ")
-            last_used = datetime.strptime(last_used, "%Y-%m-%dT%H:%M:%SZ")
+            start_used = parse_date(start_used)
+            last_used = parse_date(last_used)
             used_date_range = (
                 f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
             )
@@ -456,11 +457,11 @@ class UserService:
 
     @staticmethod
     def report_user_by_type(data_search):
-        
+
         histories = UserHistory.query
         type = data_search.get("type", "")
         type_2 = data_search.get("type_2", "")
-        
+
         if type != "":
             histories = histories.filter(UserHistory.type == type)
         if type_2 != "":
@@ -497,15 +498,15 @@ class UserService:
         total = histories.count()
 
         return total
-    
+
     @staticmethod
     def report_user_by_subscription(data_search):
         histories = User.query
         subscription = data_search.get("subscription", "")
-        
+
         if subscription != "":
             histories = histories.filter(User.subscription == subscription)
-            
+
         time_range = data_search.get("time_range", "")
         if time_range == "today":
             start_date = datetime.now().replace(
