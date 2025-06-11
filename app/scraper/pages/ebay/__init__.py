@@ -36,17 +36,39 @@ class EbayScraper:
         }
 
     def run(self):
+        print("run")
         return self.run_scraper()
-
-    def run(self):
-        pass
 
     def run_scraper(self):
         request_url = self.url
+        print("request_url", request_url)
 
         html = self.get_page_html(request_url)
+        print(html)
         if not html:
             return {}
+
+        return html
+
+    def get_page_description(self, html):
+        params = {
+            "t": 0,
+            "category": 15709,
+            "seller": "officialpumastore",
+            "excSoj": 1,
+            "ver": 0,
+            "excTrk": 1,
+            "lsite": 0,
+            "ittenable": False,
+            "domain": "ebay.com",
+            "descgauge": 1,
+            "cspheader": 1,
+            "oneClk": 2,
+            "secureDesc": 1,
+            "variationId": 2560341887251,
+        }
+
+        URL_REQUEST = "https://itm.ebaydesc.com/itmdesc/277003406532"
 
     def get_page_html(self, url, count=0, added_headers=None):
         try:
@@ -62,9 +84,9 @@ class EbayScraper:
             info = response.content
             html = BeautifulSoup(info, "html.parser")
 
-            # file_html = open("demo.html", "w", encoding="utf-8")
-            # file_html.write(info.decode("utf-8"))
-            # file_html.close()
+            file_html = open("demo.html", "w", encoding="utf-8")
+            file_html.write(info.decode("utf-8"))
+            file_html.close()
 
             return html
         except Exception as e:
