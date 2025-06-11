@@ -262,6 +262,7 @@ class NiceAuthService:
                     data_user_history = {
                         "user_id": referred_user_id,
                         "type": "referral",
+                        "type_2": 'NEW_USER',
                         "object_id": referral_history_detail.id,
                         "object_start_time": referred_subscription_expired,
                         "object_end_time": expire_date,
@@ -338,7 +339,7 @@ class NiceAuthService:
                     data_user_history = {
                         "user_id": referrer_user_id,
                         "type": "referral",
-                        "type_2": subscription,
+                        "type_2": "REFERRED_USER",
                         "object_id": referral_history_detail.id,
                         "object_start_time": referrer_subscription_expired,
                         "object_end_time": subscription_expired,
