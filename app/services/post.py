@@ -11,10 +11,12 @@ import os
 import json
 import const
 from app.lib.query import (
+    delete_by_id,
     select_with_filter,
     select_by_id,
     select_with_pagination,
     select_with_filter_one,
+    update_by_id,
 )
 from sqlalchemy import update, delete
 from sqlalchemy.orm import joinedload
@@ -66,18 +68,12 @@ class PostService:
 
     @staticmethod
     def update_post(id, *args, **kwargs):
-        post = select_by_id(Post, id)
-        if not post:
-            return None
-        post.update(**kwargs)
+        post = update_by_id(Post, id, kwargs)
         return post
 
     @staticmethod
     def delete_post(id):
-        post = select_by_id(Post, id)
-        if not post:
-            return None
-        post.delete()
+        delete_by_id(Post, id)
         return True
 
     @staticmethod
@@ -279,7 +275,6 @@ class PostService:
             return None
         user_template.update(**kwargs)
         return user_template
-    
 
     @staticmethod
     def admin_get_posts_upload(data_search):
@@ -351,7 +346,7 @@ class PostService:
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
             query = query.filter(Post.created_at >= start_date)
-        
+
         elif time_range == "from_to":
             if "from_date" in data_search:
                 from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")

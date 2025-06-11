@@ -152,3 +152,15 @@ def update_multiple_by_ids(
     db.session.commit()
     db.session.close()
     return len(instances)
+
+
+def delete_by_id(
+    model: Type[DeclarativeMeta],
+    pk: Any,
+) -> bool:
+    instance = db.session.get(model, pk)
+    if instance:
+        db.session.delete(instance)
+        db.session.commit()
+        db.session.close()
+        return True
