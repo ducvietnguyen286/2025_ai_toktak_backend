@@ -12,6 +12,7 @@ from sqlalchemy import func
 from app.extensions import db
 
 from app.lib.query import (
+    delete_by_id,
     select_with_filter,
     select_by_id,
     update_multiple_by_ids,
@@ -97,11 +98,8 @@ class SocialPostService:
 
     @staticmethod
     def delete_social_post(id):
-        post = select_by_id(SocialPost, id)
-        if post:
-            post.delete()
-            return True
-        return False
+        delete_by_id(SocialPost, id)
+        return True
 
     @staticmethod
     def create_social_sync(*args, **kwargs):
@@ -119,11 +117,8 @@ class SocialPostService:
 
     @staticmethod
     def delete_social_sync(id):
-        sync = select_by_id(SocialSync, id)
-        if sync:
-            sync.delete()
-            return True
-        return False
+        delete_by_id(SocialSync, id)
+        return True
 
     @staticmethod
     def get_social_syncs():

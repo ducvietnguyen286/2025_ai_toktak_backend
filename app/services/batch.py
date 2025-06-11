@@ -42,9 +42,6 @@ class BatchService:
 
     @staticmethod
     def delete_batch(id):
-        batch = select_by_id(Batch, id)
-        if not batch:
-            return None
         delete_by_id(Batch, id)
         return True
 
