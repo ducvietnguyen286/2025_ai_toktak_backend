@@ -1,12 +1,10 @@
 import hashlib
-from http.cookiejar import CookieJar
 import json
 import os
 import traceback
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import requests
-from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
 from app.services.crawl_data import CrawlDataService
 
@@ -26,8 +24,11 @@ class AliExpressScraper:
             or "https://a.aliexpress.com/" in self.url
         ):
             request_url = un_shotend_url(self.url)
+            print(request_url)
         else:
             request_url = self.url
+
+        # Push
 
         data = self.run_api_ali_data_hub_6(request_url)
         if not data:
@@ -99,18 +100,7 @@ class AliExpressScraper:
                         f"https:{img}" if img.startswith("//") else img
                         for img in sku_images.values()
                     ]
-                # sku_def = sku.get("def", {})
-                # if sku_def:
-                #     promotionPrice = sku_def.get("promotionPrice", "")
-                #     price = sku_def.get("price", "")
-                #     price_show = ""
 
-                #     if promotionPrice:
-                #         price_show = promotionPrice.split("-")[0].strip()
-                #     elif price:
-                #         price_show = price.split("-")[0].strip()
-
-                #     price_show = format_price_show(price_show)
             video = item.get("video", {})
             video_url = ""
             video_thumbnail = ""

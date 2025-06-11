@@ -320,7 +320,6 @@ class VideoService:
                     {"clips": [clips_caption]},
                     {"clips": [clips_audio_sub]},
                     clips_data["clips"],
-                    
                 ],
             },
             "output": {
@@ -1475,8 +1474,7 @@ def generate_caption_from_audio(
     except Exception as e:
         log_make_video_message(f"Exception: {str(e)}")
         return ""
-    
-    
+
 
 def google_speech_to_text(audio_file, config=None):
     """

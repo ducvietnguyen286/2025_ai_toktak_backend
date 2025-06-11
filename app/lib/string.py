@@ -7,6 +7,7 @@ import urllib.parse
 import hashlib
 import base64
 import string
+import traceback
 from app.lib.header import generate_desktop_user_agent
 import const
 import uuid
@@ -391,6 +392,62 @@ def generate_order_id():
 
 def format_price_won(price):
     return "{:,.0f}₩".format(price)
+
+
+def cutting_text_when_exceed_450(text):
+    """
+    Cắt văn bản khi vượt quá 450 ký tự.
+    Sử dụng hàm split_text_by_words để tách văn bản.
+
+    :param text: Văn bản cần cắt
+    :return: Danh sách các đoạn văn bản
+    """
+    return split_text_by_words(text, max_length=450)
+
+
+def split_text_by_words(text, max_length=450):
+    """
+    Tách văn bản thành các đoạn, mỗi đoạn tối đa max_length ký tự.
+    Đảm bảo không cắt giữa từ, chỉ cắt tại khoảng trắng giữa các từ.
+
+    :param text: Văn bản cần tách
+    :param max_length: Độ dài tối đa của mỗi đoạn (mặc định 450)
+    :return: Danh sách các đoạn văn bản
+    """
+    if not text:
+        return []
+
+    words = text.split()
+    chunks = []
+    current_chunk = []
+    current_length = 0
+
+    for word in words:
+        word_length = len(word) + (1 if current_chunk else 0)
+
+        if current_length + word_length > max_length:
+            if current_chunk:
+                chunks.append(" ".join(current_chunk))
+                current_chunk = []
+                current_length = 0
+
+            if len(word) > max_length:
+                chunks.append(word[:max_length])
+                word = word[max_length:]
+                while word:
+                    chunks.append(word[:max_length])
+                    word = word[max_length:]
+            else:
+                current_chunk = [word]
+                current_length = len(word)
+        else:
+            current_chunk.append(word)
+            current_length += word_length
+
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+
+    return chunks
 
 
 def extract_redirect_url_from_script(html_content):
