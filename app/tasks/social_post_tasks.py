@@ -1,6 +1,7 @@
+from app.models.post import Post
 from app.tasks.celery_app import celery_app, make_celery_app
 from app.models.social_post import SocialPost
-from app.lib.query import select_by_id
+from app.lib.query import select_by_id, update_by_id
 
 app = make_celery_app()
 
@@ -10,7 +11,4 @@ def update_social_data(self, social_id, **kwargs):
     with app.app_context():
         post = select_by_id(SocialPost, social_id)
         if post:
-            for key, value in kwargs.items():
-                if hasattr(post, key):
-                    setattr(post, key, value)
-            post.save()
+            update_by_id(Post, post.id, kwargs)

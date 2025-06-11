@@ -280,7 +280,6 @@ class APICreateBatchSync(Resource):
                 post = PostService.create_post(
                     user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
                 )
-                post.save()
 
                 post_res = post._to_json()
                 posts.append(post_res)
