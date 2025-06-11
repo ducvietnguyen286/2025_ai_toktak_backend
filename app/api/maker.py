@@ -76,6 +76,7 @@ def validater_create_batch(current_user, is_advance, url=""):
             "amazon.com",
             "amzn.com",
             "ebay.com",
+            "walmart.com",
         ]
         if url and url != "":
             if (
