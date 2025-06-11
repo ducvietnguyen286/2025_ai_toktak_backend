@@ -457,9 +457,9 @@ class CreateContent:
                 )
                 current_done_post = batch.done_post
 
-                batch = BatchService.update_batch(
-                    batch.id, done_post=current_done_post + 1
-                )
+                BatchService.update_batch(batch.id, done_post=current_done_post + 1)
+
+                batch = BatchService.find_batch_by_id(batch_id)
 
                 if batch.done_post == batch.count_post:
                     BatchService.update_batch(batch.id, status=1)

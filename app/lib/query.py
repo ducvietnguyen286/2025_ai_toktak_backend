@@ -19,6 +19,7 @@ def select_with_filter(
     if order_by is not None and len(order_by) > 0:
         stmt = stmt.order_by(*order_by)
     result = db.session.execute(stmt).scalars().all()
+    db.session.close()
     return result
 
 
@@ -46,38 +47,13 @@ def select_by_id(
     pk: Any,
     eager_opts: Optional[List[Any]] = None,
 ):
-    try:
-        if eager_opts:
-            stmt = select(model).options(*eager_opts).where(model.id == pk)
-        else:
-            stmt = select(model).where(model.id == pk)
-        result = db.session.execute(stmt).scalars().first()
-        if result:
-            return db.session.merge(result)
-        return result
-    finally:
-        db.session.close()
-
-
-def select_by_id_with_merge(
-    model: Type[DeclarativeMeta],
-    pk: Any,
-    eager_opts: Optional[List[Any]] = None,
-):
-    """Phiên bản select_by_id có merge đối tượng trước khi đóng session"""
-    try:
-        if eager_opts:
-            stmt = select(model).options(*eager_opts).where(model.id == pk)
-        else:
-            stmt = select(model).where(model.id == pk)
-        result = db.session.execute(stmt).scalars().first()
-        if result:
-            merged_result = db.session.merge(result)
-            db.session.expunge(merged_result)
-            return merged_result
-        return result
-    finally:
-        db.session.close()
+    if eager_opts:
+        stmt = select(model).options(*eager_opts).where(model.id == pk)
+    else:
+        stmt = select(model).where(model.id == pk)
+    result = db.session.execute(stmt).scalars().first()
+    db.session.close()
+    return result
 
 
 def select_with_pagination(
@@ -189,3 +165,5 @@ def delete_by_id(
         db.session.commit()
         db.session.close()
         return True
+on.commit()
+    return len(instances)

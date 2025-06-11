@@ -23,6 +23,11 @@ class BatchService:
         return batch
 
     @staticmethod
+    def find_batch_by_id(id):
+        batch = Batch.query.filter(Batch.id == id).first()
+        return batch
+
+    @staticmethod
     def get_batchs():
         batchs = select_with_filter(
             Batch, order_by=[Batch.id.desc()], filters=[Batch.status == 1]
