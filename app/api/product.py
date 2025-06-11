@@ -535,12 +535,12 @@ class GroupListWithProductsApi(Resource):
             search_key = request.args.get("search_key", "", type=str)
             user_id = request.args.get("user_id", "", type=str)
             try:
-                product_limit = int(request.args.get("product_limit", 20))
-                if product_limit < 1 or product_limit > 200:
+                product_limit = int(request.args.get("per_page", 20))
+                if product_limit < 1:
                     product_limit = 20
             except Exception:
                 product_limit = 20
-
+            
             data = GroupProductService.get_groups_with_products(
                 user_id=user_id,
                 product_limit=product_limit,
