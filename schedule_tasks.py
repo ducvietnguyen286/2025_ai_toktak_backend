@@ -3,7 +3,7 @@ import atexit
 import time
 import logging
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import DEBUG
 from logging.handlers import TimedRotatingFileHandler
 
@@ -39,6 +39,10 @@ import const
 
 from app.services.notification import NotificationServices
 from app.models.notification import Notification
+from app.models.request_log import RequestLog
+from app.models.request_social_log import RequestSocialLog
+from app.models.video_create import VideoCreate
+
 from app.ais.chatgpt import (
     translate_notifications_batch,
 )
@@ -309,6 +313,45 @@ def cleanup_pending_batches(app):
             app.logger.error(f"Error in cleanup_pending_batches: {str(e)}")
 
 
+def cleanup_request_log(app):
+    """Xóa những dữ liệu cũ từ bảng request_logs, chỉ giữ lại 5 ngày gần nhất."""
+    app.logger.info("Begin cleanup_request_log.")
+
+    with app.app_context():
+        try:
+            # Tính ngày giới hạn (5 ngày trước)
+            five_days_ago = datetime.now() - timedelta(days=5)
+            three_days_ago = datetime.now() - timedelta(days=3)
+            # Đếm số bản ghi sẽ xóa
+            req_deleted = (
+                db.session.query(RequestLog)
+                .filter(RequestLog.created_at < five_days_ago)
+                .delete(synchronize_session=False)
+            )
+
+            # --- RequestSocialLog ---
+            social_deleted = (
+                db.session.query(RequestSocialLog)
+                .filter(RequestSocialLog.created_at < three_days_ago)
+                .delete(synchronize_session=False)
+            )
+            # --- VideoCreate ---
+            video_deleted = (
+                db.session.query(VideoCreate)
+                .filter(VideoCreate.created_at < three_days_ago)
+                .delete(synchronize_session=False)
+            )
+
+            db.session.commit()
+            app.logger.info(
+                f"🧹 Đã xóa: {req_deleted} request_logs, {social_deleted} request_social_logs, "
+                f"{video_deleted} video_create cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"❌ Error in cleanup_request_log: {str(e)}")
+
+
 def check_urls_health(app):
     """Check the health of predefined URLs and send one combined Telegram alert if any fail."""
     app.logger.info("Start checking URL health...")
@@ -378,6 +421,7 @@ def start_scheduler(app):
     every_2_minutes_trigger = CronTrigger(minute="*/2", timezone=kst)
     every_5_minutes_trigger = CronTrigger(minute="*/5", timezone=kst)
     one_am_kst_trigger = CronTrigger(hour=1, minute=0, timezone=kst)
+    one_30_am_kst_trigger = CronTrigger(hour=1, minute=30, timezone=kst)
     two_am_kst_trigger = CronTrigger(hour=2, minute=0, timezone=kst)
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
     four_am_kst_trigger = CronTrigger(hour=4, minute=0, timezone=kst)
@@ -409,6 +453,11 @@ def start_scheduler(app):
         func=lambda: cleanup_pending_batches(app),
         trigger=one_am_kst_trigger,
         id="cleanup_pending_batches",
+    )
+    scheduler.add_job(
+        func=lambda: cleanup_request_log(app),
+        trigger=one_30_am_kst_trigger,
+        id="cleanup_request_log",
     )
 
     scheduler.add_job(
