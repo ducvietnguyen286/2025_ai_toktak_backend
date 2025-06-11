@@ -1,5 +1,11 @@
 from app.models.batch import Batch
-from app.lib.query import select_with_filter, select_by_id, select_with_pagination
+from app.lib.query import (
+    delete_by_id,
+    select_with_filter,
+    select_by_id,
+    select_with_pagination,
+    update_by_id,
+)
 from datetime import datetime, timedelta
 
 
@@ -25,8 +31,7 @@ class BatchService:
 
     @staticmethod
     def update_batch(id, *args, **kwargs):
-        batch = Batch.query.get(id)
-        batch.update(**kwargs)
+        batch = update_by_id(Batch, id, kwargs)
         return batch
 
     @staticmethod
@@ -34,7 +39,7 @@ class BatchService:
         batch = select_by_id(Batch, id)
         if not batch:
             return None
-        batch.delete()
+        delete_by_id(Batch, id)
         return True
 
     @staticmethod

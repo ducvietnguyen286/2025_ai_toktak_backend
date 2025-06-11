@@ -37,6 +37,7 @@ def select_with_filter_one(
     if order_by:
         stmt = stmt.order_by(*order_by)
     result = db.session.execute(stmt).scalars().first()
+    db.session.close()
     return result
 
 
@@ -50,6 +51,7 @@ def select_by_id(
     else:
         stmt = select(model).where(model.id == pk)
     result = db.session.execute(stmt).scalars().first()
+    db.session.close()
     return result
 
 
@@ -80,6 +82,7 @@ def select_with_pagination(
     )
 
     total_pages = (total + per_page - 1) // per_page
+    db.session.close()
 
     return {
         "total": total,
@@ -100,7 +103,9 @@ def update_by_id(
         for key, value in data.items():
             setattr(instance, key, value)
         db.session.commit()
+        db.session.close()
         return instance
+    db.session.close()
     return None
 
 
@@ -116,6 +121,7 @@ def update_by_filter(
     instances = db.session.execute(stmt).scalars().all()
 
     if not instances:
+        db.session.close()
         return 0
 
     for instance in instances:
@@ -123,6 +129,7 @@ def update_by_filter(
             setattr(instance, key, value)
 
     db.session.commit()
+    db.session.close()
     return len(instances)
 
 
@@ -135,6 +142,7 @@ def update_multiple_by_ids(
     instances = db.session.execute(stmt).scalars().all()
 
     if not instances:
+        db.session.close()
         return 0
 
     for instance in instances:
@@ -142,4 +150,17 @@ def update_multiple_by_ids(
             setattr(instance, key, value)
 
     db.session.commit()
+    db.session.close()
     return len(instances)
+
+
+def delete_by_id(
+    model: Type[DeclarativeMeta],
+    pk: Any,
+) -> bool:
+    instance = db.session.get(model, pk)
+    if instance:
+        db.session.delete(instance)
+        db.session.commit()
+        db.session.close()
+        return True

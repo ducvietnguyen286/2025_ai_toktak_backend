@@ -187,6 +187,17 @@ class APIReportDashboard(Resource):
         
         
         data_search = {
+            "type": "referral",
+            "type_2": "NEW_USER",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        referral_new_users = UserService.report_user_by_type(data_search)
+        new_users =  new_users + referral_new_users
+        
+        
+        data_search = {
             "subscription": "FREE",
             "time_range": selected_date_type,
             "from_date": from_date,
