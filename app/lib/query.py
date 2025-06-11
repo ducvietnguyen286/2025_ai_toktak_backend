@@ -46,13 +46,38 @@ def select_by_id(
     pk: Any,
     eager_opts: Optional[List[Any]] = None,
 ):
-    if eager_opts:
-        stmt = select(model).options(*eager_opts).where(model.id == pk)
-    else:
-        stmt = select(model).where(model.id == pk)
-    result = db.session.execute(stmt).scalars().first()
-    db.session.close()
-    return result
+    try:
+        if eager_opts:
+            stmt = select(model).options(*eager_opts).where(model.id == pk)
+        else:
+            stmt = select(model).where(model.id == pk)
+        result = db.session.execute(stmt).scalars().first()
+        if result:
+            return db.session.merge(result)
+        return result
+    finally:
+        db.session.close()
+
+
+def select_by_id_with_merge(
+    model: Type[DeclarativeMeta],
+    pk: Any,
+    eager_opts: Optional[List[Any]] = None,
+):
+    """Phiên bản select_by_id có merge đối tượng trước khi đóng session"""
+    try:
+        if eager_opts:
+            stmt = select(model).options(*eager_opts).where(model.id == pk)
+        else:
+            stmt = select(model).where(model.id == pk)
+        result = db.session.execute(stmt).scalars().first()
+        if result:
+            merged_result = db.session.merge(result)
+            db.session.expunge(merged_result)
+            return merged_result
+        return result
+    finally:
+        db.session.close()
 
 
 def select_with_pagination(
