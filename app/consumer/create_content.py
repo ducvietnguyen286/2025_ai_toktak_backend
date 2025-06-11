@@ -460,6 +460,7 @@ class CreateContent:
                 batch = BatchService.update_batch(
                     batch.id, done_post=current_done_post + 1
                 )
+                # push
 
                 if batch.done_post == batch.count_post:
                     BatchService.update_batch(batch.id, status=1)
