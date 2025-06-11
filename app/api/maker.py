@@ -711,7 +711,7 @@ class APIUpdateTemplateVideoUser(Resource):
             "purchase_guide": {"type": "string"},
             "is_purchase_guide": {"type": "integer"},
             "voice_gender": {"type": ["integer", "null"]},
-            "voice_id": {"type": ["string", "null"]},
+            "voice_id": {"type": ["integer", "string", "null"]},
             "is_video_hooking": {"type": ["integer", "null"]},
             "is_caption_top": {"type": ["integer", "null"]},
             "is_caption_last": {"type": ["integer", "null"]},
@@ -737,7 +737,7 @@ class APIUpdateTemplateVideoUser(Resource):
             is_product_pin = args.get("is_product_pin", 0)
             product_pin = args.get("product_pin", "")
             voice_gender = args.get("voice_gender", 0)
-            voice_id = args.get("voice_id", "")
+            voice_id = args.get("voice_id", 0)
             is_video_hooking = args.get("is_video_hooking", 0)
             is_caption_top = args.get("is_caption_top", 0)
             is_caption_last = args.get("is_caption_last", 0)
@@ -770,14 +770,14 @@ class APIUpdateTemplateVideoUser(Resource):
                 "purchase_guide": purchase_guide,
                 "is_purchase_guide": is_purchase_guide,
                 "voice_gender": voice_gender,
-                "voice_id": 0,
+                "voice_id": int(voice_id) if voice_id else 0,
                 "is_video_hooking": is_video_hooking,
                 "is_caption_top": is_caption_top,
                 "is_caption_last": is_caption_last,
                 "image_template_id": image_template_id,
                 "is_comment": is_comment,
                 "is_hashtag": is_hashtag,
-                "typecast_voice": voice_id,
+                "typecast_voice": "",
                 "comment": comment,
                 "hashtag": json.dumps(hashtag),
             }
