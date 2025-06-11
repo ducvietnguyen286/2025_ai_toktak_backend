@@ -52,3 +52,4 @@ sam-venv
 run_sam.sh 
 data_scripts
 proxies.txt
+run_watch_consumer.py

@@ -1,12 +1,15 @@
 from app.scraper.pages.coupang import CoupangScraper
 from app.scraper.pages.domeggook import DomeggookScraper
 from app.scraper.pages.aliexpress import AliExpressScraper
+from app.scraper.pages.ebay import EbayScraper
 from app.scraper.pages.shopee import ShopeeScarper
+from app.scraper.pages.amazon import AmazonScraper
 
 from urllib.parse import urlparse
 import requests
 from app.lib.logger import logger
 import random
+from app.scraper.pages.walmart import WalmartScraper
 from app.services.crawl_data import CrawlDataService
 import hashlib
 import json
@@ -17,13 +20,19 @@ def get_page_scraper(params):
     scraper = None
     parsed_url = urlparse(url)
     netloc = parsed_url.netloc
+    print("netloc", netloc)
     if "domeggook." in netloc:
         scraper = DomeggookScraper(params)
     elif "coupang." in netloc:
         scraper = CoupangScraper(params)
     elif "aliexpress." in netloc:
         scraper = AliExpressScraper(params)
-
+    elif "amazon." in netloc or "amzn." in netloc:
+        scraper = AmazonScraper(params)
+    elif "ebay." in netloc:
+        scraper = EbayScraper(params)
+    elif "walmart." in netloc:
+        scraper = WalmartScraper(params)
     elif "shopee." in netloc:
         scraper = ShopeeScarper(params)
     return scraper.run()
