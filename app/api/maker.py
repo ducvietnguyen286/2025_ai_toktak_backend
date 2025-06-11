@@ -458,8 +458,6 @@ class APICreateBatch(Resource):
                     user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
                 )
 
-                post.save()
-
                 post_res = post._to_json()
                 post_res["url_run"] = (
                     f"{current_domain}/api/v1/maker/make-post/{post.id}"
