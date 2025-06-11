@@ -19,7 +19,6 @@ def select_with_filter(
     if order_by is not None and len(order_by) > 0:
         stmt = stmt.order_by(*order_by)
     result = db.session.execute(stmt).scalars().all()
-    db.session.close()
     return result
 
 
@@ -165,5 +164,3 @@ def delete_by_id(
         db.session.commit()
         db.session.close()
         return True
-on.commit()
-    return len(instances)
