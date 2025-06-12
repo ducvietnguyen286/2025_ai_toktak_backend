@@ -58,17 +58,17 @@ class WalmartScraper:
             session = requests.Session()
             headers = self.generate_random_headers_request()
 
-            # proxies = self.proxies()
+            proxies = self.proxies()
 
-            # print(proxies)
+            print(proxies)
 
-            response = session.get(url, headers=headers, timeout=5)
+            response = session.get(url, headers=headers, timeout=5, proxies=proxies)
             info = response.content
             html = BeautifulSoup(info, "html.parser")
 
-            # file_html = open("demo.html", "w", encoding="utf-8")
-            # file_html.write(info.decode("utf-8"))
-            # file_html.close()
+            file_html = open("demo.html", "w", encoding="utf-8")
+            file_html.write(info.decode("utf-8"))
+            file_html.close()
 
             return html
         except Exception as e:
@@ -87,7 +87,7 @@ class WalmartScraper:
             "dpr": "1",
             "pragma": "no-cache",
             "priority": "u=0, i",
-            "referer": "https://www.google.com/",
+            # "referer": "https://www.google.com/",
             "user-agent": user_agent,
             "accept-encoding": "gzip, deflate, br",
             "connection": "keep-alive",
