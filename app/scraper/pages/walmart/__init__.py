@@ -43,13 +43,12 @@ class WalmartScraper:
         request_url = self.url
 
         html = self.get_page_html(request_url)
-        print(html)
         if not html:
             return {}
 
-        # response = Parser(html).parse(request_url)
+        response = Parser(html).parse(request_url)
 
-        # return response
+        return response
 
     def get_page_html(self, url, count=0, added_headers=None):
         try:
@@ -62,15 +61,14 @@ class WalmartScraper:
             # proxies = self.proxies()
 
             # print(proxies)
-            print(headers)
 
             response = session.get(url, headers=headers, timeout=5)
             info = response.content
             html = BeautifulSoup(info, "html.parser")
 
-            file_html = open("demo.html", "w", encoding="utf-8")
-            file_html.write(info.decode("utf-8"))
-            file_html.close()
+            # file_html = open("demo.html", "w", encoding="utf-8")
+            # file_html.write(info.decode("utf-8"))
+            # file_html.close()
 
             return html
         except Exception as e:
@@ -91,7 +89,6 @@ class WalmartScraper:
             "priority": "u=0, i",
             "referer": "https://www.google.com/",
             "user-agent": user_agent,
-            "host": "www.walmart.com",
             "accept-encoding": "gzip, deflate, br",
             "connection": "keep-alive",
         }

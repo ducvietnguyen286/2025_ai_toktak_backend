@@ -20,7 +20,6 @@ def get_page_scraper(params):
     scraper = None
     parsed_url = urlparse(url)
     netloc = parsed_url.netloc
-    print("netloc", netloc)
     if "domeggook." in netloc:
         scraper = DomeggookScraper(params)
     elif "coupang." in netloc:
