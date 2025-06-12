@@ -226,6 +226,8 @@ class APICreateBatchSync(Resource):
 
             data = Scraper().scraper({"url": url})
 
+            return data
+
             if not data:
                 NotificationServices.create_notification(
                     user_id=user_id_login,
@@ -800,8 +802,8 @@ class APIUpdateTemplateVideoUser(Resource):
 
             data_update_batch = {
                 "is_paid_advertisements": is_paid_advertisements,
-                "voice_google": 0,
-                "voice_typecast": voice_id,
+                "voice_google": int(voice_id) if voice_id else 0,
+                "voice_typecast": "",
                 "template_info": json.dumps(data_update_template),
             }
             BatchService.update_batch(batch_id, **data_update_batch)
