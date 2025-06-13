@@ -78,12 +78,13 @@ class WalmartScraper:
             session = requests.Session()
             headers = self.generate_random_headers_request(url)
 
-            cookies = self.get_cookies()
-            # proxies = self.proxies()
+            # cookies = self.get_cookies()
+            proxies = self.proxies()
+            print(proxies)
 
             # session.cookies.update(cookies)
 
-            response = session.get(url, headers=headers, timeout=15)
+            response = session.get(url, headers=headers, timeout=15, proxies=proxies)
             info = response.content
             html = BeautifulSoup(info, "html.parser")
 
@@ -91,12 +92,20 @@ class WalmartScraper:
             # file_html.write(info.decode("utf-8"))
             # file_html.close()
 
+            ld_json = html.find("script", {"id": "__NEXT_DATA__"})
+            if ld_json is None:
+                count = count + 1
+                return self.get_page_html(url, count, added_headers)
+
             return html
         except Exception as e:
             logger.error(e)
             traceback.print_exc()
             count = count + 1
             return self.get_page_html(url, count, added_headers)
+
+    def allow_proxies(self):
+        return True
 
     def generate_random_headers_request(self, url):
         user_agent = generate_desktop_user_agent()
