@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import traceback
@@ -8,6 +9,7 @@ import requests
 from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
 from app.scraper.pages.walmart.parser import Parser
+from urllib.parse import quote
 
 
 class WalmartScraper:
@@ -50,25 +52,44 @@ class WalmartScraper:
 
         return response
 
+    def get_cookies(self):
+        cookies_path = os.path.join(
+            os.getcwd(), "app/scraper/pages/walmart/cookies.json"
+        )
+        if not os.path.exists(cookies_path):
+            logger.error("Cookies file not found: {0}".format(cookies_path))
+            return {}
+
+        with open(cookies_path, "r") as file:
+            cookies = json.load(file)
+
+        cookies_dict = {}
+        for cookie in cookies:
+            if isinstance(cookie, dict) and "name" in cookie and "value" in cookie:
+                cookies_dict[cookie["name"]] = cookie["value"]
+
+        return cookies_dict
+
     def get_page_html(self, url, count=0, added_headers=None):
         try:
             if count > 10:
                 return False
 
             session = requests.Session()
-            headers = self.generate_random_headers_request()
+            headers = self.generate_random_headers_request(url)
 
-            proxies = self.proxies()
+            cookies = self.get_cookies()
+            # proxies = self.proxies()
 
-            print(proxies)
+            # session.cookies.update(cookies)
 
-            response = session.get(url, headers=headers, timeout=5, proxies=proxies)
+            response = session.get(url, headers=headers, timeout=15)
             info = response.content
             html = BeautifulSoup(info, "html.parser")
 
-            file_html = open("demo.html", "w", encoding="utf-8")
-            file_html.write(info.decode("utf-8"))
-            file_html.close()
+            # file_html = open("demo.html", "w", encoding="utf-8")
+            # file_html.write(info.decode("utf-8"))
+            # file_html.close()
 
             return html
         except Exception as e:
@@ -77,19 +98,19 @@ class WalmartScraper:
             count = count + 1
             return self.get_page_html(url, count, added_headers)
 
-    def generate_random_headers_request(self):
+    def generate_random_headers_request(self, url):
         user_agent = generate_desktop_user_agent()
+        path = "/" + "/".join(url.split("/")[3:])
+        path = quote(path, safe="/:?=&")
         headers = {
+            "host": "www.walmart.com",
             "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "accept-language": "en,vi;q=0.9,es;q=0.8,vi-VN;q=0.7,fr-FR;q=0.6,fr;q=0.5,en-US;q=0.4",
-            "cache-control": "no-cache",
-            "downlink": "10",
-            "dpr": "1",
-            "pragma": "no-cache",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en",
             "priority": "u=0, i",
-            # "referer": "https://www.google.com/",
+            "cache-control": "no-cache",
+            "pragma": "no-cache",
+            "upgrade-insecure-requests": "1",
             "user-agent": user_agent,
-            "accept-encoding": "gzip, deflate, br",
-            "connection": "keep-alive",
         }
         return headers
