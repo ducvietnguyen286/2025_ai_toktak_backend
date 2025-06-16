@@ -53,6 +53,11 @@ def parse_response(html, base_url):
 
     name = product_data.get("name", "")
     description = product_data.get("shortDescription", "")
+    if description:
+        # Parse HTML description and extract text
+        description_html = BeautifulSoup(description, "html.parser")
+        description = description_html.get_text(separator=" ", strip=True)
+        description = description.replace("\n", " ")
 
     image_info = product_data.get("imageInfo", {})
     all_images = image_info.get("allImages", [])

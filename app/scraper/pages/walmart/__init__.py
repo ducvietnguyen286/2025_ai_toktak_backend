@@ -78,12 +78,12 @@ class WalmartScraper:
             session = requests.Session()
             headers = self.generate_random_headers_request(url)
 
-            cookies = self.get_cookies()
-            # proxies = self.proxies()
+            # cookies = self.get_cookies()
+            proxies = self.proxies()
 
             # session.cookies.update(cookies)
 
-            response = session.get(url, headers=headers, timeout=15)
+            response = session.get(url, headers=headers, timeout=15, proxies=proxies)
             info = response.content
             html = BeautifulSoup(info, "html.parser")
 
