@@ -128,7 +128,7 @@ class TiktokTokenService:
             meta = json.loads(user_link.meta)
             refresh_token = meta.get("refresh_token")
 
-            REFRESH_URL = "https://open-api.tiktok.com/oauth/refresh_token/"
+            REFRESH_URL = "https://open.tiktokapis.com/v2/oauth/token/"
             TIKTOK_CLIENT_KEY = os.environ.get("TIKTOK_CLIENT_KEY") or ""
             TIKTOK_CLIENT_SECRET = os.environ.get("TIKTOK_CLIENT_SECRET") or ""
 
