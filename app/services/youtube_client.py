@@ -1,6 +1,7 @@
 from app.models.youtube_client import YoutubeClient
 import random
 from app.lib.query import (
+    delete_by_id,
     select_with_filter,
     select_by_id,
     select_with_filter_one,
@@ -14,12 +15,18 @@ class YoutubeClientService:
     def get_client_by_user_id(user_id):
         int_user_id = int(user_id)
         user_id_pattern = f"%,{int_user_id},%"
-        filters = [YoutubeClient.user_ids.like(user_id_pattern)]
+        filters = [
+            YoutubeClient.user_ids.like(user_id_pattern),
+            YoutubeClient.status == 1,
+        ]
         return select_with_filter_one(YoutubeClient, filters=filters)
 
     @staticmethod
     def get_random_client():
-        clients = select_with_filter(YoutubeClient)
+        clients = select_with_filter(
+            YoutubeClient,
+            [YoutubeClient.status == 1],
+        )
         if not clients:
             return None
 
@@ -47,11 +54,8 @@ class YoutubeClientService:
 
     @staticmethod
     def delete_youtube_client(id):
-        client = select_by_id(YoutubeClient, id)
-        if client:
-            client.delete()
-            return True
-        return False
+        delete_by_id(YoutubeClient, id)
+        return True
 
     @staticmethod
     def get_youtube_clients():

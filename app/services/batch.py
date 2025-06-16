@@ -23,6 +23,11 @@ class BatchService:
         return batch
 
     @staticmethod
+    def find_batch_by_id(id):
+        batch = Batch.query.filter(Batch.id == id).first()
+        return batch
+
+    @staticmethod
     def get_batchs():
         batchs = select_with_filter(
             Batch, order_by=[Batch.id.desc()], filters=[Batch.status == 1]
@@ -31,14 +36,12 @@ class BatchService:
 
     @staticmethod
     def update_batch(id, *args, **kwargs):
-        batch = update_by_id(Batch, id, kwargs)
+        update_by_id(Batch, id, kwargs)
+        batch = Batch.query.get(id)
         return batch
 
     @staticmethod
     def delete_batch(id):
-        batch = select_by_id(Batch, id)
-        if not batch:
-            return None
         delete_by_id(Batch, id)
         return True
 

@@ -68,7 +68,8 @@ class PostService:
 
     @staticmethod
     def update_post(id, *args, **kwargs):
-        post = update_by_id(Post, id, kwargs)
+        update_by_id(Post, id, kwargs)
+        post = Post.query.get(id)
         return post
 
     @staticmethod

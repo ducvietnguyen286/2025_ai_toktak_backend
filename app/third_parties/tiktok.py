@@ -130,9 +130,11 @@ class TiktokTokenService:
 
             REFRESH_URL = "https://open-api.tiktok.com/oauth/refresh_token/"
             TIKTOK_CLIENT_KEY = os.environ.get("TIKTOK_CLIENT_KEY") or ""
+            TIKTOK_CLIENT_SECRET = os.environ.get("TIKTOK_CLIENT_SECRET") or ""
 
             r_data = {
                 "client_key": TIKTOK_CLIENT_KEY,
+                "client_secret": TIKTOK_CLIENT_SECRET,
                 "grant_type": "refresh_token",
                 "refresh_token": refresh_token,
             }

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from app.services.user import UserService
 import const
 from app.lib.query import (
+    delete_by_id,
     select_with_filter,
     select_by_id,
     select_with_pagination,
@@ -44,11 +45,8 @@ class NotificationServices:
 
     @staticmethod
     def delete(id):
-        notif = select_by_id(Notification, id)
-        if notif:
-            notif.delete()
-            return True
-        return False
+        delete_by_id(Notification, id)
+        return True
 
     @staticmethod
     def update_notification_by_batch_id(batch_id, *args, **kwargs):
@@ -188,7 +186,7 @@ class NotificationServices:
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
             query = query.filter(Notification.created_at >= start_date)
-            
+
         elif time_range == "from_to":
             if "from_date" in data_search:
                 from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")

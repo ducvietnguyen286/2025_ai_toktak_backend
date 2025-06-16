@@ -4,6 +4,7 @@ from app.models.request_social_count import RequestSocialCount
 from app.models.social_post_created import SocialPostCreated
 from app.extensions import db
 from app.lib.query import (
+    delete_by_id,
     select_with_filter,
     select_by_id,
     select_with_filter_one,
@@ -36,12 +37,8 @@ class RequestSocialLogService:
 
     @staticmethod
     def delete_request_social_log(id):
-        log = select_by_id(RequestSocialLog, id)
-        if log:
-            db.session.delete(log)
-            db.session.commit()
-            return True
-        return False
+        delete_by_id(RequestSocialLog, id)
+        return True
 
     @staticmethod
     def get_request_social_logs_by_batch_id(batch_id):

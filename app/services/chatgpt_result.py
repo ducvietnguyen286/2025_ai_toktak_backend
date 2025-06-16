@@ -1,5 +1,10 @@
 from app.models.chatgpt_results import ChatGPTResult
-from app.lib.query import select_with_filter, select_by_id, select_with_filter_one
+from app.lib.query import (
+    delete_by_id,
+    select_with_filter,
+    select_by_id,
+    select_with_filter_one,
+)
 
 
 class ChatGPTResultService:
@@ -43,8 +48,5 @@ class ChatGPTResultService:
 
     @staticmethod
     def delete_chatgpt_result(id):
-        chatgpt_result = select_by_id(ChatGPTResult, id)
-        if not chatgpt_result:
-            return None
-        chatgpt_result.delete()
+        delete_by_id(ChatGPTResult, id)
         return True

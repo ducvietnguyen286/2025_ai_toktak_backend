@@ -48,7 +48,7 @@ from app.ais.chatgpt import (
 )
 from sqlalchemy import or_
 
-from app.third_parties.telegram import send_telegram_message
+from app.third_parties.telegram import send_telegram_message, send_slack_message
 
 
 UPLOAD_BASE_PATH = "uploads"
@@ -126,14 +126,17 @@ def split_message(text, max_length=4000):
 
 def format_notification_message(notification_detail, fe_current_domain, user=None):
     email = user.email if user else ""
+    now_korea = datetime.now(timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
     return (
-        f"[Toktak Notification {fe_current_domain}]\n"
+        f"======================================================================\n"
+        f"[{now_korea}] [Toktak Notification {fe_current_domain}]\n"
         f"- User Email: {email}\n"
         f"- Notification ID: {notification_detail.get('id')}\n"
         f"- Batch ID: {notification_detail.get('batch_id')}\n"
         f"- Title: {notification_detail.get('title')}\n"
         f"- Description: {notification_detail.get('description')}\n"
         f"{notification_detail.get('description_korea')}\n"
+        f"======================================================================\n"
     )
 
 
@@ -141,14 +144,14 @@ def send_telegram_notifications(app):
     """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
     app.logger.info("🔔 Start send_telegram_notifications...")
 
-    telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    # telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    # chat_id = os.environ.get("TELEGRAM_CHAT_ID")
 
-    if not telegram_token or not chat_id:
-        app.logger.error("❌ Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env")
-        return
+    # if not telegram_token or not chat_id:
+    #     app.logger.error("❌ Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env")
+    #     return
 
-    telegram_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+    # telegram_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
 
     with app.app_context():
         try:
@@ -185,20 +188,7 @@ def send_telegram_notifications(app):
                     # Tự chia nhỏ nếu tin nhắn quá dài
                     message_parts = split_message(message)
                     for idx, part in enumerate(message_parts):
-                        response = requests.post(
-                            telegram_url,
-                            data={"chat_id": chat_id, "text": part},
-                            timeout=10,
-                        )
-
-                        if response.status_code == 200:
-                            app.logger.info(
-                                f"✅ Sent part {idx+1}/{len(message_parts)} for notification ID {notification.id}"
-                            )
-                        else:
-                            app.logger.warning(
-                                f"⚠️ Failed to send part {idx+1} of notification ID {notification.id}. Response: {response.text}"
-                            )
+                        send_slack_message(part)
 
                     notification.send_telegram = 1
                     notification.save()
@@ -390,7 +380,8 @@ def check_urls_health(app):
             f"*Failed URL Reports:* 🚨\n\n" + "\n\n".join(failed_reports)
         )
         app.logger.warning("Some URLs failed health check.")
-        send_telegram_message(message, app, parse_mode="Markdown")
+        send_slack_message(message)
+        # send_telegram_message(message, app, parse_mode="Markdown")
     else:
         app.logger.info("✅ All URLs are healthy.")
 
