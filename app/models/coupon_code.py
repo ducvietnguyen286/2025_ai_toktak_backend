@@ -31,12 +31,12 @@ class CouponCode(db.Model, BaseModel):
     def to_dict(self):
         return {
             "expired_from": (
-                self.coupon.expired_from.strftime("%Y-%m-%d %H:%M:%S")
+                self.coupon.expired_from.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.coupon.expired_from
                 else None
             ),
             "expired": (
-                self.coupon.expired.strftime("%Y-%m-%d %H:%M:%S")
+                self.coupon.expired.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.coupon.expired
                 else None
             ),
@@ -54,20 +54,20 @@ class CouponCode(db.Model, BaseModel):
             "total_link_active": self.total_link_active,
             "used_by": self.used_by,
             "used_at": (
-                self.used_at.strftime("%Y-%m-%d %H:%M:%S") if self.used_at else None
+                self.used_at.strftime("%Y-%m-%dT%H:%M:%SZ") if self.used_at else None
             ),
             "expired_at": (
-                self.expired_at.strftime("%Y-%m-%d %H:%M:%S")
+                self.expired_at.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.expired_at
                 else None
             ),
             "created_at": (
-                self.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                self.created_at.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.created_at
                 else None
             ),
             "updated_at": (
-                self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                self.updated_at.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.updated_at
                 else None
             ),
