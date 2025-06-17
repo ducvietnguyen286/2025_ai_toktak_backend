@@ -6,7 +6,7 @@ from app.third_parties.instagram import InstagramTokenService
 
 
 def exchange_instagram_token():
-    next_seven_days = datetime.now() + datetime.timedelta(days=7)
+    next_seven_days = datetime.datetime.now() + datetime.timedelta(days=7)
     instagram_link = Link.query.where(Link.social_type == "INSTAGRAM").first()
 
     expire_users = (

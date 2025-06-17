@@ -6,7 +6,7 @@ from app.third_parties.thread import ThreadTokenService
 
 
 def exchange_thread_token():
-    next_seven_days = datetime.now() + datetime.timedelta(days=7)
+    next_seven_days = datetime.datetime.now() + datetime.timedelta(days=7)
     thread_link = Link.query.where(Link.social_type == "THREAD").first()
 
     expire_users = (
