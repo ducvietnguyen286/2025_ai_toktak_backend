@@ -75,6 +75,7 @@ def validater_create_batch(current_user, is_advance, url=""):
             "domeggook.com",
             "amazon.com",
             "amzn.com",
+            "amzn.to",
             "ebay.com",
             "walmart.com",
         ]
@@ -226,7 +227,7 @@ class APICreateBatchSync(Resource):
 
             data = Scraper().scraper({"url": url})
 
-            # return data
+            return data
 
             if not data:
                 NotificationServices.create_notification(

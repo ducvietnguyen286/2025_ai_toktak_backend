@@ -80,7 +80,6 @@ class WalmartScraper:
 
             # cookies = self.get_cookies()
             proxies = self.proxies()
-            print(proxies)
 
             # session.cookies.update(cookies)
 
