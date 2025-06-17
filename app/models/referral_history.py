@@ -44,17 +44,17 @@ class ReferralHistory(db.Model, BaseModel):
                 self.referred_user.name if self.referred_user else None
             ),
             "expired_at": (
-                self.expired_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+                self.expired_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.expired_at
                 else None
             ),
             "created_at": (
-                self.created_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+                self.created_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.created_at
                 else None
             ),
             "updated_at": (
-                self.updated_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+                self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.updated_at
                 else None
             ),
