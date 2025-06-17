@@ -50,12 +50,12 @@ class Product(db.Model, BaseModel):
             "product_url_hash": self.product_url_hash,
             "user_email": self.user.email if self.user else None,
             "created_at": (
-                self.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                self.created_at.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.created_at
                 else None
             ),
             "updated_at": (
-                self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                self.updated_at.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if self.updated_at
                 else None
             ),
