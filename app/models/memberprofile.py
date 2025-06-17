@@ -3,6 +3,7 @@ from app.models.base import BaseModel
 from datetime import datetime
 import json
 
+
 class MemberProfile(db.Model, BaseModel):
     __tablename__ = "member_profiles"
 
@@ -14,21 +15,19 @@ class MemberProfile(db.Model, BaseModel):
     member_background = db.Column(db.String(500), nullable=False, default="")
     member_address = db.Column(db.Text, nullable=True)
     design_settings = db.Column(db.Text, nullable=True)
+    guide_info = db.Column(db.Text, nullable=True)
     content = db.Column(db.Text, nullable=False, default="")
     description = db.Column(db.Text, default="")
     status = db.Column(db.Integer, default=1)
     created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
-    updated_at = db.Column(
-        db.DateTime, default=datetime.now, onupdate=datetime.now
-    )  #
-    
-    
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)  #
+
     social_is_spotify = db.Column(db.Integer, default=0)
     social_spotify_url = db.Column(db.String(500), nullable=False, default="")
-    
+
     social_is_thread = db.Column(db.Integer, default=0)
     social_thread_url = db.Column(db.String(500), nullable=False, default="")
-    
+
     social_is_youtube = db.Column(db.Integer, default=0)
     social_youtube_url = db.Column(db.String(500), nullable=False, default="")
     social_is_x = db.Column(db.Integer, default=0)
@@ -42,13 +41,13 @@ class MemberProfile(db.Model, BaseModel):
 
     user = db.relationship("User", lazy="joined")
 
-    to_json_parse = "design_settings"
+    to_json_parse = ("design_settings", "guide_info")
     # to_json_filter = "captions"
-    
 
     def to_dict(self):
         design_settings = json.loads(self.design_settings)
-        
+        guide_info = json.loads(self.guide_info)
+
         return {
             "id": self.id,
             "user_id": self.user_id,
@@ -58,6 +57,7 @@ class MemberProfile(db.Model, BaseModel):
             "member_background": self.member_background,
             "content": self.content,
             "design_settings": design_settings,
+            "guide_info": guide_info,
             "description": self.description,
             "status": self.status,
             "social_is_spotify": self.social_is_spotify,
