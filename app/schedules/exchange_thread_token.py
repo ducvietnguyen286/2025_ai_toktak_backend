@@ -21,4 +21,6 @@ def exchange_thread_token():
         meta = json.loads(user_link.meta)
         access_token = meta.get("access_token")
 
-        ThreadTokenService().refresh_token(user_link, access_token)
+        ThreadTokenService().refresh_token(
+            user_link=user_link, access_token=access_token
+        )

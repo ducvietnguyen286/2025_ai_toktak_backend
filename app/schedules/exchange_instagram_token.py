@@ -21,4 +21,6 @@ def exchange_instagram_token():
         meta = json.loads(user_link.meta)
         access_token = meta.get("access_token")
 
-        InstagramTokenService().refresh_token(user_link, access_token)
+        InstagramTokenService().refresh_token(
+            user_link=user_link, access_token=access_token
+        )
