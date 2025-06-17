@@ -11,3 +11,4 @@ class YoutubeClient(db.Model, BaseModel):
     project_name = db.Column(db.String(100), default="")
     client_id = db.Column(db.String(150), nullable=False)
     client_secret = db.Column(db.String(150), nullable=False)
+    status = db.Column(db.Integer, default=1)
