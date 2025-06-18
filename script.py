@@ -7,6 +7,9 @@ from werkzeug.exceptions import default_exceptions
 
 from app.models.month_text import MonthText
 from app.models.youtube_client import YoutubeClient
+from app.schedules.exchange_facebook_token import exchange_facebook_token
+from app.schedules.exchange_instagram_token import exchange_instagram_token
+from app.schedules.exchange_thread_token import exchange_thread_token
 from app.scripts.migrage_batch import import_batch_data
 from app.services.link import LinkService
 from app.services.notification import NotificationServices
@@ -52,10 +55,13 @@ def create_app():
 def main():
     app = create_app()
     with app.app_context():
-        import_image_template()
-        import_month_text()
-        import_youtube_client()
-        import_batch_data()
+        exchange_thread_token()
+        exchange_instagram_token()
+        exchange_facebook_token()
+    #     import_image_template()
+    #     import_month_text()
+    #     import_youtube_client()
+    #     import_batch_data()
 
 
 def import_image_template():

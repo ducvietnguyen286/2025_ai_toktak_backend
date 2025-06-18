@@ -1,4 +1,6 @@
 from http.cookiejar import CookieJar
+import os
+import random
 import traceback
 from bs4 import BeautifulSoup
 import requests
@@ -13,6 +15,28 @@ from urllib.parse import unquote
 class DomeggookScraper:
     def __init__(self, params):
         self.url = params["url"]
+
+    def proxies(self):
+        auth = "hekqlibd:llv12cujeqjr"
+
+        proxy_path = os.path.join(os.getcwd(), "app/scraper/proxies.txt")
+
+        if not os.path.exists(proxy_path):
+            logger.error("Proxy file not found: {0}".format(proxy_path))
+            return {}
+
+        with open(proxy_path, "r") as file:
+            proxy_list = file.read().splitlines()
+
+        selected_proxy = random.choice(proxy_list)
+
+        if not selected_proxy.startswith("http"):
+            selected_proxy = f"http://{auth}@{selected_proxy}"
+
+        return {
+            "http": selected_proxy,
+            "https": selected_proxy,
+        }
 
     def un_shortend_url(self, url, retry=0):
         try:
@@ -98,8 +122,8 @@ class DomeggookScraper:
 
             session = requests.Session()
             headers = self.generate_random_headers_request()
-
-            response = session.get(url, headers=headers, timeout=5)
+            proxies = self.proxies()
+            response = session.get(url, headers=headers, timeout=5, proxies=proxies)
             info = response.content
             html = BeautifulSoup(info, "html.parser")
             # file_html = open("demo.html", "w", encoding="utf-8")

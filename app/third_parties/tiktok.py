@@ -159,21 +159,19 @@ class TiktokTokenService:
                 response=json.dumps(token_data),
             )
 
-            data_token = token_data.get("data")
-
-            if not token_data or not data_token or not data_token.get("access_token"):
+            if not token_data or not token_data.get("access_token"):
                 redis_client.set(redis_key_done, "failled", ex=300)
-                redis_client.set(redis_key_result, json.dumps(data_token), ex=300)
-                return {"status": "failled", "result": data_token}
+                redis_client.set(redis_key_result, json.dumps(token_data), ex=300)
+                return {"status": "failled", "result": token_data}
 
-            meta.update(data_token)
+            meta.update(token_data)
             user_link.meta = json.dumps(meta)
             user_link.save()
 
             redis_client.set(redis_key_done, "success", ex=300)
-            redis_client.set(redis_key_result, json.dumps(data_token), ex=300)
+            redis_client.set(redis_key_result, json.dumps(token_data), ex=300)
 
-            return {"status": "success", "result": data_token}
+            return {"status": "success", "result": token_data}
         except Exception as e:
             traceback.print_exc()
             log_tiktok_message(e)

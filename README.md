@@ -99,3 +99,20 @@ sudo systemctl status rabbitmq-serve
 780109 - 1 
 
 01029020640
+
+----------------------------------
+
+rm -rf /var/www/logs/* && rm -rf /var/www/logs_toktak/* && rm -rf /var/www/toktak/logs/* && rm -rf /var/www/staging/main_toktak_fe/2025_ai_toktak_be/logs/* && sudo systemctl restart nginx && sudo systemctl restart toktak.service && sudo systemctl restart toktak_watchdog.service && sudo systemctl restart consumer_toktak.service  && sudo systemctl restart consumer_toktak_instagram.service && sudo systemctl restart consumer_toktak_thread.service && sudo systemctl restart consumer_toktak_tiktok.service && sudo systemctl restart consumer_toktak_twitter.service && sudo systemctl restart consumer_toktak_youtube.service && sudo systemctl restart main_toktak.service  && sudo systemctl restart main_consumer_toktak_instagram.service  && sudo systemctl restart main_consumer_toktak_thread.service  && sudo systemctl restart main_consumer_toktak_tiktok.service  && sudo systemctl restart main_consumer_toktak_twitter.service  && sudo systemctl restart main_consumer_toktak_youtube.service  && sudo systemctl restart main_toktak_consumer_content.service  && sudo systemctl restart main_toktak_watchdog.service 
+
+
+sudo systemctl restart main_consumer_toktak_instagram.service
+sudo systemctl restart main_consumer_toktak_thread.service
+sudo systemctl restart main_consumer_toktak_tiktok.service
+sudo systemctl restart main_consumer_toktak_twitter.service
+sudo systemctl restart main_consumer_toktak_youtube.service
+sudo systemctl restart main_toktak.service
+sudo systemctl restart main_toktak_consumer_content.service
+sudo systemctl restart main_toktak_watchdog.service
+
+
+sudo systemctl status main_consumer_toktak_youtube.service
