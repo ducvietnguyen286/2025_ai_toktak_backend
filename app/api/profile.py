@@ -50,7 +50,7 @@ class MemberProfileAPI(Resource):
                     "product_price_color": "#1E4C94",
                     "show_price": 1,
                 }
-                guide_info = {}
+                guide_info = [{"id": i + 1, "is_completed": False} for i in range(10)]
                 profile = ProfileServices.create_profile(
                     user_id=current_user.id,
                     nick_name=nick_name,
