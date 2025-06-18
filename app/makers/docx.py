@@ -94,7 +94,7 @@ class DocxMaker:
         for item in description:
             if "IMAGE_URL_" in item:
                 txt_lines.append("\n\n\n\n")
-            elif item.startswith("ADS_CONTENT_TOKTAK"):
+            elif "ADS_CONTENT_TOKTAK" in item:
                 item_replace = update_ads_content_txt(url, item)
                 txt_lines.append(item_replace + "\n")
             else:
