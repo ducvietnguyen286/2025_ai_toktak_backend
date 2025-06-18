@@ -92,14 +92,10 @@ class DocxMaker:
             txt_lines.append(ads_text + "\n\n")
 
         for item in description:
-            logger.info(f"item: {item}")
             if "IMAGE_URL_" in item:
-                logger.info(f"startswith__: {item}")
                 txt_lines.append("\n\n\n\n")
             if item.startswith("ADS_CONTENT_TOKTAK"):
-                logger.info(f"ADS_CONTENT_TOKTAK::: {item} url: {url}")
                 item_replace = update_ads_content_txt(url, item)
-                logger.info(f"item_replace::: {item_replace} url: {url}")
                 txt_lines.append(item_replace + "\n")
             else:
                 split_lines = split_toktak_url(item)
