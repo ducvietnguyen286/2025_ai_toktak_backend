@@ -62,7 +62,7 @@ class BaseModel:
                     response[column] = value.isoformat()
                 # if value.tzinfo is None:
                 #     value = pytz.utc.localize(value)  # Fix lỗi lệch giờ
-                # response[column] = value.astimezone(tz).strftime("%Y-%m-%dT%H:%M:%SZ")
+                # response[column] = value.astimezone(tz).strftime("%Y-%m-%d %H:%M:%S")
             else:
                 response[column] = value
 

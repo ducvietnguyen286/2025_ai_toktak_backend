@@ -39,6 +39,7 @@ class UserVideoTemplates(db.Model, BaseModel):
     is_comment = db.Column(db.Integer, default=0, nullable=False)
     comment = db.Column(db.String(255), default="", nullable=False)
 
+    is_advance = db.Column(db.Integer, default=0, nullable=False)
     is_hashtag = db.Column(db.Integer, default=0, nullable=False)
     hashtag = db.Column(db.Text, nullable=False, default="[]")
     typecast_voice = db.Column(db.String(100), default="")
@@ -51,6 +52,7 @@ class UserVideoTemplates(db.Model, BaseModel):
     def to_dict(self):
         return {
             "id": self.id,
+            "is_advance": self.is_advance,
             "user_id": self.user_id,
             "is_paid_advertisements": self.is_paid_advertisements,
             "narration": self.narration,
@@ -77,6 +79,6 @@ class UserVideoTemplates(db.Model, BaseModel):
             "is_hashtag": self.is_hashtag,
             "hashtag": json.loads(self.hashtag),
             "subscribe_video": self.subscribe_video,
-            "created_at": self.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "updated_at": self.updated_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
