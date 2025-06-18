@@ -87,13 +87,13 @@ class ShotStackService:
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
         # Chọn giọng nói ngẫu nhiên
-        # korean_voice = get_korean_voice(voice_typecast)
+        # korean_voice = get_korean_typecast_voice(voice_typecast)
 
         # mp3_file, audio_duration = text_to_speech_kr(
         #     korean_voice, origin_caption, dir_path, config
         # )
 
-        korean_voice = get_korean_voice_old(voice_google)
+        korean_voice = get_korean_voice_google(voice_google)
         mp3_file, audio_duration = text_to_speech_kr_old(
             korean_voice, origin_caption, dir_path, config
         )
@@ -1257,12 +1257,12 @@ def get_typecast_voices():
         return []
 
 
-def get_korean_voice_old(index):
+def get_korean_voice_google(index):
     adjusted_index = (index - 1) % len(const.KOREAN_VOICES)
     return const.KOREAN_VOICES[adjusted_index]
 
 
-def get_korean_voice(voice_id):
+def get_korean_typecast_voice(voice_id):
     typecast_voices = get_typecast_voices()
     if not typecast_voices:
         log_make_video_message("Không thể lấy danh sách giọng nói từ Typecast.")
