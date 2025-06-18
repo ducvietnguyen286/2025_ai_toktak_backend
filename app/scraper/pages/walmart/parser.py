@@ -1,7 +1,7 @@
 import json
-from app.lib.logger import logger
+
+from bs4 import BeautifulSoup
 from urllib.parse import urlparse
-import re
 
 
 def get_domain(url):
@@ -32,52 +32,75 @@ def extract_images_and_text(html):
 
 
 def parse_response(html, base_url):
-    ld_jsons = html.find_all("script", {"type": "application/ld+json"})
-    if ld_jsons is None:
+    ld_json = html.find("script", {"id": "__NEXT_DATA__"})
+    if ld_json is None:
         return {}
 
-    data = {}
-    for ld_json in ld_jsons:
-        text = ld_json.text.strip()
-        if text:
-            data = json.loads(text)
-            if data.get("@type") == "Product":
-                break
+    data = json.loads(ld_json.text.strip())
 
     if not data:
         return {}
 
-    desc_ifr = html.find("iframe", {"id": "desc_ifr"})
-    desc_ifr_url = ""
-    if desc_ifr:
-        desc_ifr_url = desc_ifr.get("src")
+    initial_data = data.get("props", {}).get("pageProps", {}).get("initialData", {})
+    if not initial_data:
+        return {}
 
-    name = data.get("name", "")
-    image = data.get("image", "")
+    product_data = initial_data.get("data", {}).get("product", {})
+    if not product_data:
+        return {}
+
+    idml = initial_data.get("data", {}).get("idml", {})
+
+    name = product_data.get("name", "")
+    description = product_data.get("shortDescription", "")
+    if description:
+        # Parse HTML description and extract text
+        description_html = BeautifulSoup(description, "html.parser")
+        description = description_html.get_text(separator=" ", strip=True)
+        description = description.replace("\n", " ")
+
+    image_info = product_data.get("imageInfo", {})
+    all_images = image_info.get("allImages", [])
+    image = image_info.get("thumbnailUrl", "")
+    thumbnails = [img.get("url") for img in all_images]
+
+    price_info = product_data.get("priceInfo", {})
+    current_price = price_info.get("currentPrice", {})
+    show_price = current_price.get("priceString", "")
+
+    seller_name = product_data.get("sellerDisplayName", "")
+    brand = product_data.get("brand", "")
+
     domain = get_domain(base_url)
-    offers = data.get("offers", {})
-    price = offers.get("price", "")
-    show_price = f"${price}"
+
+    images = []
+    gifs = []
+    iframes = []
+    text = ""
+
+    if idml:
+        long_description = idml.get("longDescription", "")
+        html_long_description = BeautifulSoup(long_description, "html.parser")
+        images, gifs, iframes, text = extract_images_and_text(html_long_description)
 
     return {
-        "name": name if name else "",
-        "description": "",
+        "name": name,
+        "description": description,
         "stock": 1,
         "domain": domain,
-        "brand": "",
-        "image": image[0] if image else "",
-        "thumbnails": image,
+        "brand": brand,
+        "image": image,
+        "thumbnails": thumbnails,
         "price": show_price,
         "url": base_url,
         "base_url": base_url,
-        "store_name": "",
+        "store_name": seller_name,
         "url_crawl": base_url,
         "show_free_shipping": 0,
-        "images": [],
-        "text": [],
-        "iframes": [],
-        "gifs": [],
-        "desc_ifr_url": desc_ifr_url,
+        "images": images,
+        "text": text,
+        "iframes": iframes,
+        "gifs": gifs,
     }
 
 

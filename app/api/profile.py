@@ -50,11 +50,13 @@ class MemberProfileAPI(Resource):
                     "product_price_color": "#1E4C94",
                     "show_price": 1,
                 }
+                guide_info = [{"id": i + 1, "is_completed": False} for i in range(10)]
                 profile = ProfileServices.create_profile(
                     user_id=current_user.id,
                     nick_name=nick_name,
                     status=0,
                     design_settings=json.dumps(design_settings),
+                    guide_info=json.dumps(guide_info),
                 )
             return profile.to_dict()
         except Exception as e:
@@ -110,7 +112,7 @@ class MemberProfileUpdateAPI(Resource):
                 product_image_path = f"{current_domain}/{output_caption_file}"
 
                 data_update["member_avatar"] = product_image_path
-                
+
             if file_background:
                 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
                 filename = f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{file_background.filename}"

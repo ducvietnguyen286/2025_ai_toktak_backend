@@ -97,9 +97,19 @@ class AmazonScraper:
     def generate_random_headers_request(self):
         user_agent = generate_desktop_user_agent()
         headers = {
-            "User-Agent": user_agent,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Encoding": "gzip, compress, br",
-            "Accept-Language": "en-US,en;q=0.9",
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-encoding": "gzip, deflate, br",
+            "accept-language": "en,vi;q=0.9,es;q=0.8,vi-VN;q=0.7,fr-FR;q=0.6,fr;q=0.5,en-US;q=0.4",
+            "cache-control": "no-cache",
+            "device-memory": "8",
+            "downlink": "10",
+            "dpr": "1",
+            "ect": "4g",
+            "pragma": "no-cache",
+            "priority": "u=0, i",
+            "rtt": "50",
+            "upgrade-insecure-requests": "1",
+            "user-agent": user_agent,
+            "viewport-width": "1920",
         }
         return headers

@@ -31,6 +31,7 @@ from app.services.user import UserService
 from app.services.link import LinkService
 from app.services.user_link import UserLinkService
 from app.services.youtube_client import YoutubeClientService
+from app.services.profileservices import ProfileServices
 from app.third_parties.aliexpress import TokenAliExpress
 from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.tiktok import TiktokTokenService
@@ -1962,4 +1963,72 @@ class APICheckReferCode(Resource):
                 "referral_code": referral_code,
             },
             message="You can add active new link",
+        ).to_dict()
+
+
+@ns.route("/todo-guide")
+class APIGetTodo(Resource):
+
+    @jwt_required()
+    def get(self):
+        try:
+            current_user = AuthService.get_current_identity(no_cache=True)
+            profile_member = ProfileServices.profile_by_user_id(current_user.id)
+            if not profile_member:
+                return Response(
+                    message="회원 정보를 찾을 수 없습니다.",
+                    message_en="Member information not found.",
+                    status=201,
+                ).to_dict()
+
+            if not profile_member.guide_info:
+                arr = [{"id": i + 1, "is_completed": False} for i in range(10)]
+                profile_member.guide_info = json.dumps(arr)
+                profile_member.save()
+            return Response(
+                data=json.loads(profile_member.guide_info),
+                message="todo-guide를 성공적으로 가져왔습니다.",
+                message_en="Successfully retrieved todo-guide.",
+            ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Lỗi kết nối",
+                status=201,
+            ).to_dict()
+
+
+@ns.route("/update-todo-guide")
+class APIUpdateTodoGuide(Resource):
+    @jwt_required()
+    def post(self):
+        current_user = AuthService.get_current_identity()
+        profile_member = ProfileServices.profile_by_user_id(current_user.id)
+        if not profile_member:
+            return Response(
+                message="회원 정보를 찾을 수 없습니다.",
+                message_en="Member information not found.",
+                status=201,
+            ).to_dict()
+        payload = ns.payload or {}
+        guide_info = json.loads(profile_member.guide_info)
+
+        exists = any(item["id"] == payload.get("id", 0) for item in guide_info)
+        if not exists:
+            guide_info.append(payload)
+            profile_member.guide_info = json.dumps(guide_info)
+            profile_member.save()
+        else:
+            for item in guide_info:
+                if item["id"] == payload.get("id", 0):
+                    item["is_completed"] = payload.get("is_completed", 0)
+                    break
+            profile_member.guide_info = json.dumps(guide_info)
+            profile_member.save()
+
+        return Response(
+            data=guide_info,
+            message="업데이트가 성공적으로 완료되었습니다.",
+            message_en="Update completed successfully.",
         ).to_dict()
