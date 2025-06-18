@@ -297,6 +297,15 @@ class APICreateBatchSync(Resource):
             batch_res["posts"] = posts
 
             batch_id = batch.id
+            
+            user_template = PostService.get_template_video_by_user_id(user_id_login)
+            if user_template:
+                data_update_template = {
+                    "is_advance": is_advance,
+                }
+                user_template = PostService.update_template(
+                    user_template.id, **data_update_template
+                )
 
             if not is_advance:
                 message = {
@@ -1050,8 +1059,8 @@ class APITemplateVideo(Resource):
 
             user_template_data = user_template.to_dict()
 
-            if "audios" not in user_template_data:
-                user_template_data["audios"] = get_typecast_voices()
+            # if "audios" not in user_template_data:
+            #     user_template_data["audios"] = get_typecast_voices()
 
             if batch_id:
                 batch_info = BatchService.find_batch(batch_id)
