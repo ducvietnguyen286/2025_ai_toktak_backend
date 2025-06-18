@@ -1054,7 +1054,7 @@ class APIGetCallbackTiktok(Resource):
                     title="TIKTOK 연결이 완료되었습니다.",
                 )
 
-                PostService.update_default_template(int_user_id, link_id)
+            PostService.update_default_template(int_user_id, link_id)
 
             user_info = TiktokTokenService().fetch_user_info(user_link)
             logger.info(f"-----------TIKTOK DATA: {user_info}-------------")
@@ -1504,8 +1504,8 @@ class APICheckSNSLink(Resource):
                     message="⚠️ 플랜 구매 후 이용 할 수 있어요!",
                     message_en="⚠️ You can use it after purchasing a plan!",
                     data={
-                        "error_message":  "🎟️ 요금제 메뉴를 확인하세요. 😊",
-                        "message_title":  "⚠️ 플랜 구매 후 이용 할 수 있어요!",
+                        "error_message": "🎟️ 요금제 메뉴를 확인하세요. 😊",
+                        "message_title": "⚠️ 플랜 구매 후 이용 할 수 있어요!",
                     },
                     code=201,
                 ).to_dict()
