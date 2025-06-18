@@ -159,6 +159,26 @@ def update_ads_content(url, content):
     return content
 
 
+def update_ads_content_txt(url, content):
+
+    if "https://link.coupang.com/" in url:
+        replace_str = get_ads_content(url)
+        content = content.replace(
+            "ADS_CONTENT_TOKTAK",
+            f"{replace_str}",
+        )
+        # content = f"이 포스팅은 쿠팡 파트너스 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.\n\n\n\n{content}"
+    elif "https://s.click.aliexpress.com" in url or "https://a.aliexpress.com" in url:
+        replace_str = get_ads_content(url)
+        content = content.replace(
+            "ADS_CONTENT_TOKTAK",
+            f"{replace_str}",
+        )
+    else:
+        content = content.replace("<h2>ADS_CONTENT_TOKTAK</h2>", "")
+    return content
+
+
 def get_ads_content(url):
     if "https://link.coupang.com/" in url:
         return "이 포스팅은 쿠팡 파트너스 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다."
