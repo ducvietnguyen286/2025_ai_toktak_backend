@@ -10,7 +10,7 @@ from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls  # Fix namespace lỗi
 import requests
 from app.lib.string import (
-    split_toktak_url,
+    split_toktak_url,update_ads_content
 )
 from app.lib.logger import logger
 from app.makers.images import ImageMaker
@@ -79,7 +79,7 @@ class DocxMaker:
             "docx_url": docx_url,
         }
 
-    def make_txt(self, title, ads_text, description, images=[], batch_id=0):
+    def make_txt(self, title, ads_text, description, images=[], batch_id=0, url=""):
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
         file_name = f"{timestamp}_{unique_id}"
@@ -96,6 +96,9 @@ class DocxMaker:
         for item in description:
             if item.startswith("IMAGE_URL_"):
                 txt_lines.append("\n\n\n\n")
+            if item.startswith("ADS_CONTENT_TOKTAK"):
+                item = update_ads_content(url, item)
+                txt_lines.append(item + "\n")
             else:
                 split_lines = split_toktak_url(item)
                 for line in split_lines:

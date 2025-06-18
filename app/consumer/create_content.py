@@ -555,6 +555,7 @@ def process_create_post_blog(process_images, data, batch, post):
     batch_id = batch.id
     try:
         response = call_chatgpt_create_blog(process_images, data, post.id)
+        
         if response:
             parse_caption = json.loads(response)
             parse_response = parse_caption.get("response", {})
@@ -562,13 +563,14 @@ def process_create_post_blog(process_images, data, batch, post):
             docx_content = parse_response.get("docx_content", "")
 
             ads_text = get_ads_content(url)
-
+            
             res_txt = DocxMaker().make_txt(
                 docx_title,
                 ads_text,
                 docx_content,
                 process_images,
                 batch_id=batch_id,
+                url=url,
             )
 
             txt_path = res_txt.get("txt_path", "")
