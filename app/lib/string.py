@@ -175,7 +175,7 @@ def update_ads_content_txt(url, content):
             f"{replace_str}",
         )
     else:
-        content = content.replace("<h2>ADS_CONTENT_TOKTAK</h2>", "")
+        content = content.replace("ADS_CONTENT_TOKTAK", "")
     return content
 
 
