@@ -9,9 +9,7 @@ from docx.shared import Inches, Pt
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls  # Fix namespace lỗi
 import requests
-from app.lib.string import (
-    split_toktak_url,
-)
+from app.lib.string import split_toktak_url, update_ads_content_txt
 from app.lib.logger import logger
 from app.makers.images import ImageMaker
 import zipfile
@@ -79,7 +77,7 @@ class DocxMaker:
             "docx_url": docx_url,
         }
 
-    def make_txt(self, title, ads_text, description, images=[], batch_id=0):
+    def make_txt(self, title, ads_text, description, images=[], batch_id=0, url=""):
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
         file_name = f"{timestamp}_{unique_id}"
@@ -94,8 +92,15 @@ class DocxMaker:
             txt_lines.append(ads_text + "\n\n")
 
         for item in description:
-            if item.startswith("IMAGE_URL_"):
+            logger.info(f"item: {item}")
+            if "IMAGE_URL_" in item:
+                logger.info(f"startswith__: {item}")
                 txt_lines.append("\n\n\n\n")
+            if item.startswith("ADS_CONTENT_TOKTAK"):
+                logger.info(f"ADS_CONTENT_TOKTAK::: {item} url: {url}")
+                item_replace = update_ads_content_txt(url, item)
+                logger.info(f"item_replace::: {item_replace} url: {url}")
+                txt_lines.append(item_replace + "\n")
             else:
                 split_lines = split_toktak_url(item)
                 for line in split_lines:
