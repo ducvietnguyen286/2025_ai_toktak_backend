@@ -1,3 +1,4 @@
+from app.lib.logger import logger
 from app.models.user import User
 from app.models.post import Post
 from app.models.user_video_templates import UserVideoTemplates
@@ -430,6 +431,7 @@ class PostService:
     @staticmethod
     def update_default_template(user_id, link_id):
         try:
+            logger.info(f"Update default template: {user_id}, {link_id}")
             link_id = int(link_id)
             user_template = PostService.get_template_video_by_user_id(user_id)
 
@@ -458,6 +460,7 @@ class PostService:
                     user_template.id, **data_update_template
                 )
         except Exception as ex:
+            logger.error(f"Error update default template: {ex}")
             return None
         return user_template
 

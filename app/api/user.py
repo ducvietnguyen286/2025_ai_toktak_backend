@@ -1055,7 +1055,7 @@ class APIGetCallbackTiktok(Resource):
                     title="TIKTOK 연결이 완료되었습니다.",
                 )
 
-                PostService.update_default_template(int_user_id, link_id)
+            PostService.update_default_template(int_user_id, link_id)
 
             user_info = TiktokTokenService().fetch_user_info(user_link)
             logger.info(f"-----------TIKTOK DATA: {user_info}-------------")
