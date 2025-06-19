@@ -353,7 +353,8 @@ class APIMeUpdate(Resource):
             message = f"🏢 회사명이 변경되었습니다. ({user_login.company_name} → {company_name})"
 
         if update_data:  # Chỉ update nếu có dữ liệu
-            NotificationServices.create_notification(
+            noticication =  NotificationServices.create_notification(
+                notification_type="update_user",
                 user_id=user_login.id,
                 title=message,
             )
