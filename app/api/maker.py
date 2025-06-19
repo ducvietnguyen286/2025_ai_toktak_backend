@@ -227,7 +227,7 @@ class APICreateBatchSync(Resource):
 
             data = Scraper().scraper({"url": url})
 
-            return data
+            # return data
 
             if not data:
                 NotificationServices.create_notification(
