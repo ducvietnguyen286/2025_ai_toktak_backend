@@ -10,6 +10,7 @@ from app.lib.response import Response
 from app.services.auth import AuthService
 from app.services.coupon import CouponService
 from app.services.user import UserService
+from app.services.notification import NotificationServices
 
 ns = Namespace(name="coupon", description="User API")
 from app.extensions import db, redis_client
@@ -64,7 +65,7 @@ class APIUsedCoupon(Resource):
                     message="쿠폰 코드가 사용 불가능합니다",
                     code=201,
                 ).to_dict()
-                
+
         today = datetime.datetime.today().date()
         if coupon.expired_from and coupon.expired_from.date() > today:
             return Response(
@@ -77,7 +78,6 @@ class APIUsedCoupon(Resource):
                 message="쿠폰 코드가 만료되었습니다",
                 code=201,
             ).to_dict()
-            
 
         if coupon.is_check_user:
             count_used = CouponService.count_coupon_used(coupon.id, current_user.id)
@@ -92,7 +92,7 @@ class APIUsedCoupon(Resource):
         # kiểm tra xem user đã dùng mã mời của KOL hay chưa
         # Nếu đã dùng của người khác thì không được dùng của KOL cũ
         if coupon.type == "KOL_COUPON":
-            
+
             login_is_auth_nice = current_user.is_auth_nice
             if login_is_auth_nice == 0:
                 return Response(
@@ -101,8 +101,7 @@ class APIUsedCoupon(Resource):
                     message_en="It has been 8 days since registration.",
                     code=203,
                 ).to_dict()
-            
-            
+
             # Use KOL coupon_Fail_over join date
             login_created_at = current_user.created_at
             today = datetime.datetime.today().date()
@@ -249,6 +248,11 @@ class APIUsedCoupon(Resource):
                     }
 
                     UserService.create_user_history(**data_user_history)
+                    NotificationServices.create_notification(
+                        notification_type="COUPON_USED",
+                        user_id=current_user_id,
+                        title=f"사용자가 쿠폰 코드 {code} 를 성공적으로 입력했습니다.",
+                    )
 
             except Exception as e:
                 traceback.print_exc()
@@ -337,17 +341,14 @@ class APICreateCoupon(Resource):
         white_lists = args.get("white_lists", [])
         description = args.get("description", "")
 
-        code_coupon=""
-        if type =='KOL_COUPON':
+        code_coupon = ""
+        if type == "KOL_COUPON":
             coupon_detail = CouponService.find_coupon_by_name(name)
             if coupon_detail:
-                return Response(
-                    message="이미 생성된 이름입니다.",
-                    code=201
-                ).to_dict()
+                return Response(message="이미 생성된 이름입니다.", code=201).to_dict()
             code_coupon = name
             max_used = 1
-            
+
         coupon = CouponService.create_coupon(
             image=image,
             name=name,
@@ -364,8 +365,7 @@ class APICreateCoupon(Resource):
             created_by=current_user.id,
             # number_expired=number_expired,
         )
-        
-            
+
         CouponService.create_codes(
             coupon.id,
             code_coupon,
@@ -739,7 +739,6 @@ class APIListCouponCodes(Resource):
             "total_pages": total_pages,
             "data": coupon_codes,
         }, 200
-
 
 
 @ns.route("/category")

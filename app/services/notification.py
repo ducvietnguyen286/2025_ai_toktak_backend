@@ -1,9 +1,11 @@
-from bson import ObjectId
 from app.models.notification import Notification
 from app.models.user import User
 from datetime import datetime, timedelta
 from app.services.user import UserService
 import const
+import requests
+import os
+from app.lib.logger import logger
 from app.lib.query import (
     delete_by_id,
     select_with_filter,
@@ -23,7 +25,29 @@ class NotificationServices:
     def create_notification(*args, **kwargs):
         notification = Notification(*args, **kwargs)
         notification.save()
-        return notification
+        user_details = UserService.find_user(kwargs.get("user_id"))
+        if not user_details:
+            return {"error": "user_not_found", "message": "User not found"}
+        try:
+            logger.info(kwargs)
+            kwargs["email"] = user_details.email
+            kwargs["name"] = user_details.name
+            logger.info(kwargs)
+
+            NOTIFICATION_API_URL = os.getenv("NOTIFICATION_API_BASE_URL")
+            res = requests.post(
+                f"{NOTIFICATION_API_URL}/notification/create-notification", json=kwargs
+            )
+            if res.status_code == 201:
+                return res.json()  # {"message": "Created", "id": "..."}
+            else:
+                return {"error": res.status_code, "message": res.text}
+        except Exception as e:
+            return {"error": "exception", "message": str(e)}
+
+        # notification = Notification(*args, **kwargs)
+        # notification.save()
+        # return notification
 
     @staticmethod
     def find(id):
