@@ -227,7 +227,7 @@ class APICreateBatchSync(Resource):
 
             data = Scraper().scraper({"url": url})
 
-            # return data
+            return data
 
             if not data:
                 NotificationServices.create_notification(
@@ -298,7 +298,7 @@ class APICreateBatchSync(Resource):
             batch_res["posts"] = posts
 
             batch_id = batch.id
-            
+
             user_template = PostService.get_template_video_by_user_id(user_id_login)
             if user_template:
                 data_update_template = {
