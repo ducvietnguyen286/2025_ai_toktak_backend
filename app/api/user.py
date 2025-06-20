@@ -1348,9 +1348,11 @@ class APIGetCallbackYoutube(Resource):
                 )
                 current_user_ids.append(int_user_id)
 
-                client.user_ids = json.dumps(current_user_ids)
-                client.member_count += 1
-                client.save()
+                YoutubeClientService.update_youtube_client(
+                    id=client.id,
+                    user_ids=json.dumps(current_user_ids),
+                    member_count=client.member_count + 1,
+                )
             else:
                 UserService.update_user_link(
                     id=user_link.id,
