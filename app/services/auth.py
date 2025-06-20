@@ -328,7 +328,6 @@ class AuthService:
                 try:
                     if db.session.is_active:
                         db.session.rollback()
-                    db.session.close()
                     db.session.remove()
                 except:
                     pass
