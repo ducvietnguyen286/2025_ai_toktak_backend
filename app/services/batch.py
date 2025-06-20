@@ -38,7 +38,7 @@ class BatchService:
     @staticmethod
     def update_batch(id, *args, **kwargs):
         update_by_id(Batch, id, kwargs)
-        batch = Batch.query.get(id)
+        batch = select_by_id(Batch, id)
         return batch
 
     @staticmethod
