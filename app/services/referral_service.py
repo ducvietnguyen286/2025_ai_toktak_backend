@@ -56,7 +56,7 @@ class ReferralService:
         referrer_update_data = {
             "referrer_user_id": user.id,
         }
-        UserService.update_user(login_user.id, **referrer_update_data)
+        UserService.update_user_with_out_session(login_user.id, **referrer_update_data)
 
         return True
 

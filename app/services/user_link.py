@@ -1,4 +1,5 @@
 from app.lib.logger import logger
+from app.services.user import UserService
 from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.instagram import InstagramTokenService
 from app.third_parties.thread import ThreadTokenService
@@ -13,44 +14,57 @@ class UserLinkService:
         is_active = False
 
         if link.type == "X":
-            user_link.status = 0
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                status=0,
+            )
 
             code = args.get("Code")
             is_active = UserLinkService.save_link_x(user_link, code)
 
         if link.type == "FACEBOOK":
-            user_link.status = 0
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                status=0,
+            )
 
             access_token = args.get("AccessToken")
             is_active = UserLinkService.save_link_facebook(user_link, access_token)
 
         if link.type == "YOUTUBE":
-            user_link.status = 0
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                status=0,
+            )
 
             code = args.get("Code")
             is_active = UserLinkService.save_link_youtube(user_link, code)
 
         if link.type == "THREAD":
-            user_link.status = 0
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                status=0,
+            )
 
             code = args.get("Code")
             is_active = UserLinkService.save_link_thread(user_link, code)
 
         if link.type == "INSTAGRAM":
-            user_link.status = 0
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                status=0,
+            )
 
             code = args.get("Code")
             is_active = UserLinkService.save_link_instagram(user_link, code)
 
         if link.type == "BLOG_NAVER":
             link = args.get("Link")
-            user_link.meta_url = link
-            user_link.save()
+
+            UserService.update_user_link(
+                id=user_link.id,
+                meta_url=link,
+            )
 
             is_active = True
 
@@ -58,13 +72,15 @@ class UserLinkService:
 
     @staticmethod
     def update_info_user_link(user_link, info):
-        user_link.social_id = info.get("id")
-        user_link.username = info.get("username")
-        user_link.name = info.get("name")
-        user_link.avatar = info.get("avatar")
-        user_link.url = info.get("url")
-        user_link.status = 1
-        user_link.save()
+        UserService.update_user_link(
+            id=user_link.id,
+            social_id=info.get("id"),
+            username=info.get("username"),
+            name=info.get("name"),
+            avatar=info.get("avatar"),
+            url=info.get("url"),
+            status=1,
+        )
         return user_link
 
     @staticmethod
