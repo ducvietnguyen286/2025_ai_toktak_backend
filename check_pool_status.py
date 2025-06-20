@@ -28,7 +28,6 @@ def check_pool_status():
             print(f"📈 Pool Checked Out: {pool.checkedout()}")
             print(f"📉 Pool Checked In: {pool.checkedin()}")
             print(f"🔄 Pool Overflow: {pool.overflow()}")
-            print(f"⚠️  Pool Invalid: {pool.invalidated()}")
 
             # Kiểm tra MySQL processlist
             result = db.session.execute(text("SHOW FULL PROCESSLIST")).fetchall()
