@@ -1059,7 +1059,7 @@ class APIGetCallbackTiktok(Resource):
                     meta=json.dumps(token),
                 )
             else:
-                UserService.update_user_link(
+                user_link = UserService.update_user_link(
                     id=user_link.id,
                     meta=json.dumps(token),
                     status=1,

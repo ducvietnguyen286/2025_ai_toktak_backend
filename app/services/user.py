@@ -193,12 +193,12 @@ class UserService:
 
     @staticmethod
     def find_user_link_exist(link_id=0, user_id=0):
-        user_link = (
-            UserLink.query.where(UserLink.user_id == user_id)
-            .where(UserLink.link_id == link_id)
-            .first()
+        user_link = select_with_filter_one(
+            UserLink,
+            [UserLink.user_id == user_id, UserLink.link_id == link_id],
+            [],
         )
-        return user_link if user_link else None
+        return user_link
 
     @staticmethod
     def get_by_link_user_links(link_id=0, user_id=0):
