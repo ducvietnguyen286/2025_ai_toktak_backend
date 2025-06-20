@@ -150,6 +150,7 @@ class APINewLink(Resource):
                 ).to_dict()
 
             user_link = UserService.find_user_link_exist(link_id, current_user.id)
+            user_link_id = user_link.id if user_link else 0
             is_active = True
             if not user_link:
                 user_link = UserService.create_user_link(
@@ -158,6 +159,7 @@ class APINewLink(Resource):
                     meta=json.dumps(info),
                     status=1,
                 )
+                user_link_id = user_link.id
 
                 is_active = UserLinkService.update_user_link(
                     link=link, user_id=current_user.id, args=args
@@ -165,7 +167,7 @@ class APINewLink(Resource):
 
             else:
                 UserService.update_user_link(
-                    id=user_link.id, meta=json.dumps(info), status=1
+                    id=user_link_id, meta=json.dumps(info), status=1
                 )
 
                 is_active = UserLinkService.update_user_link(
@@ -196,7 +198,7 @@ class APINewLink(Resource):
 
             PostService.update_default_template(current_user.id, link_id)
 
-            user_link = UserService.find_user_link_by_id(user_link.id)
+            user_link = UserService.find_user_link_by_id(user_link_id)
 
             return Response(
                 data=user_link._to_dict(),
