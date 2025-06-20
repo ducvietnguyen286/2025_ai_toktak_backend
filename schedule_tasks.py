@@ -46,7 +46,7 @@ from app.models.video_create import VideoCreate
 from app.ais.chatgpt import (
     translate_notifications_batch,
 )
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 
 from app.third_parties.telegram import send_telegram_message, send_slack_message
 
@@ -411,6 +411,99 @@ def auto_extend_subscription_task(app):
             db.session.remove()
 
 
+def auto_kill_long_connections(app):
+    """
+    Tự động kill các connections > 60 giây
+    Chạy mỗi phút để duy trì connection pool sạch sẽ
+    """
+    app.logger.info("🔪 Start auto_kill_long_connections...")
+
+    with app.app_context():
+        killed_count = 0
+        try:
+            # Get all sleep connections
+            result = db.session.execute(text("SHOW FULL PROCESSLIST")).fetchall()
+
+            sleep_connections = []
+            for row in result:
+                if len(row) >= 5 and row[4] == "Sleep":
+                    connection_info = {
+                        "id": row[0],
+                        "user": row[1],
+                        "host": row[2],
+                        "db": row[3],
+                        "command": row[4],
+                        "time": row[5],
+                        "state": row[6] if len(row) > 6 else "",
+                        "info": row[7] if len(row) > 7 else "",
+                    }
+                    sleep_connections.append(connection_info)
+
+            app.logger.info(f"📊 Found {len(sleep_connections)} sleep connections")
+
+            # Kill connections > 100 seconds
+            threshold_seconds = 100
+            for conn in sleep_connections:
+                if conn["time"] > threshold_seconds and conn["user"] == "toktak":
+                    try:
+                        db.session.execute(text(f"KILL {conn['id']}"))
+                        app.logger.info(
+                            f"🔪 Killed connection ID {conn['id']} (Sleep {conn['time']}s) from {conn['host']}"
+                        )
+                        killed_count += 1
+                    except Exception as e:
+                        app.logger.error(
+                            f"❌ Failed to kill connection {conn['id']}: {e}"
+                        )
+
+            # Get stats after cleanup
+            current_result = db.session.execute(
+                text("SHOW STATUS LIKE 'Threads_connected'")
+            ).fetchone()
+            current_connections = int(current_result[1]) if current_result else 0
+
+            sleep_after = len(
+                [
+                    conn
+                    for conn in sleep_connections
+                    if conn["time"] <= threshold_seconds
+                ]
+            )
+
+            if killed_count > 0:
+                app.logger.info(
+                    f"✅ Killed {killed_count} long connections. Current: {current_connections}, Sleep remaining: {sleep_after}"
+                )
+
+                # Alert if still too many connections
+                if sleep_after > 50:
+                    alert_msg = (
+                        f"⚠️ HIGH SLEEP CONNECTIONS ALERT!\n"
+                        f"Killed: {killed_count} connections\n"
+                        f"Sleep remaining: {sleep_after}\n"
+                        f"Current total: {current_connections}\n"
+                        f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    )
+                    app.logger.warning(alert_msg)
+                    send_slack_message(alert_msg)
+            else:
+                app.logger.info(
+                    f"✅ No long connections to kill. Current: {current_connections}, Sleep: {len(sleep_connections)}"
+                )
+
+        except Exception as e:
+            app.logger.error(f"❌ Error in auto_kill_long_connections: {str(e)}")
+        finally:
+            # CRITICAL: Force cleanup session to prevent connection leaks
+            try:
+                if db.session.is_active:
+                    db.session.rollback()
+                db.session.close()
+                db.session.remove()
+            except:
+                pass
+
+
 def create_notification_task():
     try:
         app.logger.info("Check : Created a new notification successfully.")
@@ -492,6 +585,13 @@ def start_scheduler(app):
         func=lambda: auto_extend_subscription_task(app),
         trigger=twelve_oh_one_trigger,
         id="auto_extend_subscription_task",
+    )
+
+    # Auto kill long database connections every minute
+    scheduler.add_job(
+        func=lambda: auto_kill_long_connections(app),
+        trigger=every_1_minutes_trigger,
+        id="auto_kill_long_connections",
     )
 
     atexit.register(lambda: scheduler.shutdown(wait=False))
