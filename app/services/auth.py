@@ -326,8 +326,6 @@ class AuthService:
                     )
                 # Critical: Force cleanup session after each query
                 try:
-                    if db.session.is_active:
-                        db.session.rollback()
                     db.session.remove()
                 except:
                     pass
@@ -351,9 +349,6 @@ class AuthService:
 
             # Critical: Force cleanup session after each query
             try:
-                if db.session.is_active:
-                    db.session.rollback()
-                db.session.close()
                 db.session.remove()
             except:
                 pass
@@ -363,9 +358,6 @@ class AuthService:
             logger.exception(f"get_current_identity : {ex}")
             # Critical: Force cleanup session even on error
             try:
-                if db.session.is_active:
-                    db.session.rollback()
-                db.session.close()
                 db.session.remove()
             except:
                 pass
