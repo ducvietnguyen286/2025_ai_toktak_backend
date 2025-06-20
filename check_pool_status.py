@@ -5,6 +5,11 @@ Script để kiểm tra trạng thái connection pool chi tiết
 import os
 import sys
 
+from dotenv import load_dotenv
+
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path=dotenv_path, override=True)
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app import create_app
