@@ -159,14 +159,18 @@ class APINewLink(Resource):
                     status=1,
                 )
 
-                is_active = UserLinkService.update_user_link(link, user_link, args)
+                is_active = UserLinkService.update_user_link(
+                    link=link, user_id=current_user.id, args=args
+                )
 
             else:
                 UserService.update_user_link(
                     id=user_link.id, meta=json.dumps(info), status=1
                 )
 
-                is_active = UserLinkService.update_user_link(link, user_link, args)
+                is_active = UserLinkService.update_user_link(
+                    link=link, user_id=current_user.id, args=args
+                )
 
             if not is_active:
                 NotificationServices.create_notification(

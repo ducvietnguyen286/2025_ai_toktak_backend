@@ -16,12 +16,12 @@ from app.third_parties.base_service import BaseService
 class ThreadTokenService:
 
     @staticmethod
-    def exchange_code(code, user_link):
+    def exchange_code(code, user_link_id):
         try:
             log_thread_message(
                 "------------------  EXCHANGE THREAD CODE  ------------------"
             )
-
+            user_link = UserService.find_user_link_by_id(user_link_id)
             EXCHANGE_URL = "https://graph.threads.net/oauth/access_token"
 
             CLIENT_ID = os.environ.get("THREAD_APP_ID") or ""
@@ -75,12 +75,12 @@ class ThreadTokenService:
             return False
 
     @staticmethod
-    def exchange_long_live_token(user_link):
+    def exchange_long_live_token(user_link_id):
         try:
             log_thread_message(
                 "------------------  EXCHANGE THREAD TOKEN  ------------------"
             )
-            user_link = UserService.find_user_link_by_id(user_link.id)
+            user_link = UserService.find_user_link_by_id(user_link_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
 
@@ -193,12 +193,12 @@ class ThreadTokenService:
             return False
 
     @staticmethod
-    def get_info(user_link):
+    def get_info(user_link_id):
         try:
             log_thread_message(
                 "------------------  GET THREAD USER INFO  ------------------"
             )
-            user_link = UserService.find_user_link_by_id(user_link.id)
+            user_link = UserService.find_user_link_by_id(user_link_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
 

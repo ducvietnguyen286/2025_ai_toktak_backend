@@ -91,8 +91,9 @@ class FacebookTokenService:
         }
 
     @staticmethod
-    def fetch_page_token_backend(user_link, page_id, is_all=None):
+    def fetch_page_token_backend(user_link_id, page_id, is_all=None):
         try:
+            user_link = UserService.find_user_link_by_id(user_link_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
             if not access_token:
@@ -179,9 +180,9 @@ class FacebookTokenService:
             return None
 
     @staticmethod
-    def exchange_token(access_token, user_link):
+    def exchange_token(access_token, user_link_id):
         try:
-
+            user_link = UserService.find_user_link_by_id(user_link_id)
             EXCHANGE_URL = "https://graph.facebook.com/v22.0/oauth/access_token"
 
             CLIENT_ID = os.environ.get("FACEBOOK_APP_ID") or ""

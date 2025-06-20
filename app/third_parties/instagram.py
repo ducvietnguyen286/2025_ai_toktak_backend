@@ -16,12 +16,12 @@ from app.third_parties.base_service import BaseService
 class InstagramTokenService:
 
     @staticmethod
-    def exchange_code(code, user_link):
+    def exchange_code(code, user_link_id):
         try:
             log_instagram_message(
                 "------------------  EXCHANGE INSTAGRAM CODE  ------------------"
             )
-
+            user_link = UserService.find_user_link_by_id(user_link_id)
             EXCHANGE_URL = f"https://api.instagram.com/oauth/access_token"
 
             CLIENT_ID = os.environ.get("INSTAGRAM_APP_ID") or ""
@@ -75,12 +75,12 @@ class InstagramTokenService:
             return False
 
     @staticmethod
-    def exchange_long_live_token(user_link):
+    def exchange_long_live_token(user_link_id):
         try:
             log_instagram_message(
                 "------------------  EXCHANGE INSTAGRAM TOKEN  ------------------"
             )
-            user_link = UserService.find_user_link_by_id(user_link.id)
+            user_link = UserService.find_user_link_by_id(user_link_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
 
@@ -192,12 +192,12 @@ class InstagramTokenService:
             return False
 
     @staticmethod
-    def get_info(user_link):
+    def get_info(user_link_id):
         try:
             log_instagram_message(
                 "------------------  GET INSTAGRAM USER INFO  ------------------"
             )
-            user_link = UserService.find_user_link_by_id(user_link.id)
+            user_link = UserService.find_user_link_by_id(user_link_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
 
