@@ -9,11 +9,14 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app import create_app
 from app.extensions import db
+from app.config import configs as config
 from sqlalchemy import text
 
 
 def check_pool_status():
-    app = create_app()
+    config_name = os.environ.get("FLASK_CONFIG") or "develop"
+    config_app = config[config_name]
+    app = create_app(config_app)
 
     with app.app_context():
         try:
