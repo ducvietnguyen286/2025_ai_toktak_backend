@@ -852,7 +852,10 @@ class APISelectFacebookPage(Resource):
                     message="Không tìm thấy link Facebook",
                     status=400,
                 ).to_dict()
-            select_page = FacebookTokenService().get_page_info_by_id(page_id, user_link)
+            user_link_id = user_link.id
+            select_page = FacebookTokenService().get_page_info_by_id(
+                page_id=page_id, user_link_id=user_link_id
+            )
             if not select_page:
                 return Response(
                     message="Không tìm thấy trang Facebook",
@@ -865,7 +868,9 @@ class APISelectFacebookPage(Resource):
                     status=400,
                 ).to_dict()
 
-            UserLinkService.update_info_user_link(user_link=user_link, info=page_info)
+            UserLinkService.update_info_user_link(
+                user_link_id=user_link_id, info=page_info
+            )
 
             return Response(
                 message="Lưu trang Facebook thành công",
