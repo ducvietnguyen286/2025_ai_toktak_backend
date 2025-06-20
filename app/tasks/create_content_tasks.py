@@ -29,20 +29,24 @@ from app.services.shotstack_services import ShotStackService
 from app.services.video_service import VideoService
 from app.tasks.celery_app import celery_app, make_celery_app, redis_client
 import const
+from sqlalchemy.orm import scoped_session, sessionmaker
+from app.extensions import db
 
+Session = scoped_session(sessionmaker(bind=db.engine))
 app = make_celery_app()
 
 
 @celery_app.task(bind=True, name="create_batch_content", time_limit=300)
 def create_batch_content(self, batch_id, data):
     with app.app_context():
+        session = Session()
         try:
-            batch = BatchService.find_batch(batch_id)
+            batch = BatchService.find_batch_with_task(batch_id, session=session)
             if not batch:
                 return None
 
             url = data.get("input_url")
-            shorten_link, is_shorted = ShortenServices.shorted_link(url)
+            shorten_link, is_shorted = ShortenServices.shorted_link_with_task(url)
             data["base_url"] = shorten_link
             data["shorten_link"] = shorten_link if is_shorted else ""
 
@@ -51,35 +55,33 @@ def create_batch_content(self, batch_id, data):
             if product_name_cleared:
                 data["name"] = product_name_cleared
 
-            BatchService.update_batch(
-                batch_id,
-                base_url=shorten_link,
-                shorten_link=shorten_link,
-                content=json.dumps(data),
-            )
+            data_batch = {
+                "base_url": shorten_link,
+                "shorten_link": shorten_link if is_shorted else "",
+                "content": json.dumps(data),
+            }
+
+            BatchService.update_batch_with_task(batch_id, session=session, **data_batch)
 
             is_advance = batch.is_advance
             is_paid_advertisements = batch.is_paid_advertisements
             narration = data.get("narration", "")
             user_id = batch.user_id
 
-            if not is_advance:
-                user_template = PostService.get_template_video_by_user_id(user_id)
-                if not user_template:
-                    user_template = PostService.create_user_template_make_video(
-                        user_id=user_id
-                    )
-                data_update_template = {
-                    "is_paid_advertisements": is_paid_advertisements,
-                    "narration": narration,
-                }
+            # if not is_advance:
+            #     user_template = PostService.get_template_video_by_user_id(user_id)
+            #     if not user_template:
+            #         user_template = PostService.create_user_template_make_video(
+            #             user_id=user_id
+            #         )
+            #     data_update_template = {
+            #         "is_paid_advertisements": is_paid_advertisements,
+            #         "narration": narration,
+            #     }
 
-                user_template = PostService.update_template(
-                    user_template.id, **data_update_template
-                )
-
-                # current_user.batch_remain -= 1
-                # current_user.save()
+            #     user_template = PostService.update_template(
+            #         user_template.id, **data_update_template
+            #     )
 
             time_to_end_of_day = int(
                 (
@@ -95,11 +97,15 @@ def create_batch_content(self, batch_id, data):
                 ex=time_to_end_of_day,
             )
 
-            NotificationServices.create_notification(
-                user_id=user_id,
-                batch_id=batch.id,
-                notification_type="create_batch",
-                title=f"제품 정보를 성공적으로 가져왔습니다. {url}",
+            data_notifciation = {
+                "user_id": user_id,
+                "batch_id": batch.id,
+                "notification_type": "create_batch",
+                "title": f"제품 정보를 성공적으로 가져왔습니다. {url}",
+            }
+
+            NotificationServices.create_notification_with_task(
+                session=session, **data_notifciation
             )
 
             return batch_id
@@ -112,6 +118,8 @@ def create_batch_content(self, batch_id, data):
             app.logger.error(f"Error creating batch content: {e}")
             self.retry(exc=e, countdown=5, max_retries=3)
             return None
+        finally:
+            session.close()
 
 
 @celery_app.task(bind=True, name="create_images", time_limit=300)

@@ -215,3 +215,12 @@ class NotificationServices:
                 updated += 1
         db.session.commit()
         return updated
+
+    @staticmethod
+    def create_notification_with_task(session=None, **kwargs):
+        if session is None:
+            session = db.session  # fallback cho Flask request context
+        notification = Notification(**kwargs)
+        session.add(notification)
+        session.commit()
+        return notification
