@@ -53,8 +53,9 @@ class FacebookTokenService:
             return None
 
     @staticmethod
-    def get_page_info_by_id(page_id, user_link):
+    def get_page_info_by_id(page_id, user_link_id):
         try:
+            user_link = UserService.find_user_link_by_id(user_link_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
             if not access_token:
