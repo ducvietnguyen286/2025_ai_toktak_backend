@@ -25,6 +25,13 @@ class Config(object):
         "pool_timeout": 10,  # Giảm từ 30 xuống 10 giây
         "pool_recycle": 900,  # Giảm từ 1800 xuống 900 giây (15 phút)
         "pool_pre_ping": True,  # Kiểm tra connection trước khi sử dụng
+        "pool_reset_on_return": "commit",  # Force reset connection khi trả về pool
+        "connect_args": {
+            "autocommit": False,
+            "connect_timeout": 10,
+            "read_timeout": 30,
+            "write_timeout": 30,
+        },
     }
 
     CELERY_BROKER_URL = os.environ.get("REDIS_URL") or "redis://localhost:6379/0"

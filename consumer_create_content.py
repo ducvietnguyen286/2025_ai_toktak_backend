@@ -74,7 +74,14 @@ def action_create_batch(message, app):
         db.session.rollback()
         return False
     finally:
-        db.session.remove()  # CRITICAL: Cleanup session để tránh connection leak
+        # CRITICAL: Force cleanup session để tránh connection leak
+        try:
+            if db.session.is_active:
+                db.session.rollback()
+            db.session.close()
+            db.session.remove()
+        except:
+            pass
 
 
 def process_message_sync(body, app):

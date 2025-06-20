@@ -29,10 +29,13 @@ def send_notification(
         try:
             NotificationServices.create_notification(kwargs)
         finally:
-            # CRITICAL: Cleanup database session to prevent connection leaks
+            # CRITICAL: Force cleanup database session to prevent connection leaks
             from app.extensions import db
 
             try:
+                if db.session.is_active:
+                    db.session.rollback()
+                db.session.close()
                 db.session.remove()
             except:
                 pass
