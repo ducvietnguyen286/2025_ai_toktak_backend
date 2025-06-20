@@ -84,7 +84,6 @@ def action_send_post_to_link(message):
         return False
     finally:
         db.session.remove()  # CRITICAL: Cleanup session để tránh connection leak
-        db.session.close()
 
 
 def process_message_sync(body, app):
