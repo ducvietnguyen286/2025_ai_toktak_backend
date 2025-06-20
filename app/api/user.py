@@ -192,8 +192,10 @@ class APINewLink(Resource):
 
             PostService.update_default_template(current_user.id, link_id)
 
+            user_link = UserService.find_user_link_by_id(user_link.id)
+
             return Response(
-                data=user_link._to_json(),
+                data=user_link._to_dict(),
                 message="Thêm link thành công",
             ).to_dict()
         except Exception as e:
