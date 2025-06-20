@@ -539,3 +539,13 @@ class UserService:
         total = histories.count()
 
         return total
+
+    @staticmethod
+    
+    def update_user_with_out_session(id, *args, **kwargs):
+        user = User.query.get(id)
+        if not user:
+            return None
+        user.update(**kwargs)
+        return user
+    
