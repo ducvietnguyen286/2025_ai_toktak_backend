@@ -5,7 +5,7 @@ import random
 import traceback
 from app.lib.header import generate_desktop_user_agent, generate_user_agent
 from app.lib.logger import logger
-from app.scraper.pages.coupang.headers import random_mobile_header
+from app.scraper.pages.coupang.headers import random_mobile_header, random_web_header
 from app.scraper.pages.coupang.parser import Parser
 from urllib.parse import urlparse, parse_qs
 from bs4 import BeautifulSoup
@@ -22,28 +22,12 @@ class CoupangScraper:
         self.fire_crawl_key = ""
 
     def run(self):
-        return self.run_crawler()
+        return self.run_fire_crawler()
 
     def proxies(self):
-        auth = "hekqlibd:llv12cujeqjr"
-
-        proxy_path = os.path.join(os.getcwd(), "app/scraper/pages/coupang/proxies.txt")
-
-        if not os.path.exists(proxy_path):
-            logger.error("Proxy file not found: {0}".format(proxy_path))
-            return {}
-
-        with open(proxy_path, "r") as file:
-            proxy_list = file.read().splitlines()
-
-        selected_proxy = random.choice(proxy_list)
-
-        if not selected_proxy.startswith("http"):
-            selected_proxy = f"http://{auth}@{selected_proxy}"
-
         return {
-            "http": selected_proxy,
-            "https": selected_proxy,
+            "http": "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80/",
+            "https": "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80/",
         }
 
     def run_fire_crawler(self):
@@ -305,7 +289,7 @@ class CoupangScraper:
                 return self.un_shortend_url(url, retry + 1)
             return url
 
-    def run_crawler(self):
+    def run_crawler_mobile(self):
         try:
             base_url = self.url
             real_url = self.url
