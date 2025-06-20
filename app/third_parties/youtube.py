@@ -100,8 +100,11 @@ class YoutubeTokenService:
             meta = json.loads(user_link.meta)
             meta["access_token"] = response_data["access_token"]
             meta["refresh_token"] = response_data["refresh_token"]
-            user_link.meta = json.dumps(meta)
-            user_link.save()
+
+            UserService.update_user_link(
+                id=user_link.id,
+                meta=json.dumps(meta),
+            )
 
             return True
         except Exception as e:
