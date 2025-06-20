@@ -1347,7 +1347,7 @@ class APIGetCallbackYoutube(Resource):
                 url = user_info.get("url") or ""
 
                 UserService.update_user_link(
-                    id=user_link.id,
+                    id=user_link_id,
                     social_id=social_id,
                     username=username,
                     name=name,
@@ -1370,7 +1370,7 @@ class APIGetCallbackYoutube(Resource):
                 )
             else:
                 UserService.update_user_link(
-                    id=user_link.id,
+                    id=user_link_id,
                     status=0,
                 )
                 return redirect(
