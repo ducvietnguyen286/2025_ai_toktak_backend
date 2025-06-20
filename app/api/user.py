@@ -1026,6 +1026,7 @@ class APIGetCallbackTiktok(Resource):
             user_link = UserService.find_user_link(
                 link_id=int_link_id, user_id=int_user_id
             )
+            user_link_id = user_link.id if user_link else 0
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
@@ -1060,9 +1061,10 @@ class APIGetCallbackTiktok(Resource):
                     status=1,
                     meta=json.dumps(token),
                 )
+                user_link_id = user_link.id
             else:
                 user_link = UserService.update_user_link(
-                    id=user_link.id,
+                    id=user_link_id,
                     meta=json.dumps(token),
                     status=1,
                 )
@@ -1086,7 +1088,7 @@ class APIGetCallbackTiktok(Resource):
                 url = user_info.get("url") or ""
 
                 UserService.update_user_link(
-                    id=user_link.id,
+                    id=user_link_id,
                     social_id=social_id,
                     username=username,
                     name=name,
