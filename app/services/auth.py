@@ -307,6 +307,10 @@ class AuthService:
 
     @staticmethod
     def get_current_identity(no_cache=True):
+        """
+        Get current user identity with optimized session management
+        to prevent connection pool exhaustion
+        """
         try:
             subject = get_jwt_identity()
             if subject is None:
@@ -314,54 +318,67 @@ class AuthService:
 
             user_id = int(subject)
 
-            if no_cache:
-                stmt = select(User).filter_by(id=user_id)
-                user = db.session.execute(stmt).scalar_one_or_none()
-                if user:
-                    user_dict = user.to_dict()
-                    redis_client.set(
-                        f"toktak:current_user:{user_id}",
-                        json.dumps(user_dict),
-                        ex=const.REDIS_EXPIRE_TIME,
-                    )
-                # Critical: Force cleanup session after each query
-                try:
-                    db.session.remove()
-                except:
-                    pass
-                return user if user else None
+            # Check Redis cache first if caching is enabled
+            if not no_cache:
+                user_cache = redis_client.get(f"toktak:current_user:{user_id}")
+                if user_cache:
+                    try:
+                        user_dict = json.loads(user_cache)
+                        # Create User object from dict properly
+                        user = User()
+                        for key, value in user_dict.items():
+                            if hasattr(user, key):
+                                setattr(user, key, value)
+                        return user
+                    except Exception as cache_error:
+                        logger.warning(
+                            f"Redis cache error for user {user_id}: {cache_error}"
+                        )
+                        # Fall through to database query
 
-            user_cache = redis_client.get(f"toktak:current_user:{user_id}")
-            if user_cache:
-                user = json.loads(user_cache)
-                return User(**user)
-
-            stmt = select(User).filter_by(id=user_id)
-            user = db.session.execute(stmt).scalar_one_or_none()
-
-            if user:
-                user_dict = user.to_dict()
-                redis_client.set(
-                    f"toktak:current_user:{user_id}",
-                    json.dumps(user_dict),
-                    ex=const.REDIS_EXPIRE_TIME,
-                )
-
-            # Critical: Force cleanup session after each query
+            # Single database query with proper session management
+            user = None
             try:
-                db.session.remove()
-            except:
-                pass
-            return user if user else None
+                # Use a single query with immediate session cleanup
+                user = db.session.query(User).filter_by(id=user_id).first()
+                db.session.commit()
+
+                # Cache the result if user exists and caching is enabled
+                if user:
+                    try:
+                        user_dict = user.to_dict()
+                        redis_client.set(
+                            f"toktak:current_user:{user_id}",
+                            json.dumps(user_dict),
+                            ex=const.REDIS_EXPIRE_TIME,
+                        )
+                    except Exception as cache_error:
+                        logger.warning(f"Failed to cache user {user_id}: {cache_error}")
+
+                return user
+
+            except Exception as db_error:
+                logger.error(
+                    f"Database error in get_current_identity for user {user_id}: {db_error}"
+                )
+                db.session.rollback()
+                return None
+            finally:
+                # Critical: Always cleanup session
+                try:
+                    db.session.close()
+                except Exception as cleanup_error:
+                    logger.error(f"Session cleanup error: {cleanup_error}")
 
         except Exception as ex:
-            logger.exception(f"get_current_identity : {ex}")
-            # Critical: Force cleanup session even on error
+            logger.exception(f"get_current_identity error: {ex}")
+            return None
+        finally:
+            # Final safety cleanup
             try:
                 db.session.remove()
             except:
                 pass
-            return None
 
     @staticmethod
     def update(id, *args, **kwargs):
