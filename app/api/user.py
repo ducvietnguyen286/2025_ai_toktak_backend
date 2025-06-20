@@ -1081,12 +1081,15 @@ class APIGetCallbackTiktok(Resource):
                 avatar = user_info.get("avatar") or ""
                 url = user_info.get("url") or ""
 
-                user_link.social_id = social_id
-                user_link.username = username
-                user_link.name = name
-                user_link.avatar = avatar
-                user_link.url = url
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id,
+                    social_id=social_id,
+                    username=username,
+                    name=name,
+                    avatar=avatar,
+                    url=url,
+                    status=1,
+                )
 
             return redirect(redirect_uri + "?tabIndex=2&success=1")
         except Exception as e:
