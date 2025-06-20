@@ -1296,7 +1296,7 @@ class APIGetCallbackYoutube(Resource):
                     status=400,
                 ).to_dict()
 
-            user_link = UserService.find_user_link_exist(int_link_id, int_user_id)
+            user_link = UserService.find_user_link(int_link_id, int_user_id)
             if not user_link:
                 user_link = UserService.create_user_link(
                     user_id=int_user_id,
