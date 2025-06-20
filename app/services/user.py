@@ -179,12 +179,12 @@ class UserService:
 
     @staticmethod
     def find_user_link(link_id=0, user_id=0):
-        user_link = select_with_filter_one(
-            UserLink,
-            [UserLink.link_id == link_id, UserLink.user_id == user_id],
-            [],
+        user_link = (
+            UserLink.query.where(UserLink.user_id == user_id)
+            .where(UserLink.link_id == link_id)
+            .first()
         )
-        return user_link
+        return user_link if user_link else None
 
     @staticmethod
     def find_user_link_by_id(user_link_id=0):
