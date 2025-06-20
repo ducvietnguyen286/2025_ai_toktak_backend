@@ -162,9 +162,9 @@ class APINewLink(Resource):
                 is_active = UserLinkService.update_user_link(link, user_link, args)
 
             else:
-                user_link.meta = json.dumps(info)
-                user_link.status = 1
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id, meta=json.dumps(info), status=1
+                )
 
                 is_active = UserLinkService.update_user_link(link, user_link, args)
 

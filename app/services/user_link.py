@@ -1,4 +1,5 @@
 from app.lib.logger import logger
+from app.services.user import UserService
 from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.instagram import InstagramTokenService
 from app.third_parties.thread import ThreadTokenService
@@ -58,13 +59,15 @@ class UserLinkService:
 
     @staticmethod
     def update_info_user_link(user_link, info):
-        user_link.social_id = info.get("id")
-        user_link.username = info.get("username")
-        user_link.name = info.get("name")
-        user_link.avatar = info.get("avatar")
-        user_link.url = info.get("url")
-        user_link.status = 1
-        user_link.save()
+        UserService.update_user_link(
+            id=user_link.id,
+            social_id=info.get("id"),
+            username=info.get("username"),
+            name=info.get("name"),
+            avatar=info.get("avatar"),
+            url=info.get("url"),
+            status=1,
+        )
         return user_link
 
     @staticmethod

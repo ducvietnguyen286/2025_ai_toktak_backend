@@ -2,6 +2,7 @@ import os
 import requests
 from app.errors.exceptions import BadRequest
 from app.lib.logger import logger
+from app.lib.query import select_by_id
 from app.models.social_account import SocialAccount
 from app.models.user import User
 from app.services.referral_service import ReferralService
@@ -343,51 +344,24 @@ class AuthService:
                         logger.warning(
                             f"Redis cache error for user {user_id}: {cache_error}"
                         )
-                        # Fall through to database query
 
-            # Single database query with proper session management
-            user = None
-            try:
-                # Use a single query with immediate session cleanup
-                user = db.session.query(User).filter_by(id=user_id).first()
-                db.session.commit()
-
-                # Cache the result if user exists and caching is enabled
-                if user:
-                    try:
-                        user_dict = user.to_dict()
-                        redis_client.set(
-                            f"toktak:current_user:{user_id}",
-                            json.dumps(user_dict),
-                            ex=const.REDIS_EXPIRE_TIME,
-                        )
-                    except Exception as cache_error:
-                        logger.warning(f"Failed to cache user {user_id}: {cache_error}")
-
-                return user
-
-            except Exception as db_error:
-                logger.error(
-                    f"Database error in get_current_identity for user {user_id}: {db_error}"
-                )
-                db.session.rollback()
-                return None
-            finally:
-                # Critical: Always cleanup session
+            user = select_by_id(User, user_id)
+            if user:
                 try:
-                    db.session.close()
-                except Exception as cleanup_error:
-                    logger.error(f"Session cleanup error: {cleanup_error}")
+                    user_dict = user.to_dict()
+                    redis_client.set(
+                        f"toktak:current_user:{user_id}",
+                        json.dumps(user_dict),
+                        ex=const.REDIS_EXPIRE_TIME,
+                    )
+                except Exception as cache_error:
+                    logger.warning(f"Failed to cache user {user_id}: {cache_error}")
+
+            return user
 
         except Exception as ex:
             logger.exception(f"get_current_identity error: {ex}")
             return None
-        finally:
-            # Final safety cleanup
-            try:
-                db.session.remove()
-            except:
-                pass
 
     @staticmethod
     def update(id, *args, **kwargs):
@@ -424,7 +398,7 @@ class AuthService:
             secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
         )
 
-        new_user = UserService.update_user_with_out_session(user.id, password=random_string)
+        new_user = UserService.update_user(user.id, password=random_string)
 
         return new_user
 
