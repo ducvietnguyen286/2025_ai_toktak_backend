@@ -26,4 +26,13 @@ def send_notification(
     }
     """
     with app.app_context():
-        NotificationServices.create_notification(kwargs)
+        try:
+            NotificationServices.create_notification(kwargs)
+        finally:
+            # CRITICAL: Cleanup database session to prevent connection leaks
+            from app.extensions import db
+
+            try:
+                db.session.remove()
+            except:
+                pass
