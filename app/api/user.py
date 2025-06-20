@@ -1305,6 +1305,9 @@ class APIGetCallbackYoutube(Resource):
             user_link = UserService.find_user_link(
                 link_id=int_link_id, user_id=int_user_id
             )
+
+            user_link_id = user_link.id if user_link else 0
+
             if not user_link:
                 user_link = UserService.create_user_link(
                     user_id=int_user_id,
@@ -1312,6 +1315,7 @@ class APIGetCallbackYoutube(Resource):
                     status=1,
                     meta=json.dumps({}),
                 )
+                user_link_id = user_link.id
                 NotificationServices.create_notification(
                     user_id=int_user_id,
                     title="Youtube 연결이 완료되었습니다.",
@@ -1320,7 +1324,7 @@ class APIGetCallbackYoutube(Resource):
 
             response = YoutubeTokenService().exchange_code_for_token(
                 code=code,
-                user_link=user_link,
+                user_link_id=user_link_id,
                 client=client,
             )
             if not response:
@@ -1334,7 +1338,7 @@ class APIGetCallbackYoutube(Resource):
                     status=400,
                 ).to_dict()
 
-            user_info = YoutubeTokenService().fetch_channel_info(user_link)
+            user_info = YoutubeTokenService().fetch_channel_info(user_link_id)
             if user_info:
                 social_id = user_info.get("id") or ""
                 username = user_info.get("username") or ""
