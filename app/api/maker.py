@@ -233,7 +233,7 @@ class APICreateBatchSync(Resource):
                 NotificationServices.create_notification(
                     user_id=user_id_login,
                     status=const.NOTIFICATION_FALSE,
-                    title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                    title=f"❌ 해당 {url} 은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
                     description=f"Scraper False {url}",
                 )
 
