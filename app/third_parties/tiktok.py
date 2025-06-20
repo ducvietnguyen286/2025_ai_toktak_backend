@@ -308,7 +308,9 @@ class TiktokService(BaseService):
                 if refreshed["status"] == "success":
                     new_meta = refreshed["result"]
                     self.meta = new_meta
-                    return self.upload_image(medias=json.dumps(medias), retry=retry + 1)
+                    return self.upload_image(
+                        input_medias=json.dumps(medias), retry=retry + 1
+                    )
                 else:
                     self.save_errors(
                         "ERRORED",
@@ -452,9 +454,7 @@ class TiktokService(BaseService):
                 if refreshed["status"] == "success":
                     new_meta = refreshed["result"]
                     self.meta = new_meta
-                    return self.upload_video_by_url(
-                        media_url=media_url, retry=retry + 1
-                    )
+                    return self.upload_video_by_url(post=post, retry=retry + 1)
                 else:
                     self.save_errors(
                         "ERRORED",

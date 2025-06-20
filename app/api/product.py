@@ -1,6 +1,6 @@
 # coding: utf8
 import os
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource
 from app.decorators import parameters, admin_required
 from app.lib.response import Response
@@ -90,8 +90,11 @@ class ProductCreateApi(Resource):
     )
     def post(self, args):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            subject = get_jwt_identity()
+            if subject is None:
+                return None
+
+            user_id = int(subject)
             product_name = args.get("product_name", "")
             product_url = args.get("product_url", "")
             product_image = args.get("product_image", "")
@@ -130,8 +133,7 @@ class MultiProductCreateApi(Resource):
     @jwt_required()
     def post(self):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            user_id = AuthService.get_user_id()
             products = []
             idx = 0
             today = datetime.now()
@@ -151,7 +153,7 @@ class MultiProductCreateApi(Resource):
                 file = request.files.get(f"{prefix}[product_file]")
                 if file:
                     # Lưu file lên server, đổi tên nếu cần
-                    folder_path = f"static/voice/product_upload/{today.strftime('%Y_%m_%d')}/{current_user.id}"
+                    folder_path = f"static/voice/product_upload/{today.strftime('%Y_%m_%d')}/{user_id}"
                     os.makedirs(folder_path, exist_ok=True)
                     filename = file.filename
                     save_path = os.path.join(folder_path, filename)
@@ -218,8 +220,7 @@ class ProductMultiUpdateAPI(Resource):
     @jwt_required()
     def post(self):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            user_id = AuthService.get_user_id()
             products = []
             idx = 0
             today = datetime.now()
@@ -540,7 +541,7 @@ class GroupListWithProductsApi(Resource):
                     product_limit = 20
             except Exception:
                 product_limit = 20
-            
+
             data = GroupProductService.get_groups_with_products(
                 user_id=user_id,
                 product_limit=product_limit,

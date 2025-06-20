@@ -5,15 +5,23 @@ Script để kiểm tra trạng thái connection pool chi tiết
 import os
 import sys
 
+from dotenv import load_dotenv
+
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path=dotenv_path, override=True)
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app import create_app
 from app.extensions import db
+from app.config import configs as config
 from sqlalchemy import text
 
 
 def check_pool_status():
-    app = create_app()
+    config_name = os.environ.get("FLASK_CONFIG") or "develop"
+    config_app = config[config_name]
+    app = create_app(config_app)
 
     with app.app_context():
         try:
@@ -25,7 +33,6 @@ def check_pool_status():
             print(f"📈 Pool Checked Out: {pool.checkedout()}")
             print(f"📉 Pool Checked In: {pool.checkedin()}")
             print(f"🔄 Pool Overflow: {pool.overflow()}")
-            print(f"⚠️  Pool Invalid: {pool.invalidated()}")
 
             # Kiểm tra MySQL processlist
             result = db.session.execute(text("SHOW FULL PROCESSLIST")).fetchall()

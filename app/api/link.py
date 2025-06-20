@@ -56,12 +56,12 @@ class APICreateLink(Resource):
         required=["avatar", "title", "need_info", "type"],
     )
     def post(self, args):
-        current_user = AuthService.get_current_identity()
+        user_id = AuthService.get_user_id()
         avatar = args.get("avatar", "")
         title = args.get("title", "")
         need_info = args.get("need_info", {})
         type = args.get("type", 0)
-        link = LinkService.create_link(avatar, title, need_info, type, current_user.id)
+        link = LinkService.create_link(avatar, title, need_info, type, user_id)
         return Response(
             data=link,
             message="Tạo link thành công",
