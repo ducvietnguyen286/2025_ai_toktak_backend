@@ -117,9 +117,11 @@ class TwitterTokenService:
             meta = json.loads(meta)
             meta.update(data)
 
-            user_link.meta = json.dumps(meta)
-            user_link.status = 1
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                meta=json.dumps(meta),
+                status=1,
+            )
 
             return True
         except Exception as e:

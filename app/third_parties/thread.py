@@ -55,8 +55,12 @@ class ThreadTokenService:
                 meta = json.loads(meta)
                 meta.update(data)
 
-                user_link.meta = json.dumps(meta)
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id,
+                    meta=json.dumps(meta),
+                    status=1,
+                )
+
                 return True
             else:
                 # user_link.status = 0
@@ -111,16 +115,16 @@ class ThreadTokenService:
                 meta = json.loads(meta)
                 meta.update(data)
 
-                user_link.meta = json.dumps(meta)
-
                 expires_in = 60 * 60 * 24 * 60  # 60 days
                 expired_at = time.time() + expires_in
-                user_link.expired_at = datetime.datetime.fromtimestamp(expired_at)
-                user_link.expired_date = datetime.datetime.fromtimestamp(
-                    expired_at
-                ).date()
 
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id,
+                    meta=json.dumps(meta),
+                    expired_at=datetime.datetime.fromtimestamp(expired_at),
+                    expired_date=datetime.datetime.fromtimestamp(expired_at).date(),
+                )
+
                 return True
             else:
                 # user_link.status = 0
