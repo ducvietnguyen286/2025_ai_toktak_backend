@@ -189,8 +189,14 @@ def worker_instance():
                 print("Error in worker_instance loop:", e)
                 db.session.rollback()
             finally:
-                # CRITICAL: Cleanup session to prevent connection leaks
-                db.session.remove()
+                # CRITICAL: Force cleanup session to prevent connection leaks
+                try:
+                    if db.session.is_active:
+                        db.session.rollback()
+                    db.session.close()
+                    db.session.remove()
+                except:
+                    pass
 
         print("Worker stopped (PID:", os.getpid(), ")")
         browser.quit()
