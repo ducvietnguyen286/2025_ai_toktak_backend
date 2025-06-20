@@ -8,9 +8,6 @@ import sys
 import time
 import traceback
 from dotenv import load_dotenv
-import requests
-
-from app.services.shotstack_services import ShotStackService
 
 load_dotenv(override=False)
 
@@ -26,10 +23,10 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
-from app.lib.header import generate_desktop_user_agent
+from app.lib.header import generate_desktop_user_agent_chrome
 from app.lib.logger import logger
 import threading
-from app.scraper.pages.aliexpress.parser import Parser as AliExpressParser
+from app.scraper.pages.coupang.parser import Parser as CoupangParser
 
 from werkzeug.exceptions import default_exceptions
 from app.errors.handler import api_error_handler
@@ -122,27 +119,22 @@ def create_driver_instance():
     chrome_options.add_argument("--no-default-browser-check")
     chrome_options.add_argument("--disable-extensions")
 
-    no_gui = os.environ.get("SELENIUM_NO_GUI", "false") == "true"
     proxy = os.environ.get("SELENIUM_PROXY", None)
-
-    # if no_gui or config_name == "production":
-    # chrome_options.add_argument("--headless=new")
-    # chrome_options.add_argument("--disable-gpu")
 
     if proxy:
         chrome_options.add_argument("--proxy-server={}".format(proxy))
 
-    user_agent = generate_desktop_user_agent()
+    user_agent = generate_desktop_user_agent_chrome()
     headers = {
-        # "User-Agent": user_agent,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "User-Agent": user_agent,
     }
     for header, value in headers.items():
         chrome_options.add_argument(f"--{header.lower()}={value}")
 
-    SELENIUM_URL = os.environ.get("SELENIUM_URL", "http://localhost:4567/wd/hub")
-
-    driver = webdriver.Remote(command_executor=SELENIUM_URL, options=chrome_options)
+    # Sử dụng ChromeDriver local
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
 
 
@@ -155,14 +147,14 @@ def worker_instance():
     with app.app_context():
         browser = create_driver_instance()
         # Mở trang cơ sở để làm tab gốc (base tab)
-        browser.get("https://ko.aliexpress.com/")
+        browser.get("https://www.coupang.com/")
         base_tab = browser.current_window_handle
 
         print("Worker started (PID:", os.getpid(), ")")
 
         while not stop_event.is_set():
             try:
-                task_item = redis_client.blpop("toktak:crawl_ali_queue", timeout=10)
+                task_item = redis_client.blpop("toktak:crawl_coupang_queue", timeout=10)
                 if task_item:
                     _, task_json = task_item
                     task = json.loads(task_json)
@@ -190,173 +182,17 @@ def worker_instance():
         return True
 
 
-def speech_to_text(audio_url):
-    try:
-        config = ShotStackService.get_settings()
-        api_key = config.get("GOOGLE_API_TEXT_TO_SPEECH", "")
-        api_url = f"https://speech.googleapis.com/v1/speech:recognize?key={api_key}"
-
-        if not api_key:
-            print("Lỗi: API Key chưa được thiết lập.")
-            return ""
-
-        # Tải file từ audio_url
-        response = requests.get(audio_url)
-        if response.status_code != 200:
-            print(f"Lỗi khi tải file từ URL: {audio_url}")
-            return ""
-
-        # Lưu file tạm (giả sử file gốc là MP3)
-        temp_mp3 = "temp_audio.mp3"
-        with open(temp_mp3, "wb") as f:
-            f.write(response.content)
-
-        # Chuyển file MP3 sang FLAC (Google Speech-to-Text tối ưu cho FLAC)
-        flac_file = temp_mp3.replace(".mp3", ".flac")
-        os.system(f"ffmpeg -i {temp_mp3} -ac 1 -ar 16000 {flac_file} -y")
-
-        # Đọc file FLAC dạng base64
-        with open(flac_file, "rb") as f:
-            audio_content = base64.b64encode(f.read()).decode("utf-8")
-
-        payload = {
-            "config": {
-                "encoding": "FLAC",
-                "sampleRateHertz": 16000,
-                "languageCode": "en-US",
-            },
-            "audio": {"content": audio_content},
-        }
-
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(api_url, json=payload, headers=headers)
-
-        try:
-            os.remove(temp_mp3)
-            os.remove(flac_file)
-        except Exception as e:
-            print(f"Lỗi khi xóa file FLAC: {str(e)}")
-
-        if response.status_code != 200:
-            print(f"Lỗi từ Google Speech API: {response.text}")
-            return ""
-
-        response_json = response.json()
-
-        # Lấy transcript từ API
-        transcript = " ".join(
-            [
-                alt["transcript"]
-                for res in response_json.get("results", [])
-                for alt in res.get("alternatives", [])
-            ]
-        )
-
-        return transcript.strip()
-
-    except Exception as e:
-        print(f"Exception: {str(e)}")
-        return None
-
-
 def process_task_on_tab(browser, task):
     try:
         logger.info("[Open Tab]")
         try:
-            load_cookies(browser)
+            # load_cookies(browser)
             url = task["url"]
-            # wait_id = task["wait_id"]
-            # wait_class = task["wait_class"]
-            # wait_script = task["wait_script"]
             req_id = task["req_id"]
-            # page = task["page"]
 
             time.sleep(1)
-
             browser.get(url)
-
             logger.info(f"[Open URL] {url}")
-            try:
-                iframe_tag = browser.find_elements(
-                    By.XPATH,
-                    "//iframe[contains(@src, 'https://acs.aliexpress.com:443//h5/mtop.aliexpress.pdp.pc.query/1.0/_____tmd_____/punish')]",
-                )
-                finded_script = browser.find_elements(
-                    By.XPATH, "//script[@type='application/ld+json']"
-                )
-                print("iframe_tag", iframe_tag)
-                print("finded_script", finded_script)
-                if iframe_tag and not finded_script:
-                    print(
-                        "Found J_MIDDLEWARE_FRAME_WIDGET and script with type application/ld+json"
-                    )
-
-                    outer_frame = browser.find_element(
-                        By.CSS_SELECTOR, "div.J_MIDDLEWARE_FRAME_WIDGET iframe"
-                    )
-                    browser.switch_to.frame(outer_frame)
-
-                    print("Switch To Outer Frame")
-
-                    middle_frame = browser.find_element(By.XPATH, "//iframe[1]")
-                    browser.switch_to.frame(middle_frame)
-
-                    print("Switch To Middle Frame")
-
-                    inner_frame = browser.find_element(By.XPATH, "//iframe[1]")
-
-                    challenger_iframe = browser.find_element(
-                        By.XPATH,
-                        "//iframe[contains(@title, 'recaptcha challenge')]",
-                    )
-
-                    browser.switch_to.frame(inner_frame)
-
-                    print("Switch To Captcha Frame")
-
-                    # file_html = open("demo.html", "w", encoding="utf-8")
-                    # file_html.write(browser.page_source)
-                    # file_html.close()
-
-                    checkbox = WebDriverWait(browser, 10).until(
-                        EC.presence_of_element_located((By.ID, "recaptcha-anchor"))
-                    )
-                    checkbox.click()
-
-                    time.sleep(1)
-
-                    if challenger_iframe:
-                        # Switch back to the parent frame (middle iframe) to access the sibling iframe
-                        browser.switch_to.parent_frame()
-
-                        # Now switch to the challenger iframe
-                        browser.switch_to.frame(challenger_iframe)
-
-                        print("Switch To Challenger Frame")
-                        audio_btn = WebDriverWait(browser, 10).until(
-                            EC.presence_of_element_located(
-                                (By.ID, "recaptcha-audio-button")
-                            )
-                        )
-                        audio_btn.click()
-
-                        time.sleep(1)
-
-                        file_html = open("demo.html", "w", encoding="utf-8")
-                        file_html.write(browser.page_source)
-                        file_html.close()
-
-                        audio_source = browser.find_element(By.ID, "audio-source")
-                        audio_url = audio_source.get_attribute("src")
-                        text = speech_to_text(audio_url)
-                        print("Text from audio:", text)
-
-                    browser.switch_to.default_content()
-            except Exception as e:
-                traceback.print_exc()
-                print("Error: ", str(e))
-
-            # save_cookies(browser)
 
             WebDriverWait(browser, 10).until(
                 EC.presence_of_element_located(
@@ -371,38 +207,18 @@ def process_task_on_tab(browser, task):
             browser.execute_script("window.scrollBy(700, 1600);")
             logger.info("[Scroll Down 2]")
 
-            file_html = open("demo1.html", "w", encoding="utf-8")
-            file_html.write(browser.page_source)
-            file_html.close()
-
-            # logger.info("[Wait for script tag with type application/ld+json]")
-
-            # if wait_id != "":
-            #     WebDriverWait(browser, 10).until(
-            #         EC.presence_of_element_located((By.ID, wait_id))
-            #     )
-            # if wait_class != "":
-            #     WebDriverWait(browser, 10).until(
-            #         EC.presence_of_element_located((By.CLASS_NAME, wait_class))
-            #     )
-
             logger.info("[Wait Done]")
 
-            # file_html = open("demo2.html", "w", encoding="utf-8")
-            # file_html.write(browser.page_source)
-            # file_html.close()
-
-            save_cookies(browser)
+            # save_cookies(browser)
 
             html = BeautifulSoup(browser.page_source, "html.parser")
 
-            parser = AliExpressParser(html)
+            parser = CoupangParser(html, url)
             data = parser.parse(url)
 
-            redis_client.set(f"toktak:result-ali:{req_id}", json.dumps(data))
+            redis_client.set(f"toktak:result_coupang:{req_id}", json.dumps(data))
         except Exception as e:
             traceback.print_exc()
-            # logger.error(f"Error in process_task_on_tab: {str(e)}")
             print("Error in process_task_on_tab:", e)
         finally:
             return True
@@ -413,7 +229,7 @@ def process_task_on_tab(browser, task):
 
 
 def load_cookies(browser):
-    COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
+    COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/coupang")
     try:
         cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
         if os.path.exists(cookie_file):
@@ -426,26 +242,7 @@ def load_cookies(browser):
 
 def save_cookies(browser):
     cookies = browser.get_cookies()
-
-    # cookie_dict = {}
-    # for cookie in cookies.split("; "):
-    #     key, value = cookie.split("=", 1)
-    #     cookie_dict[key] = value
-    # print("Parsed Cookies:", cookie_dict)
-
-    COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
-    # formatted_cookies = []
-    # current_cookies = []
-    # cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
-    # if os.path.exists(cookie_file):
-    #     with open(cookie_file, "r", encoding="utf-8") as file:
-    #         current_cookies = json.load(file)
-
-    # for cookie in current_cookies:
-    #     new_value = cookie_dict.get(cookie.get("name"))
-    #     if new_value:
-    #         cookie["value"] = new_value
-    #         formatted_cookies.append(cookie)
+    COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/coupang")
 
     if not os.path.exists(COOKIE_FOLDER):
         os.makedirs(COOKIE_FOLDER)
