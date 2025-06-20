@@ -201,7 +201,7 @@ class APINewLink(Resource):
             user_link = UserService.find_user_link_by_id(user_link_id)
 
             return Response(
-                data=user_link._to_dict(),
+                data=user_link._to_json(),
                 message="Thêm link thành công",
             ).to_dict()
         except Exception as e:
