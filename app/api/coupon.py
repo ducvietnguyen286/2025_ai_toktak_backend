@@ -303,7 +303,7 @@ class APICreateCoupon(Resource):
         required=["name", "max_used"],
     )
     def post(self, args):
-        current_user = AuthService.get_current_identity()
+        user_id = AuthService.get_user_id()
         image = args.get("image", "")
         name = args.get("name", "")
         type = args.get("type", "SUB_STANDARD")
@@ -362,7 +362,7 @@ class APICreateCoupon(Resource):
             description=description,
             expired=expired,
             expired_from=expired_from,
-            created_by=current_user.id,
+            created_by=user_id,
             # number_expired=number_expired,
         )
 
@@ -859,8 +859,8 @@ class APIListCouponCodes(Resource):
 class APIGetUserCoupon(Resource):
     @jwt_required()
     def get(self):
-        current_user = AuthService.get_current_identity()
-        coupon = CouponService.get_last_used(current_user.id)
+        user_id = AuthService.get_user_id()
+        coupon = CouponService.get_last_used(user_id)
         if not coupon:
             return Response(
                 message="Không tìm thấy coupon",

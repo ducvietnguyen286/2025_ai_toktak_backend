@@ -34,9 +34,11 @@ class APICreateSchedule(Resource):
         url = data.get("url", None)
         logger.info(data)
 
-        user_id_login = 0
-        current_user = AuthService.get_current_identity() or None
-        user_id_login = current_user.id
+        subject = get_jwt_identity()
+        if subject is None:
+            return None
+
+        user_id = int(subject)
 
         data_update_template = {
             "is_paid_advertisements": is_paid_advertisements,
@@ -53,7 +55,7 @@ class APICreateSchedule(Resource):
         }
 
         schedule = ScheduleService.create_schedule(
-            user_id=user_id_login,
+            user_id=user_id,
             url=url,
             date=date,
             link_sns=json.dumps(link_sns),
@@ -90,9 +92,6 @@ class APIAdminGetSchedules(Resource):
     @jwt_required()
     @admin_required()
     def get(self):
-        user_id_login = 0
-        current_user = AuthService.get_current_identity() or None
-        user_id_login = current_user.id
 
         start_date = request.args.get("start_date")
         end_date = request.args.get("end_date")
