@@ -75,29 +75,25 @@ class CouponService:
 
     @staticmethod
     def update_coupon_codes(coupon_id, **kwargs):
-        session = Session(bind=db.engine)
         try:
-            session.query(CouponCode).filter(CouponCode.coupon_id == coupon_id).update(
-                kwargs
+            CouponCode.query.filter(CouponCode.coupon_id == coupon_id).update(
+                kwargs, synchronize_session=False
             )
-            session.commit()
+            db.session.commit()
         except Exception as e:
-            session.rollback()
+            db.session.rollback()
             raise e
-        finally:
-            session.close()
 
     @staticmethod
     def delete_coupon_codes(coupon_id):
-        session = Session(bind=db.engine)
         try:
-            session.query(CouponCode).filter(CouponCode.coupon_id == coupon_id).delete()
-            session.commit()
+            CouponCode.query.filter(CouponCode.coupon_id == coupon_id).delete(
+                synchronize_session=False
+            )
+            db.session.commit()
         except Exception as e:
-            session.rollback()
+            db.session.rollback()
             raise e
-        finally:
-            session.close()
 
     @staticmethod
     def get_coupons(query_params={}):
@@ -276,12 +272,8 @@ class CouponService:
         code_query = Coupon.query
         logger.info(query_params)
 
-        if (
-            "type_coupon" in query_params
-            and  query_params["type_coupon"] != ""
-        ):
+        if "type_coupon" in query_params and query_params["type_coupon"] != "":
             code_query = code_query.filter(Coupon.type == query_params["type_coupon"])
-            
 
         # Áp dụng các bộ lọc nếu có
         if "code" in query_params and query_params["code"]:
@@ -379,17 +371,12 @@ class CouponService:
             coupon_code = CouponCode(**data)
             coupon_codes.append(coupon_code)
 
-        session = Session(bind=db.engine)
         try:
-            for i in range(0, len(coupon_codes), BATCH_SIZE):
-                batch = coupon_codes[i : i + BATCH_SIZE]
-                session.bulk_save_objects(batch)
-                session.commit()
+            db.session.bulk_save_objects(coupon_codes)
+            db.session.commit()
         except Exception as e:
-            session.rollback()
+            db.session.rollback()
             raise e
-        finally:
-            session.close()
 
     @staticmethod
     def generate_code(length=10):

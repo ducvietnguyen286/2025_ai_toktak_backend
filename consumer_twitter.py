@@ -79,7 +79,11 @@ def action_send_post_to_link(message):
         return True
     except Exception as e:
         log_twitter_message(f"ERROR: Error send post to link: {str(e)}")
+        db.session.rollback()
         return False
+    finally:
+        db.session.remove()  # CRITICAL: Cleanup session để tránh connection leak
+        db.session.close()
 
 
 def process_message_sync(body, app):

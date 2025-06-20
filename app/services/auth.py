@@ -315,29 +315,8 @@ class AuthService:
             user_id = int(subject)
 
             if no_cache:
-                try:
-                    stmt = select(User).filter_by(id=user_id)
-                    user = db.session.execute(stmt).scalar_one_or_none()
-                    if user:
-                        user_dict = user.to_dict()
-                        redis_client.set(
-                            f"toktak:current_user:{user_id}",
-                            json.dumps(user_dict),
-                            ex=const.REDIS_EXPIRE_TIME,
-                        )
-                    return user if user else None
-                finally:
-                    db.session.close()
-
-            user_cache = redis_client.get(f"toktak:current_user:{user_id}")
-            if user_cache:
-                user = json.loads(user_cache)
-                return User(**user)
-
-            try:
                 stmt = select(User).filter_by(id=user_id)
                 user = db.session.execute(stmt).scalar_one_or_none()
-
                 if user:
                     user_dict = user.to_dict()
                     redis_client.set(
@@ -345,10 +324,25 @@ class AuthService:
                         json.dumps(user_dict),
                         ex=const.REDIS_EXPIRE_TIME,
                     )
-
                 return user if user else None
-            finally:
-                db.session.close()
+
+            user_cache = redis_client.get(f"toktak:current_user:{user_id}")
+            if user_cache:
+                user = json.loads(user_cache)
+                return User(**user)
+
+            stmt = select(User).filter_by(id=user_id)
+            user = db.session.execute(stmt).scalar_one_or_none()
+
+            if user:
+                user_dict = user.to_dict()
+                redis_client.set(
+                    f"toktak:current_user:{user_id}",
+                    json.dumps(user_dict),
+                    ex=const.REDIS_EXPIRE_TIME,
+                )
+
+            return user if user else None
 
         except Exception as ex:
             logger.exception(f"get_current_identity : {ex}")

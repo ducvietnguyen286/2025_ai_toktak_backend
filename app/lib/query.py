@@ -153,5 +153,4 @@ def delete_by_id(
     if instance:
         db.session.delete(instance)
         db.session.commit()
-        db.session.close()
         return True

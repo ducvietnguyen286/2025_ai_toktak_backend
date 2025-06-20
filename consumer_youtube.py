@@ -76,10 +76,15 @@ def action_send_post_to_link(message):
                 YoutubeService(sync_id=sync_id).send_post(
                     post, link, user_id, social_post_id
                 )
+
         return True
     except Exception as e:
         log_youtube_message(f"ERROR: Error send post to link: {str(e)}")
+        db.session.rollback()
         return False
+    finally:
+        db.session.remove()  # CRITICAL: Cleanup session để tránh connection leak
+        db.session.close()
 
 
 def process_message_sync(body, app):

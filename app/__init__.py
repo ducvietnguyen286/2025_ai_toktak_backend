@@ -30,6 +30,7 @@ def create_app(config_app):
     @app.teardown_appcontext
     def shutdown_session(exception=None):
         db.session.remove()
+        db.session.close()
 
     @app.route("/admin/persistence/on")
     def persistence_on():

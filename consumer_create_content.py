@@ -71,7 +71,11 @@ def action_create_batch(message, app):
         return True
     except Exception as e:
         log_create_content_message(f"ERROR: Error create batch: {str(e)}")
+        db.session.rollback()
         return False
+    finally:
+        db.session.remove()  # CRITICAL: Cleanup session để tránh connection leak
+        db.session.close()
 
 
 def process_message_sync(body, app):
