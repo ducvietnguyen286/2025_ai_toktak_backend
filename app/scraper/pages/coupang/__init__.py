@@ -22,7 +22,7 @@ class CoupangScraper:
         self.fire_crawl_key = ""
 
     def run(self):
-        return self.run_crawler_mobile()
+        return self.run_fire_crawler()
 
     def proxies(self):
         return {
@@ -375,9 +375,7 @@ class CoupangScraper:
             proxies = self.proxies()
 
             session = requests.Session()
-            response = session.get(
-                btf_url, headers=headers, timeout=10, proxies=proxies
-            )
+            response = session.get(btf_url, headers=headers, timeout=5, proxies=proxies)
             btf_content = response.json()
             r_data = btf_content.get("rData")
 
@@ -529,7 +527,7 @@ class CoupangScraper:
 
             proxies = self.proxies()
 
-            response = session.get(url, headers=headers, timeout=10, proxies=proxies)
+            response = session.get(url, headers=headers, timeout=5, proxies=proxies)
             info = response.content
             html = BeautifulSoup(info, "html.parser")
             # file_html = open("demo.html", "w", encoding="utf-8")
