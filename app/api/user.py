@@ -1057,9 +1057,11 @@ class APIGetCallbackTiktok(Resource):
                     meta=json.dumps(token),
                 )
             else:
-                user_link.meta = json.dumps(token)
-                user_link.status = 1
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id,
+                    meta=json.dumps(token),
+                    status=1,
+                )
 
                 NotificationServices.create_notification(
                     user_id=int_user_id,
@@ -1327,14 +1329,16 @@ class APIGetCallbackYoutube(Resource):
                 avatar = user_info.get("avatar") or ""
                 url = user_info.get("url") or ""
 
-                user_link.social_id = social_id
-                user_link.username = username
-                user_link.name = name
-                user_link.avatar = avatar
-                user_link.url = url
-                user_link.youtube_client = json.dumps(client._to_json())
-                user_link.status = 1
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id,
+                    social_id=social_id,
+                    username=username,
+                    name=name,
+                    avatar=avatar,
+                    youtube_client=json.dumps(client._to_json()),
+                    url=url,
+                    status=1,
+                )
 
                 current_user_ids = client.user_ids
                 current_user_ids = (
@@ -1346,8 +1350,10 @@ class APIGetCallbackYoutube(Resource):
                 client.member_count += 1
                 client.save()
             else:
-                user_link.status = 0
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id,
+                    status=0,
+                )
                 return redirect(
                     PAGE_PROFILE
                     + "?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=Can't fetch channel info"

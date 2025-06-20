@@ -14,44 +14,57 @@ class UserLinkService:
         is_active = False
 
         if link.type == "X":
-            user_link.status = 0
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                status=0,
+            )
 
             code = args.get("Code")
             is_active = UserLinkService.save_link_x(user_link, code)
 
         if link.type == "FACEBOOK":
-            user_link.status = 0
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                status=0,
+            )
 
             access_token = args.get("AccessToken")
             is_active = UserLinkService.save_link_facebook(user_link, access_token)
 
         if link.type == "YOUTUBE":
-            user_link.status = 0
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                status=0,
+            )
 
             code = args.get("Code")
             is_active = UserLinkService.save_link_youtube(user_link, code)
 
         if link.type == "THREAD":
-            user_link.status = 0
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                status=0,
+            )
 
             code = args.get("Code")
             is_active = UserLinkService.save_link_thread(user_link, code)
 
         if link.type == "INSTAGRAM":
-            user_link.status = 0
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                status=0,
+            )
 
             code = args.get("Code")
             is_active = UserLinkService.save_link_instagram(user_link, code)
 
         if link.type == "BLOG_NAVER":
             link = args.get("Link")
-            user_link.meta_url = link
-            user_link.save()
+
+            UserService.update_user_link(
+                id=user_link.id,
+                meta_url=link,
+            )
 
             is_active = True
 
