@@ -70,7 +70,7 @@ class PostService:
     @staticmethod
     def update_post(id, *args, **kwargs):
         update_by_id(Post, id, kwargs)
-        post = Post.query.get(id)
+        post = select_by_id(Post, id)
         return post
 
     @staticmethod

@@ -162,9 +162,9 @@ class APINewLink(Resource):
                 is_active = UserLinkService.update_user_link(link, user_link, args)
 
             else:
-                user_link.meta = json.dumps(info)
-                user_link.status = 1
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id, meta=json.dumps(info), status=1
+                )
 
                 is_active = UserLinkService.update_user_link(link, user_link, args)
 
@@ -192,8 +192,10 @@ class APINewLink(Resource):
 
             PostService.update_default_template(current_user.id, link_id)
 
+            user_link = UserService.find_user_link_by_id(user_link.id)
+
             return Response(
-                data=user_link._to_json(),
+                data=user_link._to_dict(),
                 message="Thêm link thành công",
             ).to_dict()
         except Exception as e:
@@ -1057,9 +1059,11 @@ class APIGetCallbackTiktok(Resource):
                     meta=json.dumps(token),
                 )
             else:
-                user_link.meta = json.dumps(token)
-                user_link.status = 1
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id,
+                    meta=json.dumps(token),
+                    status=1,
+                )
 
                 NotificationServices.create_notification(
                     user_id=int_user_id,
@@ -1327,14 +1331,16 @@ class APIGetCallbackYoutube(Resource):
                 avatar = user_info.get("avatar") or ""
                 url = user_info.get("url") or ""
 
-                user_link.social_id = social_id
-                user_link.username = username
-                user_link.name = name
-                user_link.avatar = avatar
-                user_link.url = url
-                user_link.youtube_client = json.dumps(client._to_json())
-                user_link.status = 1
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id,
+                    social_id=social_id,
+                    username=username,
+                    name=name,
+                    avatar=avatar,
+                    youtube_client=json.dumps(client._to_json()),
+                    url=url,
+                    status=1,
+                )
 
                 current_user_ids = client.user_ids
                 current_user_ids = (
@@ -1342,12 +1348,16 @@ class APIGetCallbackYoutube(Resource):
                 )
                 current_user_ids.append(int_user_id)
 
-                client.user_ids = json.dumps(current_user_ids)
-                client.member_count += 1
-                client.save()
+                YoutubeClientService.update_youtube_client(
+                    id=client.id,
+                    user_ids=json.dumps(current_user_ids),
+                    member_count=client.member_count + 1,
+                )
             else:
-                user_link.status = 0
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id,
+                    status=0,
+                )
                 return redirect(
                     PAGE_PROFILE
                     + "?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=Can't fetch channel info"
