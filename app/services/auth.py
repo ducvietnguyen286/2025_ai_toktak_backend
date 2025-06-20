@@ -324,6 +324,8 @@ class AuthService:
                         json.dumps(user_dict),
                         ex=const.REDIS_EXPIRE_TIME,
                     )
+                # Critical: Cleanup session after each query
+                db.session.remove()
                 return user if user else None
 
             user_cache = redis_client.get(f"toktak:current_user:{user_id}")
@@ -342,10 +344,17 @@ class AuthService:
                     ex=const.REDIS_EXPIRE_TIME,
                 )
 
+            # Critical: Cleanup session after each query
+            db.session.remove()
             return user if user else None
 
         except Exception as ex:
             logger.exception(f"get_current_identity : {ex}")
+            # Critical: Cleanup session even on error
+            try:
+                db.session.remove()
+            except:
+                pass
             return None
 
     @staticmethod

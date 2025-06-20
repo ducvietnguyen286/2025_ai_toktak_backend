@@ -293,14 +293,21 @@ def cleanup_pending_batches(app):
                         app.logger.error(
                             f"Error processing batch {batch.id}: {str(batch_error)}"
                         )
+                        db.session.rollback()
 
             if deleted_batch_ids:
                 app.logger.info(
                     f"Deleted Batches: {', '.join(map(str, deleted_batch_ids))}"
                 )
 
+            db.session.commit()
+
         except Exception as e:
             app.logger.error(f"Error in cleanup_pending_batches: {str(e)}")
+            db.session.rollback()
+        finally:
+            # CRITICAL: Cleanup session to prevent connection leaks
+            db.session.remove()
 
 
 def cleanup_request_log(app):
@@ -340,6 +347,9 @@ def cleanup_request_log(app):
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"❌ Error in cleanup_request_log: {str(e)}")
+        finally:
+            # CRITICAL: Cleanup session to prevent connection leaks
+            db.session.remove()
 
 
 def check_urls_health(app):
@@ -392,8 +402,13 @@ def auto_extend_subscription_task(app):
         try:
             count = AuthService.auto_extend_free_subscriptions()
             app.logger.info(f"✓ Auto-extended {count} FREE users")
+            db.session.commit()
         except Exception as e:
             app.logger.error(f"Error in auto_extend_subscription_task: {str(e)}")
+            db.session.rollback()
+        finally:
+            # CRITICAL: Cleanup session to prevent connection leaks
+            db.session.remove()
 
 
 def create_notification_task():
