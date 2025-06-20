@@ -8,7 +8,7 @@ import traceback
 from urllib.parse import urlencode
 import uuid
 from flask import redirect, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource
 import jwt
 import requests
@@ -64,13 +64,14 @@ class APIUserLinks(Resource):
         required=[],
     )
     def get(self, args):
-        current_user = AuthService.get_current_identity()
-        if not current_user:
+        subject = get_jwt_identity()
+        if subject is None:
             return Response(
                 status=401,
                 message="Can't User login",
             ).to_dict()
-        links = UserService.get_user_links(current_user.id)
+        user_id = int(subject)
+        links = UserService.get_user_links(user_id)
         return Response(
             data=links,
             message="Đăng nhập thành công",
@@ -82,8 +83,14 @@ class APIFindUserLink(Resource):
 
     @jwt_required()
     def get(self, id):
-        current_user = AuthService.get_current_identity()
-        link = UserService.find_user_link(id, current_user.id)
+        subject = get_jwt_identity()
+        if subject is None:
+            return Response(
+                status=401,
+                message="Can't User login",
+            ).to_dict()
+        user_id = int(subject)
+        link = UserService.find_user_link(id, user_id)
         if not link:
             return Response(
                 message="Không tìm thấy link",
@@ -236,8 +243,13 @@ class APISendPosts(Resource):
         required=["post_ids"],
     )
     def post(self, args):
-        current_user = AuthService.get_current_identity()
-        current_user_id = current_user.id
+        subject = get_jwt_identity()
+        if subject is None:
+            return Response(
+                status=401,
+                message="Can't User login",
+            ).to_dict()
+        current_user_id = int(subject)
         redis_user_batch_key = f"toktak:users:batch_sns_remain:{current_user_id}"
 
         current_time = int(time.time())
@@ -504,8 +516,13 @@ class APIPostToLinks(Resource):
         required=["post_id"],
     )
     def post(self, args):
-        current_user = AuthService.get_current_identity()
-        current_user_id = current_user.id
+        subject = get_jwt_identity()
+        if subject is None:
+            return Response(
+                status=401,
+                message="Can't User login",
+            ).to_dict()
+        current_user_id = int(subject)
         redis_user_batch_key = f"toktak:users:batch_sns_remain:{current_user_id}"
 
         current_time = int(time.time())
@@ -769,8 +786,14 @@ class APIGetFacebookPage(Resource):
         required=[],
     )
     def get(self, args):
-        current_user = AuthService.get_current_identity()
-        user_links = UserService.get_original_user_links(current_user.id)
+        subject = get_jwt_identity()
+        if subject is None:
+            return Response(
+                status=401,
+                message="Can't User login",
+            ).to_dict()
+        current_user_id = int(subject)
+        user_links = UserService.get_original_user_links(current_user_id)
         link = LinkService.find_link_by_type("FACEBOOK")
         if not link:
             return Response(
@@ -819,7 +842,13 @@ class APISelectFacebookPage(Resource):
     )
     def post(self, args):
         try:
-            current_user = AuthService.get_current_identity()
+            subject = get_jwt_identity()
+            if subject is None:
+                return Response(
+                    status=401,
+                    message="Can't User login",
+                ).to_dict()
+            current_user_id = int(subject)
             link = LinkService.find_link_by_type("FACEBOOK")
             if not link:
                 return Response(
@@ -827,7 +856,7 @@ class APISelectFacebookPage(Resource):
                     status=400,
                 ).to_dict()
             page_id = args.get("page_id")
-            user_link = UserService.find_user_link(link.id, current_user.id)
+            user_link = UserService.find_user_link(link.id, current_user_id)
             if not user_link:
                 return Response(
                     message="Không tìm thấy link Facebook",
@@ -1648,20 +1677,25 @@ class APIDeleteLink(Resource):
     )
     def post(self, args):
         try:
-            current_user = AuthService.get_current_identity()
+            subject = get_jwt_identity()
+            if subject is None:
+                return None
+
+            user_id = int(subject)
+            
             link_id = args.get("link_id", 0)
 
-            user_link = UserService.find_user_link(link_id, current_user.id)
+            user_link = UserService.find_user_link(link_id, user_id)
             if not user_link:
                 return Response(
                     message="링크 삭제에 실패했습니다.",
-                    data={"user_id": current_user.id},
+                    data={"user_id": user_id},
                     code=201,
                 ).to_dict()
             else:
                 user_link.delete()
                 user_template = PostService.get_template_video_by_user_id(
-                    current_user.id
+                    user_id
                 )
 
                 if user_template:
@@ -1696,8 +1730,11 @@ class APIDeleteLink(Resource):
 class APIUserLinkTemplate(Resource):
     @jwt_required()
     def get(self):
-        urrent_user = AuthService.get_current_identity()
-        user_id = urrent_user.id
+        subject = get_jwt_identity()
+        if subject is None:
+            return None
+
+        user_id = int(subject)
         all_links = LinkService.get_all_links()
 
         # Lấy template lưu trữ các lựa chọn
@@ -1738,8 +1775,11 @@ class APIUserLinkTemplate(Resource):
 class APIUpdateUserLinkTemplate(Resource):
     @jwt_required()
     def post(self):
-        urrent_user = AuthService.get_current_identity()
-        user_id = urrent_user.id
+        subject = get_jwt_identity()
+        if subject is None:
+            return None
+
+        user_id = int(subject)
 
         payload = ns.payload or {}
 
@@ -1769,8 +1809,11 @@ class APINiceAuth(Resource):
     @jwt_required()
     def get(self):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            subject = get_jwt_identity()
+            if subject is None:
+                return None
+
+            user_id = int(subject)
 
             site_nice = os.environ.get("URL_SERVCER_NICE_AUTH", "")
             if not site_nice:
@@ -1818,8 +1861,11 @@ class APINiceAuthSuccess(Resource):
             if not enc_data:
                 return Response(code=400, message="Thiếu tham số EncodeData").to_dict()
 
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            subject = get_jwt_identity()
+            if subject is None:
+                return None
+
+            user_id = int(subject)
 
             site_nice = os.environ.get("URL_SERVCER_NICE_AUTH", "")
             if not site_nice:
@@ -1867,8 +1913,11 @@ class APINiceAuthSuccess(Resource):
             "EncodeData": enc_data,
         }
 
-        current_user = AuthService.get_current_identity()
-        user_id = current_user.id
+        subject = get_jwt_identity()
+        if subject is None:
+            return None
+
+        user_id = int(subject)
 
         data_nice = NiceAuthService.checkplus_success(user_id, result_item)
 
@@ -1880,8 +1929,11 @@ class APIGetReferUserSuccess(Resource):
     @jwt_required()
     def get(self):
 
-        current_user = AuthService.get_current_identity()
-        user_id = current_user.id
+        subject = get_jwt_identity()
+            if subject is None:
+                return None
+
+            user_id = int(subject)
 
         refer = ReferralService.get_by_user_id(user_id)
 

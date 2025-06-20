@@ -306,6 +306,15 @@ class AuthService:
         return {"access_token": access_token}
 
     @staticmethod
+    def get_user_id():
+        subject = get_jwt_identity()
+        if subject is None:
+            return None
+
+        user_id = int(subject)
+        return user_id
+
+    @staticmethod
     def get_current_identity(no_cache=True):
         """
         Get current user identity with optimized session management

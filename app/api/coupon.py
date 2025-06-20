@@ -64,7 +64,7 @@ class APIUsedCoupon(Resource):
                     message="쿠폰 코드가 사용 불가능합니다",
                     code=201,
                 ).to_dict()
-                
+
         today = datetime.datetime.today().date()
         if coupon.expired_from and coupon.expired_from.date() > today:
             return Response(
@@ -77,7 +77,6 @@ class APIUsedCoupon(Resource):
                 message="쿠폰 코드가 만료되었습니다",
                 code=201,
             ).to_dict()
-            
 
         if coupon.is_check_user:
             count_used = CouponService.count_coupon_used(coupon.id, current_user.id)
@@ -92,7 +91,7 @@ class APIUsedCoupon(Resource):
         # kiểm tra xem user đã dùng mã mời của KOL hay chưa
         # Nếu đã dùng của người khác thì không được dùng của KOL cũ
         if coupon.type == "KOL_COUPON":
-            
+
             login_is_auth_nice = current_user.is_auth_nice
             if login_is_auth_nice == 0:
                 return Response(
@@ -101,8 +100,7 @@ class APIUsedCoupon(Resource):
                     message_en="It has been 8 days since registration.",
                     code=203,
                 ).to_dict()
-            
-            
+
             # Use KOL coupon_Fail_over join date
             login_created_at = current_user.created_at
             today = datetime.datetime.today().date()
@@ -299,7 +297,7 @@ class APICreateCoupon(Resource):
         required=["name", "max_used"],
     )
     def post(self, args):
-        current_user = AuthService.get_current_identity()
+        user_id = AuthService.get_user_id()
         image = args.get("image", "")
         name = args.get("name", "")
         type = args.get("type", "SUB_STANDARD")
@@ -337,17 +335,14 @@ class APICreateCoupon(Resource):
         white_lists = args.get("white_lists", [])
         description = args.get("description", "")
 
-        code_coupon=""
-        if type =='KOL_COUPON':
+        code_coupon = ""
+        if type == "KOL_COUPON":
             coupon_detail = CouponService.find_coupon_by_name(name)
             if coupon_detail:
-                return Response(
-                    message="이미 생성된 이름입니다.",
-                    code=201
-                ).to_dict()
+                return Response(message="이미 생성된 이름입니다.", code=201).to_dict()
             code_coupon = name
             max_used = 1
-            
+
         coupon = CouponService.create_coupon(
             image=image,
             name=name,
@@ -361,11 +356,10 @@ class APICreateCoupon(Resource):
             description=description,
             expired=expired,
             expired_from=expired_from,
-            created_by=current_user.id,
+            created_by=user_id,
             # number_expired=number_expired,
         )
-        
-            
+
         CouponService.create_codes(
             coupon.id,
             code_coupon,
@@ -741,7 +735,6 @@ class APIListCouponCodes(Resource):
         }, 200
 
 
-
 @ns.route("/category")
 class APIListCouponCodes(Resource):
 
@@ -860,8 +853,8 @@ class APIListCouponCodes(Resource):
 class APIGetUserCoupon(Resource):
     @jwt_required()
     def get(self):
-        current_user = AuthService.get_current_identity()
-        coupon = CouponService.get_last_used(current_user.id)
+        user_id = AuthService.get_user_id()
+        coupon = CouponService.get_last_used(user_id)
         if not coupon:
             return Response(
                 message="Không tìm thấy coupon",

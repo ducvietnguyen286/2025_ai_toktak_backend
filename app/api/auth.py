@@ -445,16 +445,16 @@ class APIDeleteAccount(Resource):
     @jwt_required()
     def post(self):
 
-        user_login = AuthService.get_current_identity()
-        if not user_login:
+        user_id = AuthService.get_user_id()
+        if not user_id:
             return Response(
                 message="시스템에 로그인해주세요.",
                 code=201,
             ).to_dict()
 
-        AuthService.deleteAccount(user_login.id)
+        AuthService.deleteAccount(user_id)
 
-        redis_client.delete(f"toktak:current_user:{user_login.id}")
+        redis_client.delete(f"toktak:current_user:{user_id}")
 
         return Response(
             data={},
