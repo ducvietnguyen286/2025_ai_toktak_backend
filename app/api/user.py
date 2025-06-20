@@ -1023,7 +1023,9 @@ class APIGetCallbackTiktok(Resource):
                     + f"?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=최대 {total_link_active}개의 채널만 설정할 수 있습니다."
                 )
 
-            user_link = UserService.find_user_link_exist(int_link_id, int_user_id)
+            user_link = UserService.find_user_link(
+                link_id=int_link_id, user_id=int_user_id
+            )
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
@@ -1072,7 +1074,9 @@ class APIGetCallbackTiktok(Resource):
 
             PostService.update_default_template(int_user_id, link_id)
 
-            user_info = TiktokTokenService().fetch_user_info(user_link)
+            user_info = TiktokTokenService().fetch_user_info(
+                user_id=int_user_id, link_id=int_link_id
+            )
             logger.info(f"-----------TIKTOK DATA: {user_info}-------------")
             if user_info:
                 social_id = user_info.get("id") or ""
@@ -1296,7 +1300,9 @@ class APIGetCallbackYoutube(Resource):
                     status=400,
                 ).to_dict()
 
-            user_link = UserService.find_user_link(int_link_id, int_user_id)
+            user_link = UserService.find_user_link(
+                link_id=int_link_id, user_id=int_user_id
+            )
             if not user_link:
                 user_link = UserService.create_user_link(
                     user_id=int_user_id,

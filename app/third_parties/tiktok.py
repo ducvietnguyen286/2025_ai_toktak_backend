@@ -20,11 +20,12 @@ PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 class TiktokTokenService:
 
     @staticmethod
-    def fetch_user_info(user_link):
+    def fetch_user_info(user_id, link_id):
         try:
             log_tiktok_message(
                 "------------------  FETCH TIKTOK USER INFO  ------------------"
             )
+            user_link = UserService.find_user_link(link_id=link_id, user_id=user_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
 
