@@ -94,10 +94,18 @@ chmod +x /var/www/toktak/entry-point.sh
 git update-index --no-assume-unchanged run_with_watchdog.sh
 git update-index --no-assume-unchanged entry-point.sh
 
+
+
+
+-----------LIVE SERVER
 sudo systemctl status toktak.service
 sudo systemctl status toktak_watchdog.service
 sudo systemctl status create_content_1.service
 sudo systemctl status create_content_2.service
+
+
+rm -rf /var/www/logs/* && rm -rf /var/www/2025_ai_toktak_be/logs/* && sudo systemctl restart nginx && sudo systemctl restart toktak.service && sudo systemctl restart toktak_watchdog.service && sudo systemctl status create_content_1.service && sudo systemctl status create_content_2.service
+
 
 
 sudo systemctl status rabbitmq-serve
