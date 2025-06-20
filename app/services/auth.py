@@ -118,14 +118,15 @@ class AuthService:
             )
 
             user.save()
+            login_user_id = user.id
 
             # Create Basic for new User
             object_start_time = datetime.now()
             data_new_user_history = {
-                "user_id": user.id,
+                "user_id": login_user_id,
                 "type": "user",
                 "type_2": "NEW_USER",
-                "object_id": user.id,
+                "object_id": login_user_id,
                 "object_start_time": object_start_time,
                 "object_end_time": subscription_expired,
                 "title": "신규 가입 선물",
@@ -149,7 +150,7 @@ class AuthService:
 
         if not social_account:
             social_account = SocialAccount(
-                user_id=user.id,
+                user_id=login_user_id,
                 provider=provider,
                 provider_user_id=provider_user_id,
                 access_token=access_token,
