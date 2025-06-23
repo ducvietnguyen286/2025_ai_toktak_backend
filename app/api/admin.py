@@ -721,3 +721,138 @@ class APIAdminNotification(Resource):
             "total_pages": users.pages,
             "data": [user_detail._to_json() for user_detail in users.items],
         }, 200
+
+
+@ns.route("/save_admin_notification")
+class APISaveAdminNotification(Resource):
+    @parameters(
+        type="object",
+        properties={
+            "country": {"type": "string"},
+            "description": {"type": "string"},
+            "status": {"type": "integer"},
+            "title": {"type": "string"},
+            "url": {"type": "string"},
+            "notification_id": {"type": "integer"},
+        },
+        required=["country", "title"],
+    )
+    def post(self, args):
+        country = args.get("country", "")
+        description = args.get("description", "")
+        status = args.get("status", "")
+        title = args.get("title", "")
+        url = args.get("url", "")
+        notification_id = args.get("notification_id", "")
+
+        if notification_id != "":
+            # Cập nhật thông báo
+            notification = AdminNotificationService.update_admin_notification(
+                notification_id,
+                country=country,
+                title=title,
+                url=url,
+                description=description,
+                status=status,
+            )
+            if not notification:
+                return Response(
+                    message="알림을 업데이트하지 못했습니다",
+                    message_en="Cập nhật thông báo thất bại",
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                message="알림을 성공적으로 생성했습니다",
+                message_en="Tạo thông báo thành công",
+                code=200,
+            ).to_dict()
+
+        else:
+            # Tạo mới thông báo
+            notification = AdminNotificationService.create_admin_notification(
+                country=country,
+                title=title,
+                url=url,
+                description=description,
+                status=status,
+            )
+            if not notification:
+                return Response(
+                    message="알림을 생성하지 못했습니다",
+                    message_en="Tạo thông báo thất bại",
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                message="알림을 성공적으로 업데이트했습니다",
+                message_en="Cập nhật thông báo thành công",
+                code=200,
+            ).to_dict()
+
+
+@ns.route("/admin_notification_by_id")
+class APIAdminNotificationById(Resource):
+    @jwt_required()
+    @admin_required()
+    def get(self):
+        id = request.args.get("id")
+        notification_detail = AdminNotificationService.find_by_id(id)
+        return Response(
+            data=notification_detail._to_json(),
+            message="정보를 성공적으로 가져왔습니다",
+            message_en="Lấy thông tin thành công",
+            code=200,
+        ).to_dict()
+
+
+@ns.route("/delete_admin_notification")
+class APIDeleteAdminNotification(Resource):
+    @jwt_required()
+    @admin_required()
+    @parameters(
+        type="object",
+        properties={
+            "user_ids": {"type": "string"},
+        },
+        required=["user_ids"],
+    )
+    def post(self, args):
+        try:
+            user_ids = args.get("user_ids", "")
+            # Chuyển chuỗi user_ids thành list các integer
+            if not user_ids:
+                return Response(
+                    message="No user_ids provided",
+                    code=201,
+                ).to_dict()
+
+            # Tách chuỗi và convert sang list integer
+            id_list = [int(id.strip()) for id in user_ids.split(",")]
+
+            if not id_list:
+                return Response(
+                    message="Invalid user_ids format",
+                    code=201,
+                ).to_dict()
+
+            process_delete = AdminNotificationService.delete_admin_notification_by_ids(
+                id_list
+            )
+            if process_delete == 1:
+                message = "Delete notification Success"
+            else:
+                message = "사용자 삭제 중 오류"
+                return Response(
+                    message=message,
+                    code=201,
+                ).to_dict()
+
+            return Response(message=message, code=200, data=id_list).to_dict()
+
+        except Exception as e:
+            logger.error(f"Exception: Delete notification Fail  :  {str(e)}")
+            return Response(
+                message="사용자 삭제 중 오류",
+                code=201,
+            ).to_dict()

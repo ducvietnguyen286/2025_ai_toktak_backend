@@ -16,3 +16,16 @@ class AdminNotification(db.Model, BaseModel):
     status = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "country": self.country,
+            "title": self.title,
+            "url": self.url,
+            "description": self.description,
+            "status": self.status,
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+            "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S") if self.updated_at else None,
+        }
