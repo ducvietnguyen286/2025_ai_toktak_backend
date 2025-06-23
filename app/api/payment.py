@@ -128,8 +128,7 @@ class APICalculateUpgradePrice(Resource):
         data = request.get_json()
         package_name = data.get("package_name")
         addon_count = data.get("addon_count", 0)
-        current_user = AuthService.get_current_identity()
-        user_id = current_user.id
+        user_id = AuthService.get_user_id()
 
         result = PaymentService.calculate_upgrade_price(
             user_id, package_name, addon_count
@@ -158,8 +157,7 @@ class APIGetRatePlan(Resource):
 class APICreateAddon(Resource):
     @jwt_required()
     def post(self):
-        current_user = AuthService.get_current_identity() or None
-        user_id_login = current_user.id
+        user_id_login = AuthService.get_user_id()
         data = request.get_json()
         addon_count = int(data.get("addon_count", 0))
         today = datetime.datetime.now().date()
@@ -565,9 +563,8 @@ class APIBillingAuthorizations(Resource):
             customerKey = data.get("customerKey")
             amount = data.get("amount")
             message = ""
-            current_user = AuthService.get_current_identity()
-            user_id_login = current_user.id
-        
+            user_id_login = AuthService.get_user_id()
+
             user_detail = UserService.find_user_by_referral_code(customerKey)
             if not user_detail:
                 return Response(
@@ -595,10 +592,8 @@ class APIBillingAuthorizations(Resource):
                 data_update_user = {
                     "card_info": json.dumps(payment_data),
                 }
-                UserService.update_user(
-                    user_detail.id, **data_update_user
-                )
-                
+                UserService.update_user(user_detail.id, **data_update_user)
+
                 return Response(
                     message="Tosspayment 결제가 완료되었습니다",
                     message_en="Payment completed successfully via Tosspayment",
@@ -640,9 +635,10 @@ class APIBillingAuthorizationsFail(Resource):
             }
 
             PaymentService.create_payment_log(**payment_data_log)
-            logger.info("_------------------------------------APIBillingAuthorizationsFail")
+            logger.info(
+                "_------------------------------------APIBillingAuthorizationsFail"
+            )
             logger.info(payment_data_log)
-            logger.info(payment_data)
 
             return Response(
                 message="",

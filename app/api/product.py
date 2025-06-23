@@ -308,8 +308,7 @@ class ProductUpdateAPI(Resource):
     )
     def post(self, args):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            user_id = AuthService.get_user_id()
             product_id = args.get("product_id", "")
             product_detail = ProductService.find_post_by_user_id(product_id, user_id)
             if product_detail:
@@ -356,8 +355,7 @@ class ProductDeleteAPI(Resource):
     )
     def post(self, args):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            user_id = AuthService.get_user_id()
             product_ids = args.get("product_ids", "")
             id_list = [int(id.strip()) for id in product_ids.split(",") if id.strip()]
 
@@ -397,8 +395,7 @@ class GroupCreateApi(Resource):
     )
     def post(self, args):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            user_id = AuthService.get_user_id()
             group_name = args.get("group_name")
             order_no = args.get("order_no", 0)
 
@@ -443,8 +440,7 @@ class GroupUpdateApi(Resource):
     )
     def put(self, args, group_id):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            user_id = AuthService.get_user_id()
             group_name = args.get("group_name")
             order_no = args.get("order_no")
 
@@ -480,8 +476,7 @@ class GroupDeleteApi(Resource):
     @jwt_required()
     def delete(self, group_id):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            user_id = AuthService.get_user_id()
 
             success = GroupProductService.delete_group_product(group_id)
             GroupProductService.delete_group_products_cache(user_id)
@@ -511,8 +506,7 @@ class GroupListApi(Resource):
     @jwt_required()
     def get(self):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            user_id = AuthService.get_user_id()
             groups = GroupProductService.get_groups_by_user_id(user_id)
             return Response(
                 data=[g.to_dict() for g in groups],
@@ -568,8 +562,7 @@ class MultiGroupCreateApi(Resource):
     @jwt_required()
     def post(self):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            user_id = AuthService.get_user_id()
 
             data = request.get_json()
             groups = data.get("products", [])
@@ -612,8 +605,7 @@ class MultiGroupCreateApi(Resource):
             try:
                 data = request.get_json() or {}
                 ids_raw = data.get("group_ids", "")  # "1,2,3" hoặc [1,2,3]
-                current_user = AuthService.get_current_identity()
-                user_id = current_user.id
+                user_id = AuthService.get_user_id()
 
                 # Chuẩn hóa list group_id
                 if isinstance(ids_raw, str):
@@ -659,8 +651,7 @@ class MultiGroupCreateApi(Resource):
         @jwt_required()
         def post(self):
             try:
-                current_user = AuthService.get_current_identity()
-                user_id = current_user.id
+                user_id = AuthService.get_user_id()
 
                 data = request.get_json()
                 groups = data.get("products", [])
@@ -702,8 +693,7 @@ class MultiGroupCreateApi(Resource):
             try:
                 data = request.get_json() or {}
                 ids_raw = data.get("ids", "")  # "1,2,3" hoặc [1,2,3]
-                current_user = AuthService.get_current_identity()
-                user_id = current_user.id
+                user_id = AuthService.get_user_id()
 
                 # Chuẩn hóa list group_id
                 if isinstance(ids_raw, str):

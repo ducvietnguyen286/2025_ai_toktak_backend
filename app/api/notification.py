@@ -21,7 +21,7 @@ class APINotificationHistories(Resource):
     @jwt_required()
     def get(self):
         try:
-            current_user = AuthService.get_current_identity()
+            current_user_id = AuthService.get_user_id()
             page = request.args.get("page", const.DEFAULT_PAGE, type=int)
             per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
             status = request.args.get("status", const.UPLOADED, type=int)
@@ -35,11 +35,11 @@ class APINotificationHistories(Resource):
                 "type_order": type_order,
                 "type_post": type_post,
                 "time_range": time_range,
-                "user_id": current_user.id,
+                "user_id": current_user_id,
             }
             result = NotificationServices.get_notifications(data_search)
             return {
-                "current_user": current_user.id,
+                "current_user": current_user_id,
                 "status": True,
                 "message": "Success",
                 "total": result.get("total", 0),
@@ -108,9 +108,9 @@ class APIDeleteNotification(Resource):
 class APIGetTotalNotification(Resource):
     @jwt_required()
     def get(self):
-        current_user = AuthService.get_current_identity()
+        current_user_id = AuthService.get_user_id()
         data_search = {
-            "user_id": current_user.id,
+            "user_id": current_user_id,
             "type_read": "0",
         }
         total_pages = NotificationServices.getTotalNotification(data_search)
@@ -125,8 +125,7 @@ class APIUpdateReadNotification(Resource):
     @jwt_required()
     def post(self):
         try:
-            current_user = AuthService.get_current_identity()
-            user_id = current_user.id
+            user_id = AuthService.get_user_id()
 
             NotificationServices.update_post_by_user_id(user_id, is_read=1)
             message = "Update Notification Successfully"
@@ -181,7 +180,7 @@ class APIAdminNotificationHistories(Resource):
             "per_page": notifications.per_page,
             "total_pages": notifications.pages,
             "data": [notification.to_dict() for notification in notifications.items],
-        }, 200 
+        }, 200
 
 
 @ns.route("/admin/delete_notification")
