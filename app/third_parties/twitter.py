@@ -33,11 +33,12 @@ class TwitterTokenService:
         self.client_secret = config["TWITTER_CLIENT_SECRET"]
         self.redirect_uri = os.environ.get("X_REDIRECT_URI")
 
-    def fetch_user_info(self, user_link):
+    def fetch_user_info(self, user_link_id):
         try:
             log_twitter_message(
                 "------------------  FETCH TWITTER USER INFO  ------------------"
             )
+            user_link = UserService.find_user_link_by_id(user_link_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
 
@@ -75,9 +76,9 @@ class TwitterTokenService:
             log_twitter_message(e)
             return None
 
-    def fetch_token(self, code, user_link):
+    def fetch_token(self, code, user_link_id):
         try:
-
+            user_link = UserService.find_user_link_by_id(user_link_id)
             # Tạo header Authorization kiểu Basic bằng cách mã hóa "client_id:client_secret"
             client_credentials = base64.b64encode(
                 f"{self.client_id}:{self.client_secret}".encode("utf-8")
@@ -117,9 +118,11 @@ class TwitterTokenService:
             meta = json.loads(meta)
             meta.update(data)
 
-            user_link.meta = json.dumps(meta)
-            user_link.status = 1
-            user_link.save()
+            UserService.update_user_link(
+                id=user_link.id,
+                meta=json.dumps(meta),
+                status=1,
+            )
 
             return True
         except Exception as e:
