@@ -167,8 +167,7 @@ class UserService:
     @staticmethod
     def update_user_link(id, *args, **kwargs):
         update_by_id(UserLink, id, data=kwargs)
-        user_link = select_by_id(UserLink, id)
-        return user_link
+        return True
 
     @staticmethod
     def update_by_link_multiple_user_links(link_id=0, *args, **kwargs):
@@ -179,17 +178,16 @@ class UserService:
 
     @staticmethod
     def find_user_link(link_id=0, user_id=0):
-        user_link = select_with_filter_one(
-            UserLink,
-            [UserLink.link_id == link_id, UserLink.user_id == user_id],
-            [],
+        user_link = (
+            UserLink.query.where(UserLink.user_id == user_id)
+            .where(UserLink.link_id == link_id)
+            .first()
         )
-        return user_link
+        return user_link if user_link else None
 
     @staticmethod
     def find_user_link_by_id(user_link_id=0):
-        user_link = UserLink.query.get(user_link_id)
-        return user_link
+        return select_by_id(UserLink, user_link_id)
 
     @staticmethod
     def find_user_link_exist(link_id=0, user_id=0):

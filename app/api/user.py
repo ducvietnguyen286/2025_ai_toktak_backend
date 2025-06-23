@@ -150,6 +150,7 @@ class APINewLink(Resource):
                 ).to_dict()
 
             user_link = UserService.find_user_link_exist(link_id, current_user.id)
+            user_link_id = user_link.id if user_link else 0
             is_active = True
             if not user_link:
                 user_link = UserService.create_user_link(
@@ -158,15 +159,20 @@ class APINewLink(Resource):
                     meta=json.dumps(info),
                     status=1,
                 )
+                user_link_id = user_link.id
 
-                is_active = UserLinkService.update_user_link(link, user_link, args)
+                is_active = UserLinkService.update_user_link(
+                    link=link, user_id=current_user.id, args=args
+                )
 
             else:
                 UserService.update_user_link(
-                    id=user_link.id, meta=json.dumps(info), status=1
+                    id=user_link_id, meta=json.dumps(info), status=1
                 )
 
-                is_active = UserLinkService.update_user_link(link, user_link, args)
+                is_active = UserLinkService.update_user_link(
+                    link=link, user_id=current_user.id, args=args
+                )
 
             if not is_active:
                 NotificationServices.create_notification(
@@ -192,10 +198,10 @@ class APINewLink(Resource):
 
             PostService.update_default_template(current_user.id, link_id)
 
-            user_link = UserService.find_user_link_by_id(user_link.id)
+            user_link = UserService.find_user_link_by_id(user_link_id)
 
             return Response(
-                data=user_link._to_dict(),
+                data=user_link._to_json(),
                 message="Thêm link thành công",
             ).to_dict()
         except Exception as e:
@@ -846,7 +852,10 @@ class APISelectFacebookPage(Resource):
                     message="Không tìm thấy link Facebook",
                     status=400,
                 ).to_dict()
-            select_page = FacebookTokenService().get_page_info_by_id(page_id, user_link)
+            user_link_id = user_link.id
+            select_page = FacebookTokenService().get_page_info_by_id(
+                page_id=page_id, user_link_id=user_link_id
+            )
             if not select_page:
                 return Response(
                     message="Không tìm thấy trang Facebook",
@@ -859,7 +868,9 @@ class APISelectFacebookPage(Resource):
                     status=400,
                 ).to_dict()
 
-            UserLinkService.update_info_user_link(user_link=user_link, info=page_info)
+            UserLinkService.update_info_user_link(
+                user_link_id=user_link_id, info=page_info
+            )
 
             return Response(
                 message="Lưu trang Facebook thành công",
@@ -1023,7 +1034,10 @@ class APIGetCallbackTiktok(Resource):
                     + f"?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=최대 {total_link_active}개의 채널만 설정할 수 있습니다."
                 )
 
-            user_link = UserService.find_user_link_exist(int_link_id, int_user_id)
+            user_link = UserService.find_user_link(
+                link_id=int_link_id, user_id=int_user_id
+            )
+            user_link_id = user_link.id if user_link else 0
 
             RequestSocialLogService.create_request_social_log(
                 social="TIKTOK",
@@ -1058,9 +1072,10 @@ class APIGetCallbackTiktok(Resource):
                     status=1,
                     meta=json.dumps(token),
                 )
+                user_link_id = user_link.id
             else:
-                UserService.update_user_link(
-                    id=user_link.id,
+                user_link = UserService.update_user_link(
+                    id=user_link_id,
                     meta=json.dumps(token),
                     status=1,
                 )
@@ -1072,7 +1087,9 @@ class APIGetCallbackTiktok(Resource):
 
             PostService.update_default_template(int_user_id, link_id)
 
-            user_info = TiktokTokenService().fetch_user_info(user_link)
+            user_info = TiktokTokenService().fetch_user_info(
+                user_id=int_user_id, link_id=int_link_id
+            )
             logger.info(f"-----------TIKTOK DATA: {user_info}-------------")
             if user_info:
                 social_id = user_info.get("id") or ""
@@ -1081,12 +1098,15 @@ class APIGetCallbackTiktok(Resource):
                 avatar = user_info.get("avatar") or ""
                 url = user_info.get("url") or ""
 
-                user_link.social_id = social_id
-                user_link.username = username
-                user_link.name = name
-                user_link.avatar = avatar
-                user_link.url = url
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link_id,
+                    social_id=social_id,
+                    username=username,
+                    name=name,
+                    avatar=avatar,
+                    url=url,
+                    status=1,
+                )
 
             return redirect(redirect_uri + "?tabIndex=2&success=1")
         except Exception as e:
@@ -1293,7 +1313,12 @@ class APIGetCallbackYoutube(Resource):
                     status=400,
                 ).to_dict()
 
-            user_link = UserService.find_user_link_exist(int_link_id, int_user_id)
+            user_link = UserService.find_user_link(
+                link_id=int_link_id, user_id=int_user_id
+            )
+
+            user_link_id = user_link.id if user_link else 0
+
             if not user_link:
                 user_link = UserService.create_user_link(
                     user_id=int_user_id,
@@ -1301,6 +1326,7 @@ class APIGetCallbackYoutube(Resource):
                     status=1,
                     meta=json.dumps({}),
                 )
+                user_link_id = user_link.id
                 NotificationServices.create_notification(
                     user_id=int_user_id,
                     title="Youtube 연결이 완료되었습니다.",
@@ -1309,7 +1335,7 @@ class APIGetCallbackYoutube(Resource):
 
             response = YoutubeTokenService().exchange_code_for_token(
                 code=code,
-                user_link=user_link,
+                user_link_id=user_link_id,
                 client=client,
             )
             if not response:
@@ -1323,7 +1349,7 @@ class APIGetCallbackYoutube(Resource):
                     status=400,
                 ).to_dict()
 
-            user_info = YoutubeTokenService().fetch_channel_info(user_link)
+            user_info = YoutubeTokenService().fetch_channel_info(user_link_id)
             if user_info:
                 social_id = user_info.get("id") or ""
                 username = user_info.get("username") or ""
@@ -1332,7 +1358,7 @@ class APIGetCallbackYoutube(Resource):
                 url = user_info.get("url") or ""
 
                 UserService.update_user_link(
-                    id=user_link.id,
+                    id=user_link_id,
                     social_id=social_id,
                     username=username,
                     name=name,
@@ -1355,7 +1381,7 @@ class APIGetCallbackYoutube(Resource):
                 )
             else:
                 UserService.update_user_link(
-                    id=user_link.id,
+                    id=user_link_id,
                     status=0,
                 )
                 return redirect(
