@@ -17,10 +17,21 @@ from dateutil.relativedelta import relativedelta
 class AdminNotificationService:
 
     @staticmethod
-    def create_user(*args, **kwargs):
+    def create_admin_notification(*args, **kwargs):
         admin_notification = AdminNotification(*args, **kwargs)
         admin_notification.save()
         return admin_notification
+    
+    @staticmethod
+    def update_admin_notification(id, *args, **kwargs):
+        admin_notification = AdminNotification.query.get(id)
+        if not admin_notification:
+            return None
+        admin_notification.update(**kwargs)
+        return admin_notification
+    @staticmethod
+    def find_by_id(id):
+        return AdminNotification.query.get(id)
 
     @staticmethod
     def admin_search_admin_notifications(data_search):
