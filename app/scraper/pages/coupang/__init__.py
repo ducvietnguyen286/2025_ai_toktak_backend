@@ -24,22 +24,62 @@ class CoupangScraper:
         self.fire_crawl_key = ""
 
     def run(self):
-        return self.run_crawler_mobile()
+        return self.run_selenium()
 
     def proxies(self):
+        proxies = [
+            "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
+            "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
+            "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
+            "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
+            "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
+        ]
+
+        random_proxy = random.choice(proxies)
         old_proxy = "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80/"
         # proxy = "http://b45ba2a7:xyuhqzh7dlyu@proxy.toolip.io:31113"
         return {
-            "http": old_proxy,
-            "https": old_proxy,
+            "http": random_proxy,
+            "https": random_proxy,
         }
 
     def run_selenium(self):
         try:
             req_id = str(uuid.uuid4())
+
+            real_url = self.url
+
+            parsed_url = urlparse(real_url)
+            netloc = parsed_url.netloc
+
+            if netloc == "link.coupang.com":
+                real_url = self.un_shortend_url(real_url)
+                parsed_url = urlparse(real_url)
+
+            path = parsed_url.path
+
+            query_params = parsed_url.query
+            query_params_dict = parse_qs(query_params)
+
+            item_id = query_params_dict.get("itemId")
+            vendor_item_id = query_params_dict.get("vendorItemId")
+
+            path = path.replace("/vp/", "/vm/")
+            target_item_id = item_id[0] if item_id else ""
+            target_vendor_item_id = vendor_item_id[0] if vendor_item_id else ""
+
+            path_mobile = path
+            query_params = ""
+            if target_item_id != "":
+                query_params = query_params + "&itemId=" + target_item_id
+            if target_vendor_item_id != "":
+                query_params = query_params + "&vendorItemId=" + target_vendor_item_id
+            query_params = query_params[1:]
+            real_url = "https://m.coupang.com" + path_mobile + "?" + query_params
+
             task = {
                 "req_id": req_id,
-                "url": self.url,
+                "url": real_url,
             }
             redis_client.rpush("toktak:crawl_coupang_queue", json.dumps(task))
             timeout = 30  # Giây
@@ -55,10 +95,10 @@ class CoupangScraper:
             # parsed_url = urlparse(self.url)
 
             # real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
-            ali_data = self.get_page_html(self.url)
+            ali_data = self.get_page_html(real_url)
             if not ali_data:
                 return {}
-            ali_base_data = Parser(ali_data).parse(self.url)
+            ali_base_data = Parser(ali_data).parse(real_url)
 
             # file_html = open("demo.html", "w", encoding="utf-8")
             # file_html.write(str(ali_data))

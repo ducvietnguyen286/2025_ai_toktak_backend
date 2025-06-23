@@ -3,6 +3,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
 import json
 import os
+import random
 import signal
 import sys
 import time
@@ -103,38 +104,307 @@ def create_app():
 def create_driver_instance():
     config_name = os.environ.get("FLASK_CONFIG") or "develop"
     chrome_options = Options()
+
+    # Ẩn dấu vết Selenium và Automation
+    chrome_options.add_experimental_option(
+        "excludeSwitches", ["enable-automation", "enable-logging"]
+    )
+    chrome_options.add_experimental_option("useAutomationExtension", False)
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+
+    # Thêm các tham số stealth mode
+    chrome_options.add_argument("--disable-web-security")
+    chrome_options.add_argument("--disable-features=IsolateOrigins,site-per-process")
+    chrome_options.add_argument("--disable-site-isolation-trials")
+    chrome_options.add_argument("--disable-features=BlockCredentialedSubresources")
+    chrome_options.add_argument("--disable-plugins-discovery")
+    chrome_options.add_argument("--disable-single-click-autofill")
+    chrome_options.add_argument("--disable-prompt-on-repost")
+    chrome_options.add_argument("--no-default-browser-check")
+    chrome_options.add_argument("--no-first-run")
+
+    # Thêm các tham số để giả lập người dùng thực
+    chrome_options.add_argument("--disable-notifications")
+    chrome_options.add_argument("--disable-popup-blocking")
+    chrome_options.add_argument("--disable-infobars")
+    chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--ignore-ssl-errors")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-site-isolation-trials")
-    chrome_options.add_argument(
-        "--disable-blink-features=BlockCredentialedSubresources"
-    )
-    chrome_options.add_argument("--enable-unsafe-swiftshader")
-    chrome_options.add_argument("--window-size=1920x1080")
 
-    # Thêm một số option bổ sung để tránh lỗi
-    chrome_options.add_argument("--no-first-run")
-    chrome_options.add_argument("--no-default-browser-check")
-    chrome_options.add_argument("--disable-extensions")
+    # Random window size để tránh detection
+    widths = [360, 375, 390, 412, 414]
+    heights = [640, 720, 780, 800, 850]
+    width = random.choice(widths)
+    height = random.choice(heights)
 
-    proxy = os.environ.get("SELENIUM_PROXY", None)
-
-    if proxy:
-        chrome_options.add_argument("--proxy-server={}".format(proxy))
-
-    user_agent = generate_desktop_user_agent_chrome()
-    headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "User-Agent": user_agent,
+    # Cấu hình giả lập Android
+    mobile_emulation = {
+        "deviceMetrics": {
+            "width": width,
+            "height": height,
+            "pixelRatio": 3.0,
+            "touch": True,
+            "mobile": True,
+        },
+        "userAgent": "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
     }
-    for header, value in headers.items():
-        chrome_options.add_argument(f"--{header.lower()}={value}")
+    chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
+
+    # Thêm các tham số giả lập Android
+    chrome_options.add_argument("--enable-touch-events")
+    chrome_options.add_argument("--touch-events=enabled")
+    chrome_options.add_argument("--disable-hover")
+
+    # Cấu hình proxy với xác thực
+    proxies = [
+        {
+            "host": "gw.dataimpulse.com",
+            "port": "823",
+            "username": "27222558ddfa5c9d6449__cr.il",
+            "password": "69271afa03d6c430",
+        },
+        {
+            "host": "gw.dataimpulse.com",
+            "port": "823",
+            "username": "27222558ddfa5c9d6449__cr.il",
+            "password": "69271afa03d6c430",
+        },
+        {
+            "host": "gw.dataimpulse.com",
+            "port": "823",
+            "username": "27222558ddfa5c9d6449__cr.il",
+            "password": "69271afa03d6c430",
+        },
+    ]
+
+    proxy = random.choice(proxies)
+    manifest_json = """
+    {
+        "version": "1.0.0",
+        "manifest_version": 2,
+        "name": "Chrome Proxy",
+        "permissions": [
+            "proxy",
+            "tabs",
+            "unlimitedStorage",
+            "storage",
+            "webRequest",
+            "webRequestBlocking"
+        ],
+        "background": {
+            "scripts": ["background.js"]
+        },
+        "minimum_chrome_version":"22.0.0"
+    }
+    """
+
+    background_js = """
+    var config = {
+        mode: "fixed_servers",
+        rules: {
+            singleProxy: {
+                scheme: "http",
+                host: "%s",
+                port: parseInt(%s)
+            },
+            bypassList: []
+        }
+    };
+    chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
+    function callbackFn(details) {
+        return {
+            authCredentials: {
+                username: "%s",
+                password: "%s"
+            }
+        };
+    }
+    chrome.webRequest.onAuthRequired.addListener(
+        callbackFn,
+        {urls: ["<all_urls>"]},
+        ['blocking']
+    );
+    """ % (
+        proxy["host"],
+        proxy["port"],
+        proxy["username"],
+        proxy["password"],
+    )
+
+    plugin_dir = "chrome_proxy_extension"
+    if not os.path.exists(plugin_dir):
+        os.makedirs(plugin_dir)
+
+    with open(f"{plugin_dir}/manifest.json", "w") as f:
+        f.write(manifest_json)
+    with open(f"{plugin_dir}/background.js", "w") as f:
+        f.write(background_js)
+
+    chrome_options.add_argument(f"--load-extension={os.path.abspath(plugin_dir)}")
+
+    # Giả lập vị trí địa lý (Jerusalem, Israel)
+    chrome_options.add_argument("--enable-geolocation")
+    location = {"latitude": 31.7683, "longitude": 35.2137, "accuracy": 100}
+    chrome_options.add_experimental_option(
+        "prefs",
+        {
+            "profile.default_content_setting_values.geolocation": 1,
+            "profile.default_content_settings.geolocation": 1,
+            "profile.content_settings.exceptions.geolocation": {"*": {"setting": 1}},
+            # Thêm các preferences để giả lập người dùng thực
+            "credentials_enable_service": False,
+            "profile.password_manager_enabled": False,
+            "profile.default_content_setting_values.notifications": 2,
+            "profile.managed_default_content_settings.images": 1,
+            "profile.default_content_setting_values.cookies": 1,
+            "profile.default_content_setting_values.plugins": 1,
+            "profile.default_content_setting_values.popups": 1,
+            "profile.default_content_setting_values.geolocation": 1,
+            "profile.default_content_setting_values.auto_select_certificate": 1,
+            "profile.default_content_setting_values.mixed_script": 1,
+            "profile.default_content_setting_values.media_stream": 1,
+            "profile.default_content_setting_values.media_stream_mic": 1,
+            "profile.default_content_setting_values.media_stream_camera": 1,
+            "profile.default_content_setting_values.protocol_handlers": 1,
+            "profile.default_content_setting_values.midi_sysex": 1,
+            "profile.default_content_setting_values.push_messaging": 1,
+            "profile.default_content_setting_values.ssl_cert_decisions": 1,
+            "profile.default_content_setting_values.metro_switch_to_desktop": 1,
+            "profile.default_content_setting_values.protected_media_identifier": 1,
+            "profile.default_content_setting_values.site_engagement": 1,
+            "profile.default_content_setting_values.durable_storage": 1,
+        },
+    )
 
     # Sử dụng ChromeDriver local
     service = Service(ChromeDriverManager().install())
+
+    # Ẩn chuỗi ChromeDriver trong capabilities
+    service.creation_flags = 0x08000000  # CREATE_NO_WINDOW flag
+
     driver = webdriver.Chrome(service=service, options=chrome_options)
+
+    # Xóa các thuộc tính tiết lộ automation
+    driver.execute_cdp_cmd(
+        "Page.addScriptToEvaluateOnNewDocument",
+        {
+            "source": """
+            // Ẩn webdriver
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+            
+            // Giả lập ngôn ngữ
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['ko-KR', 'ko', 'en-US', 'en']
+            });
+            
+            // Giả lập plugins
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [
+                    {
+                        0: {type: "application/x-google-chrome-pdf", suffixes: "pdf", description: "Portable Document Format"},
+                        description: "Portable Document Format",
+                        filename: "internal-pdf-viewer",
+                        length: 1,
+                        name: "Chrome PDF Plugin"
+                    },
+                    {
+                        0: {type: "application/pdf", suffixes: "pdf", description: "Portable Document Format"},
+                        description: "Portable Document Format",
+                        filename: "mhjfbmdgcfjbbpaeojofohoefgiehjai",
+                        length: 1,
+                        name: "Chrome PDF Viewer"
+                    }
+                ]
+            });
+            
+            // Ẩn automation flags
+            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+            
+            // Giả lập WebGL
+            const getParameter = WebGLRenderingContext.getParameter;
+            WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                if (parameter === 37445) {
+                    return 'Intel Inc.'
+                }
+                if (parameter === 37446) {
+                    return 'Intel(R) Iris(TM) Graphics 6100'
+                }
+                return getParameter(parameter);
+            };
+            
+            // Giả lập thông tin phần cứng
+            Object.defineProperty(navigator, 'hardwareConcurrency', {
+                get: () => 8
+            });
+            Object.defineProperty(navigator, 'deviceMemory', {
+                get: () => 8
+            });
+            Object.defineProperty(screen, 'colorDepth', {
+                get: () => 24
+            });
+            
+            // Giả lập hành vi touch
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({state: Notification.permission}) :
+                    originalQuery(parameters)
+            );
+            
+            // Thêm một số thuộc tính ngẫu nhiên
+            const now = new Date();
+            Object.defineProperty(navigator, 'getBattery', {
+                get: () => () => Promise.resolve({
+                    charging: true,
+                    chargingTime: 0,
+                    dischargingTime: Infinity,
+                    level: 0.98
+                })
+            });
+        """
+        },
+    )
+
+    # Set geolocation after driver creation
+    driver.execute_cdp_cmd("Emulation.setGeolocationOverride", location)
+
+    # Thêm một số hành vi ngẫu nhiên để giống người dùng thực
+    driver.execute_cdp_cmd("Network.enable", {})
+    driver.execute_cdp_cmd(
+        "Network.setUserAgentOverride",
+        {
+            "userAgent": mobile_emulation["userAgent"],
+            "platform": "Android",
+            "acceptLanguage": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        },
+    )
+
+    # Thêm headers tùy chỉnh
+    driver.execute_cdp_cmd(
+        "Network.setExtraHTTPHeaders",
+        {
+            "headers": {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Cache-Control": "max-age=0",
+                "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="112"',
+                "Sec-Ch-Ua-Mobile": "?1",
+                "Sec-Ch-Ua-Platform": '"Android"',
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+            }
+        },
+    )
+
     return driver
 
 
@@ -147,7 +417,7 @@ def worker_instance():
     with app.app_context():
         browser = create_driver_instance()
         # Mở trang cơ sở để làm tab gốc (base tab)
-        browser.get("https://www.coupang.com/")
+        browser.get("https://m.coupang.com/")
         base_tab = browser.current_window_handle
 
         print("Worker started (PID:", os.getpid(), ")")
