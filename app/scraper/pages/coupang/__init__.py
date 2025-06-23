@@ -135,12 +135,12 @@ class CoupangScraper:
             real_url = "https://m.coupang.com" + path_mobile + "?" + query_params
 
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
-            if exist_data:
-                return json.loads(exist_data.response)
+            # exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            # if exist_data:
+            #     return json.loads(exist_data.response)
 
-            added_headers = {"referer": real_url}
-            coupang_data = self.get_page_html(real_url, 0, added_headers)
+            # added_headers = {"referer": real_url}
+            coupang_data = self.get_page_html(real_url)
 
             if not coupang_data:
                 return None
@@ -336,6 +336,8 @@ class CoupangScraper:
                 headers.update(added_headers)
             mobile_user_agent = generate_user_agent()
             headers.update({"user-agent": mobile_user_agent})
+
+            print("headers", headers)
 
             proxies = self.proxies()
 
