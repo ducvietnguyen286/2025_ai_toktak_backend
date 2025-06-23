@@ -24,6 +24,7 @@ import traceback
 from app.services.social_post import SocialPostService
 from app.services.product import ProductService
 from app.services.batch import BatchService
+from app.services.admin_notification import AdminNotificationService
 
 ns = Namespace(name="admin", description="Admin API")
 
@@ -184,8 +185,7 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         new_users = UserService.report_user_by_type(data_search)
-        
-        
+
         data_search = {
             "type": "referral",
             "type_2": "NEW_USER",
@@ -194,9 +194,8 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         referral_new_users = UserService.report_user_by_type(data_search)
-        new_users =  new_users + referral_new_users
-        
-        
+        new_users = new_users + referral_new_users
+
         data_search = {
             "subscription": "FREE",
             "time_range": selected_date_type,
@@ -204,7 +203,7 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         total_user_free = UserService.report_user_by_subscription(data_search)
-        
+
         data_search = {
             "subscription": "BASIC",
             "time_range": selected_date_type,
@@ -212,7 +211,6 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         total_user_basic = UserService.report_user_by_subscription(data_search)
-
 
         data_search = {
             "subscription": "STANDARD",
@@ -222,7 +220,6 @@ class APIReportDashboard(Resource):
         }
         total_user_standard = UserService.report_user_by_subscription(data_search)
 
-        
         data_search = {
             "subscription": "NEW_USER",
             "time_range": selected_date_type,
@@ -230,7 +227,7 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         total_user_new_user = UserService.report_user_by_subscription(data_search)
-        
+
         data_search = {
             "subscription": "BUSINESS",
             "time_range": selected_date_type,
@@ -238,9 +235,6 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         total_user_business = UserService.report_user_by_subscription(data_search)
-
-
-
 
         data_search_coupon = {
             "type": "USED_COUPON",
@@ -327,10 +321,16 @@ class APIReportDashboard(Resource):
         data["total_user_pending_payment"] = total_user_pending_payment
         data["total_user_products"] = total_user_products
         data["total_batchs"] = total_batchs
-        data["total_batch_drafts"] =total_batch_drafts
-        data["total_user_payment_price"] = format_price_won(total_user_paid_payment_price) 
-        data["total_user_paid_payment_price"] = format_price_won(total_user_paid_payment_price)
-        data["total_user_pending_payment_price"] = format_price_won(total_user_pending_payment_price)
+        data["total_batch_drafts"] = total_batch_drafts
+        data["total_user_payment_price"] = format_price_won(
+            total_user_paid_payment_price
+        )
+        data["total_user_paid_payment_price"] = format_price_won(
+            total_user_paid_payment_price
+        )
+        data["total_user_pending_payment_price"] = format_price_won(
+            total_user_pending_payment_price
+        )
 
         return Response(message="", code=200, data=data).to_dict()
 
@@ -504,20 +504,25 @@ class GetDetailLog(Resource):
                     return Response(
                         data=None, message="Missing userId", status=400
                     ).to_dict()
-                
+
                 random_string = "".join(
-                    secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
+                    secrets.choice(string.ascii_letters + string.digits)
+                    for _ in range(60)
                 )
 
                 # Cập nhật mật khẩu
-                update_result = UserService.update_user_with_out_session(userId, password=random_string)
+                update_result = UserService.update_user_with_out_session(
+                    userId, password=random_string
+                )
                 if not update_result:
                     return Response(
                         data=None, message="Update failed", status=400
                     ).to_dict()
 
                 fe_current_domain = os.environ.get("FE_DOMAIN") or "https://toktak.ai"
-                url_return = f"{fe_current_domain}/auth/loginadmin?random_string={random_string}"
+                url_return = (
+                    f"{fe_current_domain}/auth/loginadmin?random_string={random_string}"
+                )
                 return Response(
                     data={"userId": userId, "url_return": url_return},
                     message="Đăng nhập thành công",
@@ -676,3 +681,43 @@ class APIDownloadUserExcel(Resource):
                 message=f"download-excel.(Error code : ) {str(e)}",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/admin_notifications")
+class APIAdminNotification(Resource):
+
+    @jwt_required()
+    @admin_required()
+    def get(self):
+        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+        status = request.args.get("status", const.UPLOADED, type=int)
+        type_order = request.args.get("type_order", "", type=str)
+        type_post = request.args.get("type_post", "", type=str)
+        time_range = request.args.get("time_range", "", type=str)
+        search = request.args.get("search", "", type=str)
+        member_type = request.args.get("member_type", "", type=str)
+        from_date = request.args.get("from_date", "", type=str)
+        to_date = request.args.get("to_date", "", type=str)
+        data_search = {
+            "page": page,
+            "per_page": per_page,
+            "status": status,
+            "type_order": type_order,
+            "type_post": type_post,
+            "time_range": time_range,
+            "search": search,
+            "member_type": member_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        users = AdminNotificationService.admin_search_admin_notifications(data_search)
+        return {
+            "status": True,
+            "message": "Success",
+            "total": users.total,
+            "page": users.page,
+            "per_page": users.per_page,
+            "total_pages": users.pages,
+            "data": [user_detail._to_json() for user_detail in users.items],
+        }, 200
