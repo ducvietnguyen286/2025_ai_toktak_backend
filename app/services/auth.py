@@ -398,7 +398,7 @@ class AuthService:
             secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
         )
 
-        new_user = UserService.update_user(user.id, password=random_string)
+        new_user = UserService.update_user_with_out_session(user.id, password=random_string)
 
         return new_user
 
