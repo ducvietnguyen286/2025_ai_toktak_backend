@@ -498,20 +498,35 @@ class GetDetailLog(Resource):
         @jwt_required()
         @admin_required()
         def get(self):
-            userId = request.args.get("userId", "", type=str)
-            random_string = "".join(
-                secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
-            )
+            try:
+                userId = request.args.get("userId", "", type=str)
+                if not userId:
+                    return Response(
+                        data=None, message="Missing userId", status=400
+                    ).to_dict()
+                
+                random_string = "".join(
+                    secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
+                )
 
-            UserService.update_user(userId, password=random_string)
-            fe_current_domain = os.environ.get("FE_DOMAIN") or "https://toktak.ai"
-            url_return = (
-                f"{fe_current_domain}/auth/loginadmin?random_string={random_string}"
-            )
-            return Response(
-                data={"userId": userId, "url_return": url_return},
-                message="Đăng nhập thành công",
-            ).to_dict()
+                # Cập nhật mật khẩu
+                update_result = UserService.update_user_with_out_session(userId, password=random_string)
+                if not update_result:
+                    return Response(
+                        data=None, message="Update failed", status=400
+                    ).to_dict()
+
+                fe_current_domain = os.environ.get("FE_DOMAIN") or "https://toktak.ai"
+                url_return = f"{fe_current_domain}/auth/loginadmin?random_string={random_string}"
+                return Response(
+                    data={"userId": userId, "url_return": url_return},
+                    message="Đăng nhập thành công",
+                ).to_dict()
+            except Exception as e:
+                logger.error(f"Exception: Lỗi hệ thống  :  {str(e)}")
+                return Response(
+                    data=None, message=f"Lỗi hệ thống: {str(e)}", status=500
+                ).to_dict()
 
 
 @ns.route("/user/detail/<path:id>")
