@@ -2,6 +2,7 @@ import os
 import requests
 from app.errors.exceptions import BadRequest
 from app.lib.logger import logger
+from app.lib.query import select_by_id
 from app.models.social_account import SocialAccount
 from app.models.user import User
 from app.services.referral_service import ReferralService
@@ -306,7 +307,20 @@ class AuthService:
         return {"access_token": access_token}
 
     @staticmethod
+    def get_user_id():
+        subject = get_jwt_identity()
+        if subject is None:
+            return None
+
+        user_id = int(subject)
+        return user_id
+
+    @staticmethod
     def get_current_identity(no_cache=True):
+        """
+        Get current user identity with optimized session management
+        to prevent connection pool exhaustion
+        """
         try:
             subject = get_jwt_identity()
             if subject is None:
@@ -314,44 +328,39 @@ class AuthService:
 
             user_id = int(subject)
 
-            if no_cache:
-                try:
-                    stmt = select(User).filter_by(id=user_id)
-                    user = db.session.execute(stmt).scalar_one_or_none()
-                    if user:
-                        user_dict = user.to_dict()
-                        redis_client.set(
-                            f"toktak:current_user:{user_id}",
-                            json.dumps(user_dict),
-                            ex=const.REDIS_EXPIRE_TIME,
+            # Check Redis cache first if caching is enabled
+            if not no_cache:
+                user_cache = redis_client.get(f"toktak:current_user:{user_id}")
+                if user_cache:
+                    try:
+                        user_dict = json.loads(user_cache)
+                        # Create User object from dict properly
+                        user = User()
+                        for key, value in user_dict.items():
+                            if hasattr(user, key):
+                                setattr(user, key, value)
+                        return user
+                    except Exception as cache_error:
+                        logger.warning(
+                            f"Redis cache error for user {user_id}: {cache_error}"
                         )
-                    return user if user else None
-                finally:
-                    db.session.close()
 
-            user_cache = redis_client.get(f"toktak:current_user:{user_id}")
-            if user_cache:
-                user = json.loads(user_cache)
-                return User(**user)
-
-            try:
-                stmt = select(User).filter_by(id=user_id)
-                user = db.session.execute(stmt).scalar_one_or_none()
-
-                if user:
+            user = select_by_id(User, user_id)
+            if user:
+                try:
                     user_dict = user.to_dict()
                     redis_client.set(
                         f"toktak:current_user:{user_id}",
                         json.dumps(user_dict),
                         ex=const.REDIS_EXPIRE_TIME,
                     )
+                except Exception as cache_error:
+                    logger.warning(f"Failed to cache user {user_id}: {cache_error}")
 
-                return user if user else None
-            finally:
-                db.session.close()
+            return user
 
         except Exception as ex:
-            logger.exception(f"get_current_identity : {ex}")
+            logger.exception(f"get_current_identity error: {ex}")
             return None
 
     @staticmethod
@@ -389,7 +398,7 @@ class AuthService:
             secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
         )
 
-        new_user = UserService.update_user(user.id, password=random_string)
+        new_user = UserService.update_user_with_out_session(user.id, password=random_string)
 
         return new_user
 

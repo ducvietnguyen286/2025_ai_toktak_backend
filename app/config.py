@@ -20,11 +20,22 @@ class Config(object):
     )
 
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 200,
-        "max_overflow": 500,
-        "pool_timeout": 30,
-        "pool_recycle": 1800,
-        "pool_pre_ping": True,
+        "pool_size": 15,  # Giảm xuống để tránh overload
+        "max_overflow": 30,  # Giảm overflow
+        "pool_timeout": 30,  # Tăng lên 30 giây
+        "pool_recycle": 600,  # Giảm xuống 10 phút để refresh connection thường xuyên hơn
+        "pool_pre_ping": True,  # Kiểm tra connection trước khi sử dụng
+        "pool_reset_on_return": "commit",  # Force reset connection khi trả về pool
+        "echo_pool": False,  # Set True để debug pool issues
+        "connect_args": {
+            "autocommit": False,
+            "connect_timeout": 10,
+            "read_timeout": 30,
+            "write_timeout": 30,
+            # MySQL specific settings để tránh timeout
+            "charset": "utf8mb4",
+            "use_unicode": True,
+        },
     }
 
     CELERY_BROKER_URL = os.environ.get("REDIS_URL") or "redis://localhost:6379/0"

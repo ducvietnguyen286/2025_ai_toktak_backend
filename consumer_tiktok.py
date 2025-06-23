@@ -78,7 +78,17 @@ def action_send_post_to_link(message):
         return True
     except Exception as e:
         log_tiktok_message(f"ERROR: Error send post to link: {str(e)}")
+        db.session.rollback()
         return False
+    finally:
+        # CRITICAL: Force cleanup session để tránh connection leak
+        try:
+            if db.session.is_active:
+                db.session.rollback()
+            db.session.close()
+            db.session.remove()
+        except:
+            pass
 
 
 def process_message_sync(body, app):

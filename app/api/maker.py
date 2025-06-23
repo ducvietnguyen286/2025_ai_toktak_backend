@@ -154,7 +154,7 @@ class APICheckCreateBatch(Resource):
     )
     def get(self, args):
         is_advance = args.get("is_advance", False)
-        current_user = AuthService.get_current_identity() or None
+        current_user = AuthService.get_current_identity(no_cache=True) or None
         errors = validater_create_batch(current_user, is_advance)
         if errors:
             return errors
@@ -233,7 +233,7 @@ class APICreateBatchSync(Resource):
                 NotificationServices.create_notification(
                     user_id=user_id_login,
                     status=const.NOTIFICATION_FALSE,
-                    title=f"❌ 해당 {url}은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                    title=f"❌ 해당 {url} 은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
                     description=f"Scraper False {url}",
                 )
 
@@ -569,8 +569,8 @@ class APIGetBatch(Resource):
     @jwt_required()
     def get(self, id):
         try:
-            current_user = AuthService.get_current_identity()
-            if not current_user:
+            user_id = AuthService.get_user_id()
+            if not user_id:
                 return Response(
                     message="Bạn không có quyền truy cập",
                     status=403,
@@ -583,7 +583,7 @@ class APIGetBatch(Resource):
                     status=404,
                 ).to_dict()
 
-            if current_user.id != batch.user_id:
+            if user_id != batch.user_id:
                 return Response(
                     message="Bạn không có quyền truy cập",
                     status=403,
@@ -594,8 +594,8 @@ class APIGetBatch(Resource):
             batch_res = batch._to_json()
             batch_res["posts"] = posts
 
-            user_login = AuthService.get_current_identity()
-            user_info = UserService.get_user_info_detail(user_login.id)
+            user_id = AuthService.get_user_id()
+            user_info = UserService.get_user_info_detail(user_id)
             batch_res["user_info"] = user_info
 
             return Response(
@@ -616,16 +616,12 @@ class APIGetBatch(Resource):
 class APIBatchs(Resource):
 
     def get(self):
-
-        user_id_login = 0
-        current_user = AuthService.get_current_identity() or None
-        if current_user:
-            user_id_login = current_user.id
+        user_id = AuthService.get_user_id()
 
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
 
-        batches = BatchService.get_all_batches(page, per_page, user_id_login)
+        batches = BatchService.get_all_batches(page, per_page, user_id)
 
         return {
             "status": True,
@@ -896,7 +892,7 @@ class APIUpdateStatusBatch(Resource):
     @jwt_required()
     def post(self, id):
         try:
-            current_user = AuthService.get_current_identity()
+            user_id = AuthService.get_user_id()
             message = "Update Batch Success"
             batch = BatchService.find_batch(id)
             if not batch:
@@ -906,19 +902,19 @@ class APIUpdateStatusBatch(Resource):
                 ).to_dict()
 
             batch_detail = BatchService.update_batch(
-                batch.id, status=99, process_status="DRAFT", user_id=current_user.id
+                batch.id, status=99, process_status="DRAFT", user_id=user_id
             )
 
             PostService.update_post_by_batch_id(
-                batch.id, status=const.DRAFT_STATUS, user_id=current_user.id
+                batch.id, status=const.DRAFT_STATUS, user_id=user_id
             )
 
             NotificationServices.update_notification_by_batch_id(
-                batch.id, user_id=current_user.id
+                batch.id, user_id=user_id
             )
 
             NotificationServices.create_notification(
-                user_id=current_user.id,
+                user_id=user_id,
                 batch_id=id,
                 title="💾 작업이 임시 저장되었습니다.",
             )
@@ -942,7 +938,7 @@ class APIHistories(Resource):
     @jwt_required()
     def get(self):
         try:
-            current_user = AuthService.get_current_identity()
+            user_id = AuthService.get_user_id()
             page = request.args.get("page", const.DEFAULT_PAGE, type=int)
             per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
             status = request.args.get("status", const.UPLOADED, type=int)
@@ -958,7 +954,7 @@ class APIHistories(Resource):
                 "type_order": type_order,
                 "type_post": type_post,
                 "time_range": time_range,
-                "user_id": current_user.id,
+                "user_id": user_id,
                 "from_date": from_date,
                 "to_date": to_date,
             }
@@ -966,7 +962,7 @@ class APIHistories(Resource):
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
             return {
-                "current_user": current_user.id,
+                "current_user": user_id,
                 "status": True,
                 "message": "Success",
                 "total": posts.get("total", 0),
@@ -1050,12 +1046,12 @@ class APITemplateVideo(Resource):
     def get(self):
         try:
             batch_id = request.args.get("batch_id")
-            current_user = AuthService.get_current_identity()
-            user_template = PostService.get_template_video_by_user_id(current_user.id)
+            user_id = AuthService.get_user_id()
+            user_template = PostService.get_template_video_by_user_id(user_id)
 
             if not user_template:
                 user_template = PostService.create_user_template_make_video(
-                    user_id=current_user.id
+                    user_id=user_id
                 )
 
             user_template_data = user_template.to_dict()

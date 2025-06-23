@@ -165,6 +165,11 @@ class UserService:
         return user_link
 
     @staticmethod
+    def update_user_link(id, *args, **kwargs):
+        update_by_id(UserLink, id, data=kwargs)
+        return True
+
+    @staticmethod
     def update_by_link_multiple_user_links(link_id=0, *args, **kwargs):
         UserLink.query.filter(UserLink.link_id == link_id).update(
             kwargs, synchronize_session=False
@@ -173,26 +178,25 @@ class UserService:
 
     @staticmethod
     def find_user_link(link_id=0, user_id=0):
-        user_link = select_with_filter_one(
-            UserLink,
-            [UserLink.link_id == link_id, UserLink.user_id == user_id],
-            [],
-        )
-        return user_link
-
-    @staticmethod
-    def find_user_link_by_id(user_link_id=0):
-        user_link = UserLink.query.get(user_link_id)
-        return user_link
-
-    @staticmethod
-    def find_user_link_exist(link_id=0, user_id=0):
         user_link = (
             UserLink.query.where(UserLink.user_id == user_id)
             .where(UserLink.link_id == link_id)
-            .all()
+            .first()
         )
-        return user_link[0] if user_link else None
+        return user_link if user_link else None
+
+    @staticmethod
+    def find_user_link_by_id(user_link_id=0):
+        return select_by_id(UserLink, user_link_id)
+
+    @staticmethod
+    def find_user_link_exist(link_id=0, user_id=0):
+        user_link = select_with_filter_one(
+            UserLink,
+            [UserLink.user_id == user_id, UserLink.link_id == link_id],
+            [],
+        )
+        return user_link
 
     @staticmethod
     def get_by_link_user_links(link_id=0, user_id=0):
@@ -539,3 +543,11 @@ class UserService:
         total = histories.count()
 
         return total
+
+    @staticmethod
+    def update_user_with_out_session(id, *args, **kwargs):
+        user = User.query.get(id)
+        if not user:
+            return None
+        user.update(**kwargs)
+        return user

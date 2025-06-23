@@ -78,55 +78,64 @@ class APISocialLogin(Resource):
         required=["provider", "access_token"],
     )
     def post(self, args):
-        provider = args.get("provider", "")
-        access_token = args.get("access_token", "")
-        person_id = args.get("person_id", "")
-        referral_code = args.get("referral_code", "")
+        try:
+            provider = args.get("provider", "")
+            access_token = args.get("access_token", "")
+            person_id = args.get("person_id", "")
+            referral_code = args.get("referral_code", "")
 
-        if referral_code != "":
-            user_referal_detail = UserService.find_user_by_referral_code(referral_code)
-            if not user_referal_detail:
+            if referral_code != "":
+                user_referal_detail = UserService.find_user_by_referral_code(
+                    referral_code
+                )
+                if not user_referal_detail:
+                    return Response(
+                        message="입력하신 URL을 다시 한 번 확인해 주세요. 😊",
+                        data={
+                            "error_message_title": "⚠️ 초대하기 URL에 문제가 있어요!",
+                            "error_message": "입력하신 URL을 다시 한 번 확인해 주세요. 😊",
+                            "referral_code": referral_code,
+                        },
+                        code=202,
+                    ).to_dict()
+
+            user, new_user_referral_code, is_new_user = AuthService.social_login(
+                provider=provider,
+                access_token=access_token,
+                person_id=person_id,
+                referral_code=referral_code,
+            )
+
+            if user.deleted_at and (datetime.now() - user.deleted_at).days <= 30:
                 return Response(
-                    message="입력하신 URL을 다시 한 번 확인해 주세요. 😊",
+                    message="시스템에 로그인해주세요.",
                     data={
-                        "error_message_title": "⚠️ 초대하기 URL에 문제가 있어요!",
-                        "error_message": "입력하신 URL을 다시 한 번 확인해 주세요. 😊",
-                        "referral_code": referral_code,
+                        "error_message_title": "⚠️ 현재는 재가입할 수 없어요!",
+                        "error_message": "🚫 탈퇴하신 계정은 30일간 재가입하실 수 없습니다.",
                     },
-                    code=202,
+                    code=201,
                 ).to_dict()
 
-        user, new_user_referral_code, is_new_user = AuthService.social_login(
-            provider=provider,
-            access_token=access_token,
-            person_id=person_id,
-            referral_code=referral_code,
-        )
+            tokens = AuthService.generate_token(user)
+            tokens.update(
+                {
+                    "type": "Bearer",
+                    "expires_in": 7200,
+                    "new_user_referral_code": new_user_referral_code,
+                    "is_new_user": is_new_user,
+                }
+            )
 
-        if user.deleted_at and (datetime.now() - user.deleted_at).days <= 30:
             return Response(
-                message="시스템에 로그인해주세요.",
-                data={
-                    "error_message_title": "⚠️ 현재는 재가입할 수 없어요!",
-                    "error_message": "🚫 탈퇴하신 계정은 30일간 재가입하실 수 없습니다.",
-                },
-                code=201,
+                data=tokens,
+                message="Đăng nhập bằng mạng xã hội thành công",
             ).to_dict()
-
-        tokens = AuthService.generate_token(user)
-        tokens.update(
-            {
-                "type": "Bearer",
-                "expires_in": 7200,
-                "new_user_referral_code": new_user_referral_code,
-                "is_new_user": is_new_user,
-            }
-        )
-
-        return Response(
-            data=tokens,
-            message="Đăng nhập bằng mạng xã hội thành công",
-        ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.exception(f"social-login : {e}")
+            return Response(
+                data=None, message=f"Lỗi hệ thống: {str(e)}", status=500
+            ).to_dict()
 
 
 @ns.route("/register")
@@ -445,16 +454,16 @@ class APIDeleteAccount(Resource):
     @jwt_required()
     def post(self):
 
-        user_login = AuthService.get_current_identity()
-        if not user_login:
+        user_id = AuthService.get_user_id()
+        if not user_id:
             return Response(
                 message="시스템에 로그인해주세요.",
                 code=201,
             ).to_dict()
 
-        AuthService.deleteAccount(user_login.id)
+        AuthService.deleteAccount(user_id)
 
-        redis_client.delete(f"toktak:current_user:{user_login.id}")
+        redis_client.delete(f"toktak:current_user:{user_id}")
 
         return Response(
             data={},

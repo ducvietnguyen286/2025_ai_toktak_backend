@@ -7,6 +7,7 @@ from app.lib.query import (
     update_by_id,
 )
 from datetime import datetime, timedelta
+from app.extensions import db
 
 
 class BatchService:
@@ -37,7 +38,7 @@ class BatchService:
     @staticmethod
     def update_batch(id, *args, **kwargs):
         update_by_id(Batch, id, kwargs)
-        batch = Batch.query.get(id)
+        batch = select_by_id(Batch, id)
         return batch
 
     @staticmethod
@@ -101,3 +102,19 @@ class BatchService:
         total = histories.count()
 
         return total
+
+    @staticmethod
+    def find_batch_with_task(id, session=None):
+        if session is None:
+            session = db.session
+        return session.get(Batch, id)
+
+    @staticmethod
+    def update_batch_with_task(batch_id, session=None, **kwargs):
+        if session is None:
+            session = db.session
+        batch = session.get(Batch, batch_id)
+        for k, v in kwargs.items():
+            setattr(batch, k, v)
+        session.commit()
+        return batch

@@ -171,11 +171,24 @@ def worker_instance():
 
                     # Quay lại tab cơ sở
                     browser.switch_to.window(base_tab)
+
+                    # Commit any DB changes made during task processing
+                    db.session.commit()
                 else:
                     time.sleep(1)
             except Exception as e:
                 logger.error(f"Error in worker_instance loop: {str(e)}")
                 print("Error in worker_instance loop:", e)
+                db.session.rollback()
+            finally:
+                # CRITICAL: Force cleanup session to prevent connection leaks
+                try:
+                    if db.session.is_active:
+                        db.session.rollback()
+                    db.session.close()
+                    db.session.remove()
+                except:
+                    pass
 
         print("Worker stopped (PID:", os.getpid(), ")")
         browser.quit()

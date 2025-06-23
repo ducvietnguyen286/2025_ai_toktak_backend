@@ -20,11 +20,12 @@ PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 class TiktokTokenService:
 
     @staticmethod
-    def fetch_user_info(user_link):
+    def fetch_user_info(user_id, link_id):
         try:
             log_tiktok_message(
                 "------------------  FETCH TIKTOK USER INFO  ------------------"
             )
+            user_link = UserService.find_user_link(link_id=link_id, user_id=user_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
 
@@ -308,7 +309,9 @@ class TiktokService(BaseService):
                 if refreshed["status"] == "success":
                     new_meta = refreshed["result"]
                     self.meta = new_meta
-                    return self.upload_image(medias=json.dumps(medias), retry=retry + 1)
+                    return self.upload_image(
+                        input_medias=json.dumps(medias), retry=retry + 1
+                    )
                 else:
                     self.save_errors(
                         "ERRORED",
@@ -452,9 +455,7 @@ class TiktokService(BaseService):
                 if refreshed["status"] == "success":
                     new_meta = refreshed["result"]
                     self.meta = new_meta
-                    return self.upload_video_by_url(
-                        media_url=media_url, retry=retry + 1
-                    )
+                    return self.upload_video_by_url(post=post, retry=retry + 1)
                 else:
                     self.save_errors(
                         "ERRORED",
