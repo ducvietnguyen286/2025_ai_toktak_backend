@@ -3,6 +3,7 @@ import requests
 import json
 import os
 import random
+from app.enums.voices import Voices
 from app.lib.audio import merge_audio_files
 from app.lib.string import split_text_by_words
 from app.models.video_create import VideoCreate
@@ -36,13 +37,13 @@ class ShotStackService:
         batch_id = data_make_video["batch_id"]
         is_advance = data_make_video["is_advance"]
         template_info = data_make_video["template_info"]
-        voice_google = data_make_video["voice_google"]
-        voice_typecast = data_make_video["voice_typecast"]
         origin_caption = data_make_video["origin_caption"]
         images_url = data_make_video["images_url"]
         images_slider_url = data_make_video["images_slider_url"]
         product_video_url = data_make_video["product_video_url"] or ""
         batch_type = data_make_video["batch_type"] or ""
+        voice_type = data_make_video["voice_type"] or ""
+        voice = data_make_video["voice"] or ""
 
         config = ShotStackService.get_settings()
         SHOTSTACK_API_KEY = config["SHOTSTACK_API_KEY"]
@@ -87,16 +88,17 @@ class ShotStackService:
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
         # Chọn giọng nói ngẫu nhiên
-        korean_voice = get_korean_typecast_voice(voice_typecast)
 
-        mp3_file, audio_duration = text_to_speech_kr(
-            korean_voice, origin_caption, dir_path, config
-        )
-
-        # korean_voice = get_korean_voice_google(voice_google)
-        # mp3_file, audio_duration = text_to_speech_kr_old(
-        #     korean_voice, origin_caption, dir_path, config
-        # )
+        if voice_type == Voices.GOOGLE.value:
+            korean_voice = get_korean_voice_google(voice)
+            mp3_file, audio_duration = text_to_speech_kr_old(
+                korean_voice, origin_caption, dir_path, config
+            )
+        else:
+            korean_voice = get_korean_typecast_voice(voice)
+            mp3_file, audio_duration = text_to_speech_kr(
+                korean_voice, origin_caption, dir_path, config
+            )
 
         video_urls = ShotStackService.get_random_videos(2)
 
@@ -1256,8 +1258,9 @@ def get_typecast_voices():
         return []
 
 
-def get_korean_voice_google(index):
-    adjusted_index = (index - 1) % len(const.KOREAN_VOICES)
+def get_korean_voice_google(voice_id):
+    int_voice_id = int(voice_id)
+    adjusted_index = (int_voice_id - 1) % len(const.KOREAN_VOICES)
     return const.KOREAN_VOICES[adjusted_index]
 
 

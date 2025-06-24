@@ -8,6 +8,7 @@ from app.ais.chatgpt import (
     call_chatgpt_create_social,
 )
 from app.enums.messages import MessageError, MessageSuccess
+from app.enums.voices import Voices
 from app.lib.logger import log_create_content_message, logger
 from app.lib.string import (
     change_advance_hashtags,
@@ -555,7 +556,7 @@ def process_create_post_blog(process_images, data, batch, post):
     batch_id = batch.id
     try:
         response = call_chatgpt_create_blog(process_images, data, post.id)
-        
+
         if response:
             parse_caption = json.loads(response)
             parse_response = parse_caption.get("response", {})
@@ -563,7 +564,7 @@ def process_create_post_blog(process_images, data, batch, post):
             docx_content = parse_response.get("docx_content", "")
 
             ads_text = get_ads_content(url)
-            
+
             res_txt = DocxMaker().make_txt(
                 docx_title,
                 ads_text,
@@ -730,8 +731,8 @@ def process_create_post_video(process_images, data, batch, post):
 
                 product_name = data["name"]
 
-                voice_google = batch.voice_google or 1
-                voice_typecast = batch.voice_typecast or ""
+                voice = batch.voice or ""
+                voice_type = batch.voice_type or Voices.GOOGLE.value
 
                 product_video_url = data.get("video_url", "")
                 if product_video_url != "":
@@ -743,8 +744,8 @@ def process_create_post_video(process_images, data, batch, post):
                     "is_advance": batch.is_advance,
                     "template_info": batch.template_info,
                     "batch_type": batch.type,
-                    "voice_google": voice_google,
-                    "voice_typecast": voice_typecast,
+                    "voice_type": voice_type,
+                    "voice": voice,
                     "origin_caption": origin_caption,
                     "images_url": image_renders,
                     "images_slider_url": image_renders_sliders,
