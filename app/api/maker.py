@@ -1056,8 +1056,8 @@ class APITemplateVideo(Resource):
 
             user_template_data = user_template.to_dict()
 
-            # if "audios" not in user_template_data:
-            #     user_template_data["audios"] = get_typecast_voices()
+            if "audios" not in user_template_data:
+                user_template_data["audios"] = get_typecast_voices()
 
             if batch_id:
                 batch_info = BatchService.find_batch(batch_id)
