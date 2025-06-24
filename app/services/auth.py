@@ -2,6 +2,7 @@ import os
 import requests
 from app.errors.exceptions import BadRequest
 from app.lib.logger import logger
+from app.lib.query import select_by_id
 from app.models.social_account import SocialAccount
 from app.models.user import User
 from app.services.referral_service import ReferralService
@@ -78,6 +79,7 @@ class AuthService:
         if not provider_user_id:
             provider_user_id = user_info.get("sub")
         email = user_info.get("email")
+
         name = user_info.get("name")
         avatar = user_info.get("picture")
         if type(avatar) == dict:
@@ -86,6 +88,75 @@ class AuthService:
         social_account = SocialAccount.query.filter_by(
             provider=provider, provider_user_id=provider_user_id
         ).first()
+
+        # BEGIN LOGIN USER
+        login_user_id = 0
+        if social_account:
+            login_user_id = social_account.user_id
+
+        user = None
+        if login_user_id > 0:
+            user = User.query.get(login_user_id)
+
+        if not user:
+            level = 0
+            level_info = get_level_images(level)
+
+            subscription_expired = datetime.now() + relativedelta(months=1)
+            user = User(
+                email=email,
+                name=name,
+                avatar=avatar,
+                level=level,
+                contact=provider,
+                subscription="NEW_USER",
+                subscription_expired=subscription_expired,
+                batch_total=const.PACKAGE_CONFIG["BASIC"]["batch_total"],
+                batch_remain=const.PACKAGE_CONFIG["BASIC"]["batch_remain"],
+                total_link_active=const.PACKAGE_CONFIG["BASIC"]["total_link_active"],
+                level_info=json.dumps(level_info),
+            )
+
+            user.save()
+
+            # Create Basic for new User
+            object_start_time = datetime.now()
+            data_new_user_history = {
+                "user_id": user.id,
+                "type": "user",
+                "type_2": "NEW_USER",
+                "object_id": user.id,
+                "object_start_time": object_start_time,
+                "object_end_time": subscription_expired,
+                "title": "신규 가입 선물",
+                "description": "신규 가입 선물",
+                "value": 30,
+                "num_days": 30,
+            }
+            UserService.create_user_history(**data_new_user_history)
+
+            # payment history
+            payment = PaymentService.create_new_payment(
+                user, "BASIC", "PAID", 0, "NEW_USER"
+            )
+
+            is_new_user = 1
+
+            if referral_code != "":
+                user_history = ReferralService.use_referral_code(referral_code, user)
+                if user_history:
+                    new_user_referral_code = 1
+
+        if not social_account:
+            social_account = SocialAccount(
+                user_id=user.id,
+                provider=provider,
+                provider_user_id=provider_user_id,
+                access_token=access_token,
+            )
+            social_account.save()
+
+        return user, new_user_referral_code, is_new_user
 
         if social_account:
             user = User.query.get(social_account.user_id)
@@ -99,6 +170,7 @@ class AuthService:
                     name=name,
                     avatar=avatar,
                     level=level,
+                    contact=provider,
                     subscription_expired=subscription_expired,
                     level_info=json.dumps(level_info),
                 )
@@ -121,7 +193,9 @@ class AuthService:
                 UserService.create_user_history(**data_new_user_history)
 
                 # payment history
-                payment = PaymentService.create_new_payment(user, "BASIC", "PAID")
+                payment = PaymentService.create_new_payment(
+                    user, "BASIC", "PAID", 0, "NEW_USER"
+                )
 
             else:
                 user = User.query.filter_by(email=email).first()
@@ -136,6 +210,7 @@ class AuthService:
                     name=name,
                     avatar=avatar,
                     level=level,
+                    contact=provider,
                     subscription="NEW_USER",
                     subscription_expired=subscription_expired,
                     batch_total=const.PACKAGE_CONFIG["BASIC"]["batch_total"],
@@ -165,7 +240,9 @@ class AuthService:
                 UserService.create_user_history(**data_new_user_history)
 
                 # payment history
-                payment = PaymentService.create_new_payment(user, "BASIC", "PAID")
+                payment = PaymentService.create_new_payment(
+                    user, "BASIC", "PAID", 0, "NEW_USER"
+                )
 
                 is_new_user = 1
 
@@ -230,7 +307,20 @@ class AuthService:
         return {"access_token": access_token}
 
     @staticmethod
+    def get_user_id():
+        subject = get_jwt_identity()
+        if subject is None:
+            return None
+
+        user_id = int(subject)
+        return user_id
+
+    @staticmethod
     def get_current_identity(no_cache=True):
+        """
+        Get current user identity with optimized session management
+        to prevent connection pool exhaustion
+        """
         try:
             subject = get_jwt_identity()
             if subject is None:
@@ -238,38 +328,39 @@ class AuthService:
 
             user_id = int(subject)
 
-            if no_cache:
-                stmt = select(User).filter_by(id=user_id)
-                user = db.session.execute(stmt).scalar_one_or_none()
-                if user:
+            # Check Redis cache first if caching is enabled
+            if not no_cache:
+                user_cache = redis_client.get(f"toktak:current_user:{user_id}")
+                if user_cache:
+                    try:
+                        user_dict = json.loads(user_cache)
+                        # Create User object from dict properly
+                        user = User()
+                        for key, value in user_dict.items():
+                            if hasattr(user, key):
+                                setattr(user, key, value)
+                        return user
+                    except Exception as cache_error:
+                        logger.warning(
+                            f"Redis cache error for user {user_id}: {cache_error}"
+                        )
+
+            user = select_by_id(User, user_id)
+            if user:
+                try:
                     user_dict = user.to_dict()
                     redis_client.set(
                         f"toktak:current_user:{user_id}",
                         json.dumps(user_dict),
                         ex=const.REDIS_EXPIRE_TIME,
                     )
-                return user if user else None
+                except Exception as cache_error:
+                    logger.warning(f"Failed to cache user {user_id}: {cache_error}")
 
-            user_cache = redis_client.get(f"toktak:current_user:{user_id}")
-            if user_cache:
-                user = json.loads(user_cache)
-                return User(**user)
-
-            stmt = select(User).filter_by(id=user_id)
-            user = db.session.execute(stmt).scalar_one_or_none()
-
-            if user:
-                user_dict = user.to_dict()
-                redis_client.set(
-                    f"toktak:current_user:{user_id}",
-                    json.dumps(user_dict),
-                    ex=const.REDIS_EXPIRE_TIME,
-                )
-
-            return user if user else None
+            return user
 
         except Exception as ex:
-            logger.exception(f"get_current_identity : {ex}")
+            logger.exception(f"get_current_identity error: {ex}")
             return None
 
     @staticmethod
@@ -307,7 +398,7 @@ class AuthService:
             secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
         )
 
-        new_user = UserService.update_user(user.id, password=random_string)
+        new_user = UserService.update_user_with_out_session(user.id, password=random_string)
 
         return new_user
 

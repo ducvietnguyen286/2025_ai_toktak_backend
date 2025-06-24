@@ -1,3 +1,4 @@
+from app.lib.string import parse_date
 from app.models.coupon_code import CouponCode
 from app.models.user import User
 from app.models.user_link import UserLink
@@ -164,6 +165,11 @@ class UserService:
         return user_link
 
     @staticmethod
+    def update_user_link(id, *args, **kwargs):
+        update_by_id(UserLink, id, data=kwargs)
+        return True
+
+    @staticmethod
     def update_by_link_multiple_user_links(link_id=0, *args, **kwargs):
         UserLink.query.filter(UserLink.link_id == link_id).update(
             kwargs, synchronize_session=False
@@ -172,26 +178,25 @@ class UserService:
 
     @staticmethod
     def find_user_link(link_id=0, user_id=0):
-        user_link = select_with_filter_one(
-            UserLink,
-            [UserLink.link_id == link_id, UserLink.user_id == user_id],
-            [],
-        )
-        return user_link
-
-    @staticmethod
-    def find_user_link_by_id(user_link_id=0):
-        user_link = UserLink.query.get(user_link_id)
-        return user_link
-
-    @staticmethod
-    def find_user_link_exist(link_id=0, user_id=0):
         user_link = (
             UserLink.query.where(UserLink.user_id == user_id)
             .where(UserLink.link_id == link_id)
-            .all()
+            .first()
         )
-        return user_link[0] if user_link else None
+        return user_link if user_link else None
+
+    @staticmethod
+    def find_user_link_by_id(user_link_id=0):
+        return select_by_id(UserLink, user_link_id)
+
+    @staticmethod
+    def find_user_link_exist(link_id=0, user_id=0):
+        user_link = select_with_filter_one(
+            UserLink,
+            [UserLink.user_id == user_id, UserLink.link_id == link_id],
+            [],
+        )
+        return user_link
 
     @staticmethod
     def get_by_link_user_links(link_id=0, user_id=0):
@@ -287,6 +292,15 @@ class UserService:
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
             query = query.filter(User.created_at >= start_date)
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                query = query.filter(User.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                query = query.filter(User.created_at < to_date)
 
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
@@ -364,8 +378,8 @@ class UserService:
 
         used_date_range = ""
         if start_used and last_used:
-            start_used = datetime.strptime(start_used, "%Y-%m-%dT%H:%M:%SZ")
-            last_used = datetime.strptime(last_used, "%Y-%m-%dT%H:%M:%SZ")
+            start_used = parse_date(start_used)
+            last_used = parse_date(last_used)
             used_date_range = (
                 f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
             )
@@ -444,3 +458,96 @@ class UserService:
             ),
             "histories": [history_detail._to_json() for history_detail in histories],
         }
+
+    @staticmethod
+    def report_user_by_type(data_search):
+
+        histories = UserHistory.query
+        type = data_search.get("type", "")
+        type_2 = data_search.get("type_2", "")
+
+        if type != "":
+            histories = histories.filter(UserHistory.type == type)
+        if type_2 != "":
+            histories = histories.filter(UserHistory.type_2 == type_2)
+        time_range = data_search.get("time_range", "")
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            histories = histories.filter(UserHistory.created_at >= start_date)
+
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            histories = histories.filter(UserHistory.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            histories = histories.filter(UserHistory.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            histories = histories.filter(UserHistory.created_at >= start_date)
+
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                histories = histories.filter(UserHistory.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                histories = histories.filter(UserHistory.created_at < to_date)
+
+        total = histories.count()
+
+        return total
+
+    @staticmethod
+    def report_user_by_subscription(data_search):
+        histories = User.query
+        subscription = data_search.get("subscription", "")
+
+        if subscription != "":
+            histories = histories.filter(User.subscription == subscription)
+
+        time_range = data_search.get("time_range", "")
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                histories = histories.filter(User.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                histories = histories.filter(User.created_at < to_date)
+
+        total = histories.count()
+
+        return total
+
+    @staticmethod
+    def update_user_with_out_session(id, *args, **kwargs):
+        user = User.query.get(id)
+        if not user:
+            return None
+        user.update(**kwargs)
+        return user

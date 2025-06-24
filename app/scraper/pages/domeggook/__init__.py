@@ -1,4 +1,6 @@
 from http.cookiejar import CookieJar
+import os
+import random
 import traceback
 from bs4 import BeautifulSoup
 import requests
@@ -13,6 +15,12 @@ from urllib.parse import unquote
 class DomeggookScraper:
     def __init__(self, params):
         self.url = params["url"]
+
+    def proxies(self):
+        return {
+            "http": "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80/",
+            "https": "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80/",
+        }
 
     def un_shortend_url(self, url, retry=0):
         try:
@@ -98,8 +106,8 @@ class DomeggookScraper:
 
             session = requests.Session()
             headers = self.generate_random_headers_request()
-
-            response = session.get(url, headers=headers, timeout=5)
+            proxies = self.proxies()
+            response = session.get(url, headers=headers, timeout=5, proxies=proxies)
             info = response.content
             html = BeautifulSoup(info, "html.parser")
             # file_html = open("demo.html", "w", encoding="utf-8")

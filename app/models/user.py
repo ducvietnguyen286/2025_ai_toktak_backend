@@ -48,9 +48,9 @@ class User(db.Model, BaseModel):
     ali_express_active = db.Column(db.Boolean, default=False)
     ali_express_info = db.Column(db.Text)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
-    last_activated = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
+    last_activated = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
+    updated_at = db.Column(db.DateTime, default=datetime.now)
     deleted_at = db.Column(db.DateTime)
 
     print_filter = ("password",)
@@ -81,22 +81,22 @@ class User(db.Model, BaseModel):
             "user_type": self.user_type,
             "referrer_user_id": self.referrer_user_id,
             "subscription_expired": (
-                self.subscription_expired.strftime("%Y-%m-%dT%H:%M:%SZ")
+                self.subscription_expired.strftime("%Y-%m-%d %H:%M:%S")
                 if self.subscription_expired
                 else None
             ),
             "created_at": (
-                self.created_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+                self.created_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.created_at
                 else None
             ),
             "last_activated": (
-                self.last_activated.strftime("%Y-%m-%dT%H:%M:%SZ")
+                self.last_activated.strftime("%Y-%m-%d %H:%M:%S")
                 if self.last_activated
                 else None
             ),
             "updated_at": (
-                self.updated_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+                self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.updated_at
                 else None
             ),

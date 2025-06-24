@@ -20,9 +20,9 @@ class CouponCode(db.Model, BaseModel):
     total_link_active = db.Column(db.Integer, default=7)
     used_at = db.Column(db.DateTime)
     used_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )  #
 
     coupon = db.relationship(Coupon, foreign_keys=[coupon_id], lazy="joined")

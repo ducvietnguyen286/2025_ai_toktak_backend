@@ -5,6 +5,7 @@ from app.ais.chatgpt import call_chatgpt_get_main_text_and_color_for_image
 from app.makers.images import ImageMaker
 from app.models.image_template import ImageTemplate
 from app.lib.query import (
+    delete_by_id,
     select_with_filter,
     select_by_id,
     select_with_pagination,
@@ -58,11 +59,8 @@ class ImageTemplateService:
 
     @staticmethod
     def delete_image_template(id):
-        template = select_by_id(ImageTemplate, id)
-        if template:
-            template.delete()
-            return True
-        return False
+        delete_by_id(ImageTemplate, id)
+        return True
 
     @staticmethod
     def create_image_by_template(

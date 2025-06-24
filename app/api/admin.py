@@ -4,21 +4,27 @@ from flask_restx import Namespace, Resource
 from app.decorators import parameters, admin_required
 from app.lib.response import Response
 from app.services.user import UserService
-from datetime import datetime
+from app.services.payment_services import PaymentService
+from datetime import datetime, timedelta
 
 from app.lib.logger import logger
 import json
-from flask import request
+from flask import request, send_file
 from app.services.auth import AuthService
 from app.services.referral_service import ReferralService
-from app.lib.string import get_level_images
+from app.lib.string import format_price_won, get_level_images
 import const
 import os
 import secrets
 import string
 from app.extensions import redis_client
+import pandas as pd
+from io import BytesIO
+import traceback
 
 from app.services.social_post import SocialPostService
+from app.services.product import ProductService
+from app.services.batch import BatchService
 
 ns = Namespace(name="admin", description="Admin API")
 
@@ -77,6 +83,8 @@ class APIUsers(Resource):
         time_range = request.args.get("time_range", "", type=str)
         search = request.args.get("search", "", type=str)
         member_type = request.args.get("member_type", "", type=str)
+        from_date = request.args.get("from_date", "", type=str)
+        to_date = request.args.get("to_date", "", type=str)
         data_search = {
             "page": page,
             "per_page": per_page,
@@ -86,6 +94,8 @@ class APIUsers(Resource):
             "time_range": time_range,
             "search": search,
             "member_type": member_type,
+            "from_date": from_date,
+            "to_date": to_date,
         }
         users = UserService.admin_search_users(data_search)
         return {
@@ -151,13 +161,176 @@ class APIDeleteUser(Resource):
 
 @ns.route("/socialposts")
 class APISocialPost(Resource):
-
     @jwt_required()
     @admin_required()
     def get(self):
-
         filters = request.args.to_dict()  # Convert query string to dict
         data = SocialPostService.getTotalRunning(filters)
+        return Response(message="", code=200, data=data).to_dict()
+
+
+@ns.route("/report_dashboard")
+class APIReportDashboard(Resource):
+    @jwt_required()
+    @admin_required()
+    def get(self):
+        selected_date_type = request.args.get("selected_date_type", "", type=str)
+        from_date = request.args.get("from_date", "", type=str)
+        to_date = request.args.get("to_date", "", type=str)
+        data_search = {
+            "type": "user",
+            "type_2": "NEW_USER",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        new_users = UserService.report_user_by_type(data_search)
+
+        data_search = {
+            "type": "referral",
+            "type_2": "NEW_USER",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        referral_new_users = UserService.report_user_by_type(data_search)
+        new_users = new_users + referral_new_users
+
+        data_search = {
+            "subscription": "FREE",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_free = UserService.report_user_by_subscription(data_search)
+
+        data_search = {
+            "subscription": "BASIC",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_basic = UserService.report_user_by_subscription(data_search)
+
+        data_search = {
+            "subscription": "STANDARD",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_standard = UserService.report_user_by_subscription(data_search)
+
+        data_search = {
+            "subscription": "NEW_USER",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_new_user = UserService.report_user_by_subscription(data_search)
+
+        data_search = {
+            "subscription": "BUSINESS",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_business = UserService.report_user_by_subscription(data_search)
+
+        data_search_coupon = {
+            "type": "USED_COUPON",
+            "type_2": "",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+
+        total_user_use_coupon = UserService.report_user_by_type(data_search_coupon)
+
+        data_search_payment = {
+            "package_name": "",
+            "type_2": "",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        data_user_payment = PaymentService.report_payment_by_type(data_search_payment)
+        total_user_payment = data_user_payment["total"]
+        total_user_payment_price = data_user_payment["total_price"]
+
+        data_search_payment_paid = {
+            "package_name": "",
+            "status": "PAID",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        data_user_paid_payment = PaymentService.report_payment_by_type(
+            data_search_payment_paid
+        )
+        total_user_paid_payment = data_user_paid_payment["total"]
+        total_user_paid_payment_price = data_user_paid_payment["total_price"]
+
+        data_search_pending_payment = {
+            "package_name": "",
+            "status": "PENDING",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        data_user_pending_payment = PaymentService.report_payment_by_type(
+            data_search_pending_payment
+        )
+        total_user_pending_payment = data_user_pending_payment["total"]
+        total_user_pending_payment_price = data_user_pending_payment["total_price"]
+
+        data_search_products = {
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_user_products = ProductService.report_product_by_type(
+            data_search_products
+        )
+
+        data_search_contents = {
+            "process_status": "",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_batchs = BatchService.report_batch_by_type(data_search_contents)
+
+        data_search_contents = {
+            "process_status": "DRAFT",
+            "time_range": selected_date_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        total_batch_drafts = BatchService.report_batch_by_type(data_search_contents)
+
+        data = {}
+        data["total_user_free"] = total_user_free
+        data["total_user_basic"] = total_user_basic
+        data["total_user_standard"] = total_user_standard
+        data["total_user_new_user"] = total_user_new_user
+        data["total_user_business"] = total_user_business
+        data["new_users"] = new_users
+        data["total_user_use_coupon"] = total_user_use_coupon
+        data["total_user_payment"] = total_user_payment
+        data["total_user_paid_payment"] = total_user_paid_payment
+        data["total_user_pending_payment"] = total_user_pending_payment
+        data["total_user_products"] = total_user_products
+        data["total_batchs"] = total_batchs
+        data["total_batch_drafts"] = total_batch_drafts
+        data["total_user_payment_price"] = format_price_won(
+            total_user_paid_payment_price
+        )
+        data["total_user_paid_payment_price"] = format_price_won(
+            total_user_paid_payment_price
+        )
+        data["total_user_pending_payment_price"] = format_price_won(
+            total_user_pending_payment_price
+        )
 
         return Response(message="", code=200, data=data).to_dict()
 
@@ -247,6 +420,8 @@ class GetDetailLog(Resource):
             time_range = request.args.get("time_range", "", type=str)
             type_status = request.args.get("type_status", "", type=str)
             search_key = request.args.get("search_key", "", type=str)
+            from_date = request.args.get("from_date", "", type=str)
+            to_date = request.args.get("to_date", "", type=str)
             data_search = {
                 "page": page,
                 "per_page": per_page,
@@ -256,6 +431,8 @@ class GetDetailLog(Resource):
                 "time_range": time_range,
                 "type_status": type_status,
                 "search_key": search_key,
+                "from_date": from_date,
+                "to_date": to_date,
             }
             billings = ReferralService.get_admin_referral_history(data_search)
             return {
@@ -321,20 +498,40 @@ class GetDetailLog(Resource):
         @jwt_required()
         @admin_required()
         def get(self):
-            userId = request.args.get("userId", "", type=str)
-            random_string = "".join(
-                secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
-            )
+            try:
+                userId = request.args.get("userId", "", type=str)
+                if not userId:
+                    return Response(
+                        data=None, message="Missing userId", status=400
+                    ).to_dict()
 
-            UserService.update_user(userId, password=random_string)
-            fe_current_domain = os.environ.get("FE_DOMAIN") or "https://toktak.ai"
-            url_return = (
-                f"{fe_current_domain}/auth/loginadmin?random_string={random_string}"
-            )
-            return Response(
-                data={"userId": userId, "url_return": url_return},
-                message="Đăng nhập thành công",
-            ).to_dict()
+                random_string = "".join(
+                    secrets.choice(string.ascii_letters + string.digits)
+                    for _ in range(60)
+                )
+
+                # Cập nhật mật khẩu
+                update_result = UserService.update_user_with_out_session(
+                    userId, password=random_string
+                )
+                if not update_result:
+                    return Response(
+                        data=None, message="Update failed", status=400
+                    ).to_dict()
+
+                fe_current_domain = os.environ.get("FE_DOMAIN") or "https://toktak.ai"
+                url_return = (
+                    f"{fe_current_domain}/auth/loginadmin?random_string={random_string}"
+                )
+                return Response(
+                    data={"userId": userId, "url_return": url_return},
+                    message="Đăng nhập thành công",
+                ).to_dict()
+            except Exception as e:
+                logger.error(f"Exception: Lỗi hệ thống  :  {str(e)}")
+                return Response(
+                    data=None, message=f"Lỗi hệ thống: {str(e)}", status=500
+                ).to_dict()
 
 
 @ns.route("/user/detail/<path:id>")
@@ -388,6 +585,19 @@ class APIAdminSaveUser(Resource):
             }
             user_info = UserService.update_user(userId, **data_update)
 
+            if subscription == "FREE":
+                # update hết payment
+                active = PaymentService.has_active_subscription(userId)
+                if active:
+                    end_date = datetime.now().date() - timedelta(days=1)
+                    data_update_payment = {
+                        "end_date": end_date,
+                    }
+
+                    payment = PaymentService.update_payment(
+                        active.id, **data_update_payment
+                    )
+
             return Response(
                 # data=user_info,
                 message="Updated User successfully",
@@ -410,3 +620,76 @@ class APIAdminClearCacheTypecastVoices(Resource):
             message="Clear Cache Typecast Voices Success",
             code=200,
         ).to_dict()
+
+
+@ns.route("/download-excel")
+class APIDownloadUserExcel(Resource):
+    def post(self):
+        try:
+            data = request.get_json()
+            type_order = data.get("type_order")
+            type_post = data.get("type_post")
+            time_range = data.get("time_range")
+            search = data.get("search")
+            member_type = data.get("member_type")
+            status = data.get("status")
+
+            data_search = {
+                "page": 1,
+                "per_page": 99999999999,
+                "status": status,
+                "type_order": type_order,
+                "type_post": type_post,
+                "time_range": time_range,
+                "search": search,
+                "member_type": member_type,
+            }
+            users = UserService.admin_search_users(data_search)
+
+            data = users.items
+
+            # Convert data thành DataFrame
+            df = pd.DataFrame(
+                [
+                    {
+                        "ID": u.id,
+                        "Name": u.name,
+                        "Email": u.email,
+                        "Subscription": u.subscription,
+                        "Created At": (
+                            u.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                            if u.created_at
+                            else ""
+                        ),
+                        "Subscription Expired At": (
+                            u.subscription_expired.strftime("%Y-%m-%d %H:%M:%S")
+                            if u.subscription_expired
+                            else ""
+                        ),
+                    }
+                    for u in data
+                ]
+            )
+
+            # Ghi vào bộ nhớ tạm
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False, sheet_name="Users")
+
+            output.seek(0)
+
+            filename = f"users_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            return send_file(
+                output,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                download_name=filename,
+            )
+
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message=f"download-excel.(Error code : ) {str(e)}",
+                code=201,
+            ).to_dict()

@@ -1,8 +1,10 @@
+import traceback
 import requests
 import json
 import os
 import random
-from app.lib.string import limit_text_to_100
+from app.lib.audio import merge_audio_files
+from app.lib.string import cutting_text_when_exceed_450
 from app.models.video_create import VideoCreate
 from app.models.video_viral import VideoViral
 from app.models.captions import Caption
@@ -85,9 +87,14 @@ class ShotStackService:
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
         # Chọn giọng nói ngẫu nhiên
-        korean_voice = get_korean_voice(voice_typecast)
+        # korean_voice = get_korean_typecast_voice(voice_typecast)
 
-        mp3_file, audio_duration = text_to_speech_kr(
+        # mp3_file, audio_duration = text_to_speech_kr(
+        #     korean_voice, origin_caption, dir_path, config
+        # )
+
+        korean_voice = get_korean_voice_google(voice_google)
+        mp3_file, audio_duration = text_to_speech_kr_old(
             korean_voice, origin_caption, dir_path, config
         )
 
@@ -898,55 +905,94 @@ def create_first_header_text(viral_text, start=0, length=0, add_time=0.01):
     return clip_detail
 
 
-def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
+def text_to_speech_kr_old(korean_voice, text, disk_path="output", config=None):
     try:
-        # if not config:
-        #     log_make_video_message("Lỗi: Config không được truyền vào.")
-        #     return "", 0.0
+        if not config:
+            log_make_video_message("Lỗi: Config không được truyền vào.")
+            return "", 0.0
 
-        # GOOGLE_API_SPEED = float(config.get("GOOGLE_API_SPEED", 1))
-        # api_key = config.get("GOOGLE_API_TEXT_TO_SPEECH", "")
-        # api_url = config.get(
-        #     "GOOGLE_API_TEXT_TO_URL",
-        #     "https://texttospeech.googleapis.com/v1/text:synthesize",
-        # )
+        GOOGLE_API_SPEED = float(config.get("GOOGLE_API_SPEED", 1))
+        api_key = config.get("GOOGLE_API_TEXT_TO_SPEECH", "")
+        api_url = config.get(
+            "GOOGLE_API_TEXT_TO_URL",
+            "https://texttospeech.googleapis.com/v1/text:synthesize",
+        )
 
-        # if not api_key or not api_url:
-        #     log_make_video_message("Lỗi: API Key hoặc API URL chưa được thiết lập.")
-        #     return "", 0.0
+        if not api_key or not api_url:
+            log_make_video_message("Lỗi: API Key hoặc API URL chưa được thiết lập.")
+            return "", 0.0
 
-        # if not text:
-        #     log_make_video_message("Lỗi: Vui lòng nhập văn bản.")
-        #     return "", 0.0
+        if not text:
+            log_make_video_message("Lỗi: Vui lòng nhập văn bản.")
+            return "", 0.0
 
         os.makedirs(disk_path, exist_ok=True)
         output_file = f"{disk_path}/google_voice_output.mp3"
 
-        # chirp3_hd_voices = {
-        #     "ko-KR-Chirp3-HD-Charon",
-        #     "ko-KR-Chirp3-HD-Fenrir",
-        #     "ko-KR-Chirp3-HD-Puck",
-        #     "ko-KR-Chirp3-HD-Aoede",
-        #     "ko-KR-Chirp3-HD-Kore",
-        #     "ko-KR-Chirp3-HD-Leda",
-        #     "ko-KR-Chirp3-HD-Zephyr",
-        #     "ko-KR-Chirp3-HD-Orus",
-        # }
+        chirp3_hd_voices = {
+            "ko-KR-Chirp3-HD-Charon",
+            "ko-KR-Chirp3-HD-Fenrir",
+            "ko-KR-Chirp3-HD-Puck",
+            "ko-KR-Chirp3-HD-Aoede",
+            "ko-KR-Chirp3-HD-Kore",
+            "ko-KR-Chirp3-HD-Leda",
+            "ko-KR-Chirp3-HD-Zephyr",
+            "ko-KR-Chirp3-HD-Orus",
+        }
 
-        # # # Payload gửi lên Google API
-        # payload = {
-        #     "input": {"text": text},
-        #     "voice": {
-        #         "languageCode": "ko-KR",
-        #         "name": korean_voice["name"],
-        #         "ssmlGender": korean_voice["ssmlGender"],
-        #     },
-        #     "audioConfig": {"audioEncoding": "MP3"},
-        # }
+        # # Payload gửi lên Google API
+        payload = {
+            "input": {"text": text},
+            "voice": {
+                "languageCode": "ko-KR",
+                "name": korean_voice["name"],
+                "ssmlGender": korean_voice["ssmlGender"],
+            },
+            "audioConfig": {"audioEncoding": "MP3"},
+        }
 
-        # # Nếu giọng không thuộc Chirp3-HD, thêm speakingRate
-        # if korean_voice["name"] not in chirp3_hd_voices:
-        #     payload["audioConfig"]["speakingRate"] = GOOGLE_API_SPEED
+        # Nếu giọng không thuộc Chirp3-HD, thêm speakingRate
+        if korean_voice["name"] not in chirp3_hd_voices:
+            payload["audioConfig"]["speakingRate"] = GOOGLE_API_SPEED
+
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(
+            f"{api_url}?key={api_key}", json=payload, headers=headers
+        )
+
+        if response.status_code != 200:
+            log_make_video_message(f"Lỗi từ Google API payload: {payload}")
+            log_make_video_message(f"Lỗi từ Google API: {response.text}")
+            return "", 0.0
+
+        response_json = response.json()
+
+        if "audioContent" not in response_json:
+            log_make_video_message("Lỗi: Không nhận được dữ liệu âm thanh từ API.")
+            return "", 0.0
+
+        audio_content = base64.b64decode(response_json["audioContent"])
+        output_file = f"{disk_path}/google_voice_output.mp3"
+
+        with open(output_file, "wb") as audio_file:
+            audio_file.write(audio_content)
+
+        # Lấy thời gian audio bằng ffmpeg
+        audio_duration = get_audio_duration(output_file)
+
+        return output_file, audio_duration
+
+    except Exception as e:
+        traceback.print_exc()
+        print(f"Exception text_to_speech_kr_old : {str(e)}")
+        log_make_video_message(f"Exception text_to_speech_kr_old : {str(e)}")
+        return "", 0.0
+
+
+def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
+    try:
+        os.makedirs(disk_path, exist_ok=True)
+        output_file = f"{disk_path}/google_voice_output.mp3"
 
         TYPECAST_API_KEY = os.environ.get("TYPECAST_API_KEY", "")
 
@@ -955,88 +1001,98 @@ def text_to_speech_kr(korean_voice, text, disk_path="output", config=None):
             "Authorization": f"Bearer {TYPECAST_API_KEY}",
         }
 
-        text = limit_text_to_100(text)
+        text = cutting_text_when_exceed_450(text)
 
-        payload = {
-            "text": text,
-            "lang": "auto",
-            "actor_id": korean_voice["actor_id"],
-            "xapi_hd": False,
-            "model_version": "latest",
-            "xapi_audio_format": "mp3",
-            "volumn": 100,
-            "speed_x": 1,
-            "max_seconds": 60,
-        }
-
-        response = requests.post(
-            "https://typecast.ai/api/speak", json=payload, headers=headers
-        )
-
-        # headers = {"Content-Type": "application/json"}
-        # response = requests.post(
-        #     f"{api_url}?key={api_key}", json=payload, headers=headers
-        # )
-
-        if response.status_code != 200:
-            print(f"Response status code: {response.status_code}")
-            print(f"Response text: {response.text}")
-            log_make_video_message(f"Lỗi từ Google API payload: {payload}")
-            log_make_video_message(f"Lỗi từ Google API: {response.text}")
-            return "", 0.0
-
-        response_json = response.json()
-
-        result_speak = response_json.get("result", {})
-        if not result_speak:
-            log_make_video_message("Lỗi: Không nhận được kết quả từ API.")
-            return "", 0.0
-
-        check_status_speak = result_speak.get("speak_v2_url", "")
-
-        download_url = ""
+        audio_files = []
         audio_duration = 0
-        text_count = 0
 
-        while True:
-            response_check = requests.get(check_status_speak, headers=headers)
-            if response_check.status_code == 200:
-                result_check = response_check.json().get("result", {})
-                if result_check.get("status") == "done":
-                    download_url = result_check.get("audio_download_url", "")
-                    audio_duration = result_check.get("duration", 0)
-                    text_count = result_check.get("text_count", 0)
-                    break
-                elif result_check.get("status") == "failed":
-                    log_make_video_message("Lỗi: Tạo giọng nói thất bại.")
-                    return "", 0.0
-            else:
-                log_make_video_message(
-                    f"Lỗi kiểm tra trạng thái: {response_check.text}"
-                )
+        for index in range(len(text)):
+            text_chunk = text[index]
+
+            payload = {
+                "text": text_chunk,
+                "lang": "auto",
+                "actor_id": korean_voice["actor_id"],
+                "xapi_hd": False,
+                "model_version": "latest",
+                "xapi_audio_format": "mp3",
+                "volumn": 100,
+                "speed_x": 1,
+                "max_seconds": 60,
+            }
+
+            response = requests.post(
+                "https://typecast.ai/api/speak", json=payload, headers=headers
+            )
+
+            if response.status_code != 200:
+                log_make_video_message(f"Lỗi từ Google API payload: {payload}")
+                log_make_video_message(f"Lỗi từ Google API: {response.text}")
                 return "", 0.0
 
-        audio_content = requests.get(download_url)
+            response_json = response.json()
 
-        # if "audioContent" not in response_json:
-        #     log_make_video_message("Lỗi: Không nhận được dữ liệu âm thanh từ API.")
-        #     return "", 0.0
+            result_speak = response_json.get("result", {})
+            if not result_speak:
+                log_make_video_message("Lỗi: Không nhận được kết quả từ API.")
+                return "", 0.0
 
-        # Giải mã Base64 và lưu file MP3
-        # audio_content = base64.b64decode(response_json["audioContent"])
-        with open(output_file, "wb") as audio_file:
-            audio_file.write(audio_content.content)
-            # audio_file.write(audio_content)
+            check_status_speak = result_speak.get("speak_v2_url", "")
 
-        # Lấy thời gian audio bằng ffmpeg
-        # audio_duration = get_audio_duration(output_file)
+            download_url = ""
+            text_count = 0
+            file_duration = 0
 
-        log_make_video_message(
-            f"Đã tạo file âm thanh ({korean_voice['name']}): {output_file} (Thời gian: {audio_duration:.2f}s) với đoạn text dài {text_count} ký tự"
-        )
+            while True:
+                response_check = requests.get(check_status_speak, headers=headers)
+                if response_check.status_code == 200:
+                    result_check = response_check.json().get("result", {})
+                    if result_check.get("status") == "done":
+                        download_url = result_check.get("audio_download_url", "")
+                        file_duration = result_check.get("duration", 0)
+                        text_count = result_check.get("text_count", 0)
+                        break
+                    elif result_check.get("status") == "failed":
+                        log_make_video_message("Lỗi: Tạo giọng nói thất bại.")
+                        log_make_video_message(f"Lỗi: {result_check}")
+                        return "", 0.0
+                else:
+                    log_make_video_message(
+                        f"Lỗi kiểm tra trạng thái: {response_check.text}"
+                    )
+                    return "", 0.0
+
+            audio_content = requests.get(download_url)
+
+            # Giải mã Base64 và lưu file MP3
+            # audio_content = base64.b64decode(response_json["audioContent"])
+            output_file_temp = f"{disk_path}/google_voice_output_{index}.mp3"
+            with open(output_file_temp, "wb") as audio_file:
+                audio_file.write(audio_content.content)
+                # audio_file.write(audio_content)
+
+            # Lấy thời gian audio bằng ffmpeg
+            # audio_duration = get_audio_duration(output_file)
+
+            log_make_video_message(
+                f"Đã tạo file âm thanh ({korean_voice['name']}): {output_file_temp} (Thời gian: {file_duration:.2f}s) với đoạn text dài {text_count} ký tự"
+            )
+
+            audio_files.append(output_file_temp)
+            audio_duration += file_duration
+
+        if len(audio_files) > 1:
+            output_file = merge_audio_files(audio_files, output_file)
+            for audio_file in audio_files:
+                os.remove(audio_file)
+        else:
+            output_file = audio_files[0]
+
         return output_file, audio_duration
 
     except Exception as e:
+        traceback.print_exc()
+        print(f"Exception text_to_speech_kr : {str(e)}")
         log_make_video_message(f"Exception text_to_speech_kr : {str(e)}")
         return "", 0.0
 
@@ -1201,17 +1257,17 @@ def get_typecast_voices():
         return []
 
 
-def get_korean_voice(voice_id):
-    # adjusted_index = (voice_id - 1) % len(const.KOREAN_VOICES)
-    # return const.KOREAN_VOICES[adjusted_index]
+def get_korean_voice_google(index):
+    adjusted_index = (index - 1) % len(const.KOREAN_VOICES)
+    return const.KOREAN_VOICES[adjusted_index]
 
+
+def get_korean_typecast_voice(voice_id):
     typecast_voices = get_typecast_voices()
     if not typecast_voices:
         log_make_video_message("Không thể lấy danh sách giọng nói từ Typecast.")
         return False
 
-    print(f"typecast_voices: {typecast_voices}")
-    print(f"voice_id: {voice_id}")
     for voice in typecast_voices:
         if "actor_id" in voice and voice["actor_id"] == voice_id:
             return voice
@@ -1235,7 +1291,7 @@ def get_audio_duration(file_path):
     try:
         result = subprocess.run(
             [
-                "/usr/bin/ffprobe",
+                "ffprobe",
                 "-i",
                 file_path,
                 "-show_entries",
@@ -1376,7 +1432,7 @@ def get_media_duration(url):
     try:
         result = subprocess.run(
             [
-                "/usr/bin/ffprobe",
+                "ffprobe",
                 "-i",
                 url,
                 "-show_entries",

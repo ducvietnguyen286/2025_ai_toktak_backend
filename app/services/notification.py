@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from app.services.user import UserService
 import const
 from app.lib.query import (
+    delete_by_id,
     select_with_filter,
     select_by_id,
     select_with_pagination,
@@ -44,11 +45,8 @@ class NotificationServices:
 
     @staticmethod
     def delete(id):
-        notif = select_by_id(Notification, id)
-        if notif:
-            notif.delete()
-            return True
-        return False
+        delete_by_id(Notification, id)
+        return True
 
     @staticmethod
     def update_notification_by_batch_id(batch_id, *args, **kwargs):
@@ -189,6 +187,16 @@ class NotificationServices:
             start_date = datetime.now() - timedelta(days=365)
             query = query.filter(Notification.created_at >= start_date)
 
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                query = query.filter(Notification.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                query = query.filter(Notification.created_at < to_date)
+
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
@@ -207,3 +215,12 @@ class NotificationServices:
                 updated += 1
         db.session.commit()
         return updated
+
+    @staticmethod
+    def create_notification_with_task(session=None, **kwargs):
+        if session is None:
+            session = db.session  # fallback cho Flask request context
+        notification = Notification(**kwargs)
+        session.add(notification)
+        session.commit()
+        return notification

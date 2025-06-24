@@ -1,12 +1,15 @@
 from app.scraper.pages.coupang import CoupangScraper
 from app.scraper.pages.domeggook import DomeggookScraper
 from app.scraper.pages.aliexpress import AliExpressScraper
+from app.scraper.pages.ebay import EbayScraper
 from app.scraper.pages.shopee import ShopeeScarper
+from app.scraper.pages.amazon import AmazonScraper
 
 from urllib.parse import urlparse
 import requests
 from app.lib.logger import logger
 import random
+from app.scraper.pages.walmart import WalmartScraper
 from app.services.crawl_data import CrawlDataService
 import hashlib
 import json
@@ -23,7 +26,12 @@ def get_page_scraper(params):
         scraper = CoupangScraper(params)
     elif "aliexpress." in netloc:
         scraper = AliExpressScraper(params)
-
+    elif "amazon." in netloc or "amzn." in netloc:
+        scraper = AmazonScraper(params)
+    elif "ebay." in netloc:
+        scraper = EbayScraper(params)
+    elif "walmart." in netloc:
+        scraper = WalmartScraper(params)
     elif "shopee." in netloc:
         scraper = ShopeeScarper(params)
     return scraper.run()
@@ -34,11 +42,12 @@ class Scraper:
     def scraper(self, params):
         response = get_page_scraper(params)
         if not response:
-            # 103.98.152.125
-            # 3.38.117.230
-            # 43.203.118.116
-            # 3.35.172.6
-            # #
+            #     # 103.98.152.125 scraper.vodaplay.vn
+            #       103.9.159.82 apistaging82.toktak.ai
+            #     # 3.38.117.230 scraper.play-tube.net
+            #     # 43.203.118.116 scraper.canvasee.com
+            #     # 3.35.172.6 scraper.bodaplay.ai
+            #     # #
 
             parsed_url = urlparse(params["url"])
             netloc = parsed_url.netloc
@@ -46,7 +55,7 @@ class Scraper:
             params["netloc"] = netloc
             urls = [
                 "https://scraper.vodaplay.vn/api/v1/maker/create-scraper",
-                "https://apitoktak.voda-play.com/api/v1/maker/create-scraper",
+                "https://apistaging82.toktak.ai/api/v1/maker/create-scraper",
                 "https://scraper.play-tube.net/api/v1/maker/create-scraper",
                 "https://scraper.canvasee.com/api/v1/maker/create-scraper",
                 "https://scraper.bodaplay.ai/api/v1/maker/create-scraper",

@@ -1,13 +1,21 @@
+from http.cookiejar import CookieJar
 import json
 import random
 import re
+import urllib.parse
 
 import hashlib
 import base64
 import string
+import traceback
+from app.lib.header import generate_desktop_user_agent
 import const
 import uuid
 from app.lib.logger import logger
+import requests
+from urllib.parse import urljoin
+
+from datetime import datetime
 
 
 def is_json(data):
@@ -148,6 +156,18 @@ def update_ads_content(url, content):
         )
     else:
         content = content.replace("<h2>ADS_CONTENT_TOKTAK</h2>", "")
+    return content
+
+
+def update_ads_content_txt(url, content):
+
+    if "https://link.coupang.com/" in url:
+        content = get_ads_content(url)
+        # content = f"이 포스팅은 쿠팡 파트너스 수익 활동의 일환으로, 이에 따른 일정액의 수수료를 제공 받습니다.\n\n\n\n{content}"
+    elif "https://s.click.aliexpress.com" in url or "https://a.aliexpress.com" in url:
+        content = get_ads_content(url)
+    else:
+        content = ""
     return content
 
 
@@ -360,9 +380,9 @@ def get_subscription_name(subscription):
         elif subscription == "COUPON_STANDARD":
             subscription_name = "기업형 스탠다드 플랜"
         elif subscription == "NEW_USER":
-            subscription_name = "신규 가입 선물"
+            subscription_name = "베이직 플랜"
         elif subscription == "COUPON_KOL":
-            subscription_name = "기업형 스탠다드 플랜"
+            subscription_name = "베이직 플랜"
         else:
             package_data = const.PACKAGE_CONFIG.get(subscription_name)
             if not package_data:
@@ -382,14 +402,186 @@ def generate_order_id():
     return re.sub(r"[^a-zA-Z0-9_-]", "", raw_id)
 
 
-def limit_text_to_100(text):
-    """
-    Giới hạn văn bản tối đa 100 ký tự.
-    Nếu văn bản dài hơn 100 ký tự, sẽ cắt bớt và thêm dấu ... vào cuối.
+def format_price_won(price):
+    return "{:,.0f}₩".format(price)
 
-    :param text: Văn bản đầu vào
-    :return: Văn bản đã được giới hạn độ dài
+
+def cutting_text_when_exceed_450(text):
     """
-    if len(text) <= 495:
-        return text
-    return text[:495]
+    Cắt văn bản khi vượt quá 450 ký tự.
+    Sử dụng hàm split_text_by_words để tách văn bản.
+
+    :param text: Văn bản cần cắt
+    :return: Danh sách các đoạn văn bản
+    """
+    return split_text_by_words(text, max_length=450)
+
+
+def split_text_by_words(text, max_length=450):
+    """
+    Tách văn bản thành các đoạn, mỗi đoạn tối đa max_length ký tự.
+    Đảm bảo không cắt giữa từ, chỉ cắt tại khoảng trắng giữa các từ.
+
+    :param text: Văn bản cần tách
+    :param max_length: Độ dài tối đa của mỗi đoạn (mặc định 450)
+    :return: Danh sách các đoạn văn bản
+    """
+    if not text:
+        return []
+
+    words = text.split()
+    chunks = []
+    current_chunk = []
+    current_length = 0
+
+    for word in words:
+        word_length = len(word) + (1 if current_chunk else 0)
+
+        if current_length + word_length > max_length:
+            if current_chunk:
+                chunks.append(" ".join(current_chunk))
+                current_chunk = []
+                current_length = 0
+
+            if len(word) > max_length:
+                chunks.append(word[:max_length])
+                word = word[max_length:]
+                while word:
+                    chunks.append(word[:max_length])
+                    word = word[max_length:]
+            else:
+                current_chunk = [word]
+                current_length = len(word)
+        else:
+            current_chunk.append(word)
+            current_length += word_length
+
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+
+    return chunks
+
+
+def extract_redirect_url_from_script(html_content):
+    """
+    Trích xuất giá trị window.runParams.redirectUrl từ nội dung script trong HTML
+
+    :param html_content: Nội dung HTML của trang web
+    :return: URL redirect nếu tìm thấy, None nếu không tìm thấy
+    """
+    try:
+        script_pattern = r"<script[^>]*>(.*?)</script>"
+        scripts = re.findall(script_pattern, html_content, re.DOTALL)
+
+        for script in scripts:
+            redirect_pattern = (
+                r'window\.runParams\.redirectUrl\s*=\s*[\'"]([^\'"]+)[\'"]'
+            )
+            match = re.search(redirect_pattern, script)
+            if match:
+                redirect_url = match.group(1)
+                return urllib.parse.unquote(redirect_url)
+
+        return None
+
+    except Exception as e:
+        logger.error(f"Error extracting redirect URL from script: {str(e)}")
+        return None
+
+
+def un_shotend_url(url):
+    """
+    Lấy URL gốc từ URL rút gọn.
+    Kiểm tra và theo dõi tất cả các redirect cho đến khi tìm được URL cuối cùng.
+
+    :param url: URL rút gọn cần kiểm tra
+    :return: URL gốc sau khi đã theo dõi tất cả redirect
+    """
+    try:
+        cookie_jar = CookieJar()
+        session = requests.Session()
+        session.cookies = cookie_jar
+        user_agent = generate_desktop_user_agent()
+        headers = {
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en",
+            "priority": "u=0, i",
+            "referer": "",
+            "upgrade-insecure-requests": "1",
+            "user-agent": user_agent,
+        }
+        response = session.get(url, headers=headers, allow_redirects=False)
+
+        while response.status_code in (301, 302, 303, 307, 308):
+            redirect_url = response.headers.get("Location")
+            if not redirect_url:
+                break
+
+            if not redirect_url.startswith(("http://", "https://")):
+                redirect_url = urljoin(url, redirect_url)
+
+            response = session.get(redirect_url, headers=headers, allow_redirects=False)
+
+            if redirect_url.startswith("https://star.aliexpress.com"):
+                redirect_url_from_script = extract_redirect_url_from_script(
+                    response.text
+                )
+                if redirect_url_from_script:
+                    return redirect_url_from_script
+                return urllib.parse.unquote(redirect_url)
+
+            url = redirect_url
+
+        return urllib.parse.unquote(url)
+
+    except Exception as e:
+        logger.error(f"Error unshortening URL {url}: {str(e)}")
+        return url
+
+
+def parse_date(date_str):
+    """
+    Parse date string to datetime object.
+    Hỗ trợ nhiều format ngày tháng khác nhau.
+
+    :param date_str: Chuỗi ngày tháng cần parse
+    :return: datetime object hoặc None nếu không parse được
+    """
+    if not date_str:
+        return None
+
+    # Danh sách các format có thể có
+    date_formats = [
+        "%Y-%m-%d %H:%M:%S",  # 2024-03-21 14:30:00
+        "%Y-%m-%d %H:%M",  # 2024-03-21 14:30
+        "%Y-%m-%d",  # 2024-03-21
+        "%d/%m/%Y %H:%M:%S",  # 21/03/2024 14:30:00
+        "%d/%m/%Y %H:%M",  # 21/03/2024 14:30
+        "%d/%m/%Y",  # 21/03/2024
+        "%m/%d/%Y %H:%M:%S",  # 03/21/2024 14:30:00
+        "%m/%d/%Y %H:%M",  # 03/21/2024 14:30
+        "%m/%d/%Y",  # 03/21/2024
+        "%Y/%m/%d %H:%M:%S",  # 2024/03/21 14:30:00
+        "%Y/%m/%d %H:%M",  # 2024/03/21 14:30
+        "%Y/%m/%d",  # 2024/03/21
+        "%Y-%m-%dT%H:%M:%SZ",  # 2024-03-21T14:30:00Z
+        "%Y-%m-%dT%H:%M:%S%z",  # 2024-03-21T14:30:00+0900
+        "%Y-%m-%dT%H:%M:%S.%f%z",  # 2024-03-21T14:30:00.123+0900
+    ]
+
+    # Thử parse với từng format
+    for date_format in date_formats:
+        try:
+            return datetime.strptime(date_str, date_format)
+        except ValueError:
+            continue
+
+    # Nếu không parse được với format nào, thử parse với dateutil
+    try:
+        from dateutil import parser
+
+        return parser.parse(date_str)
+    except:
+        logger.error(f"Could not parse date string: {date_str}")
+        return None

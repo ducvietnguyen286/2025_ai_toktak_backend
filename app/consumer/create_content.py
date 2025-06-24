@@ -263,8 +263,8 @@ class CreateContent:
                 )
                 return None
 
-            post.process_status = const.POST_PROCESSING_STATUS["PROCESSING"]
-            post.save()
+            kwargs = {"process_status": const.POST_PROCESSING_STATUS["PROCESSING"]}
+            PostService.update_post(post.id, **kwargs)
 
             is_paid_advertisements = batch.is_paid_advertisements
             template_info = json.loads(batch.template_info)
@@ -400,9 +400,11 @@ class CreateContent:
                         "blog": MessageError.CREATE_POST_BLOG.value,
                     }
 
-                    post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
-                    post.error_message = message_error.get(type, "")
-                    post.save()
+                    kwargs = {
+                        "process_status": const.POST_PROCESSING_STATUS["FAILED"],
+                        "error_message": message_error.get(type, ""),
+                    }
+                    PostService.update_post(post.id, **kwargs)
 
                     return None
 
@@ -458,6 +460,7 @@ class CreateContent:
                 batch = BatchService.update_batch(
                     batch.id, done_post=current_done_post + 1
                 )
+                # push
 
                 if batch.done_post == batch.count_post:
                     BatchService.update_batch(batch.id, status=1)
@@ -484,8 +487,8 @@ class CreateContent:
                         notification_type="blog",
                     )
 
-                post.process_status = const.POST_PROCESSING_STATUS["COMPLETED"]
-                post.save()
+                kwargs = {"process_status": const.POST_PROCESSING_STATUS["COMPLETED"]}
+                PostService.update_post(post.id, **kwargs)
 
                 return post.id
             except Exception as e:
@@ -520,9 +523,12 @@ class CreateContent:
                         f"Error make_single_post Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                     )
                 log_create_content_message(f"Error in make_single_post: {e}")
-                post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
-                post.error_message = f"Create Post False {str(e)}"
-                post.save()
+
+                kwargs = {
+                    "process_status": const.POST_PROCESSING_STATUS["FAILED"],
+                    "error_message": f"Create Post False {str(e)}",
+                }
+                PostService.update_post(post.id, **kwargs)
 
                 return None
 
@@ -549,6 +555,7 @@ def process_create_post_blog(process_images, data, batch, post):
     batch_id = batch.id
     try:
         response = call_chatgpt_create_blog(process_images, data, post.id)
+        
         if response:
             parse_caption = json.loads(response)
             parse_response = parse_caption.get("response", {})
@@ -556,13 +563,14 @@ def process_create_post_blog(process_images, data, batch, post):
             docx_content = parse_response.get("docx_content", "")
 
             ads_text = get_ads_content(url)
-
+            
             res_txt = DocxMaker().make_txt(
                 docx_title,
                 ads_text,
                 docx_content,
                 process_images,
                 batch_id=batch_id,
+                url=url,
             )
 
             txt_path = res_txt.get("txt_path", "")
@@ -573,9 +581,11 @@ def process_create_post_blog(process_images, data, batch, post):
             message_error = MessageError.CREATE_POST_BLOG.value
             log_create_content_message(f"Error creating blog post: {message_error}")
 
-            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
-            post.error_message = message_error
-            post.save()
+            kwargs = {
+                "process_status": const.POST_PROCESSING_STATUS["FAILED"],
+                "error_message": message_error,
+            }
+            PostService.update_post(post.id, **kwargs)
 
             return None
 
@@ -595,9 +605,12 @@ def process_create_post_blog(process_images, data, batch, post):
                 f"Error in process_create_post_blog: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
             )
         logger.error(f"Error in process_create_post_blog: {e}")
-        post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
-        post.error_message = str(e)
-        post.save()
+
+        kwargs = {
+            "process_status": const.POST_PROCESSING_STATUS["FAILED"],
+            "error_message": str(e),
+        }
+        PostService.update_post(post.id, **kwargs)
         return None
 
 
@@ -615,11 +628,12 @@ def process_create_post_image(process_images, data, batch, post):
         template_info = json.loads(batch.template_info)
         image_template_id = template_info.get("image_template_id", "")
         if image_template_id == "":
-            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
-            post.error_message = (
-                "Image template ID is required for image post creation."
-            )
-            post.save()
+            kwargs = {
+                "process_status": const.POST_PROCESSING_STATUS["FAILED"],
+                "error_message": "Image template ID is required for image post creation.",
+            }
+            PostService.update_post(post.id, **kwargs)
+
             return None
 
         is_avif = check_is_avif(data)
@@ -648,9 +662,11 @@ def process_create_post_image(process_images, data, batch, post):
             message_error = MessageError.CREATE_POST_IMAGE.value
             log_create_content_message(f"Error creating image post: {message_error}")
 
-            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
-            post.error_message = message_error
-            post.save()
+            kwargs = {
+                "process_status": const.POST_PROCESSING_STATUS["FAILED"],
+                "error_message": message_error,
+            }
+            PostService.update_post(post.id, **kwargs)
 
             return None
 
@@ -662,9 +678,13 @@ def process_create_post_image(process_images, data, batch, post):
                 f"process_create_post_image Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
             )
         logger.error(f"Error in process_create_post_image: {e}")
-        post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
-        post.error_message = str(e)
-        post.save()
+
+        kwargs = {
+            "process_status": const.POST_PROCESSING_STATUS["FAILED"],
+            "error_message": str(e),
+        }
+        PostService.update_post(post.id, **kwargs)
+
         return None
 
 
@@ -756,9 +776,11 @@ def process_create_post_video(process_images, data, batch, post):
                     captions = []
                     log_create_content_message(f"Error creating video post, {result}")
 
-                    post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
-                    post.error_message = result.get("message", "Unknown error")
-                    post.save()
+                    kwargs = {
+                        "process_status": const.POST_PROCESSING_STATUS["FAILED"],
+                        "error_message": result.get("message", "Unknown error"),
+                    }
+                    PostService.update_post(post.id, **kwargs)
 
                     return None
 
@@ -769,17 +791,24 @@ def process_create_post_video(process_images, data, batch, post):
                 captions = []
 
                 message_error = MessageError.CREATE_POST_VIDEO.value
-                post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
-                post.error_message = message_error
-                post.save()
+
+                kwargs = {
+                    "process_status": const.POST_PROCESSING_STATUS["FAILED"],
+                    "error_message": message_error,
+                }
+                PostService.update_post(post.id, **kwargs)
 
                 return None
 
         else:
             message_error = MessageError.CREATE_POST_VIDEO.value
-            post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
-            post.error_message = message_error
-            post.save()
+
+            kwargs = {
+                "process_status": const.POST_PROCESSING_STATUS["FAILED"],
+                "error_message": message_error,
+            }
+            PostService.update_post(post.id, **kwargs)
+
             log_create_content_message(
                 f"Error creating video post {post.id}: {message_error} ------ CHATGPT"
             )
@@ -794,8 +823,10 @@ def process_create_post_video(process_images, data, batch, post):
             )
         logger.error(f"Error in process_create_post_video: {e}")
 
-        post.process_status = const.POST_PROCESSING_STATUS["FAILED"]
-        post.error_message = str(e)
-        post.save()
+        kwargs = {
+            "process_status": const.POST_PROCESSING_STATUS["FAILED"],
+            "error_message": str(e),
+        }
+        PostService.update_post(post.id, **kwargs)
 
         return None

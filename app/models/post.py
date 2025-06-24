@@ -34,9 +34,9 @@ class Post(db.Model, BaseModel):
     social_sns_description = db.Column(db.Text, nullable=True)
     schedule_date = db.Column(db.DateTime)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )  #
 
     user = db.relationship("User", lazy="joined")
@@ -70,7 +70,7 @@ class Post(db.Model, BaseModel):
             "social_sns_description": self.social_sns_description,
             "user_email": self.user.email if self.user else None,  # Lấy email từ user
             "schedule_date": (
-                pytz.utc.localize(self.schedule_date).strftime("%Y-%m-%dT%H:%M:%SZ")
+                pytz.utc.localize(self.schedule_date).strftime("%Y-%m-%d %H:%M:%S")
                 if self.schedule_date
                 else None
             ),

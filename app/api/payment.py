@@ -230,6 +230,8 @@ class APIAdminNotificationHistories(Resource):
         time_range = request.args.get("time_range", "", type=str)
         type_payment = request.args.get("type_payment", "", type=str)
         search_key = request.args.get("search_key", "", type=str)
+        from_date = request.args.get("from_date", "", type=str)
+        to_date = request.args.get("to_date", "", type=str)
         data_search = {
             "page": page,
             "per_page": per_page,
@@ -239,6 +241,8 @@ class APIAdminNotificationHistories(Resource):
             "time_range": time_range,
             "type_payment": type_payment,
             "search_key": search_key,
+            "from_date": from_date,
+            "to_date": to_date,
         }
         billings = PaymentService.get_admin_billings(data_search)
         return {

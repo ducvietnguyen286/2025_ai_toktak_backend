@@ -16,12 +16,12 @@ from app.third_parties.base_service import BaseService
 class InstagramTokenService:
 
     @staticmethod
-    def exchange_code(code, user_link):
+    def exchange_code(code, user_link_id):
         try:
             log_instagram_message(
                 "------------------  EXCHANGE INSTAGRAM CODE  ------------------"
             )
-
+            user_link = UserService.find_user_link_by_id(user_link_id)
             EXCHANGE_URL = f"https://api.instagram.com/oauth/access_token"
 
             CLIENT_ID = os.environ.get("INSTAGRAM_APP_ID") or ""
@@ -55,8 +55,12 @@ class InstagramTokenService:
                 meta = json.loads(meta)
                 meta.update(data)
 
-                user_link.meta = json.dumps(meta)
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id,
+                    meta=json.dumps(meta),
+                    status=1,
+                )
+
                 return True
             else:
                 # user_link.status = 0
@@ -71,12 +75,12 @@ class InstagramTokenService:
             return False
 
     @staticmethod
-    def exchange_long_live_token(user_link):
+    def exchange_long_live_token(user_link_id):
         try:
             log_instagram_message(
                 "------------------  EXCHANGE INSTAGRAM TOKEN  ------------------"
             )
-            user_link = UserService.find_user_link_by_id(user_link.id)
+            user_link = UserService.find_user_link_by_id(user_link_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
 
@@ -109,14 +113,15 @@ class InstagramTokenService:
                 meta = json.loads(meta)
                 meta.update(data)
 
-                user_link.meta = json.dumps(meta)
-
                 expires_in = 60 * 60 * 24 * 60  # 60 days
                 expired_at = time.time() + expires_in
-                user_link.expired_at = datetime.datetime.fromtimestamp(expired_at)
-                user_link.expired_date = datetime.datetime.fromtimestamp(
-                    expired_at
-                ).date()
+
+                UserService.update_user_link(
+                    id=user_link.id,
+                    meta=json.dumps(meta),
+                    expired_at=datetime.datetime.fromtimestamp(expired_at),
+                    expired_date=datetime.datetime.fromtimestamp(expired_at).date(),
+                )
 
                 user_link.save()
                 return True
@@ -187,12 +192,12 @@ class InstagramTokenService:
             return False
 
     @staticmethod
-    def get_info(user_link):
+    def get_info(user_link_id):
         try:
             log_instagram_message(
                 "------------------  GET INSTAGRAM USER INFO  ------------------"
             )
-            user_link = UserService.find_user_link_by_id(user_link.id)
+            user_link = UserService.find_user_link_by_id(user_link_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
 
@@ -257,6 +262,7 @@ class InstagramService(BaseService):
         self.link_id = link.id
         self.post_id = post.id
         self.batch_id = post.batch_id
+        self.post = post
         self.social_post_id = self.social_post.id
         self.istagram_user_id = self.user_link.social_id
         self.key_log = f"{self.post_id} - {self.social_post.session_key}"
@@ -527,7 +533,7 @@ class InstagramService(BaseService):
             GET_STATUS_URL = f"https://graph.instagram.com/v22.0/{media_id}"
             params = {
                 "access_token": self.access_token,
-                "fields": "status,status_code",
+                "fields": "status,status_code,error_message",
             }
 
             try:
@@ -558,7 +564,12 @@ class InstagramService(BaseService):
                     error = result["error"] if "error" in result else {}
                     error_message = error["message"] if "message" in error else ""
                     if error_message == "":
+                        error_message = (
+                            result["error_message"] if "error_message" in result else ""
+                        )
+                    if error_message == "":
                         error_message = "Error occurred while uploading media"
+
                     self.save_errors(
                         "ERRORED",
                         f"ERROR GET UPLOAD STATUS {self.key_log}: {error_message}",

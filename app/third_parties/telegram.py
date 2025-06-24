@@ -41,3 +41,54 @@ def send_telegram_message(message: str, app=None, parse_mode: str = "Markdown"):
     except Exception as e:
         if app:
             logger.error(f"❌ Error sending Telegram message: {str(e)}")
+
+
+def send_slack_message(text: str, channel: str = None) -> bool:
+    """
+    Gửi tin nhắn đến Slack channel bằng Slack Bot Token.
+
+    Args:
+        text (str): Nội dung tin nhắn.
+        channel (str): ID kênh Slack (ví dụ: C0123456789). Nếu không có, lấy từ env.
+
+    Returns:
+        bool: True nếu gửi thành công, False nếu lỗi.
+    """
+    slack_token = os.environ.get("SLACK_BOT_TOKEN")
+    default_channel = os.environ.get("SLACK_CHANNEL_ID")
+
+    if not slack_token:
+        print("❌ Thiếu SLACK_BOT_TOKEN trong biến môi trường.")
+        return False
+
+    channel_id = channel or default_channel
+    if not channel_id:
+        print("❌ Thiếu channel_id (truyền tham số hoặc đặt SLACK_CHANNEL_ID trong .env)")
+        return False
+
+    print(channel_id)
+
+    slack_url = "https://slack.com/api/chat.postMessage"
+    headers = {
+        "Authorization": f"Bearer {slack_token}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "channel": channel_id,
+        "text": text,
+    }
+
+    try:
+        response = requests.post(slack_url, headers=headers, json=payload, timeout=10)
+        data = response.json()
+
+        if response.status_code == 200 and data.get("ok"):
+            return True
+        else:
+            print(f"⚠️ Gửi Slack thất bại: {data.get('error')}")
+            return False
+
+    except Exception as e:
+        print(f"❌ Lỗi khi gửi Slack message: {str(e)}")
+        return False

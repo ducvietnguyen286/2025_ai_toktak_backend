@@ -55,6 +55,13 @@ Do server SNS là khác server lên cần mount folder
 
 rm -rf /var/www/logs/* && rm -rf /var/www/2025_ai_toktak_be/logs/* && sudo systemctl restart nginx && sudo systemctl restart toktak.service && sudo systemctl restart toktak_watchdog.service
 
+
+Server 82
+rm -rf /var/www/logs_toktak/* && rm -rf /var/www/2025_ai_toktak_be/logs/* && sudo systemctl restart nginx && sudo systemctl restart toktak.service && sudo systemctl restart toktak_watchdog.service && sudo systemctl restart toktak_consumer_content.service
+
+
+
+
 sudo systemctl restart toktak_watchdog.service
 
 sudo systemctl status toktak_watchdog.service
@@ -87,8 +94,18 @@ chmod +x /var/www/toktak/entry-point.sh
 git update-index --no-assume-unchanged run_with_watchdog.sh
 git update-index --no-assume-unchanged entry-point.sh
 
+
+
+
+-----------LIVE SERVER
 sudo systemctl status toktak.service
 sudo systemctl status toktak_watchdog.service
+sudo systemctl status create_content_1.service
+sudo systemctl status create_content_2.service
+
+
+rm -rf /var/www/logs/* && rm -rf /var/www/2025_ai_toktak_be/logs/* && sudo systemctl restart nginx && sudo systemctl restart toktak.service && sudo systemctl restart toktak_watchdog.service && sudo systemctl status create_content_1.service && sudo systemctl status create_content_2.service
+
 
 
 sudo systemctl status rabbitmq-serve
@@ -99,3 +116,20 @@ sudo systemctl status rabbitmq-serve
 780109 - 1 
 
 01029020640
+
+----------------------------------
+
+rm -rf /var/www/logs/* && rm -rf /var/www/logs_toktak/* && rm -rf /var/www/toktak/logs/* && rm -rf /var/www/staging/main_toktak_fe/2025_ai_toktak_be/logs/* && sudo systemctl restart nginx && sudo systemctl restart toktak.service && sudo systemctl restart toktak_watchdog.service && sudo systemctl restart consumer_toktak.service  && sudo systemctl restart consumer_toktak_instagram.service && sudo systemctl restart consumer_toktak_thread.service && sudo systemctl restart consumer_toktak_tiktok.service && sudo systemctl restart consumer_toktak_twitter.service && sudo systemctl restart consumer_toktak_youtube.service && sudo systemctl restart main_toktak.service  && sudo systemctl restart main_consumer_toktak_instagram.service  && sudo systemctl restart main_consumer_toktak_thread.service  && sudo systemctl restart main_consumer_toktak_tiktok.service  && sudo systemctl restart main_consumer_toktak_twitter.service  && sudo systemctl restart main_consumer_toktak_youtube.service  && sudo systemctl restart main_toktak_consumer_content.service  && sudo systemctl restart main_toktak_watchdog.service 
+
+
+sudo systemctl restart main_consumer_toktak_instagram.service
+sudo systemctl restart main_consumer_toktak_thread.service
+sudo systemctl restart main_consumer_toktak_tiktok.service
+sudo systemctl restart main_consumer_toktak_twitter.service
+sudo systemctl restart main_consumer_toktak_youtube.service
+sudo systemctl restart main_toktak.service
+sudo systemctl restart main_toktak_consumer_content.service
+sudo systemctl restart main_toktak_watchdog.service
+
+
+sudo systemctl status main_consumer_toktak_youtube.service

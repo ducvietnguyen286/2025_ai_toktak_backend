@@ -3,7 +3,7 @@ import atexit
 import time
 import logging
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import DEBUG
 from logging.handlers import TimedRotatingFileHandler
 
@@ -39,12 +39,16 @@ import const
 
 from app.services.notification import NotificationServices
 from app.models.notification import Notification
+from app.models.request_log import RequestLog
+from app.models.request_social_log import RequestSocialLog
+from app.models.video_create import VideoCreate
+
 from app.ais.chatgpt import (
     translate_notifications_batch,
 )
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 
-from app.third_parties.telegram import send_telegram_message
+from app.third_parties.telegram import send_telegram_message, send_slack_message
 
 
 UPLOAD_BASE_PATH = "uploads"
@@ -122,14 +126,17 @@ def split_message(text, max_length=4000):
 
 def format_notification_message(notification_detail, fe_current_domain, user=None):
     email = user.email if user else ""
+    now_korea = datetime.now(timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
     return (
-        f"[Toktak Notification {fe_current_domain}]\n"
+        f"======================================================================\n"
+        f"[{now_korea}] [Toktak Notification {fe_current_domain}]\n"
         f"- User Email: {email}\n"
         f"- Notification ID: {notification_detail.get('id')}\n"
         f"- Batch ID: {notification_detail.get('batch_id')}\n"
         f"- Title: {notification_detail.get('title')}\n"
         f"- Description: {notification_detail.get('description')}\n"
         f"{notification_detail.get('description_korea')}\n"
+        f"======================================================================\n"
     )
 
 
@@ -137,14 +144,14 @@ def send_telegram_notifications(app):
     """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
     app.logger.info("🔔 Start send_telegram_notifications...")
 
-    telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    # telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    # chat_id = os.environ.get("TELEGRAM_CHAT_ID")
 
-    if not telegram_token or not chat_id:
-        app.logger.error("❌ Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env")
-        return
+    # if not telegram_token or not chat_id:
+    #     app.logger.error("❌ Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env")
+    #     return
 
-    telegram_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+    # telegram_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
 
     with app.app_context():
         try:
@@ -181,20 +188,7 @@ def send_telegram_notifications(app):
                     # Tự chia nhỏ nếu tin nhắn quá dài
                     message_parts = split_message(message)
                     for idx, part in enumerate(message_parts):
-                        response = requests.post(
-                            telegram_url,
-                            data={"chat_id": chat_id, "text": part},
-                            timeout=10,
-                        )
-
-                        if response.status_code == 200:
-                            app.logger.info(
-                                f"✅ Sent part {idx+1}/{len(message_parts)} for notification ID {notification.id}"
-                            )
-                        else:
-                            app.logger.warning(
-                                f"⚠️ Failed to send part {idx+1} of notification ID {notification.id}. Response: {response.text}"
-                            )
+                        send_slack_message(part)
 
                     notification.send_telegram = 1
                     notification.save()
@@ -299,14 +293,63 @@ def cleanup_pending_batches(app):
                         app.logger.error(
                             f"Error processing batch {batch.id}: {str(batch_error)}"
                         )
+                        db.session.rollback()
 
             if deleted_batch_ids:
                 app.logger.info(
                     f"Deleted Batches: {', '.join(map(str, deleted_batch_ids))}"
                 )
 
+            db.session.commit()
+
         except Exception as e:
             app.logger.error(f"Error in cleanup_pending_batches: {str(e)}")
+            db.session.rollback()
+        finally:
+            # CRITICAL: Cleanup session to prevent connection leaks
+            db.session.remove()
+
+
+def cleanup_request_log(app):
+    """Xóa những dữ liệu cũ từ bảng request_logs, chỉ giữ lại 5 ngày gần nhất."""
+    app.logger.info("Begin cleanup_request_log.")
+
+    with app.app_context():
+        try:
+            # Tính ngày giới hạn (5 ngày trước)
+            five_days_ago = datetime.now() - timedelta(days=5)
+            three_days_ago = datetime.now() - timedelta(days=3)
+            # Đếm số bản ghi sẽ xóa
+            req_deleted = (
+                db.session.query(RequestLog)
+                .filter(RequestLog.created_at < five_days_ago)
+                .delete(synchronize_session=False)
+            )
+
+            # --- RequestSocialLog ---
+            social_deleted = (
+                db.session.query(RequestSocialLog)
+                .filter(RequestSocialLog.created_at < three_days_ago)
+                .delete(synchronize_session=False)
+            )
+            # --- VideoCreate ---
+            video_deleted = (
+                db.session.query(VideoCreate)
+                .filter(VideoCreate.created_at < three_days_ago)
+                .delete(synchronize_session=False)
+            )
+
+            db.session.commit()
+            app.logger.info(
+                f"🧹 Đã xóa: {req_deleted} request_logs, {social_deleted} request_social_logs, "
+                f"{video_deleted} video_create cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"❌ Error in cleanup_request_log: {str(e)}")
+        finally:
+            # CRITICAL: Cleanup session to prevent connection leaks
+            db.session.remove()
 
 
 def check_urls_health(app):
@@ -347,7 +390,8 @@ def check_urls_health(app):
             f"*Failed URL Reports:* 🚨\n\n" + "\n\n".join(failed_reports)
         )
         app.logger.warning("Some URLs failed health check.")
-        send_telegram_message(message, app, parse_mode="Markdown")
+        send_slack_message(message)
+        # send_telegram_message(message, app, parse_mode="Markdown")
     else:
         app.logger.info("✅ All URLs are healthy.")
 
@@ -358,8 +402,106 @@ def auto_extend_subscription_task(app):
         try:
             count = AuthService.auto_extend_free_subscriptions()
             app.logger.info(f"✓ Auto-extended {count} FREE users")
+            db.session.commit()
         except Exception as e:
             app.logger.error(f"Error in auto_extend_subscription_task: {str(e)}")
+            db.session.rollback()
+        finally:
+            # CRITICAL: Cleanup session to prevent connection leaks
+            db.session.remove()
+
+
+def auto_kill_long_connections(app):
+    """
+    Tự động kill các connections > 60 giây
+    Chạy mỗi phút để duy trì connection pool sạch sẽ
+    """
+    app.logger.info("🔪 Start auto_kill_long_connections...")
+
+    with app.app_context():
+        killed_count = 0
+        try:
+            # Get all sleep connections
+            result = db.session.execute(text("SHOW FULL PROCESSLIST")).fetchall()
+
+            sleep_connections = []
+            for row in result:
+                if len(row) >= 5 and row[4] == "Sleep":
+                    connection_info = {
+                        "id": row[0],
+                        "user": row[1],
+                        "host": row[2],
+                        "db": row[3],
+                        "command": row[4],
+                        "time": row[5],
+                        "state": row[6] if len(row) > 6 else "",
+                        "info": row[7] if len(row) > 7 else "",
+                    }
+                    sleep_connections.append(connection_info)
+
+            app.logger.info(f"📊 Found {len(sleep_connections)} sleep connections")
+
+            # Kill connections > 100 seconds
+            threshold_seconds = 100
+            for conn in sleep_connections:
+                if conn["time"] > threshold_seconds and conn["user"] == "toktak":
+                    try:
+                        db.session.execute(text(f"KILL {conn['id']}"))
+                        app.logger.info(
+                            f"🔪 Killed connection ID {conn['id']} (Sleep {conn['time']}s) from {conn['host']}"
+                        )
+                        killed_count += 1
+                    except Exception as e:
+                        app.logger.error(
+                            f"❌ Failed to kill connection {conn['id']}: {e}"
+                        )
+
+            # Get stats after cleanup
+            current_result = db.session.execute(
+                text("SHOW STATUS LIKE 'Threads_connected'")
+            ).fetchone()
+            current_connections = int(current_result[1]) if current_result else 0
+
+            sleep_after = len(
+                [
+                    conn
+                    for conn in sleep_connections
+                    if conn["time"] <= threshold_seconds
+                ]
+            )
+
+            if killed_count > 0:
+                app.logger.info(
+                    f"✅ Killed {killed_count} long connections. Current: {current_connections}, Sleep remaining: {sleep_after}"
+                )
+
+                # Alert if still too many connections
+                if sleep_after > 50:
+                    alert_msg = (
+                        f"⚠️ HIGH SLEEP CONNECTIONS ALERT!\n"
+                        f"Killed: {killed_count} connections\n"
+                        f"Sleep remaining: {sleep_after}\n"
+                        f"Current total: {current_connections}\n"
+                        f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    )
+                    app.logger.warning(alert_msg)
+                    send_slack_message(alert_msg)
+            else:
+                app.logger.info(
+                    f"✅ No long connections to kill. Current: {current_connections}, Sleep: {len(sleep_connections)}"
+                )
+
+        except Exception as e:
+            app.logger.error(f"❌ Error in auto_kill_long_connections: {str(e)}")
+        finally:
+            # CRITICAL: Force cleanup session to prevent connection leaks
+            try:
+                if db.session.is_active:
+                    db.session.rollback()
+                db.session.close()
+                db.session.remove()
+            except:
+                pass
 
 
 def create_notification_task():
@@ -378,6 +520,7 @@ def start_scheduler(app):
     every_2_minutes_trigger = CronTrigger(minute="*/2", timezone=kst)
     every_5_minutes_trigger = CronTrigger(minute="*/5", timezone=kst)
     one_am_kst_trigger = CronTrigger(hour=1, minute=0, timezone=kst)
+    one_30_am_kst_trigger = CronTrigger(hour=1, minute=30, timezone=kst)
     two_am_kst_trigger = CronTrigger(hour=2, minute=0, timezone=kst)
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
     four_am_kst_trigger = CronTrigger(hour=4, minute=0, timezone=kst)
@@ -410,6 +553,11 @@ def start_scheduler(app):
         trigger=one_am_kst_trigger,
         id="cleanup_pending_batches",
     )
+    scheduler.add_job(
+        func=lambda: cleanup_request_log(app),
+        trigger=one_30_am_kst_trigger,
+        id="cleanup_request_log",
+    )
 
     scheduler.add_job(
         func=lambda: create_notification_task(),
@@ -437,6 +585,13 @@ def start_scheduler(app):
         func=lambda: auto_extend_subscription_task(app),
         trigger=twelve_oh_one_trigger,
         id="auto_extend_subscription_task",
+    )
+
+    # Auto kill long database connections every minute
+    scheduler.add_job(
+        func=lambda: auto_kill_long_connections(app),
+        trigger=every_1_minutes_trigger,
+        id="auto_kill_long_connections",
     )
 
     atexit.register(lambda: scheduler.shutdown(wait=False))

@@ -14,10 +14,10 @@ class ReferralHistory(db.Model, BaseModel):
     referred_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     days = db.Column(db.Integer, nullable=False, default=7)
 
-    expired_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expired_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )
 
     referrer = db.relationship(

@@ -12,9 +12,9 @@ class VideoViral(db.Model, BaseModel):
     video_url = db.Column(db.String(500), nullable=False)
     status = db.Column(db.Integer)
     duration = db.Column(db.Float )
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )
 
     def to_dict(self):

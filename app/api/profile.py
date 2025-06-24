@@ -50,11 +50,13 @@ class MemberProfileAPI(Resource):
                     "product_price_color": "#1E4C94",
                     "show_price": 1,
                 }
+                guide_info = [{"id": i + 1, "is_completed": False} for i in range(10)]
                 profile = ProfileServices.create_profile(
                     user_id=current_user.id,
                     nick_name=nick_name,
                     status=0,
                     design_settings=json.dumps(design_settings),
+                    guide_info=json.dumps(guide_info),
                 )
             return profile.to_dict()
         except Exception as e:
@@ -73,6 +75,7 @@ class MemberProfileUpdateAPI(Resource):
             current_user = AuthService.get_current_identity()
             form = request.form
             file = request.files.get("member_avatar")
+            file_background = request.files.get("member_background")
 
             # Lấy dữ liệu text fields
             data_update = {
@@ -81,6 +84,20 @@ class MemberProfileUpdateAPI(Resource):
                 "description": form.get("description"),
                 "content": form.get("content"),
                 "member_address": form.get("member_address"),
+                "social_is_spotify": form.get("social_is_spotify"),
+                "social_spotify_url": form.get("social_spotify_url"),
+                "social_is_thread": form.get("social_is_thread"),
+                "social_thread_url": form.get("social_thread_url"),
+                "social_is_youtube": form.get("social_is_youtube"),
+                "social_youtube_url": form.get("social_youtube_url"),
+                "social_is_x": form.get("social_is_x"),
+                "social_x_url": form.get("social_x_url"),
+                "social_is_instagram": form.get("social_is_instagram"),
+                "social_instagram_url": form.get("social_instagram_url"),
+                "social_is_tiktok": form.get("social_is_tiktok"),
+                "social_tiktok_url": form.get("social_tiktok_url"),
+                "social_is_facebook": form.get("social_is_facebook"),
+                "social_facebook_url": form.get("social_facebook_url"),
                 "status": 2,
             }
 
@@ -95,6 +112,16 @@ class MemberProfileUpdateAPI(Resource):
                 product_image_path = f"{current_domain}/{output_caption_file}"
 
                 data_update["member_avatar"] = product_image_path
+
+            if file_background:
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                filename = f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{file_background.filename}"
+                path = os.path.join(UPLOAD_FOLDER, filename)
+                file_background.save(path)
+                output_caption_file = path.replace("static/", "").replace("\\", "/")
+                member_background_path = f"{current_domain}/{output_caption_file}"
+
+                data_update["member_background"] = member_background_path
             profile = ProfileServices.update_profile_by_user_id(
                 current_user.id, **data_update
             )

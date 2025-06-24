@@ -53,8 +53,9 @@ class FacebookTokenService:
             return None
 
     @staticmethod
-    def get_page_info_by_id(page_id, user_link):
+    def get_page_info_by_id(page_id, user_link_id):
         try:
+            user_link = UserService.find_user_link_by_id(user_link_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
             if not access_token:
@@ -91,8 +92,9 @@ class FacebookTokenService:
         }
 
     @staticmethod
-    def fetch_page_token_backend(user_link, page_id, is_all=None):
+    def fetch_page_token_backend(user_link_id, page_id, is_all=None):
         try:
+            user_link = UserService.find_user_link_by_id(user_link_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
             if not access_token:
@@ -179,9 +181,9 @@ class FacebookTokenService:
             return None
 
     @staticmethod
-    def exchange_token(access_token, user_link):
+    def exchange_token(access_token, user_link_id):
         try:
-
+            user_link = UserService.find_user_link_by_id(user_link_id)
             EXCHANGE_URL = "https://graph.facebook.com/v22.0/oauth/access_token"
 
             CLIENT_ID = os.environ.get("FACEBOOK_APP_ID") or ""
@@ -211,16 +213,16 @@ class FacebookTokenService:
                 meta = json.loads(meta)
                 meta.update(data)
 
-                user_link.meta = json.dumps(meta)
-
                 expires_in = 60 * 60 * 24 * 60  # 60 days
                 expired_at = time.time() + expires_in
-                user_link.expired_at = datetime.datetime.fromtimestamp(expired_at)
-                user_link.expired_date = datetime.datetime.fromtimestamp(
-                    expired_at
-                ).date()
 
-                user_link.save()
+                UserService.update_user_link(
+                    id=user_link.id,
+                    meta=json.dumps(meta),
+                    expired_at=datetime.datetime.fromtimestamp(expired_at),
+                    expired_date=datetime.datetime.fromtimestamp(expired_at).date(),
+                )
+
                 return True
             else:
                 user_link.status = 0

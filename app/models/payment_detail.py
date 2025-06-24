@@ -12,9 +12,9 @@ class PaymentDetail(db.Model, BaseModel):
     price = db.Column(db.Float, nullable=False)
     amount = db.Column(db.Float, nullable=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Ngày tạo
+    created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now, onupdate=datetime.now
     )
 
     user = db.relationship("User", lazy="joined")

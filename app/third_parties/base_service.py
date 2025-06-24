@@ -39,6 +39,13 @@ class BaseService:
             self.log_social_message(
                 f"------------START {self.key_log} GET MEDIA : {media_path}----------------"
             )
+
+            if not os.path.exists(media_path):
+                self.log_social_message(
+                    f"------------POST {self.key_log} MEDIA PATH NOT FOUND----------------"
+                )
+                return False
+
             with open(media_path, "rb") as file:
                 content = file.read()
                 if get_content:

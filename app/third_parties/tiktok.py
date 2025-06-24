@@ -20,11 +20,12 @@ PROGRESS_CHANNEL = os.environ.get("REDIS_PROGRESS_CHANNEL") or "progessbar"
 class TiktokTokenService:
 
     @staticmethod
-    def fetch_user_info(user_link):
+    def fetch_user_info(user_id, link_id):
         try:
             log_tiktok_message(
                 "------------------  FETCH TIKTOK USER INFO  ------------------"
             )
+            user_link = UserService.find_user_link(link_id=link_id, user_id=user_id)
             meta = json.loads(user_link.meta)
             access_token = meta.get("access_token")
 
@@ -128,11 +129,13 @@ class TiktokTokenService:
             meta = json.loads(user_link.meta)
             refresh_token = meta.get("refresh_token")
 
-            REFRESH_URL = "https://open-api.tiktok.com/oauth/refresh_token/"
+            REFRESH_URL = "https://open.tiktokapis.com/v2/oauth/token/"
             TIKTOK_CLIENT_KEY = os.environ.get("TIKTOK_CLIENT_KEY") or ""
+            TIKTOK_CLIENT_SECRET = os.environ.get("TIKTOK_CLIENT_SECRET") or ""
 
             r_data = {
                 "client_key": TIKTOK_CLIENT_KEY,
+                "client_secret": TIKTOK_CLIENT_SECRET,
                 "grant_type": "refresh_token",
                 "refresh_token": refresh_token,
             }
@@ -157,21 +160,19 @@ class TiktokTokenService:
                 response=json.dumps(token_data),
             )
 
-            data_token = token_data.get("data")
-
-            if not token_data or not data_token or not data_token.get("access_token"):
+            if not token_data or not token_data.get("access_token"):
                 redis_client.set(redis_key_done, "failled", ex=300)
-                redis_client.set(redis_key_result, json.dumps(data_token), ex=300)
-                return {"status": "failled", "result": data_token}
+                redis_client.set(redis_key_result, json.dumps(token_data), ex=300)
+                return {"status": "failled", "result": token_data}
 
-            meta.update(data_token)
+            meta.update(token_data)
             user_link.meta = json.dumps(meta)
             user_link.save()
 
             redis_client.set(redis_key_done, "success", ex=300)
-            redis_client.set(redis_key_result, json.dumps(data_token), ex=300)
+            redis_client.set(redis_key_result, json.dumps(token_data), ex=300)
 
-            return {"status": "success", "result": data_token}
+            return {"status": "success", "result": token_data}
         except Exception as e:
             traceback.print_exc()
             log_tiktok_message(e)
@@ -217,7 +218,7 @@ class TiktokService(BaseService):
                 f"------------ READY TO SEND POST: {post._to_json()} ----------------"
             )
             if post.type == "video":
-                self.upload_video(post)
+                self.upload_video_by_url(post)
             if post.type == "image":
                 self.upload_image(post.images)
             return True
@@ -225,11 +226,22 @@ class TiktokService(BaseService):
             self.save_errors("ERRORED", f"SEND POST {self.key_log}: {str(e)}")
             return True
 
-    def upload_image(self, medias, retry=0):
+    def upload_image(self, input_medias, retry=0):
         try:
             log_tiktok_message(f"Upload POST: {self.key_log} image to Tiktok")
             access_token = self.meta.get("access_token")
-            medias = json.loads(medias)
+            base_medias = json.loads(input_medias)
+
+            replace_url = "https://apitoktak.voda-play.com/"
+            need_replace_url = "https://api.toktak.ai/"
+
+            medias = []
+
+            for media in base_medias:
+                media = media.replace(need_replace_url, replace_url)
+                medias.append(media)
+
+            log_tiktok_message(f"POST {self.key_log} UPLOAD IMAGE - medias: {medias}")
 
             URL_IMAGE_UPLOAD = (
                 "https://open.tiktokapis.com/v2/post/publish/content/init/"
@@ -246,7 +258,7 @@ class TiktokService(BaseService):
                     "description": self.post.description
                     + "\n\n  #tiktok "
                     + self.post.hashtag,
-                    "privacy_level": "SELF_ONLY",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
+                    "privacy_level": "PUBLIC_TO_EVERYONE",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
                     "disable_duet": False,
                     "disable_comment": False,
                     "disable_stitch": False,
@@ -297,7 +309,9 @@ class TiktokService(BaseService):
                 if refreshed["status"] == "success":
                     new_meta = refreshed["result"]
                     self.meta = new_meta
-                    return self.upload_image(medias=json.dumps(medias), retry=retry + 1)
+                    return self.upload_image(
+                        input_medias=json.dumps(medias), retry=retry + 1
+                    )
                 else:
                     self.save_errors(
                         "ERRORED",
@@ -321,13 +335,6 @@ class TiktokService(BaseService):
                 self.save_publish("PUBLISHED", permalink)
                 return True
             else:
-                error_message = status.get("message")
-                self.save_errors(
-                    "ERRORED",
-                    f"POST {self.key_log} UPLOAD IMAGE: {error_message}",
-                    base_message=error_message,
-                )
-
                 return False
 
         except Exception as e:
@@ -376,9 +383,21 @@ class TiktokService(BaseService):
             self.save_errors("ERRORED", f"POST {self.key_log} UPLOAD VIDEO: {str(e)}")
             return False
 
-    def upload_video_by_url(self, media_url, retry=0):
+    def upload_video_by_url(self, post, retry=0):
         try:
-            log_tiktok_message(f"POST {self.key_log} Upload video to Tiktok")
+            log_tiktok_message(f"POST {self.key_log} Upload video by URL to Tiktok")
+
+            video_path = post.video_path
+            time_waited = 0
+            while not video_path and time_waited < 30:
+                time.sleep(2)
+                time_waited += 2
+                post = PostService.find_post(post.id)
+                video_path = post.video_path
+
+            path_video_url = video_path.replace("/mnt/", "")
+            media_url = f"https://apitoktak.voda-play.com/voice/{path_video_url}"
+
             URL_VIDEO_UPLOAD = "https://open.tiktokapis.com/v2/post/publish/video/init/"
             access_token = self.meta.get("access_token")
 
@@ -392,7 +411,7 @@ class TiktokService(BaseService):
                     "title": self.post.description
                     + "\n\n  #tiktok "
                     + self.post.hashtag,
-                    "privacy_level": "SELF_ONLY",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
+                    "privacy_level": "PUBLIC_TO_EVERYONE",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
                     "disable_duet": False,
                     "disable_comment": False,
                     "disable_stitch": False,
@@ -436,9 +455,7 @@ class TiktokService(BaseService):
                 if refreshed["status"] == "success":
                     new_meta = refreshed["result"]
                     self.meta = new_meta
-                    return self.upload_video_by_url(
-                        media_url=media_url, retry=retry + 1
-                    )
+                    return self.upload_video_by_url(post=post, retry=retry + 1)
                 else:
                     self.save_errors(
                         "ERRORED",
@@ -467,12 +484,6 @@ class TiktokService(BaseService):
                 self.save_publish("PUBLISHED", permalink)
                 return True
             else:
-                error_message = status.get("message")
-                self.save_errors(
-                    "ERRORED",
-                    f"POST {self.key_log} UPLOAD VIDEO: {error_message}",
-                    base_message=error_message,
-                )
                 return False
         except Exception as e:
             self.save_errors(
@@ -565,6 +576,11 @@ class TiktokService(BaseService):
                 "publicaly_available_post_id": publicaly_available_post_id,
             }
         if status == "FAILED":
+            self.save_errors(
+                "ERRORED",
+                f"POST {self.key_log} CHECK STATUS - GET ERROR: {res_json.get('data').get('fail_reason')}",
+                base_message=res_json.get("data").get("fail_reason"),
+            )
             return {
                 "status": False,
                 "message": res_json.get("data").get("fail_reason"),
@@ -598,34 +614,27 @@ class TiktokService(BaseService):
 
         disable_comment = (
             self.social_post.disable_comment
-            if "disable_comment" in self.social_post
+            if self.social_post.disable_comment
             else False
-        )
-        privacy_level = (
-            self.social_post.privacy_level
-            if "privacy_level" in self.social_post
-            else "SELF_ONLY"
         )
         auto_add_music = (
             self.social_post.auto_add_music
-            if "auto_add_music" in self.social_post
+            if self.social_post.auto_add_music
             else False
         )
         disable_duet = (
-            self.social_post.disable_duet
-            if "disable_duet" in self.social_post
-            else False
+            self.social_post.disable_duet if self.social_post.disable_duet else False
         )
         disable_stitch = (
             self.social_post.disable_stitch
-            if "disable_stitch" in self.social_post
+            if self.social_post.disable_stitch
             else False
         )
 
         payload = {
             "post_info": {
                 "title": self.post.description + "\n\n  #tiktok " + self.post.hashtag,
-                "privacy_level": privacy_level,  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
+                "privacy_level": "PUBLIC_TO_EVERYONE",  # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY,
                 "disable_duet": disable_duet,
                 "disable_comment": disable_comment,
                 "disable_stitch": disable_stitch,
@@ -710,7 +719,9 @@ class TiktokService(BaseService):
             else:
                 start_bytes = i * chunk_size
                 end_bytes = min(start_bytes + chunk_size, media_size) - 1
-                current_chunk_size = start_bytes - end_bytes + 1
+                current_chunk_size = (
+                    (end_bytes - start_bytes) + 1 if total_chunk == 1 else chunk_size
+                )
 
             chunk_data = media_content[start_bytes:end_bytes]
 

@@ -134,10 +134,10 @@ class PaymentService:
 
     @staticmethod
     def has_active_subscription(user_id):
-        now = datetime.now()
+        today = datetime.now().date() 
         active_payment = (
             Payment.query.filter_by(user_id=user_id)
-            .filter(Payment.end_date > now)
+            .filter(func.date(Payment.end_date) >= today)
             .filter(Payment.package_name != "ADDON")
             .order_by(Payment.end_date.desc())
             .first()
@@ -152,7 +152,9 @@ class PaymentService:
         return active_payment
 
     @staticmethod
-    def create_new_payment(current_user, package_name, status="PENDING", addon_count=0):
+    def create_new_payment(
+        current_user, package_name, status="PENDING", addon_count=0, method="REQUEST"
+    ):
         now = datetime.now()
         origin_price = PACKAGE_CONFIG[package_name]["price"]
         start_date = now
@@ -169,7 +171,7 @@ class PaymentService:
             "end_date": end_date,
             "customer_name": current_user.name or current_user.email,
             "total_create": PACKAGE_CONFIG[package_name]["total_create"],
-            "method": "REQUEST",
+            "method": method,
             "requested_at": start_date,
             "total_link": PACKAGE_CONFIG[package_name]["total_link"],
             "description": f"{package_name} 패키지를 구매하기",
@@ -302,9 +304,7 @@ class PaymentService:
 
     @staticmethod
     def get_admin_billings(data_search):
-        # Query cơ bản với các điều kiện
-        query = Payment.query
-
+        query = Payment.query.filter(Payment.method != "NEW_USER")
         search_key = data_search.get("search_key", "")
 
         if search_key != "":
@@ -354,6 +354,15 @@ class PaymentService:
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
             query = query.filter(Payment.created_at >= start_date)
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                query = query.filter(Payment.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                query = query.filter(Payment.created_at < to_date)
 
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
@@ -747,8 +756,7 @@ class PaymentService:
             return res.json(), res.status_code
         except requests.RequestException as e:
             return {"message": f"TossPayments 연결 오류: {str(e)}"}, 500
-        
-        
+
     @staticmethod
     def billing_authorizations_toss(auth_key, customer_key):
         TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY")
@@ -891,3 +899,52 @@ class PaymentService:
             .scalar()
         )
         return total or 0
+
+    @staticmethod
+    def report_payment_by_type(data_search):
+        
+        histories = Payment.query.filter(Payment.method != "NEW_USER")
+        package_name = data_search.get("package_name", "")
+        status = data_search.get("status", "")
+        
+        if package_name != "":
+            histories = histories.filter(Payment.package_name == package_name)
+        if status != "":
+            histories = histories.filter(Payment.status == status)
+        time_range = data_search.get("time_range", "")
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            histories = histories.filter(Payment.created_at >= start_date)
+
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            histories = histories.filter(Payment.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            histories = histories.filter(Payment.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            histories = histories.filter(Payment.created_at >= start_date)
+
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                histories = histories.filter(Payment.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                histories = histories.filter(Payment.created_at < to_date)
+
+        
+        total = histories.count()
+        total_price = histories.with_entities(func.coalesce(func.sum(Payment.price), 0)).scalar()
+
+        return {
+            "total": total,
+            "total_price": total_price
+        }

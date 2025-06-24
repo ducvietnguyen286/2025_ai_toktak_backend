@@ -1,5 +1,10 @@
 from app.models.ocr_results import OCRResult
-from app.lib.query import select_with_filter, select_by_id, select_with_filter_one
+from app.lib.query import (
+    delete_by_id,
+    select_with_filter,
+    select_by_id,
+    select_with_filter_one,
+)
 
 
 class OCRResultService:
@@ -43,8 +48,5 @@ class OCRResultService:
 
     @staticmethod
     def delete_ocr_result(id):
-        ocr_result = select_by_id(OCRResult, id)
-        if not ocr_result:
-            return None
-        ocr_result.delete()
+        delete_by_id(OCRResult, id)
         return True

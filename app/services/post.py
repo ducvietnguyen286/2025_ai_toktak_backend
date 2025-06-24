@@ -1,3 +1,4 @@
+from app.lib.logger import logger
 from app.models.user import User
 from app.models.post import Post
 from app.models.user_video_templates import UserVideoTemplates
@@ -11,10 +12,12 @@ import os
 import json
 import const
 from app.lib.query import (
+    delete_by_id,
     select_with_filter,
     select_by_id,
     select_with_pagination,
     select_with_filter_one,
+    update_by_id,
 )
 from sqlalchemy import update, delete
 from sqlalchemy.orm import joinedload
@@ -66,18 +69,13 @@ class PostService:
 
     @staticmethod
     def update_post(id, *args, **kwargs):
+        update_by_id(Post, id, kwargs)
         post = select_by_id(Post, id)
-        if not post:
-            return None
-        post.update(**kwargs)
         return post
 
     @staticmethod
     def delete_post(id):
-        post = select_by_id(Post, id)
-        if not post:
-            return None
-        post.delete()
+        delete_by_id(Post, id)
         return True
 
     @staticmethod
@@ -224,6 +222,15 @@ class PostService:
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
             filters.append(Post.created_at >= start_date)
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                query = query.filter(Post.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                query = query.filter(Post.created_at < to_date)
 
         pagination = select_with_pagination(
             Post,
@@ -270,7 +277,6 @@ class PostService:
             return None
         user_template.update(**kwargs)
         return user_template
-    
 
     @staticmethod
     def admin_get_posts_upload(data_search):
@@ -342,6 +348,16 @@ class PostService:
         elif time_range == "last_year":
             start_date = datetime.now() - timedelta(days=365)
             query = query.filter(Post.created_at >= start_date)
+
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                query = query.filter(Post.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                query = query.filter(Post.created_at < to_date)
 
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
@@ -415,6 +431,7 @@ class PostService:
     @staticmethod
     def update_default_template(user_id, link_id):
         try:
+            logger.info(f"Update default template: {user_id}, {link_id}")
             link_id = int(link_id)
             user_template = PostService.get_template_video_by_user_id(user_id)
 
@@ -443,6 +460,7 @@ class PostService:
                     user_template.id, **data_update_template
                 )
         except Exception as ex:
+            logger.error(f"Error update default template: {ex}")
             return None
         return user_template
 
