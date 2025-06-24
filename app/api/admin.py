@@ -733,7 +733,11 @@ class APISaveAdminNotification(Resource):
             "status": {"type": "integer"},
             "title": {"type": "string"},
             "url": {"type": "string"},
+            "icon": {"type": "string"},
+            "redirect_type": {"type": "string"},
             "notification_id": {"type": "integer"},
+            "repeat_duration": {"type": "integer"},
+            "ask_again": {"type": "integer"},
         },
         required=["country", "title"],
     )
@@ -743,6 +747,10 @@ class APISaveAdminNotification(Resource):
         status = args.get("status", "")
         title = args.get("title", "")
         url = args.get("url", "")
+        icon = args.get("icon", "")
+        ask_again = args.get("ask_again",0)
+        repeat_duration = args.get("repeat_duration",0)
+        redirect_type = args.get("redirect_type", "")
         notification_id = args.get("notification_id", "")
 
         if notification_id != "":
@@ -754,6 +762,10 @@ class APISaveAdminNotification(Resource):
                 url=url,
                 description=description,
                 status=status,
+                icon=icon,
+                redirect_type=redirect_type,
+                ask_again=ask_again,
+                repeat_duration=repeat_duration,
             )
             if not notification:
                 return Response(
@@ -776,6 +788,10 @@ class APISaveAdminNotification(Resource):
                 url=url,
                 description=description,
                 status=status,
+                icon=icon,
+                redirect_type=redirect_type,
+                ask_again=ask_again,
+                repeat_duration=repeat_duration,
             )
             if not notification:
                 return Response(
