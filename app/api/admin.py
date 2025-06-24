@@ -24,6 +24,7 @@ import traceback
 from app.services.social_post import SocialPostService
 from app.services.product import ProductService
 from app.services.batch import BatchService
+from app.services.admin_notification import AdminNotificationService
 
 ns = Namespace(name="admin", description="Admin API")
 
@@ -184,8 +185,7 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         new_users = UserService.report_user_by_type(data_search)
-        
-        
+
         data_search = {
             "type": "referral",
             "type_2": "NEW_USER",
@@ -194,9 +194,8 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         referral_new_users = UserService.report_user_by_type(data_search)
-        new_users =  new_users + referral_new_users
-        
-        
+        new_users = new_users + referral_new_users
+
         data_search = {
             "subscription": "FREE",
             "time_range": selected_date_type,
@@ -204,7 +203,7 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         total_user_free = UserService.report_user_by_subscription(data_search)
-        
+
         data_search = {
             "subscription": "BASIC",
             "time_range": selected_date_type,
@@ -212,7 +211,6 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         total_user_basic = UserService.report_user_by_subscription(data_search)
-
 
         data_search = {
             "subscription": "STANDARD",
@@ -222,7 +220,6 @@ class APIReportDashboard(Resource):
         }
         total_user_standard = UserService.report_user_by_subscription(data_search)
 
-        
         data_search = {
             "subscription": "NEW_USER",
             "time_range": selected_date_type,
@@ -230,7 +227,7 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         total_user_new_user = UserService.report_user_by_subscription(data_search)
-        
+
         data_search = {
             "subscription": "BUSINESS",
             "time_range": selected_date_type,
@@ -238,9 +235,6 @@ class APIReportDashboard(Resource):
             "to_date": to_date,
         }
         total_user_business = UserService.report_user_by_subscription(data_search)
-
-
-
 
         data_search_coupon = {
             "type": "USED_COUPON",
@@ -327,10 +321,16 @@ class APIReportDashboard(Resource):
         data["total_user_pending_payment"] = total_user_pending_payment
         data["total_user_products"] = total_user_products
         data["total_batchs"] = total_batchs
-        data["total_batch_drafts"] =total_batch_drafts
-        data["total_user_payment_price"] = format_price_won(total_user_paid_payment_price) 
-        data["total_user_paid_payment_price"] = format_price_won(total_user_paid_payment_price)
-        data["total_user_pending_payment_price"] = format_price_won(total_user_pending_payment_price)
+        data["total_batch_drafts"] = total_batch_drafts
+        data["total_user_payment_price"] = format_price_won(
+            total_user_paid_payment_price
+        )
+        data["total_user_paid_payment_price"] = format_price_won(
+            total_user_paid_payment_price
+        )
+        data["total_user_pending_payment_price"] = format_price_won(
+            total_user_pending_payment_price
+        )
 
         return Response(message="", code=200, data=data).to_dict()
 
@@ -504,20 +504,25 @@ class GetDetailLog(Resource):
                     return Response(
                         data=None, message="Missing userId", status=400
                     ).to_dict()
-                
+
                 random_string = "".join(
-                    secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
+                    secrets.choice(string.ascii_letters + string.digits)
+                    for _ in range(60)
                 )
 
                 # Cập nhật mật khẩu
-                update_result = UserService.update_user_with_out_session(userId, password=random_string)
+                update_result = UserService.update_user_with_out_session(
+                    userId, password=random_string
+                )
                 if not update_result:
                     return Response(
                         data=None, message="Update failed", status=400
                     ).to_dict()
 
                 fe_current_domain = os.environ.get("FE_DOMAIN") or "https://toktak.ai"
-                url_return = f"{fe_current_domain}/auth/loginadmin?random_string={random_string}"
+                url_return = (
+                    f"{fe_current_domain}/auth/loginadmin?random_string={random_string}"
+                )
                 return Response(
                     data={"userId": userId, "url_return": url_return},
                     message="Đăng nhập thành công",
@@ -674,5 +679,196 @@ class APIDownloadUserExcel(Resource):
             logger.error("Exception: {0}".format(str(e)))
             return Response(
                 message=f"download-excel.(Error code : ) {str(e)}",
+                code=201,
+            ).to_dict()
+
+
+@ns.route("/admin_notifications")
+class APIAdminNotification(Resource):
+
+    @jwt_required()
+    @admin_required()
+    def get(self):
+        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+        status = request.args.get("status", const.UPLOADED, type=int)
+        type_order = request.args.get("type_order", "", type=str)
+        type_post = request.args.get("type_post", "", type=str)
+        time_range = request.args.get("time_range", "", type=str)
+        search = request.args.get("search", "", type=str)
+        member_type = request.args.get("member_type", "", type=str)
+        from_date = request.args.get("from_date", "", type=str)
+        to_date = request.args.get("to_date", "", type=str)
+        data_search = {
+            "page": page,
+            "per_page": per_page,
+            "status": status,
+            "type_order": type_order,
+            "type_post": type_post,
+            "time_range": time_range,
+            "search": search,
+            "member_type": member_type,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        users = AdminNotificationService.admin_search_admin_notifications(data_search)
+        return {
+            "status": True,
+            "message": "Success",
+            "total": users.total,
+            "page": users.page,
+            "per_page": users.per_page,
+            "total_pages": users.pages,
+            "data": [user_detail._to_json() for user_detail in users.items],
+        }, 200
+
+
+@ns.route("/save_admin_notification")
+class APISaveAdminNotification(Resource):
+    @parameters(
+        type="object",
+        properties={
+            "country": {"type": "string"},
+            "description": {"type": "string"},
+            "status": {"type": "integer"},
+            "title": {"type": "string"},
+            "url": {"type": "string"},
+            "icon": {"type": "string"},
+            "redirect_type": {"type": "string"},
+            "notification_id": {"type": "integer"},
+            "repeat_duration": {"type": "integer"},
+            "ask_again": {"type": "integer"},
+        },
+        required=["country", "title"],
+    )
+    def post(self, args):
+        country = args.get("country", "")
+        description = args.get("description", "")
+        status = args.get("status", "")
+        title = args.get("title", "")
+        url = args.get("url", "")
+        icon = args.get("icon", "")
+        ask_again = args.get("ask_again",0)
+        repeat_duration = args.get("repeat_duration",0)
+        redirect_type = args.get("redirect_type", "")
+        notification_id = args.get("notification_id", "")
+
+        if notification_id != "":
+            # Cập nhật thông báo
+            notification = AdminNotificationService.update_admin_notification(
+                notification_id,
+                country=country,
+                title=title,
+                url=url,
+                description=description,
+                status=status,
+                icon=icon,
+                redirect_type=redirect_type,
+                ask_again=ask_again,
+                repeat_duration=repeat_duration,
+            )
+            if not notification:
+                return Response(
+                    message="알림을 업데이트하지 못했습니다",
+                    message_en="Cập nhật thông báo thất bại",
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                message="알림을 성공적으로 생성했습니다",
+                message_en="Tạo thông báo thành công",
+                code=200,
+            ).to_dict()
+
+        else:
+            # Tạo mới thông báo
+            notification = AdminNotificationService.create_admin_notification(
+                country=country,
+                title=title,
+                url=url,
+                description=description,
+                status=status,
+                icon=icon,
+                redirect_type=redirect_type,
+                ask_again=ask_again,
+                repeat_duration=repeat_duration,
+            )
+            if not notification:
+                return Response(
+                    message="알림을 생성하지 못했습니다",
+                    message_en="Tạo thông báo thất bại",
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                message="알림을 성공적으로 업데이트했습니다",
+                message_en="Cập nhật thông báo thành công",
+                code=200,
+            ).to_dict()
+
+
+@ns.route("/admin_notification_by_id")
+class APIAdminNotificationById(Resource):
+    @jwt_required()
+    @admin_required()
+    def get(self):
+        id = request.args.get("id")
+        notification_detail = AdminNotificationService.find_by_id(id)
+        return Response(
+            data=notification_detail._to_json(),
+            message="정보를 성공적으로 가져왔습니다",
+            message_en="Lấy thông tin thành công",
+            code=200,
+        ).to_dict()
+
+
+@ns.route("/delete_admin_notification")
+class APIDeleteAdminNotification(Resource):
+    @jwt_required()
+    @admin_required()
+    @parameters(
+        type="object",
+        properties={
+            "user_ids": {"type": "string"},
+        },
+        required=["user_ids"],
+    )
+    def post(self, args):
+        try:
+            user_ids = args.get("user_ids", "")
+            # Chuyển chuỗi user_ids thành list các integer
+            if not user_ids:
+                return Response(
+                    message="No user_ids provided",
+                    code=201,
+                ).to_dict()
+
+            # Tách chuỗi và convert sang list integer
+            id_list = [int(id.strip()) for id in user_ids.split(",")]
+
+            if not id_list:
+                return Response(
+                    message="Invalid user_ids format",
+                    code=201,
+                ).to_dict()
+
+            process_delete = AdminNotificationService.delete_admin_notification_by_ids(
+                id_list
+            )
+            if process_delete == 1:
+                message = "Delete notification Success"
+            else:
+                message = "사용자 삭제 중 오류"
+                return Response(
+                    message=message,
+                    code=201,
+                ).to_dict()
+
+            return Response(message=message, code=200, data=id_list).to_dict()
+
+        except Exception as e:
+            logger.error(f"Exception: Delete notification Fail  :  {str(e)}")
+            return Response(
+                message="사용자 삭제 중 오류",
                 code=201,
             ).to_dict()
