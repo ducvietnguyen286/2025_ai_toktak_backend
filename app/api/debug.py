@@ -198,14 +198,54 @@ HTML_TEMPLATE = """
             background: #4CAF50;
             cursor: pointer;
         }
+        .text-input-section {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            z-index: 100;
+        }
+        .text-input-section textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Noto Sans KR', Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+        }
+        .text-input-section label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+        .character-count {
+            text-align: right;
+            margin-top: 5px;
+            font-size: 0.9em;
+            color: #666;
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <h1>Voice Test Interface</h1>
+    
+    <div class="text-input-section">
+        <label>텍스트 입력 (Text Input)</label>
+        <textarea id="shared-text" oninput="updateCharCount(this)">{{ origin_caption }}</textarea>
+        <div class="character-count">Characters: <span id="char-count">0</span></div>
+    </div>
+
     <div class="grid">
         {% for voice in voices %}
-        <div class="voice-card" id="card-{{ voice.get('actor_id', '') }}">
+        <div class="voice-card" id="card-{{ voice.get('actor_id', '') }}" data-index="{{ loop.index }}">
             <img src="{{ voice.get('img_url', 'https://via.placeholder.com/100') }}" alt="{{ voice.get('name', {}).get('ko', 'Unknown') }}">
             <div class="voice-name">{{ voice.get('name', {}).get('ko', 'Unknown') }}</div>
             <div class="voice-name-en">{{ voice.get('name', {}).get('en', '') }}</div>
@@ -263,7 +303,7 @@ HTML_TEMPLATE = """
                 </div>
             </div>
 
-            <button class="test-button" onclick="testVoice('{{ voice.get('actor_id', '') }}')" id="btn-{{ voice.get('actor_id', '') }}">음성 테스트</button>
+            <button class="test-button" onclick="testVoice('{{ voice.get('actor_id', '') }}', {{ loop.index }})" id="btn-{{ voice.get('actor_id', '') }}">음성 테스트</button>
             
             <div class="audio-section" id="audio-section-{{ voice.get('actor_id', '') }}">
                 <h4>생성된 파일 (Generated Files)</h4>
@@ -286,6 +326,17 @@ HTML_TEMPLATE = """
     <div id="loading">음성을 생성하는 중... 잠시만 기다려주세요...</div>
 
     <script>
+        // Update character count on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.getElementById('shared-text');
+            updateCharCount(textarea);
+        });
+
+        function updateCharCount(textarea) {
+            const count = textarea.value.length;
+            document.getElementById('char-count').textContent = count;
+        }
+
         function updateControlValue(input) {
             const value = parseFloat(input.value).toFixed(1);
             input.nextElementSibling.textContent = value;
@@ -297,12 +348,13 @@ HTML_TEMPLATE = """
             });
         }
 
-        function testVoice(voiceId) {
+        function testVoice(voiceId, voiceIndex) {
             const audioSection = document.getElementById(`audio-section-${voiceId}`);
             const audioFiles = document.getElementById(`audio-files-${voiceId}`);
             const audioMain = document.getElementById(`audio-main-${voiceId}`);
             const button = document.getElementById(`btn-${voiceId}`);
             const loadingElement = document.getElementById('loading');
+            const sharedText = document.getElementById('shared-text').value;
             
             // Get control values
             const volume = document.getElementById(`volume-${voiceId}`).value;
@@ -327,9 +379,11 @@ HTML_TEMPLATE = """
                 },
                 body: JSON.stringify({
                     voice_id: voiceId,
+                    batch_id: voiceIndex,
                     volumn: parseFloat(volume),
                     speed_x: parseFloat(speed),
-                    tempo: parseFloat(tempo)
+                    tempo: parseFloat(tempo),
+                    text: sharedText
                 })
             })
             .then(response => response.json())
@@ -392,7 +446,10 @@ class DebugGunicorn(Resource):
 class VoiceTestPage(Resource):
     def get(self):
         voices = get_typecast_voices()
-        html = render_template_string(HTML_TEMPLATE, voices=voices)
+        origin_caption = "주방의 청소 도구가 항상 어지럽혀져 있다면, 누구나 한번쯤 고민해보셨을 거예요. 행주와 스폰지, 수세미까지 다양한 물건들이 자주 뒤섞이면서 찾아도 없고, 사용할 때마다 불편함이 커지기 마련입니다. 이런 일들이 자주 반복되면 집중력도 떨어지고, 주방을 사용할 때마다 스트레스를 받게 되죠.\\n이제 그 스트레스를 날려줄 수 있는 솔루션이 있습니다. 스테인레스 스틸로 만들어져 내구성이 뛰어난 주방 청소 도구 스토리지 랙을 사용해보세요. 이 랙은 다용도로 사용이 가능해 스폰지, 행주, 수세미 등 다양한 도구를 깔끔하게 정리해 줍니다. 특히, 구성품이 다공성 바닥으로 되어 있어 물이 쉽게 빠져나가면서 항상 건조한 상태를 유지할 수 있습니다. 이렇게 공간 효율이 높아지면, 주방에서 느끼는 불편함이 훨씬 줄어들겠죠. 매일 사용하는 도구가 정리되어 있으면 주방도 깔끔해져요.\\n이미 많은 분들이 만족하고 계십니다. 제품에 대한 후기가 수백 개 달리며 높은 평점을 기록하고 있어요. 일상생활에서 소소한 변화가 큰 차이를 만들어낼 수 있다는 점에서, 많은 사람들이 인정한 제품입니다.\\n주방에서의 불편함을 해소하고 싶으신 분이라면, 이 제품을 한 번 사용해보세요. 깔끔한 정리가 주는 편안함을 직접 느껴보시길 바랍니다."
+        html = render_template_string(
+            HTML_TEMPLATE, voices=voices, origin_caption=origin_caption
+        )
         response = make_response(html)
         response.headers["Content-Type"] = "text/html"
         return response
@@ -408,12 +465,15 @@ class DebugTestTypecast(Resource):
         volumn = data.get("volumn", 100)
         speed_x = data.get("speed_x", 1)
         tempo = data.get("tempo", 1)
+        batch_id = data.get("batch_id", 1)  # Get batch_id from request
+        text = data.get(
+            "text",
+            "주방의 청소 도구가 항상 어지럽혀져 있다면, 누구나 한번쯤 고민해보셨을 거예요. 행주와 스폰지, 수세미까지 다양한 물건들이 자주 뒤섞이면서 찾아도 없고, 사용할 때마다 불편함이 커지기 마련입니다. 이런 일들이 자주 반복되면 집중력도 떨어지고, 주방을 사용할 때마다 스트레스를 받게 되죠.\\n이제 그 스트레스를 날려줄 수 있는 솔루션이 있습니다. 스테인레스 스틸로 만들어져 내구성이 뛰어난 주방 청소 도구 스토리지 랙을 사용해보세요. 이 랙은 다용도로 사용이 가능해 스폰지, 행주, 수세미 등 다양한 도구를 깔끔하게 정리해 줍니다. 특히, 구성품이 다공성 바닥으로 되어 있어 물이 쉽게 빠져나가면서 항상 건조한 상태를 유지할 수 있습니다. 이렇게 공간 효율이 높아지면, 주방에서 느끼는 불편함이 훨씬 줄어들겠죠. 매일 사용하는 도구가 정리되어 있으면 주방도 깔끔해져요.\\n이미 많은 분들이 만족하고 계십니다. 제품에 대한 후기가 수백 개 달리며 높은 평점을 기록하고 있어요. 일상생활에서 소소한 변화가 큰 차이를 만들어낼 수 있다는 점에서, 많은 사람들이 인정한 제품입니다.\\n주방에서의 불편함을 해소하고 싶으신 분이라면, 이 제품을 한 번 사용해보세요. 깔끔한 정리가 주는 편안함을 직접 느껴보시길 바랍니다.",
+        )
 
-        batch_id = 1
         date_create = datetime.datetime.now().strftime("%Y_%m_%d")
         dir_path = f"static/voice/gtts_voice/{date_create}/{batch_id}"
         config = ShotStackService.get_settings()
-        origin_caption = "주방의 청소 도구가 항상 어지럽혀져 있다면, 누구나 한번쯤 고민해보셨을 거예요. 행주와 스폰지, 수세미까지 다양한 물건들이 자주 뒤섞이면서 찾아도 없고, 사용할 때마다 불편함이 커지기 마련입니다. 이런 일들이 자주 반복되면 집중력도 떨어지고, 주방을 사용할 때마다 스트레스를 받게 되죠.\\n이제 그 스트레스를 날려줄 수 있는 솔루션이 있습니다. 스테인레스 스틸로 만들어져 내구성이 뛰어난 주방 청소 도구 스토리지 랙을 사용해보세요. 이 랙은 다용도로 사용이 가능해 스폰지, 행주, 수세미 등 다양한 도구를 깔끔하게 정리해 줍니다. 특히, 구성품이 다공성 바닥으로 되어 있어 물이 쉽게 빠져나가면서 항상 건조한 상태를 유지할 수 있습니다. 이렇게 공간 효율이 높아지면, 주방에서 느끼는 불편함이 훨씬 줄어들겠죠. 매일 사용하는 도구가 정리되어 있으면 주방도 깔끔해져요.\\n이미 많은 분들이 만족하고 계십니다. 제품에 대한 후기가 수백 개 달리며 높은 평점을 기록하고 있어요. 일상생활에서 소소한 변화가 큰 차이를 만들어낼 수 있다는 점에서, 많은 사람들이 인정한 제품입니다.\\n주방에서의 불편함을 해소하고 싶으신 분이라면, 이 제품을 한 번 사용해보세요. 깔끔한 정리가 주는 편안함을 직접 느껴보시길 바랍니다."
 
         korean_voice = get_korean_typecast_voice(voice_typecast)
         if not korean_voice:
@@ -424,7 +484,7 @@ class DebugTestTypecast(Resource):
         config["tempo"] = tempo
 
         mp3_file, audio_duration, audio_files = text_to_speech_kr(
-            korean_voice, origin_caption, dir_path, config, get_audios=True
+            korean_voice, text, dir_path, config, get_audios=True
         )
 
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
