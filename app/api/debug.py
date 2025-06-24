@@ -429,9 +429,10 @@ class DebugTestTypecast(Resource):
 
         current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
 
-        main_file_url = f"{current_domain}/{mp3_file}"
+        main_file_url = f"{current_domain}/{mp3_file.replace('/static', '/')}"
         audio_files_url = [
-            f"{current_domain}/{audio_file}" for audio_file in audio_files
+            f"{current_domain}/{audio_file.replace('/static', '/')}"
+            for audio_file in audio_files
         ]
 
         return {
