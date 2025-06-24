@@ -137,6 +137,7 @@ class MultiProductCreateApi(Resource):
             products = []
             idx = 0
             today = datetime.now()
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             while True:
                 prefix = f"[{idx}]"
                 if f"{prefix}[id]" not in request.form:
@@ -150,7 +151,7 @@ class MultiProductCreateApi(Resource):
                 }
 
                 # Nhận file nếu có
-                file = request.files.get(f"{prefix}[product_file]")
+                file = request.files.get(f"{prefix}[product_image_file]")
                 if file:
                     # Lưu file lên server, đổi tên nếu cần
                     folder_path = f"static/voice/product_upload/{today.strftime('%Y_%m_%d')}/{user_id}"
@@ -158,7 +159,11 @@ class MultiProductCreateApi(Resource):
                     filename = file.filename
                     save_path = os.path.join(folder_path, filename)
                     file.save(save_path)
-                    prod["product_image"] = save_path
+                    output_caption_file = save_path.replace("static/", "").replace(
+                        "\\", "/"
+                    )
+                    file_url = f"{current_domain}/{output_caption_file}"
+                    prod["product_image"] = file_url
 
                 else:
                     prod["product_image"] = request.form.get(
@@ -224,6 +229,7 @@ class ProductMultiUpdateAPI(Resource):
             products = []
             idx = 0
             today = datetime.now()
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             while True:
                 prefix = f"[{idx}]"
                 if f"{prefix}[id]" not in request.form:
@@ -238,7 +244,7 @@ class ProductMultiUpdateAPI(Resource):
                 }
 
                 # Nhận file nếu có
-                file = request.files.get(f"{prefix}[product_file]")
+                file = request.files.get(f"{prefix}[product_image_file]")
                 if file:
                     # Lưu file lên server, đổi tên nếu cần
                     folder_path = f"static/voice/product_upload/{today.strftime('%Y_%m_%d')}/{user_id}"
@@ -246,7 +252,12 @@ class ProductMultiUpdateAPI(Resource):
                     filename = file.filename
                     save_path = os.path.join(folder_path, filename)
                     file.save(save_path)
-                    prod["product_image"] = save_path
+                    
+                    output_caption_file = save_path.replace("static/", "").replace(
+                        "\\", "/"
+                    )
+                    file_url = f"{current_domain}/{output_caption_file}"
+                    prod["product_image"] = file_url
 
                 else:
                     prod["product_image"] = request.form.get(
