@@ -24,24 +24,30 @@ class CoupangScraper:
         self.fire_crawl_key = ""
 
     def run(self):
-        return self.run_selenium()
+        return self.run_crawler_mobile()
 
     def proxies(self):
-        proxies = [
-            "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
-            "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
-            "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
-            "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
-            "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
-        ]
+        # proxies = [
+        #     "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
+        #     "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
+        #     "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
+        #     "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
+        #     "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
+        # ]
 
-        random_proxy = random.choice(proxies)
+        proxy = "http://brd-customer-hl_8019b21f-zone-scraping_browser2-country-il:wyfmhy3tqffj@brd.superproxy.io:33335"
+
+        # random_proxy = random.choice(proxies)
         old_proxy = "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80/"
         # proxy = "http://b45ba2a7:xyuhqzh7dlyu@proxy.toolip.io:31113"
         return {
-            "http": random_proxy,
-            "https": random_proxy,
+            "http": proxy,
+            "https": proxy,
         }
+
+    def cert_ssl_path(self):
+        COUPANG_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/coupang")
+        return os.path.join(COUPANG_FOLDER, "ca_cert.crt")
 
     def run_selenium(self):
         try:
@@ -225,9 +231,16 @@ class CoupangScraper:
             )
 
             proxies = self.proxies()
+            cert_ssl_path = self.cert_ssl_path()
 
             session = requests.Session()
-            response = session.get(btf_url, headers=headers, timeout=5, proxies=proxies)
+            response = session.get(
+                btf_url,
+                headers=headers,
+                timeout=5,
+                proxies=proxies,
+                verify=cert_ssl_path,
+            )
             btf_content = response.json()
             r_data = btf_content.get("rData")
 
@@ -374,14 +387,17 @@ class CoupangScraper:
             headers = random_mobile_header()
             if added_headers is not None:
                 headers.update(added_headers)
-            mobile_user_agent = generate_user_agent()
-            headers.update({"user-agent": mobile_user_agent})
-
-            print("headers", headers)
 
             proxies = self.proxies()
+            cert_ssl_path = self.cert_ssl_path()
 
-            response = session.get(url, headers=headers, timeout=5, proxies=proxies)
+            response = session.get(
+                url,
+                headers=headers,
+                timeout=5,
+                proxies=proxies,
+                verify=cert_ssl_path,
+            )
             info = response.content
             html = BeautifulSoup(info, "html.parser")
             # file_html = open("demo.html", "w", encoding="utf-8")

@@ -36,6 +36,8 @@ from app.config import configs as config
 
 stop_event = threading.Event()
 
+SELENIUM_URL = "https://brd-customer-hl_8019b21f-zone-scraping_browser1:w2dey5l5cws2@brd.superproxy.io:9515"
+
 
 def clear_profile_lock(profile_dir):
     """

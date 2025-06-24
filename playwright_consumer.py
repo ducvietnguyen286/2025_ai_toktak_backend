@@ -25,6 +25,9 @@ load_dotenv(override=False)
 
 stop_event = threading.Event()
 
+AUTH = "brd-customer-hl_8019b21f-zone-scraping_browser1-country-il:w2dey5l5cws2"
+SBR_WS_CDP = f"wss://{AUTH}@brd.superproxy.io:9222"
+
 
 def signal_handler(sig, frame):
     print("Received shutdown signal. Stopping worker...")
@@ -64,169 +67,31 @@ def create_app():
 
 async def create_browser_instance():
     """Tạo một instance của trình duyệt với các cấu hình nâng cao"""
-    p = await async_playwright().start()
-
-    # Cấu hình browser
-    browser = await p.chromium.launch(
-        headless=False,  # Set True trong production
-        args=[
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-accelerated-2d-canvas",
-            "--disable-gpu",
-            "--disable-features=site-per-process",
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--disable-extensions",
-            "--disable-popup-blocking",
-            "--disable-notifications",
-            "--disable-infobars",
-            "--enable-touch-events",
-            "--touch-events=enabled",
-            "--disable-http2",  # Tắt HTTP/2 để tránh lỗi protocol
-            "--disable-blink-features=AutomationControlled",  # Ẩn dấu vết automation
-            "--ignore-certificate-errors",  # Bỏ qua lỗi chứng chỉ
-            "--window-size=412,915",  # Kích thước cửa sổ giống mobile
-        ],
-    )
-
-    # Cấu hình thiết bị Android
-    device = {
-        "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
-        "viewport": {"width": 412, "height": 915},
-        "device_scale_factor": 3.5,
-        "is_mobile": True,
-        "has_touch": True,
-        "default_browser_type": "chromium",
-    }
-
-    # Tạo context với các cấu hình nâng cao
-    context = await browser.new_context(
-        user_agent=device["user_agent"],
-        viewport=device["viewport"],
-        device_scale_factor=device["device_scale_factor"],
-        is_mobile=device["is_mobile"],
-        has_touch=device["has_touch"],
-        locale="ko-KR",
-        timezone_id="Asia/Seoul",
-        geolocation={
-            "latitude": 37.5665,
-            "longitude": 126.9780,
-            "accuracy": 100,
-        },  # Seoul coordinates
-        permissions=["geolocation"],
-        proxy=(
-            {
-                "server": os.environ.get("PROXY_SERVER", ""),
-                "username": os.environ.get("PROXY_USERNAME", ""),
-                "password": os.environ.get("PROXY_PASSWORD", ""),
-            }
-            if os.environ.get("PROXY_SERVER")
-            else None
-        ),
-        extra_http_headers={
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="112"',
-            "Sec-Ch-Ua-Mobile": "?1",
-            "Sec-Ch-Ua-Platform": '"Android"',
-            "Sec-Ch-Ua-Platform-Version": "13.0.0",
-            "Sec-Ch-Ua-Model": "SM-S908B",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-            "Upgrade-Insecure-Requests": "1",
-            "Pragma": "no-cache",
-        },
-    )
-
-    # Thêm các script để ngụy trang automation
-    await context.add_init_script(
-        """
-        // Ẩn dấu vết automation
-        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-        Object.defineProperty(navigator, 'languages', { get: () => ['ko-KR', 'ko', 'en-US', 'en'] });
-        
-        // Giả lập WebGL
-        const getParameter = WebGLRenderingContext.prototype.getParameter;
-        WebGLRenderingContext.prototype.getParameter = function(parameter) {
-            if (parameter === 37445) return 'Google Inc. (ARM)';
-            if (parameter === 37446) return 'ANGLE (ARM, Mali-G78 MP14, OpenGL ES 3.2)';
-            return getParameter.apply(this, [parameter]);
-        };
-        
-        // Giả lập thông tin phần cứng
-        Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
-        Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
-        Object.defineProperty(screen, 'colorDepth', { get: () => 32 });
-        
-        // Giả lập thông tin thiết bị di động
-        Object.defineProperty(navigator, 'platform', { get: () => 'Linux armv8l' });
-        Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 5 });
-        
-        // Giả lập cảm biến
-        Object.defineProperty(window, 'DeviceOrientationEvent', {
-            get: () => function(){ return true; }
-        });
-        Object.defineProperty(window, 'DeviceMotionEvent', {
-            get: () => function(){ return true; }
-        });
-        
-        // Giả lập permissions
-        const originalQuery = window.navigator.permissions.query;
-        window.navigator.permissions.query = (parameters) => (
-            parameters.name === 'notifications' ?
-                Promise.resolve({state: Notification.permission}) :
-                originalQuery(parameters)
-        );
-
-        // Giả lập battery
-        Object.defineProperty(navigator, 'getBattery', {
-            get: () => () => Promise.resolve({
-                charging: true,
-                chargingTime: 0,
-                dischargingTime: Infinity,
-                level: 0.89
-            })
-        });
-        
-        // Giả lập network
-        Object.defineProperty(navigator, 'connection', {
-            get: () => ({
-                type: '4g',
-                downlinkMax: 10,
-                effectiveType: '4g',
-                rtt: 50,
-                saveData: false
-            })
-        });
-
-        // Ẩn automation flags
-        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
-        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
-        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
-    """
-    )
-
-    return p, browser, context
+    try:
+        async with async_playwright() as playwright:
+            logger.info("[Browser] Đang kết nối tới Bright Data browser...")
+            # Cấu hình browser với timeout dài hơn
+            browser = await playwright.chromium.connect_over_cdp(
+                SBR_WS_CDP, timeout=60000  # Tăng timeout lên 60 giây
+            )
+            logger.info("[Browser] Kết nối thành công")
+            return browser
+    except Exception as e:
+        logger.error(f"[Browser] Lỗi khi kết nối browser: {str(e)}")
+        raise  # Re-raise để worker_instance có thể xử lý
 
 
-async def process_task(context, task):
+async def process_task(browser, task):
     try:
         logger.info("[Open Page]")
-        page = await context.new_page()
+        page = await browser.new_page()
 
         try:
             url = task["url"]
             req_id = task["req_id"]
 
             # Load cookies nếu có
-            await load_cookies(page)
+            # await load_cookies(page)
 
             # Thêm random delay trước khi truy cập
             await asyncio.sleep(random.uniform(1, 3))
@@ -236,7 +101,6 @@ async def process_task(context, task):
             # Cấu hình timeout và waitUntil
             await page.goto(
                 url,
-                wait_until="domcontentloaded",  # Thay đổi từ networkidle sang domcontentloaded
                 timeout=30000,  # Tăng timeout lên 30 giây
             )
 
@@ -267,7 +131,7 @@ async def process_task(context, task):
                 f.write(await page.content())
 
             # Lưu cookies
-            await save_cookies(page)
+            # await save_cookies(page)
 
             # Parse content
             html = BeautifulSoup(await page.content(), "html.parser")
@@ -323,48 +187,69 @@ async def worker_instance():
     """
     app = create_app()
     with app.app_context():
-        playwright, browser, context = await create_browser_instance()
+        retry_count = 0
+        max_retries = 3
 
-        try:
-            # Mở trang cơ sở
-            page = await context.new_page()
-            await page.goto("https://m.coupang.com/")
+        while retry_count < max_retries and not stop_event.is_set():
+            try:
+                browser = await create_browser_instance()
 
-            print("Worker started (PID:", os.getpid(), ")")
-
-            while not stop_event.is_set():
                 try:
-                    task_item = redis_client.blpop(
-                        "toktak:crawl_coupang_queue", timeout=10
-                    )
-                    if task_item:
-                        _, task_json = task_item
-                        task = json.loads(task_json)
+                    # Mở trang cơ sở
+                    logger.info("[Worker] Đang mở trang cơ sở...")
+                    page = await browser.new_page()
+                    await page.goto("https://m.coupang.com/", timeout=30000)
+                    logger.info("[Worker] Đã mở trang cơ sở thành công")
 
-                        await process_task(context, task)
+                    print("Worker started (PID:", os.getpid(), ")")
 
-                        # Commit DB changes
-                        db.session.commit()
-                    else:
-                        await asyncio.sleep(1)
+                    while not stop_event.is_set():
+                        try:
+                            task_item = redis_client.blpop(
+                                "toktak:crawl_coupang_queue", timeout=10
+                            )
+                            if task_item:
+                                _, task_json = task_item
+                                task = json.loads(task_json)
+                                logger.info(
+                                    f"[Worker] Nhận được task mới: {task['req_id']}"
+                                )
+                                await process_task(browser, task)
+                                logger.info(
+                                    f"[Worker] Hoàn thành task: {task['req_id']}"
+                                )
 
-                except Exception as e:
-                    logger.error(f"Error in worker_instance loop: {str(e)}")
-                    print("Error in worker_instance loop:", e)
-                    db.session.rollback()
+                                # Commit DB changes
+                                db.session.commit()
+                            else:
+                                await asyncio.sleep(1)
+
+                        except Exception as e:
+                            logger.error(f"Error in worker_instance loop: {str(e)}")
+                            print("Error in worker_instance loop:", e)
+                            db.session.rollback()
+                        finally:
+                            # Cleanup session
+                            if db.session.is_active:
+                                db.session.rollback()
+                            db.session.close()
+                            db.session.remove()
+
                 finally:
-                    # Cleanup session
-                    if db.session.is_active:
-                        db.session.rollback()
-                    db.session.close()
-                    db.session.remove()
+                    await browser.close()
+                    logger.info("[Worker] Đóng browser")
+                    print("Worker stopped (PID:", os.getpid(), ")")
 
-        finally:
-            await context.close()
-            await browser.close()
-            await playwright.stop()
-            print("Worker stopped (PID:", os.getpid(), ")")
-            return True
+                return True  # Thoát vòng lặp nếu mọi thứ OK
+
+            except Exception as e:
+                retry_count += 1
+                logger.error(f"[Worker] Lỗi lần {retry_count}: {str(e)}")
+                await asyncio.sleep(5)  # Chờ 5 giây trước khi thử lại
+
+        if retry_count >= max_retries:
+            logger.error("[Worker] Đã thử lại quá số lần cho phép, dừng worker")
+        return False
 
 
 async def run_worker():
