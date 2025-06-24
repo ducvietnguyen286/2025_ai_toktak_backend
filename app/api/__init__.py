@@ -24,6 +24,7 @@ from app.api.payment import ns as payment_ns
 from app.api.debug import ns as debug_ns
 
 bp = Blueprint("api", __name__, url_prefix="/api/v1")
+bp_html = Blueprint("html", __name__, url_prefix="/html")
 
 api = Api(bp, version="1.0", title="Flask API", description="Flask API", doc="/docs/")
 
