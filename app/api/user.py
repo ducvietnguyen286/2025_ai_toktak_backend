@@ -1825,47 +1825,16 @@ class APINiceAuth(Resource):
     @jwt_required()
     def get(self):
         try:
-            subject = get_jwt_identity()
-            if subject is None:
-                return None
+            user_id = AuthService.get_user_id()
+            data_nice = NiceAuthService.get_nice_auth(user_id)
+            return data_nice
 
-            user_id = int(subject)
-
-            site_nice = os.environ.get("URL_SERVCER_NICE_AUTH", "")
-            if not site_nice:
-                return Response(
-                    code=400, message="Thiếu biến môi trường URL_SERVCER_NICE_AUTH"
-                ).to_dict()
-
-            url = f"{site_nice}/api/v1/maker/encrypt"
-            response = requests.post(url, json={"user_id": user_id}, timeout=1000)
-
-            if response.status_code != 200:
-                logger.error(f"API NICE_AUTH lỗi: {response.text}")
-                return Response(
-                    code=500, message="Không thể kết nối tới máy chủ mã hóa NICE"
-                ).to_dict()
-
-            data = response.json()
-            logger.info(data)
-
-            return Response(
-                code=200, message="Thành công", data=data.get("data", {})
-            ).to_dict()
-
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logger.error("RequestException: " + str(e))
             return Response(
-                code=500,
+                code=201,
                 message="Lỗi khi gọi máy chủ mã hóa NICE",
-            ).to_dict()
-        except Exception as e:
-            logger.error("Exception: " + str(e))
-            traceback.print_exc()
-            return Response(
-                code=500,
-                message="Lỗi nội bộ máy chủ",
-            ).to_dict()
+            ).to_dict() 
 
 
 @ns.route("/checkplus_success")
@@ -1873,49 +1842,18 @@ class APINiceAuthSuccess(Resource):
     @jwt_required()
     def get(self):
         try:
-            enc_data = request.args.get("EncodeData", "")
-            if not enc_data:
-                return Response(code=400, message="Thiếu tham số EncodeData").to_dict()
-
-            subject = get_jwt_identity()
-            if subject is None:
-                return None
-
-            user_id = int(subject)
-
-            site_nice = os.environ.get("URL_SERVCER_NICE_AUTH", "")
-            if not site_nice:
-                return Response(
-                    code=400, message="Thiếu biến môi trường URL_SERVCER_NICE_AUTH"
-                ).to_dict()
-
-            # Gửi yêu cầu dạng GET với query string
-            url = f"{site_nice}/api/v1/maker/decrypt"
-            response = requests.get(
-                url, params={"user_id": user_id, "EncodeData": enc_data}, timeout=1000
-            )
-
-            if response.status_code != 200:
-                logger.error(f"API NICE DECRYPT lỗi: {response.text}")
-                return Response(
-                    code=500, message="Không thể kết nối tới máy chủ giải mã NICE"
-                ).to_dict()
-
-            result = response.json()
-            return result
-
-        except requests.exceptions.RequestException as e:
-            logger.error("RequestException: " + str(e))
-            return Response(
-                code=500,
-                message="Lỗi khi gọi máy chủ giải mã NICE",
-            ).to_dict()
-
+            enc_data = request.args.get("EncodeData")  
+            result_item = {
+                "EncodeData": enc_data,
+            }
+            user_id = AuthService.get_user_id()
+            data_nice = NiceAuthService.checkplus_success(user_id, result_item)
+            return data_nice
         except Exception as e:
             logger.error("Exception: " + str(e))
             traceback.print_exc()
             return Response(
-                code=500,
+                code=201,
                 message="Lỗi nội bộ máy chủ",
             ).to_dict()
 
