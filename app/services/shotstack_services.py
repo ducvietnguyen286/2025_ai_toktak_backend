@@ -1068,6 +1068,7 @@ def text_to_speech_kr(
                 with open(output_file_temp, "wb") as audio_file:
                     audio_file.write(audio_content)
 
+                log_make_video_message(f"Typecast API payload: {payload}")
                 log_make_video_message(
                     f"Đã tạo file âm thanh ({korean_voice['name']}): {output_file_temp} với đoạn text dài {len(text_chunk)} ký tự"
                 )
