@@ -15,6 +15,7 @@ from app.ais.chatgpt import (
 from app.decorators import jwt_optional, parameters
 from app.enums.messages import MessageError, MessageSuccess
 from app.enums.social import SocialMedia
+from app.enums.voices import Voices
 from app.lib.caller import get_shorted_link_coupang
 from app.lib.logger import logger
 from app.lib.response import Response
@@ -175,6 +176,7 @@ class APICreateBatchSync(Resource):
         properties={
             "url": {"type": "string"},
             "voice": {"type": ["string", "null"]},
+            "voice_type": {"type": ["string", "null"]},
             "narration": {"type": ["string", "null"]},
             "is_advance": {"type": "boolean"},
             "is_paid_advertisements": {"type": "integer"},
@@ -216,12 +218,16 @@ class APICreateBatchSync(Resource):
                         batch_of_month=current_month,
                     )
 
-            narration = args.get("narration", "female")
+            narration = args.get("narration", Voices.FEMALE.value)
             voice_typecast = args.get("voice", "")
-            if narration == "female":
-                voice = 3
+            voice_type = args.get("voice_type", Voices.GOOGLE.value)
+            if voice_type == Voices.GOOGLE.value:
+                if narration == Voices.FEMALE.value:
+                    voice = "3"
+                else:
+                    voice = "2"
             else:
-                voice = 2
+                voice_typecast = voice_typecast
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
 
@@ -254,6 +260,9 @@ class APICreateBatchSync(Resource):
             thumbnail_url = data.get("image", "")
             thumbnails = data.get("thumbnails", [])
 
+            data["voice_type"] = voice_type
+            data["voice"] = voice
+
             data["input_url"] = url
             data["base_url"] = ""
             data["shorten_link"] = ""
@@ -279,7 +288,8 @@ class APICreateBatchSync(Resource):
                 status=0,
                 process_status="PENDING",
                 voice_google=voice,
-                voice_typecast=voice_typecast,
+                voice=voice,
+                voice_type=voice_type,
                 is_paid_advertisements=is_paid_advertisements,
                 is_advance=is_advance,
                 template_info=template_info,
@@ -402,7 +412,8 @@ class APIUpdateTemplateVideoUser(Resource):
             "purchase_guide": {"type": "string"},
             "is_purchase_guide": {"type": "integer"},
             "voice_gender": {"type": ["integer", "string", "null"]},
-            "voice_id": {"type": ["integer", "string", "null"]},
+            "voice_type": {"type": ["string", "null"]},
+            "voice_id": {"type": ["string", "null"]},
             "is_video_hooking": {"type": ["integer", "null"]},
             "is_caption_top": {"type": ["integer", "null"]},
             "is_caption_last": {"type": ["integer", "null"]},
@@ -428,7 +439,8 @@ class APIUpdateTemplateVideoUser(Resource):
             is_product_pin = args.get("is_product_pin", 0)
             product_pin = args.get("product_pin", "")
             voice_gender = args.get("voice_gender", 0)
-            voice_id = args.get("voice_id", 0)
+            voice_id = args.get("voice_id", "")
+            voice_type = args.get("voice_type", Voices.GOOGLE.value)
             is_video_hooking = args.get("is_video_hooking", 0)
             is_caption_top = args.get("is_caption_top", 0)
             is_caption_last = args.get("is_caption_last", 0)
@@ -461,14 +473,15 @@ class APIUpdateTemplateVideoUser(Resource):
                 "purchase_guide": purchase_guide,
                 "is_purchase_guide": is_purchase_guide,
                 "voice_gender": int(voice_gender) if voice_gender else 0,
-                "voice_id": int(voice_id) if voice_id else 0,
+                "voice_id": 0,
                 "is_video_hooking": is_video_hooking,
                 "is_caption_top": is_caption_top,
                 "is_caption_last": is_caption_last,
                 "image_template_id": image_template_id,
                 "is_comment": is_comment,
                 "is_hashtag": is_hashtag,
-                "typecast_voice": "",
+                "voice": voice_id,
+                "voice_type": voice_type,
                 "comment": comment,
                 "hashtag": json.dumps(hashtag),
             }
@@ -491,8 +504,9 @@ class APIUpdateTemplateVideoUser(Resource):
 
             data_update_batch = {
                 "is_paid_advertisements": is_paid_advertisements,
-                "voice_google": int(voice_id) if voice_id else 0,
-                "voice_typecast": "",
+                "voice_google": 0,
+                "voice": voice_id,
+                "voice_type": voice_type,
                 "template_info": json.dumps(data_update_template),
             }
             BatchService.update_batch(batch_id, **data_update_batch)
@@ -1035,6 +1049,57 @@ class APIDeletePostBatch(Resource):
             logger.error(f"Exception: Delete Post Fail  :  {str(e)}")
             return Response(
                 message="Delete Post Fail",
+                code=201,
+            ).to_dict()
+
+
+@ns.route("/get-voices")
+class APIGetVoices(Resource):
+    def get(self):
+        try:
+            voices = const.SETUP_VOICES
+
+            typecast_voices = get_typecast_voices()
+
+            female = "여성"
+            male = "남성"
+
+            for typecast_voice in typecast_voices:
+                sex = typecast_voice.get("sex")
+                if female in sex:
+                    gender = Voices.FEMALE.value
+                elif male in sex:
+                    gender = Voices.MALE.value
+                else:
+                    gender = Voices.MALE.value
+
+                voice = {
+                    "id": typecast_voice.get("actor_id"),
+                    "name": (
+                        typecast_voice.get("name")["ko"]
+                        if typecast_voice.get("name")["ko"]
+                        else typecast_voice.get("name")["en"]
+                    ),
+                    "name_en": (
+                        typecast_voice.get("name")["en"]
+                        if typecast_voice.get("name")["en"]
+                        else typecast_voice.get("name")["ko"]
+                    ),
+                    "gender": gender,
+                    "audio_url": typecast_voice.get("audio_url"),
+                    "type": Voices.TYPECAST.value,
+                }
+                voices.append(voice)
+
+            return Response(
+                data=voices,
+                message="Get Voices Success",
+                code=200,
+            ).to_dict()
+        except Exception as e:
+            logger.error(f"Exception: Get Voices Fail  :  {str(e)}")
+            return Response(
+                message="Get Voices Fail",
                 code=201,
             ).to_dict()
 

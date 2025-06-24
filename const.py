@@ -1,4 +1,7 @@
 # Pagination Defaults
+from app.enums.voices import Voices
+
+
 DEFAULT_PAGE = 1
 DEFAULT_PER_PAGE = 10
 MAX_PER_PAGE = 100
@@ -232,3 +235,95 @@ POST_PROCESSING_STATUS = {
     "COMPLETED": "COMPLETED",
     "FAILED": "FAILED",
 }
+
+
+SETUP_VOICES = [
+    {
+        "id": "3",
+        "name": "친절한 상담원",
+        "name_en": "Standard-A",
+        "audio_url": "http://apitoktak.voda-play.com/voice/audio/music/ko-KR-Standard-A.wav",
+        "gender": Voices.FEMALE.value,
+        "type": Voices.GOOGLE.value,
+    },
+    {
+        "id": "4",
+        "name": "다큐 내레이션 성우",
+        "name_en": "Standard-B",
+        "audio_url": "http://apitoktak.voda-play.com/voice/audio/music/ko-KR-Standard-B.wav",
+        "gender": Voices.FEMALE.value,
+        "type": Voices.GOOGLE.value,
+    },
+    {
+        "id": "13",
+        "name": "AI 비서",
+        "name_en": "Neural2-A",
+        "audio_url": "http://apitoktak.voda-play.com/voice/audio/music/ko-KR-Neural2-A.wav",
+        "gender": Voices.FEMALE.value,
+        "type": Voices.GOOGLE.value,
+    },
+    {
+        "id": "14",
+        "name": "광고 내레이션 성우",
+        "name_en": "Neural2-B",
+        "audio_url": "http://apitoktak.voda-play.com/voice/audio/music/ko-KR-Neural2-B.wav",
+        "gender": Voices.FEMALE.value,
+        "type": Voices.GOOGLE.value,
+    },
+    {
+        "id": "16",
+        "name": "유치원 선생님",
+        "name_en": "Wavenet-A",
+        "audio_url": "http://apitoktak.voda-play.com/voice/audio/music/ko-KR-Wavenet-A.wav",
+        "gender": Voices.FEMALE.value,
+        "type": Voices.GOOGLE.value,
+    },
+    {
+        "id": "17",
+        "name": "뉴스 앵커",
+        "name_en": "Wavenet-B",
+        "audio_url": "http://apitoktak.voda-play.com/voice/audio/music/ko-KR-Wavenet-B.wav",
+        "gender": Voices.FEMALE.value,
+        "type": Voices.GOOGLE.value,
+    },
+    {
+        "id": "1",
+        "name": "금융 크리에이터",
+        "name_en": "Standard-C",
+        "audio_url": "http://apitoktak.voda-play.com/voice/audio/music/ko-KR-Standard-C.wav",
+        "gender": Voices.MALE.value,
+        "type": Voices.GOOGLE.value,
+    },
+    {
+        "id": "2",
+        "name": "라디오 DJ",
+        "name_en": "Standard-D",
+        "audio_url": "http://apitoktak.voda-play.com/voice/audio/music/ko-KR-Standard-D.wav",
+        "gender": Voices.MALE.value,
+        "type": Voices.GOOGLE.value,
+    },
+    {
+        "id": "15",
+        "name": "비즈니스 발표자",
+        "name_en": "Neural2-C",
+        "audio_url": "http://apitoktak.voda-play.com/voice/audio/music/ko-KR-Neural2-C.wav",
+        "gender": Voices.MALE.value,
+        "type": Voices.GOOGLE.value,
+    },
+    {
+        "id": "18",
+        "name": "전문 강사",
+        "name_en": "Wavenet-C",
+        "audio_url": "http://apitoktak.voda-play.com/voice/audio/music/ko-KR-Wavenet-C.wav",
+        "gender": Voices.MALE.value,
+        "type": Voices.GOOGLE.value,
+    },
+    {
+        "id": "19",
+        "name": "경제 크리에이터",
+        "name_en": "Wavenet-D",
+        "audio_url": "http://apitoktak.voda-play.com/voice/audio/music/ko-KR-Wavenet-D.wav",
+        "gender": Voices.MALE.value,
+        "type": Voices.GOOGLE.value,
+    },
+]

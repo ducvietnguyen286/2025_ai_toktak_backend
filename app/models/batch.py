@@ -21,7 +21,8 @@ class Batch(db.Model, BaseModel):
     is_paid_advertisements = db.Column(db.Integer, default=0)
     is_advance = db.Column(db.Integer, default=0)
     voice_google = db.Column(db.Integer, default=1)
-    voice_typecast = db.Column(db.String(100), default="")
+    voice = db.Column(db.String(100), default="")
+    voice_type = db.Column(db.String(100), default="")
     process_status = db.Column(db.String(50), default="PENDING")
     template_info = db.Column(db.Text, nullable=True)
 
