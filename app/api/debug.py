@@ -114,6 +114,10 @@ HTML_TEMPLATE = """
             margin-top: 10px;
             width: 100%;
             position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
         }
         .test-button:hover {
             background-color: #45a049;
@@ -138,6 +142,11 @@ HTML_TEMPLATE = """
             border-radius: 50%;
             border-top-color: transparent;
             animation: spin 1s linear infinite;
+        }
+        .timer {
+            font-size: 0.9em;
+            font-family: monospace;
+            color: rgba(255, 255, 255, 0.8);
         }
         @keyframes spin {
             to {
@@ -365,7 +374,19 @@ HTML_TEMPLATE = """
             loadingElement.style.display = 'block';
             disableAllButtons(true);
             button.classList.add('processing');
-            button.textContent = '처리 중...';
+
+            // Start timer
+            const startTime = Date.now();
+            let timerInterval;
+            
+            function updateTimer() {
+                const elapsedTime = Date.now() - startTime;
+                button.innerHTML = `처리 중... <span class="timer">${elapsedTime}ms</span>`;
+            }
+            
+            // Update timer every 10ms
+            timerInterval = setInterval(updateTimer, 10);
+            updateTimer(); // Initial update
             
             // Clear previous audio files
             audioFiles.innerHTML = '';
@@ -388,6 +409,9 @@ HTML_TEMPLATE = """
             })
             .then(response => response.json())
             .then(data => {
+                // Stop timer
+                clearInterval(timerInterval);
+                
                 // Hide loading
                 loadingElement.style.display = 'none';
                 audioSection.style.display = 'block';
@@ -414,8 +438,20 @@ HTML_TEMPLATE = """
                 disableAllButtons(false);
                 button.classList.remove('processing');
                 button.textContent = '음성 테스트';
+
+                // Show final processing time
+                const totalTime = Date.now() - startTime;
+                const processingTime = document.createElement('div');
+                processingTime.style.fontSize = '0.8em';
+                processingTime.style.color = '#666';
+                processingTime.style.marginTop = '5px';
+                processingTime.textContent = `처리 시간: ${totalTime}ms`;
+                audioSection.insertBefore(processingTime, audioSection.firstChild);
             })
             .catch(error => {
+                // Stop timer
+                clearInterval(timerInterval);
+                
                 console.error('Error:', error);
                 loadingElement.style.display = 'none';
                 disableAllButtons(false);
