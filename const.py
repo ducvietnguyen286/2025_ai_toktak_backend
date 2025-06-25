@@ -327,3 +327,6 @@ SETUP_VOICES = [
         "type": Voices.GOOGLE.value,
     },
 ]
+REDIS_KEY_TOKTAK = {
+    "user_info_me": "user_info:me",
+}
