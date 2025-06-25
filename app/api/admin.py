@@ -751,6 +751,8 @@ class APISaveAdminNotification(Resource):
             "notification_id": {"type": "integer"},
             "repeat_duration": {"type": "integer"},
             "ask_again": {"type": "integer"},
+            "button_cancel": {"type": "string"},
+            "button_oke": {"type": "string"},
         },
         required=["country", "title"],
     )
@@ -765,6 +767,8 @@ class APISaveAdminNotification(Resource):
         repeat_duration = args.get("repeat_duration",0)
         redirect_type = args.get("redirect_type", "")
         notification_id = args.get("notification_id", "")
+        button_cancel = args.get("button_cancel", "")
+        button_oke = args.get("button_oke", "")
 
         if notification_id != "":
             # Cập nhật thông báo
@@ -779,6 +783,8 @@ class APISaveAdminNotification(Resource):
                 redirect_type=redirect_type,
                 ask_again=ask_again,
                 repeat_duration=repeat_duration,
+                button_cancel=button_cancel,
+                button_oke=button_oke,
             )
             if not notification:
                 return Response(
@@ -805,6 +811,8 @@ class APISaveAdminNotification(Resource):
                 redirect_type=redirect_type,
                 ask_again=ask_again,
                 repeat_duration=repeat_duration,
+                button_cancel=button_cancel,
+                button_oke=button_oke,
             )
             if not notification:
                 return Response(
