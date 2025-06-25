@@ -804,9 +804,11 @@ class APIGetStatusUploadWithBatch(Resource):
                             )
                             notification_id = notification.id
                         else:
-                            notification_id = notification.get("id", 0)
-                        
-                        
+                            notification_id = (
+                                notification.get("id")
+                                if type(notification) == dict
+                                else (notification.id if notification else 0)
+                            )
 
                         if (
                             link_type == SocialMedia.INSTAGRAM.value
