@@ -140,18 +140,9 @@ def format_notification_message(notification_detail, fe_current_domain, user=Non
     )
 
 
-def send_telegram_notifications(app):
-    """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
-    app.logger.info("🔔 Start send_telegram_notifications...")
-
-    # telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    # chat_id = os.environ.get("TELEGRAM_CHAT_ID")
-
-    # if not telegram_token or not chat_id:
-    #     app.logger.error("❌ Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env")
-    #     return
-
-    # telegram_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+def send_slack_notifications(app):
+    """Gửi Notification đến Slack cho những bản ghi chưa gửi (send_telegram = 0)"""
+    app.logger.info("🔔 Start send_slack_notifications...")
 
     with app.app_context():
         try:
@@ -178,6 +169,11 @@ def send_telegram_notifications(app):
 
             for notification in notifications:
                 try:
+                    # Đánh dấu đã gửi SLACK NGAY và commit, tránh race/trùng
+                    notification.send_telegram = 1
+                    notification.save()
+                    db.session.commit()
+
                     notification_detail = notification.to_dict()
                     user = user_dict.get(notification.user_id)
 
@@ -185,21 +181,19 @@ def send_telegram_notifications(app):
                         notification_detail, fe_current_domain, user=user
                     )
 
-                    # Tự chia nhỏ nếu tin nhắn quá dài
                     message_parts = split_message(message)
                     for idx, part in enumerate(message_parts):
                         send_slack_message(part)
-
-                    notification.send_telegram = 1
-                    notification.save()
 
                 except Exception as single_error:
                     app.logger.error(
                         f"❌ Error sending notification ID {notification.id}: {str(single_error)}"
                     )
-
+                    db.session.rollback()
         except Exception as e:
-            app.logger.exception(f"❌ Error in send_telegram_notifications: {str(e)}")
+            app.logger.exception(f"❌ Error in send_slack_notifications: {str(e)}")
+        finally:
+            db.session.remove()
 
 
 def translate_notification(app):
@@ -543,9 +537,9 @@ def start_scheduler(app):
     )
 
     scheduler.add_job(
-        func=lambda: send_telegram_notifications(app),
+        func=lambda: send_slack_notifications(app),
         trigger=every_2_minutes_trigger,
-        id="send_telegram_notifications",
+        id="send_slack_notifications",
     )
 
     scheduler.add_job(
