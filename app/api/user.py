@@ -1825,46 +1825,15 @@ class APINiceAuth(Resource):
     @jwt_required()
     def get(self):
         try:
-            subject = get_jwt_identity()
-            if subject is None:
-                return None
+            user_id = AuthService.get_user_id()
+            data_nice = NiceAuthService.get_nice_auth(user_id)
+            return data_nice
 
-            user_id = int(subject)
-
-            site_nice = os.environ.get("URL_SERVCER_NICE_AUTH", "")
-            if not site_nice:
-                return Response(
-                    code=400, message="Thiếu biến môi trường URL_SERVCER_NICE_AUTH"
-                ).to_dict()
-
-            url = f"{site_nice}/api/v1/maker/encrypt"
-            response = requests.post(url, json={"user_id": user_id}, timeout=1000)
-
-            if response.status_code != 200:
-                logger.error(f"API NICE_AUTH lỗi: {response.text}")
-                return Response(
-                    code=500, message="Không thể kết nối tới máy chủ mã hóa NICE"
-                ).to_dict()
-
-            data = response.json()
-            logger.info(data)
-
-            return Response(
-                code=200, message="Thành công", data=data.get("data", {})
-            ).to_dict()
-
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logger.error("RequestException: " + str(e))
             return Response(
-                code=500,
+                code=201,
                 message="Lỗi khi gọi máy chủ mã hóa NICE",
-            ).to_dict()
-        except Exception as e:
-            logger.error("Exception: " + str(e))
-            traceback.print_exc()
-            return Response(
-                code=500,
-                message="Lỗi nội bộ máy chủ",
             ).to_dict()
 
 
@@ -1873,49 +1842,18 @@ class APINiceAuthSuccess(Resource):
     @jwt_required()
     def get(self):
         try:
-            enc_data = request.args.get("EncodeData", "")
-            if not enc_data:
-                return Response(code=400, message="Thiếu tham số EncodeData").to_dict()
-
-            subject = get_jwt_identity()
-            if subject is None:
-                return None
-
-            user_id = int(subject)
-
-            site_nice = os.environ.get("URL_SERVCER_NICE_AUTH", "")
-            if not site_nice:
-                return Response(
-                    code=400, message="Thiếu biến môi trường URL_SERVCER_NICE_AUTH"
-                ).to_dict()
-
-            # Gửi yêu cầu dạng GET với query string
-            url = f"{site_nice}/api/v1/maker/decrypt"
-            response = requests.get(
-                url, params={"user_id": user_id, "EncodeData": enc_data}, timeout=1000
-            )
-
-            if response.status_code != 200:
-                logger.error(f"API NICE DECRYPT lỗi: {response.text}")
-                return Response(
-                    code=500, message="Không thể kết nối tới máy chủ giải mã NICE"
-                ).to_dict()
-
-            result = response.json()
-            return result
-
-        except requests.exceptions.RequestException as e:
-            logger.error("RequestException: " + str(e))
-            return Response(
-                code=500,
-                message="Lỗi khi gọi máy chủ giải mã NICE",
-            ).to_dict()
-
+            enc_data = request.args.get("EncodeData")
+            result_item = {
+                "EncodeData": enc_data,
+            }
+            user_id = AuthService.get_user_id()
+            data_nice = NiceAuthService.checkplus_success(user_id, result_item)
+            return data_nice
         except Exception as e:
             logger.error("Exception: " + str(e))
             traceback.print_exc()
             return Response(
-                code=500,
+                code=201,
                 message="Lỗi nội bộ máy chủ",
             ).to_dict()
 
@@ -2040,8 +1978,8 @@ class APIGetTodo(Resource):
     @jwt_required()
     def get(self):
         try:
-            current_user = AuthService.get_current_identity(no_cache=True)
-            profile_member = ProfileServices.profile_by_user_id(current_user.id)
+            user_id = AuthService.get_user_id()
+            profile_member = ProfileServices.profile_by_user_id(user_id)
             if not profile_member:
                 return Response(
                     message="회원 정보를 찾을 수 없습니다.",
@@ -2071,36 +2009,44 @@ class APIGetTodo(Resource):
 class APIUpdateTodoGuide(Resource):
     @jwt_required()
     def post(self):
-        subject = get_jwt_identity()
-        if subject is None:
-            return None
+        try:
+            user_id = AuthService.get_user_id()
+            profile_member = ProfileServices.profile_by_user_id(user_id)
+            if not profile_member:
+                return Response(
+                    message="회원 정보를 찾을 수 없습니다.",
+                    message_en="Member information not found.",
+                    status=201,
+                ).to_dict()
+            payload = ns.payload or {}
+            guide_info = json.loads(profile_member.guide_info)
 
-        user_id = int(subject)
-        profile_member = ProfileServices.profile_by_user_id(user_id)
-        if not profile_member:
+            exists = any(item["id"] == payload.get("id", 0) for item in guide_info)
+            if not exists:
+                guide_info = [{"id": i + 1, "is_completed": False} for i in range(10)]
+                guide_info.append(payload)
+                profile_member.guide_info = json.dumps(guide_info)
+                profile_member.save()
+            else:
+                for item in guide_info:
+                    if item["id"] == payload.get("id", 0):
+                        item["is_completed"] = payload.get("is_completed", 0)
+                        break
+                profile_member.guide_info = json.dumps(guide_info)
+                profile_member.save()
+
             return Response(
-                message="회원 정보를 찾을 수 없습니다.",
-                message_en="Member information not found.",
-                status=201,
+                data=guide_info,
+                message="업데이트가 성공적으로 완료되었습니다.",
+                message_en="Update completed successfully.",
             ).to_dict()
-        payload = ns.payload or {}
-        guide_info = json.loads(profile_member.guide_info)
 
-        exists = any(item["id"] == payload.get("id", 0) for item in guide_info)
-        if not exists:
-            guide_info.append(payload)
-            profile_member.guide_info = json.dumps(guide_info)
-            profile_member.save()
-        else:
-            for item in guide_info:
-                if item["id"] == payload.get("id", 0):
-                    item["is_completed"] = payload.get("is_completed", 0)
-                    break
-            profile_member.guide_info = json.dumps(guide_info)
-            profile_member.save()
-
-        return Response(
-            data=guide_info,
-            message="업데이트가 성공적으로 완료되었습니다.",
-            message_en="Update completed successfully.",
-        ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="처리 중 오류가 발생했습니다.",
+                message_en="An error occurred while processing your request.",
+                data=str(e),
+                status=500,
+            ).to_dict()

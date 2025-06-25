@@ -42,11 +42,10 @@ class Scraper:
     def scraper(self, params):
         response = get_page_scraper(params)
         if not response:
-            #     # 103.98.152.125 scraper.vodaplay.vn
-            #       103.9.159.82 apistaging82.toktak.ai
-            #     # 3.38.117.230 scraper.play-tube.net
-            #     # 43.203.118.116 scraper.canvasee.com
-            #     # 3.35.172.6 scraper.bodaplay.ai
+            #     # 103.98.152.125
+            #     # 3.38.117.230
+            #     # 43.203.118.116
+            #     # 3.35.172.6
             #     # #
 
             parsed_url = urlparse(params["url"])
@@ -55,7 +54,7 @@ class Scraper:
             params["netloc"] = netloc
             urls = [
                 "https://scraper.vodaplay.vn/api/v1/maker/create-scraper",
-                "https://apistaging82.toktak.ai/api/v1/maker/create-scraper",
+                "https://apitoktak.voda-play.com/api/v1/maker/create-scraper",
                 "https://scraper.play-tube.net/api/v1/maker/create-scraper",
                 "https://scraper.canvasee.com/api/v1/maker/create-scraper",
                 "https://scraper.bodaplay.ai/api/v1/maker/create-scraper",

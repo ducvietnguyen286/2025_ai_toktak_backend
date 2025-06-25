@@ -198,7 +198,8 @@ class APIMe(Resource):
     @jwt_required()
     def get(self):
         try:
-            user_login = AuthService.get_current_identity(no_cache=True)
+            user_login_id = AuthService.get_user_id()
+            user_login = UserService.find_user_with_out_session(user_login_id)
             if not user_login:
                 return Response(
                     status=401,
@@ -252,6 +253,13 @@ class APIMe(Resource):
             user_dict["subscription_name"] = subscription_name
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)
+
+            try:
+                key_redis = const.REDIS_KEY_TOKTAK.get("user_info_me", "user:me")
+                redis_key = f"{key_redis}:{user_login.id}"
+                redis_client.setex(redis_key, 86400, json.dumps(user_dict))
+            except Exception as e:
+                logger.warning(f"Cannot save user to redis: {e}")
 
             return Response(
                 data=user_dict,
@@ -362,7 +370,8 @@ class APIMeUpdate(Resource):
             message = f"🏢 회사명이 변경되었습니다. ({user_login.company_name} → {company_name})"
 
         if update_data:  # Chỉ update nếu có dữ liệu
-            NotificationServices.create_notification(
+            noticication = NotificationServices.create_notification(
+                notification_type="update_user",
                 user_id=user_login.id,
                 title=message,
             )

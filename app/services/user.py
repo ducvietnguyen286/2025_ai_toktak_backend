@@ -21,6 +21,8 @@ from app.lib.query import (
     update_by_id,
 )
 import const
+from app.extensions import redis_client
+import json
 from dateutil.relativedelta import relativedelta
 
 from app.models.user_history import UserHistory
@@ -550,4 +552,39 @@ class UserService:
         if not user:
             return None
         user.update(**kwargs)
+        return user
+
+    @staticmethod
+    def find_user_by_redis(user_id):
+        redis_key = f'{const.REDIS_KEY_TOKTAK.get("user_info_me", "user:me")}:{user_id}'
+        try:
+            user_json = redis_client.get(redis_key)
+            if user_json:
+                if isinstance(user_json, bytes):
+                    user_json = user_json.decode("utf-8")
+                user_data = json.loads(user_json)
+                return user_data
+        except Exception as e:
+            logger.warning(f"Cannot get user from Redis: {e}")
+
+        # 2. Nếu không có, lấy từ DB
+        user = User.query.get(user_id)
+        if user:
+            # 3. Cache lại vào Redis
+            try:
+                user_json = json.dumps(
+                    user._to_json() if hasattr(user, "_to_json") else user.to_dict()
+                )
+                redis_client.setex(redis_key, 86400, user_json)
+            except Exception as e:
+                logger.warning(f"Cannot save user to Redis: {e}")
+            # Nếu muốn trả về dict
+            return user._to_json() if hasattr(user, "_to_json") else user.to_dict()
+        return None
+
+    @staticmethod
+    def find_user_with_out_session(id):
+        user = User.query.get(id)
+        if not user:
+            return None
         return user

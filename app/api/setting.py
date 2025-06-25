@@ -13,6 +13,8 @@ from app.lib.response import Response
 from app.models.request_log import RequestLog
 import const
 
+from app.services.admin_notification import AdminNotificationService
+
 ns = Namespace(name="setting", description="Setting API")
 
 
@@ -116,6 +118,9 @@ class GetPublicConfig(Resource):
         settings_dict.pop("ALLOWED_IPS", None)
         # logger.info(settings_dict)
         # logger.info(remote_ip)
+        
+        notification_detail = AdminNotificationService.get_first_active_notification()
+        settings_dict["notification_detail"] = notification_detail.to_dict() if notification_detail else {}
         return Response(
             data=settings_dict,
             message="Get Public setting",

@@ -31,7 +31,7 @@ class NiceAuthService:
 
         if not all([sitecode, sitepasswd, cb_encode_path, url_verify_result]):
             return {
-                "code": 400,
+                "code": 201,
                 "message": "Thiếu biến môi trường cấu hình.",
                 "data": {},
             }
@@ -45,8 +45,15 @@ class NiceAuthService:
 
             # Lưu thông tin người dùng nếu có
             user_data = UserService.find_user(user_id)
+
             if user_data:
-                UserService.update_user(user_id, password_certificate=reqseq)
+                UserService.update_user_with_out_session(user_id, password_certificate=reqseq)
+            else:
+                return {
+                    "code": 201,
+                    "message": "Not have user.",
+                    "data": {},
+                }
 
             returnurl = url_verify_result
             errorurl = url_verify_result
@@ -60,8 +67,6 @@ class NiceAuthService:
                 f"7:ERR_URL{len(errorurl)}:{errorurl}"
                 f"9:CUSTOMIZE{len(customize)}:{customize}"
             )
-            logger.info(plaindata)
-
             # Mã hóa dữ liệu
 
             enc_data = NiceAuthService.run_command(
@@ -84,8 +89,10 @@ class NiceAuthService:
 
         except subprocess.CalledProcessError as e:
             return_msg = f"Command execution error: {e.output.decode()}"
+            logger.info(return_msg)
         except Exception as e:
             return_msg = str(e)
+            logger.info(return_msg)
 
         return {"code": 500, "message": return_msg, "data": result_item}
 
@@ -169,9 +176,8 @@ class NiceAuthService:
 
             # Validate user session
             user_data = UserService.find_user(user_id)
-
             if not user_data:
-                logger.warning("Not found User Verify")
+                logger.warning(f"Not found User Verify {user_id}")
                 return {
                     "code": 403,
                     "message": "사용자 로그인을 해주세요",
@@ -206,7 +212,7 @@ class NiceAuthService:
                     "password_certificate": "",
                     "gender": "M" if result_item.get("gender") == "1" else "F",
                 }
-                UserService.update_user(user_id, **data_update)
+                UserService.update_user_with_out_session(user_id, **data_update)
                 # Tìm theo người được giới thiệu khi xác thực thành công
                 referral_history_detail = ReferralService.find_by_referred_user_id(
                     user_id
@@ -249,7 +255,7 @@ class NiceAuthService:
                         "total_link_active": basic_package["total_link_active"],
                     }
 
-                    UserService.update_user(referred_user_id, **referred_update_data)
+                    UserService.update_user_with_out_session(referred_user_id, **referred_update_data)
 
                     message = f"링크 초대로 가입이 완료되었습니다. 계정이 BASIC 요금제로 업그레이드되었으며, 사용 기간은 {referred_subscription_expired.strftime('%Y-%m-%d')}부터 {expire_date.strftime('%Y-%m-%d')}까지입니다."
                     NotificationServices.create_notification(
@@ -262,7 +268,7 @@ class NiceAuthService:
                     data_user_history = {
                         "user_id": referred_user_id,
                         "type": "referral",
-                        "type_2": 'NEW_USER',
+                        "type_2": "NEW_USER",
                         "object_id": referral_history_detail.id,
                         "object_start_time": referred_subscription_expired,
                         "object_end_time": expire_date,
@@ -287,9 +293,11 @@ class NiceAuthService:
                     )
 
                     old_batch_total = referrer_user_data.batch_total
+                    new_subscription = subscription
                     if subscription == "FREE":
                         referrer_subscription_expired = datetime_now
                         old_batch_total = 0
+                        new_subscription = "INVITE_BASIC"
 
                     referrer_subscription_expired = (
                         referrer_subscription_expired + relativedelta(days=1)
@@ -308,26 +316,20 @@ class NiceAuthService:
                     )
                     new_batch_total = basic_package["batch_total"] + old_batch_total
 
-                    if subscription != "STANDARD":
-                        referrer_update_data = {
-                            "subscription_expired": subscription_expired,
-                            "subscription": "INVITE_BASIC",
-                            "batch_total": min(
-                                new_batch_total,
-                                150,
-                            ),
-                            "batch_remain": min(
-                                new_batch_remain,
-                                150,
-                            ),
-                            "total_link_active": max(
-                                basic_package["total_link_active"],
-                                referrer_user_data.total_link_active,
-                            ),
-                        }
-                        UserService.update_user(
-                            referrer_user_id, **referrer_update_data
-                        )
+                    admin_description_message = ""
+
+                    referrer_update_data = {
+                        "subscription_expired": subscription_expired,
+                        "subscription": new_subscription,
+                        "batch_total": new_batch_total,
+                        "batch_remain": new_batch_remain,
+                        "total_link_active": max(
+                            basic_package["total_link_active"],
+                            referrer_user_data.total_link_active,
+                        ),
+                    }
+                    admin_description_message = f" old subscription : {subscription}  old batch_remain : {old_referred_batch_remain} old batch_total : {old_batch_total}  new_subscription = {new_subscription} new_batch_remain : {new_batch_remain} new_batch_total : {new_batch_total}"
+                    UserService.update_user(referrer_user_id, **referrer_update_data)
 
                     message = f"추천이 완료되었습니다. 계정이 BASIC 요금제로 업그레이드되었으며, 사용 기간은 {referrer_subscription_expired.strftime('%Y-%m-%d')}부터 {subscription_expired.strftime('%Y-%m-%d')}까지입니다."
                     NotificationServices.create_notification(
@@ -345,6 +347,7 @@ class NiceAuthService:
                         "object_end_time": subscription_expired,
                         "title": basic_package["pack_name"],
                         "description": basic_package["pack_description"],
+                        "admin_description": admin_description_message,
                         "value": basic_package["batch_total"],
                         "num_days": basic_package["batch_remain"],
                     }
@@ -387,19 +390,30 @@ class NiceAuthService:
     @staticmethod
     def run_command(cmd: list) -> str:
         try:
-            # 인증결과 암호화 데이터 복호화 처리
-            #  plaindata = subprocess.check_output([cb_encode_path, 'DEC', sitecode, sitepasswd, enc_data])
-            plaindata = subprocess.run(
-                cmd, capture_output=True, encoding="euc-kr"
-            ).stdout
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,  # sẽ raise lỗi nếu exit code != 0
+            )
+            try:
+                plaindata = result.stdout.decode("euc-kr")
+            except UnicodeDecodeError:
+                logger.warning("stdout decoding failed. Attempting latin1 fallback.")
+                plaindata = result.stdout.decode("latin1")  # fallback nếu cần
+
         except subprocess.CalledProcessError as e:
-            # check_output 함수 이용하는 경우 1 이외의 결과는 에러로 처리됨
-            plaindata = e.output.decode("euc-kr")
+            try:
+                output = e.output.decode("euc-kr")
+            except Exception:
+                output = e.output.decode("latin1")
+            plaindata = output
             logger.error("===== NiceAuthService run_command Error =====")
             logger.error(f"cmd: {cmd}")
-            logger.error(f"Error: {e.output}")
+            logger.error(f"Error output: {output}")
             logger.error("Traceback:")
-            logger.error(traceback.format_exc())  # Ghi log traceback để biết dòng lỗi
+            logger.error(traceback.format_exc())
+
         return plaindata
 
     @staticmethod
