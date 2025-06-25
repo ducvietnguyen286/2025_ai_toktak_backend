@@ -36,6 +36,7 @@ from app.third_parties.aliexpress import TokenAliExpress
 from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.tiktok import TiktokTokenService
 from app.third_parties.twitter import TwitterTokenService
+from app.lib.string import generate_random_nick_name
 from app.rabbitmq.producer import (
     send_facebook_message,
     send_instagram_message,
@@ -2013,11 +2014,27 @@ class APIUpdateTodoGuide(Resource):
             user_id = AuthService.get_user_id()
             profile_member = ProfileServices.profile_by_user_id(user_id)
             if not profile_member:
-                return Response(
-                    message="회원 정보를 찾을 수 없습니다.",
-                    message_en="Member information not found.",
-                    status=201,
-                ).to_dict()
+                user_details = UserService.find_user_by_redis(user_id)
+                nick_name = generate_random_nick_name(user_details["email"])
+                design_settings = {
+                    "background_color": "#E8F0FE",
+                    "main_text_color": "#0A1929",
+                    "sub_text_color": "#6B7F99",
+                    "notice_color": "#6B7F99",
+                    "notice_background_color": "#FFFFFF",
+                    "product_background_color": "#FFFFFF",
+                    "product_name_color": "#6B7F99",
+                    "product_price_color": "#1E4C94",
+                    "show_price": 1,
+                }
+                guide_info = [{"id": i + 1, "is_completed": False} for i in range(10)]
+                profile_member = ProfileServices.create_profile(
+                    user_id=user_id,
+                    nick_name=nick_name,
+                    status=0,
+                    design_settings=json.dumps(design_settings),
+                    guide_info=json.dumps(guide_info),
+                )
             payload = ns.payload or {}
             guide_info = json.loads(profile_member.guide_info)
 

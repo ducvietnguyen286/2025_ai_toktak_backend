@@ -79,7 +79,7 @@ def parameters(**schema):
                         return Response(
                             message=message,
                             message_en="Request parameters are invalid.",
-                            status=500,
+                            code=201,
                         ).to_dict()
 
             try:
@@ -115,7 +115,7 @@ def parameters(**schema):
                     message_en = "Request parameters are invalid."
 
                 return Response(
-                    message=message, message_en=message_en, status=500
+                    message=message, message_en=message_en, code=201
                 ).to_dict()
 
             if request.endpoint == "api.maker_api_make_post":
