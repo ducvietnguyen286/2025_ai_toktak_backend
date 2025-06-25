@@ -27,22 +27,17 @@ class CoupangScraper:
         return self.run_crawler_mobile()
 
     def proxies(self):
-        # proxies = [
-        #     "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
-        #     "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
-        #     "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
-        #     "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
-        #     "27222558ddfa5c9d6449__cr.il:69271afa03d6c430@gw.dataimpulse.com:823",
-        # ]
+        proxies = [
+            "http://brd-customer-hl_8019b21f-zone-scraping_browser2-country-kr:wyfmhy3tqffj@brd.superproxy.io:33335",
+            "http://brd-customer-hl_8019b21f-zone-scraping_browser2-country-il:wyfmhy3tqffj@brd.superproxy.io:33335",
+        ]
 
-        proxy = "http://brd-customer-hl_8019b21f-zone-scraping_browser2-country-il:wyfmhy3tqffj@brd.superproxy.io:33335"
-
-        # random_proxy = random.choice(proxies)
-        old_proxy = "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80/"
+        random_proxy = random.choice(proxies)
+        # old_proxy = "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80/"
         # proxy = "http://b45ba2a7:xyuhqzh7dlyu@proxy.toolip.io:31113"
         return {
-            "http": proxy,
-            "https": proxy,
+            "http": random_proxy,
+            "https": random_proxy,
         }
 
     def cert_ssl_path(self):
@@ -397,11 +392,6 @@ class CoupangScraper:
             proxies = self.proxies()
             cert_ssl_path = self.cert_ssl_path()
 
-            logger.info("Get Page HTML: {0}".format(url))
-            logger.info("Proxies: {0}".format(proxies))
-            logger.info("Cert SSL Path: {0}".format(cert_ssl_path))
-            logger.info("Headers: {0}".format(headers))
-
             response = session.get(
                 url,
                 headers=headers,
@@ -411,13 +401,10 @@ class CoupangScraper:
             )
             info = response.content
 
-            logger.info("Response Content: {0}".format(response.content))
-            logger.info("Response Status Code: {0}".format(response.status_code))
-
             html = BeautifulSoup(info, "html.parser")
-            # file_html = open("demo.html", "w", encoding="utf-8")
-            # file_html.write(info.decode("utf-8"))
-            # file_html.close()
+            file_html = open("demo.html", "w", encoding="utf-8")
+            file_html.write(info.decode("utf-8"))
+            file_html.close()
             ld_json = html.find("script", {"type": "application/ld+json"})
             if ld_json is None:
                 count = count + 1
