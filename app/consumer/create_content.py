@@ -731,7 +731,7 @@ def process_create_post_video(process_images, data, batch, post):
 
                 product_name = data["name"]
 
-                voice = batch.voice or ""
+                voice = batch.voice or "3"
                 voice_type = batch.voice_type or Voices.GOOGLE.value
 
                 product_video_url = data.get("video_url", "")
@@ -751,6 +751,9 @@ def process_create_post_video(process_images, data, batch, post):
                     "images_slider_url": image_renders_sliders,
                     "product_video_url": product_video_url,
                 }
+
+                log_create_content_message(f"Data make video: {data_make_video}")
+
                 result = ShotStackService.create_video_from_images_v2(data_make_video)
 
                 logger.info(
