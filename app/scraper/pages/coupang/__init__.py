@@ -415,9 +415,9 @@ class CoupangScraper:
             logger.info("Response Status Code: {0}".format(response.status_code))
 
             html = BeautifulSoup(info, "html.parser")
-            # file_html = open("demo.html", "w", encoding="utf-8")
-            # file_html.write(info.decode("utf-8"))
-            # file_html.close()
+            file_html = open("demo.html", "w", encoding="utf-8")
+            file_html.write(info.decode("utf-8"))
+            file_html.close()
             ld_json = html.find("script", {"type": "application/ld+json"})
             if ld_json is None:
                 count = count + 1
