@@ -96,8 +96,12 @@ class ShotStackService:
             )
         else:
             korean_voice = get_korean_typecast_voice(voice)
+
+            korean_voice_config = typecast_voice_setup(korean_voice)
+            config.update(korean_voice_config)
+
             mp3_file, audio_duration = text_to_speech_kr(
-                korean_voice, origin_caption, dir_path, config
+                korean_voice, origin_caption, dir_path, config=config
             )
 
         video_urls = ShotStackService.get_random_videos(2)
@@ -1287,6 +1291,23 @@ def get_korean_typecast_voice(voice_id):
     for voice in typecast_voices:
         if "actor_id" in voice and voice["actor_id"] == voice_id:
             return voice
+
+
+def typecast_voice_setup(voice):
+    voice_id = voice.get("actor_id")
+    setup_voice = {
+        "6763bef751dc3fb17792acaf": {"volumn": 100, "speed_x": 0.7, "tempo": 1.5},
+        "66d91cac31a58a718f750a49": {"volumn": 100, "speed_x": 0.7, "tempo": 1.7},
+        "65e96ab52564d1136ecb1d67": {"volumn": 100, "speed_x": 0.7, "tempo": 1.6},
+        "65d6f8ee2b58da07b6284a56": {"volumn": 100, "speed_x": 0.7, "tempo": 1.4},
+        "65d6f8d2905d7082a9e4e382": {"volumn": 100, "speed_x": 0.7, "tempo": 1.5},
+        "656059db8edf4b53b4f35990": {"volumn": 100, "speed_x": 0.7, "tempo": 1.5},
+        "63e4665f44a08572e32da6e9": {"volumn": 100, "speed_x": 0.7, "tempo": 1.5},
+        "6317255ba96fad352c4aebc8": {"volumn": 100, "speed_x": 0.7, "tempo": 1.5},
+        "631725654e0d806f7158efd1": {"volumn": 100, "speed_x": 0.7, "tempo": 1.5},
+        "62031fd83afcc3bfff06883d": {"volumn": 100, "speed_x": 0.7, "tempo": 1.5},
+    }
+    return setup_voice.get(voice_id, {"volumn": 100, "speed_x": 0.7, "tempo": 1.5})
 
 
 def format_time_caption(seconds):
