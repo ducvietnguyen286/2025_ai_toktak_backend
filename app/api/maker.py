@@ -220,7 +220,7 @@ class APICreateBatchSync(Resource):
 
             narration = args.get("narration", Voices.FEMALE.value)
             voice = ""
-            voice_typecast = args.get("voice", "")
+            voice_typecast = args.get("voice", "3")
             voice_type = args.get("voice_type", Voices.GOOGLE.value)
             if voice_type == Voices.GOOGLE.value:
                 if narration == Voices.FEMALE.value:
@@ -229,6 +229,9 @@ class APICreateBatchSync(Resource):
                     voice = "2"
             else:
                 voice = voice_typecast
+
+            if voice_type == Voices.GOOGLE.value and voice == "":
+                voice = "3"
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
 
