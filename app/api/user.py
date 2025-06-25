@@ -2009,36 +2009,41 @@ class APIGetTodo(Resource):
 class APIUpdateTodoGuide(Resource):
     @jwt_required()
     def post(self):
-        subject = get_jwt_identity()
-        if subject is None:
-            return None
+        try:
+            user_id = AuthService.get_user_id()
+            profile_member = ProfileServices.profile_by_user_id(user_id)
+            if not profile_member:
+                return Response(
+                    message="회원 정보를 찾을 수 없습니다.",
+                    message_en="Member information not found.",
+                    status=201,
+                ).to_dict()
+            payload = ns.payload or {}
+            guide_info = json.loads(profile_member.guide_info)
 
-        user_id = int(subject)
-        profile_member = ProfileServices.profile_by_user_id(user_id)
-        if not profile_member:
+            exists = any(item["id"] == payload.get("id", 0) for item in guide_info)
+            if not exists:
+                guide_info.append(payload)
+                profile_member.guide_info = json.dumps(guide_info)
+                profile_member.save()
+            else:
+                for item in guide_info:
+                    if item["id"] == payload.get("id", 0):
+                        item["is_completed"] = payload.get("is_completed", 0)
+                        break
+                profile_member.guide_info = json.dumps(guide_info)
+                profile_member.save()
+
             return Response(
-                message="회원 정보를 찾을 수 없습니다.",
-                message_en="Member information not found.",
-                status=201,
+                data=guide_info,
+                message="업데이트가 성공적으로 완료되었습니다.",
+                message_en="Update completed successfully.",
             ).to_dict()
-        payload = ns.payload or {}
-        guide_info = json.loads(profile_member.guide_info)
 
-        exists = any(item["id"] == payload.get("id", 0) for item in guide_info)
-        if not exists:
-            guide_info.append(payload)
-            profile_member.guide_info = json.dumps(guide_info)
-            profile_member.save()
-        else:
-            for item in guide_info:
-                if item["id"] == payload.get("id", 0):
-                    item["is_completed"] = payload.get("is_completed", 0)
-                    break
-            profile_member.guide_info = json.dumps(guide_info)
-            profile_member.save()
-
-        return Response(
-            data=guide_info,
-            message="업데이트가 성공적으로 완료되었습니다.",
-            message_en="Update completed successfully.",
-        ).to_dict()
+        except Exception as e:
+            return Response(
+                message="처리 중 오류가 발생했습니다.",
+                message_en="An error occurred while processing your request.",
+                data=str(e),
+                status=500,
+            ).to_dict()
