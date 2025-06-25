@@ -2023,6 +2023,7 @@ class APIUpdateTodoGuide(Resource):
 
             exists = any(item["id"] == payload.get("id", 0) for item in guide_info)
             if not exists:
+                guide_info = [{"id": i + 1, "is_completed": False} for i in range(10)]
                 guide_info.append(payload)
                 profile_member.guide_info = json.dumps(guide_info)
                 profile_member.save()
@@ -2041,6 +2042,8 @@ class APIUpdateTodoGuide(Resource):
             ).to_dict()
 
         except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
             return Response(
                 message="처리 중 오류가 발생했습니다.",
                 message_en="An error occurred while processing your request.",
