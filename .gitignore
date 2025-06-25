@@ -53,3 +53,5 @@ run_sam.sh
 data_scripts
 proxies.txt
 run_watch_consumer.py
+ca_cert.pem
+ca_cert.crt

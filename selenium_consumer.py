@@ -3,14 +3,12 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
 import json
 import os
+import random
 import signal
 import sys
 import time
 import traceback
 from dotenv import load_dotenv
-import requests
-
-from app.services.shotstack_services import ShotStackService
 
 load_dotenv(override=False)
 
@@ -26,10 +24,10 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
-from app.lib.header import generate_desktop_user_agent
+from app.lib.header import generate_desktop_user_agent_chrome
 from app.lib.logger import logger
 import threading
-from app.scraper.pages.aliexpress.parser import Parser as AliExpressParser
+from app.scraper.pages.coupang.parser import Parser as CoupangParser
 
 from werkzeug.exceptions import default_exceptions
 from app.errors.handler import api_error_handler
@@ -37,6 +35,8 @@ from app.extensions import redis_client, db
 from app.config import configs as config
 
 stop_event = threading.Event()
+
+SELENIUM_URL = "https://brd-customer-hl_8019b21f-zone-scraping_browser1:w2dey5l5cws2@brd.superproxy.io:9515"
 
 
 def clear_profile_lock(profile_dir):
@@ -106,43 +106,307 @@ def create_app():
 def create_driver_instance():
     config_name = os.environ.get("FLASK_CONFIG") or "develop"
     chrome_options = Options()
+
+    # Ẩn dấu vết Selenium và Automation
+    chrome_options.add_experimental_option(
+        "excludeSwitches", ["enable-automation", "enable-logging"]
+    )
+    chrome_options.add_experimental_option("useAutomationExtension", False)
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+
+    # Thêm các tham số stealth mode
+    chrome_options.add_argument("--disable-web-security")
+    chrome_options.add_argument("--disable-features=IsolateOrigins,site-per-process")
+    chrome_options.add_argument("--disable-site-isolation-trials")
+    chrome_options.add_argument("--disable-features=BlockCredentialedSubresources")
+    chrome_options.add_argument("--disable-plugins-discovery")
+    chrome_options.add_argument("--disable-single-click-autofill")
+    chrome_options.add_argument("--disable-prompt-on-repost")
+    chrome_options.add_argument("--no-default-browser-check")
+    chrome_options.add_argument("--no-first-run")
+
+    # Thêm các tham số để giả lập người dùng thực
+    chrome_options.add_argument("--disable-notifications")
+    chrome_options.add_argument("--disable-popup-blocking")
+    chrome_options.add_argument("--disable-infobars")
+    chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--ignore-ssl-errors")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-site-isolation-trials")
-    chrome_options.add_argument(
-        "--disable-blink-features=BlockCredentialedSubresources"
-    )
-    chrome_options.add_argument("--enable-unsafe-swiftshader")
-    chrome_options.add_argument("--window-size=1920x1080")
 
-    # Thêm một số option bổ sung để tránh lỗi
-    chrome_options.add_argument("--no-first-run")
-    chrome_options.add_argument("--no-default-browser-check")
-    chrome_options.add_argument("--disable-extensions")
+    # Random window size để tránh detection
+    widths = [360, 375, 390, 412, 414]
+    heights = [640, 720, 780, 800, 850]
+    width = random.choice(widths)
+    height = random.choice(heights)
 
-    no_gui = os.environ.get("SELENIUM_NO_GUI", "false") == "true"
-    proxy = os.environ.get("SELENIUM_PROXY", None)
-
-    # if no_gui or config_name == "production":
-    # chrome_options.add_argument("--headless=new")
-    # chrome_options.add_argument("--disable-gpu")
-
-    if proxy:
-        chrome_options.add_argument("--proxy-server={}".format(proxy))
-
-    user_agent = generate_desktop_user_agent()
-    headers = {
-        # "User-Agent": user_agent,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    # Cấu hình giả lập Android
+    mobile_emulation = {
+        "deviceMetrics": {
+            "width": width,
+            "height": height,
+            "pixelRatio": 3.0,
+            "touch": True,
+            "mobile": True,
+        },
+        "userAgent": "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
     }
-    for header, value in headers.items():
-        chrome_options.add_argument(f"--{header.lower()}={value}")
+    chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
 
-    SELENIUM_URL = os.environ.get("SELENIUM_URL", "http://localhost:4567/wd/hub")
+    # Thêm các tham số giả lập Android
+    chrome_options.add_argument("--enable-touch-events")
+    chrome_options.add_argument("--touch-events=enabled")
+    chrome_options.add_argument("--disable-hover")
 
-    driver = webdriver.Remote(command_executor=SELENIUM_URL, options=chrome_options)
+    # Cấu hình proxy với xác thực
+    proxies = [
+        {
+            "host": "gw.dataimpulse.com",
+            "port": "823",
+            "username": "27222558ddfa5c9d6449__cr.il",
+            "password": "69271afa03d6c430",
+        },
+        {
+            "host": "gw.dataimpulse.com",
+            "port": "823",
+            "username": "27222558ddfa5c9d6449__cr.il",
+            "password": "69271afa03d6c430",
+        },
+        {
+            "host": "gw.dataimpulse.com",
+            "port": "823",
+            "username": "27222558ddfa5c9d6449__cr.il",
+            "password": "69271afa03d6c430",
+        },
+    ]
+
+    proxy = random.choice(proxies)
+    manifest_json = """
+    {
+        "version": "1.0.0",
+        "manifest_version": 2,
+        "name": "Chrome Proxy",
+        "permissions": [
+            "proxy",
+            "tabs",
+            "unlimitedStorage",
+            "storage",
+            "webRequest",
+            "webRequestBlocking"
+        ],
+        "background": {
+            "scripts": ["background.js"]
+        },
+        "minimum_chrome_version":"22.0.0"
+    }
+    """
+
+    background_js = """
+    var config = {
+        mode: "fixed_servers",
+        rules: {
+            singleProxy: {
+                scheme: "http",
+                host: "%s",
+                port: parseInt(%s)
+            },
+            bypassList: []
+        }
+    };
+    chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
+    function callbackFn(details) {
+        return {
+            authCredentials: {
+                username: "%s",
+                password: "%s"
+            }
+        };
+    }
+    chrome.webRequest.onAuthRequired.addListener(
+        callbackFn,
+        {urls: ["<all_urls>"]},
+        ['blocking']
+    );
+    """ % (
+        proxy["host"],
+        proxy["port"],
+        proxy["username"],
+        proxy["password"],
+    )
+
+    plugin_dir = "chrome_proxy_extension"
+    if not os.path.exists(plugin_dir):
+        os.makedirs(plugin_dir)
+
+    with open(f"{plugin_dir}/manifest.json", "w") as f:
+        f.write(manifest_json)
+    with open(f"{plugin_dir}/background.js", "w") as f:
+        f.write(background_js)
+
+    chrome_options.add_argument(f"--load-extension={os.path.abspath(plugin_dir)}")
+
+    # Giả lập vị trí địa lý (Jerusalem, Israel)
+    chrome_options.add_argument("--enable-geolocation")
+    location = {"latitude": 31.7683, "longitude": 35.2137, "accuracy": 100}
+    chrome_options.add_experimental_option(
+        "prefs",
+        {
+            "profile.default_content_setting_values.geolocation": 1,
+            "profile.default_content_settings.geolocation": 1,
+            "profile.content_settings.exceptions.geolocation": {"*": {"setting": 1}},
+            # Thêm các preferences để giả lập người dùng thực
+            "credentials_enable_service": False,
+            "profile.password_manager_enabled": False,
+            "profile.default_content_setting_values.notifications": 2,
+            "profile.managed_default_content_settings.images": 1,
+            "profile.default_content_setting_values.cookies": 1,
+            "profile.default_content_setting_values.plugins": 1,
+            "profile.default_content_setting_values.popups": 1,
+            "profile.default_content_setting_values.geolocation": 1,
+            "profile.default_content_setting_values.auto_select_certificate": 1,
+            "profile.default_content_setting_values.mixed_script": 1,
+            "profile.default_content_setting_values.media_stream": 1,
+            "profile.default_content_setting_values.media_stream_mic": 1,
+            "profile.default_content_setting_values.media_stream_camera": 1,
+            "profile.default_content_setting_values.protocol_handlers": 1,
+            "profile.default_content_setting_values.midi_sysex": 1,
+            "profile.default_content_setting_values.push_messaging": 1,
+            "profile.default_content_setting_values.ssl_cert_decisions": 1,
+            "profile.default_content_setting_values.metro_switch_to_desktop": 1,
+            "profile.default_content_setting_values.protected_media_identifier": 1,
+            "profile.default_content_setting_values.site_engagement": 1,
+            "profile.default_content_setting_values.durable_storage": 1,
+        },
+    )
+
+    # Sử dụng ChromeDriver local
+    service = Service(ChromeDriverManager().install())
+
+    # Ẩn chuỗi ChromeDriver trong capabilities
+    service.creation_flags = 0x08000000  # CREATE_NO_WINDOW flag
+
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+
+    # Xóa các thuộc tính tiết lộ automation
+    driver.execute_cdp_cmd(
+        "Page.addScriptToEvaluateOnNewDocument",
+        {
+            "source": """
+            // Ẩn webdriver
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+            
+            // Giả lập ngôn ngữ
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['ko-KR', 'ko', 'en-US', 'en']
+            });
+            
+            // Giả lập plugins
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [
+                    {
+                        0: {type: "application/x-google-chrome-pdf", suffixes: "pdf", description: "Portable Document Format"},
+                        description: "Portable Document Format",
+                        filename: "internal-pdf-viewer",
+                        length: 1,
+                        name: "Chrome PDF Plugin"
+                    },
+                    {
+                        0: {type: "application/pdf", suffixes: "pdf", description: "Portable Document Format"},
+                        description: "Portable Document Format",
+                        filename: "mhjfbmdgcfjbbpaeojofohoefgiehjai",
+                        length: 1,
+                        name: "Chrome PDF Viewer"
+                    }
+                ]
+            });
+            
+            // Ẩn automation flags
+            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+            
+            // Giả lập WebGL
+            const getParameter = WebGLRenderingContext.getParameter;
+            WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                if (parameter === 37445) {
+                    return 'Intel Inc.'
+                }
+                if (parameter === 37446) {
+                    return 'Intel(R) Iris(TM) Graphics 6100'
+                }
+                return getParameter(parameter);
+            };
+            
+            // Giả lập thông tin phần cứng
+            Object.defineProperty(navigator, 'hardwareConcurrency', {
+                get: () => 8
+            });
+            Object.defineProperty(navigator, 'deviceMemory', {
+                get: () => 8
+            });
+            Object.defineProperty(screen, 'colorDepth', {
+                get: () => 24
+            });
+            
+            // Giả lập hành vi touch
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({state: Notification.permission}) :
+                    originalQuery(parameters)
+            );
+            
+            // Thêm một số thuộc tính ngẫu nhiên
+            const now = new Date();
+            Object.defineProperty(navigator, 'getBattery', {
+                get: () => () => Promise.resolve({
+                    charging: true,
+                    chargingTime: 0,
+                    dischargingTime: Infinity,
+                    level: 0.98
+                })
+            });
+        """
+        },
+    )
+
+    # Set geolocation after driver creation
+    driver.execute_cdp_cmd("Emulation.setGeolocationOverride", location)
+
+    # Thêm một số hành vi ngẫu nhiên để giống người dùng thực
+    driver.execute_cdp_cmd("Network.enable", {})
+    driver.execute_cdp_cmd(
+        "Network.setUserAgentOverride",
+        {
+            "userAgent": mobile_emulation["userAgent"],
+            "platform": "Android",
+            "acceptLanguage": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        },
+    )
+
+    # Thêm headers tùy chỉnh
+    driver.execute_cdp_cmd(
+        "Network.setExtraHTTPHeaders",
+        {
+            "headers": {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Cache-Control": "max-age=0",
+                "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="112"',
+                "Sec-Ch-Ua-Mobile": "?1",
+                "Sec-Ch-Ua-Platform": '"Android"',
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+            }
+        },
+    )
+
     return driver
 
 
@@ -155,14 +419,14 @@ def worker_instance():
     with app.app_context():
         browser = create_driver_instance()
         # Mở trang cơ sở để làm tab gốc (base tab)
-        browser.get("https://ko.aliexpress.com/")
+        browser.get("https://m.coupang.com/")
         base_tab = browser.current_window_handle
 
         print("Worker started (PID:", os.getpid(), ")")
 
         while not stop_event.is_set():
             try:
-                task_item = redis_client.blpop("toktak:crawl_ali_queue", timeout=10)
+                task_item = redis_client.blpop("toktak:crawl_coupang_queue", timeout=10)
                 if task_item:
                     _, task_json = task_item
                     task = json.loads(task_json)
@@ -203,173 +467,17 @@ def worker_instance():
         return True
 
 
-def speech_to_text(audio_url):
-    try:
-        config = ShotStackService.get_settings()
-        api_key = config.get("GOOGLE_API_TEXT_TO_SPEECH", "")
-        api_url = f"https://speech.googleapis.com/v1/speech:recognize?key={api_key}"
-
-        if not api_key:
-            print("Lỗi: API Key chưa được thiết lập.")
-            return ""
-
-        # Tải file từ audio_url
-        response = requests.get(audio_url)
-        if response.status_code != 200:
-            print(f"Lỗi khi tải file từ URL: {audio_url}")
-            return ""
-
-        # Lưu file tạm (giả sử file gốc là MP3)
-        temp_mp3 = "temp_audio.mp3"
-        with open(temp_mp3, "wb") as f:
-            f.write(response.content)
-
-        # Chuyển file MP3 sang FLAC (Google Speech-to-Text tối ưu cho FLAC)
-        flac_file = temp_mp3.replace(".mp3", ".flac")
-        os.system(f"ffmpeg -i {temp_mp3} -ac 1 -ar 16000 {flac_file} -y")
-
-        # Đọc file FLAC dạng base64
-        with open(flac_file, "rb") as f:
-            audio_content = base64.b64encode(f.read()).decode("utf-8")
-
-        payload = {
-            "config": {
-                "encoding": "FLAC",
-                "sampleRateHertz": 16000,
-                "languageCode": "en-US",
-            },
-            "audio": {"content": audio_content},
-        }
-
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(api_url, json=payload, headers=headers)
-
-        try:
-            os.remove(temp_mp3)
-            os.remove(flac_file)
-        except Exception as e:
-            print(f"Lỗi khi xóa file FLAC: {str(e)}")
-
-        if response.status_code != 200:
-            print(f"Lỗi từ Google Speech API: {response.text}")
-            return ""
-
-        response_json = response.json()
-
-        # Lấy transcript từ API
-        transcript = " ".join(
-            [
-                alt["transcript"]
-                for res in response_json.get("results", [])
-                for alt in res.get("alternatives", [])
-            ]
-        )
-
-        return transcript.strip()
-
-    except Exception as e:
-        print(f"Exception: {str(e)}")
-        return None
-
-
 def process_task_on_tab(browser, task):
     try:
         logger.info("[Open Tab]")
         try:
-            load_cookies(browser)
+            # load_cookies(browser)
             url = task["url"]
-            # wait_id = task["wait_id"]
-            # wait_class = task["wait_class"]
-            # wait_script = task["wait_script"]
             req_id = task["req_id"]
-            # page = task["page"]
 
             time.sleep(1)
-
             browser.get(url)
-
             logger.info(f"[Open URL] {url}")
-            try:
-                iframe_tag = browser.find_elements(
-                    By.XPATH,
-                    "//iframe[contains(@src, 'https://acs.aliexpress.com:443//h5/mtop.aliexpress.pdp.pc.query/1.0/_____tmd_____/punish')]",
-                )
-                finded_script = browser.find_elements(
-                    By.XPATH, "//script[@type='application/ld+json']"
-                )
-                print("iframe_tag", iframe_tag)
-                print("finded_script", finded_script)
-                if iframe_tag and not finded_script:
-                    print(
-                        "Found J_MIDDLEWARE_FRAME_WIDGET and script with type application/ld+json"
-                    )
-
-                    outer_frame = browser.find_element(
-                        By.CSS_SELECTOR, "div.J_MIDDLEWARE_FRAME_WIDGET iframe"
-                    )
-                    browser.switch_to.frame(outer_frame)
-
-                    print("Switch To Outer Frame")
-
-                    middle_frame = browser.find_element(By.XPATH, "//iframe[1]")
-                    browser.switch_to.frame(middle_frame)
-
-                    print("Switch To Middle Frame")
-
-                    inner_frame = browser.find_element(By.XPATH, "//iframe[1]")
-
-                    challenger_iframe = browser.find_element(
-                        By.XPATH,
-                        "//iframe[contains(@title, 'recaptcha challenge')]",
-                    )
-
-                    browser.switch_to.frame(inner_frame)
-
-                    print("Switch To Captcha Frame")
-
-                    # file_html = open("demo.html", "w", encoding="utf-8")
-                    # file_html.write(browser.page_source)
-                    # file_html.close()
-
-                    checkbox = WebDriverWait(browser, 10).until(
-                        EC.presence_of_element_located((By.ID, "recaptcha-anchor"))
-                    )
-                    checkbox.click()
-
-                    time.sleep(1)
-
-                    if challenger_iframe:
-                        # Switch back to the parent frame (middle iframe) to access the sibling iframe
-                        browser.switch_to.parent_frame()
-
-                        # Now switch to the challenger iframe
-                        browser.switch_to.frame(challenger_iframe)
-
-                        print("Switch To Challenger Frame")
-                        audio_btn = WebDriverWait(browser, 10).until(
-                            EC.presence_of_element_located(
-                                (By.ID, "recaptcha-audio-button")
-                            )
-                        )
-                        audio_btn.click()
-
-                        time.sleep(1)
-
-                        file_html = open("demo.html", "w", encoding="utf-8")
-                        file_html.write(browser.page_source)
-                        file_html.close()
-
-                        audio_source = browser.find_element(By.ID, "audio-source")
-                        audio_url = audio_source.get_attribute("src")
-                        text = speech_to_text(audio_url)
-                        print("Text from audio:", text)
-
-                    browser.switch_to.default_content()
-            except Exception as e:
-                traceback.print_exc()
-                print("Error: ", str(e))
-
-            # save_cookies(browser)
 
             WebDriverWait(browser, 10).until(
                 EC.presence_of_element_located(
@@ -384,38 +492,18 @@ def process_task_on_tab(browser, task):
             browser.execute_script("window.scrollBy(700, 1600);")
             logger.info("[Scroll Down 2]")
 
-            file_html = open("demo1.html", "w", encoding="utf-8")
-            file_html.write(browser.page_source)
-            file_html.close()
-
-            # logger.info("[Wait for script tag with type application/ld+json]")
-
-            # if wait_id != "":
-            #     WebDriverWait(browser, 10).until(
-            #         EC.presence_of_element_located((By.ID, wait_id))
-            #     )
-            # if wait_class != "":
-            #     WebDriverWait(browser, 10).until(
-            #         EC.presence_of_element_located((By.CLASS_NAME, wait_class))
-            #     )
-
             logger.info("[Wait Done]")
 
-            # file_html = open("demo2.html", "w", encoding="utf-8")
-            # file_html.write(browser.page_source)
-            # file_html.close()
-
-            save_cookies(browser)
+            # save_cookies(browser)
 
             html = BeautifulSoup(browser.page_source, "html.parser")
 
-            parser = AliExpressParser(html)
+            parser = CoupangParser(html, url)
             data = parser.parse(url)
 
-            redis_client.set(f"toktak:result-ali:{req_id}", json.dumps(data))
+            redis_client.set(f"toktak:result_coupang:{req_id}", json.dumps(data))
         except Exception as e:
             traceback.print_exc()
-            # logger.error(f"Error in process_task_on_tab: {str(e)}")
             print("Error in process_task_on_tab:", e)
         finally:
             return True
@@ -426,7 +514,7 @@ def process_task_on_tab(browser, task):
 
 
 def load_cookies(browser):
-    COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
+    COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/coupang")
     try:
         cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
         if os.path.exists(cookie_file):
@@ -439,26 +527,7 @@ def load_cookies(browser):
 
 def save_cookies(browser):
     cookies = browser.get_cookies()
-
-    # cookie_dict = {}
-    # for cookie in cookies.split("; "):
-    #     key, value = cookie.split("=", 1)
-    #     cookie_dict[key] = value
-    # print("Parsed Cookies:", cookie_dict)
-
-    COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/aliexpress")
-    # formatted_cookies = []
-    # current_cookies = []
-    # cookie_file = os.path.join(COOKIE_FOLDER, "cookies.json")
-    # if os.path.exists(cookie_file):
-    #     with open(cookie_file, "r", encoding="utf-8") as file:
-    #         current_cookies = json.load(file)
-
-    # for cookie in current_cookies:
-    #     new_value = cookie_dict.get(cookie.get("name"))
-    #     if new_value:
-    #         cookie["value"] = new_value
-    #         formatted_cookies.append(cookie)
+    COOKIE_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/coupang")
 
     if not os.path.exists(COOKIE_FOLDER):
         os.makedirs(COOKIE_FOLDER)
