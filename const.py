@@ -232,3 +232,8 @@ POST_PROCESSING_STATUS = {
     "COMPLETED": "COMPLETED",
     "FAILED": "FAILED",
 }
+
+
+REDIS_KEY_TOKTAK = {
+    "user_info_me": "user_info:me",
+}
