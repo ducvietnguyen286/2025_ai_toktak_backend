@@ -101,6 +101,9 @@ class CoupangScraper:
             # parsed_url = urlparse(self.url)
 
             # real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
+
+            real_url = real_url + "&failRedirectApp=true"
+
             ali_data = self.get_page_html(real_url)
             if not ali_data:
                 return {}
@@ -186,6 +189,9 @@ class CoupangScraper:
             #     return json.loads(exist_data.response)
 
             # added_headers = {"referer": real_url}
+
+            real_url = real_url + "&failRedirectApp=true"
+
             coupang_data = self.get_page_html(real_url)
 
             if not coupang_data:
@@ -390,8 +396,6 @@ class CoupangScraper:
 
             proxies = self.proxies()
             cert_ssl_path = self.cert_ssl_path()
-
-            url = url + "&failRedirectApp=true"
 
             logger.info("Get Page HTML: {0}".format(url))
             logger.info("Proxies: {0}".format(proxies))
