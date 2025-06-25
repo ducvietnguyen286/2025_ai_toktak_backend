@@ -10,6 +10,7 @@ from app.lib.response import Response
 from app.services.auth import AuthService
 from app.services.coupon import CouponService
 from app.services.user import UserService
+from app.services.notification import NotificationServices
 
 ns = Namespace(name="coupon", description="User API")
 from app.extensions import db, redis_client
@@ -247,6 +248,11 @@ class APIUsedCoupon(Resource):
                     }
 
                     UserService.create_user_history(**data_user_history)
+                    NotificationServices.create_notification(
+                        notification_type="COUPON_USED",
+                        user_id=current_user_id,
+                        title=f"사용자가 쿠폰 코드 {code} 를 성공적으로 입력했습니다.",
+                    )
 
             except Exception as e:
                 traceback.print_exc()
