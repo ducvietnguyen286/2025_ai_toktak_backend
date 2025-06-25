@@ -803,6 +803,9 @@ class APIGetStatusUploadWithBatch(Resource):
                                 notification_type=notification_type,
                                 title=f"🔄{notification_type}에 업로드 중입니다.",
                             )
+                            notification_id = notification.id
+                        
+                        
 
                         if (
                             link_type == SocialMedia.INSTAGRAM.value

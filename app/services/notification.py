@@ -33,21 +33,16 @@ class NotificationServices:
             kwargs["name"] = user_details["name"]
 
             NOTIFICATION_API_URL = os.getenv("NOTIFICATION_API_BASE_URL")
-            res = requests.post(
+            requests.post(
                 f"{NOTIFICATION_API_URL}/notification/create-notification", json=kwargs
             )
-            if res.status_code == 201:
-                return res.json()  
-            else:
-                logger.error(res.text)
-                return {"error": res.status_code, "message": res.text}
         except Exception as e:
             logger.error(str(e))
             return {"error": "exception", "message": str(e)}
 
         # notification = Notification(*args, **kwargs)
         # notification.save()
-        # return notification
+        return notification
 
     @staticmethod
     def find(id):
