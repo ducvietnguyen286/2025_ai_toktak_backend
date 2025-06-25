@@ -72,7 +72,7 @@ class MemberProfileUpdateAPI(Resource):
     @jwt_required()
     def post(self):
         try:
-            current_user = AuthService.get_current_identity()
+            user_id = AuthService.get_user_id()
             form = request.form
             file = request.files.get("member_avatar")
             file_background = request.files.get("member_background")
@@ -105,7 +105,9 @@ class MemberProfileUpdateAPI(Resource):
             # Nếu có file ảnh => lưu ảnh
             if file:
                 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                filename = f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{file.filename}"
+                filename = (
+                    f"{user_id}_{int(datetime.utcnow().timestamp())}_{file.filename}"
+                )
                 path = os.path.join(UPLOAD_FOLDER, filename)
                 file.save(path)
                 output_caption_file = path.replace("static/", "").replace("\\", "/")
@@ -115,16 +117,14 @@ class MemberProfileUpdateAPI(Resource):
 
             if file_background:
                 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                filename = f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{file_background.filename}"
+                filename = f"{user_id}_{int(datetime.utcnow().timestamp())}_{file_background.filename}"
                 path = os.path.join(UPLOAD_FOLDER, filename)
                 file_background.save(path)
                 output_caption_file = path.replace("static/", "").replace("\\", "/")
                 member_background_path = f"{current_domain}/{output_caption_file}"
 
                 data_update["member_background"] = member_background_path
-            profile = ProfileServices.update_profile_by_user_id(
-                current_user.id, **data_update
-            )
+            profile = ProfileServices.update_profile_by_user_id(user_id, **data_update)
             if not profile:
                 return Response(
                     message="프로필이 존재하지 않습니다", code=201
@@ -146,9 +146,9 @@ class MemberProfileStatusUpdateAPI(Resource):
     @jwt_required()
     def post(self):
         try:
-            current_user = AuthService.get_current_identity()
+            user_id = AuthService.get_user_id()
 
-            profile_member = ProfileServices.profile_by_user_id(current_user.id)
+            profile_member = ProfileServices.profile_by_user_id(user_id)
             if not profile_member:
                 return Response(
                     message="상태를 업데이트하는 중에 문제가 발생했습니다.", code=201
@@ -164,7 +164,7 @@ class MemberProfileStatusUpdateAPI(Resource):
                     "status": 1,
                 }
                 profile = ProfileServices.update_profile_by_user_id(
-                    current_user.id, **data_update
+                    user_id, **data_update
                 )
             return Response(
                 data=profile.to_dict(), message="상태가 성공적으로 업데이트되었습니다."
@@ -182,7 +182,7 @@ class CheckNickNameAPI(Resource):
     @jwt_required()
     def get(self):
         try:
-            current_user = AuthService.get_current_identity()
+            user_id = AuthService.get_user_id()
             nick_name = request.args.get("nick_name", "").strip()
 
             if not nick_name:
@@ -190,7 +190,7 @@ class CheckNickNameAPI(Resource):
 
             # Tìm người khác có nick_name giống vậy (không phải chính user)
             existed = ProfileServices.find_by_nick_name_exclude_user(
-                nick_name, exclude_user_id=current_user.id
+                nick_name, exclude_user_id=user_id
             )
 
             if existed:
@@ -231,7 +231,7 @@ class MemberProfileDesignSettingsUpdateAPI(Resource):
     @jwt_required()
     def post(self):
         try:
-            current_user = AuthService.get_current_identity()
+            user_id = AuthService.get_user_id()
             data_form = request.get_json()
             data_update = {}
 
@@ -239,9 +239,7 @@ class MemberProfileDesignSettingsUpdateAPI(Resource):
 
             data_update["design_settings"] = json.dumps(data_form, ensure_ascii=False)
 
-            profile = ProfileServices.update_profile_by_user_id(
-                current_user.id, **data_update
-            )
+            profile = ProfileServices.update_profile_by_user_id(user_id, **data_update)
             if not profile:
                 return Response(
                     message="디자인 설정 정보 업데이트에 실패했습니다.", code=201
