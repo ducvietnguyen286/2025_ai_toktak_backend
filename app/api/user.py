@@ -1834,7 +1834,7 @@ class APINiceAuth(Resource):
             return Response(
                 code=201,
                 message="Lỗi khi gọi máy chủ mã hóa NICE",
-            ).to_dict() 
+            ).to_dict()
 
 
 @ns.route("/checkplus_success")
@@ -1842,7 +1842,7 @@ class APINiceAuthSuccess(Resource):
     @jwt_required()
     def get(self):
         try:
-            enc_data = request.args.get("EncodeData")  
+            enc_data = request.args.get("EncodeData")
             result_item = {
                 "EncodeData": enc_data,
             }
@@ -1978,8 +1978,8 @@ class APIGetTodo(Resource):
     @jwt_required()
     def get(self):
         try:
-            current_user = AuthService.get_current_identity(no_cache=True)
-            profile_member = ProfileServices.profile_by_user_id(current_user.id)
+            user_id = AuthService.get_user_id()
+            profile_member = ProfileServices.profile_by_user_id(user_id)
             if not profile_member:
                 return Response(
                     message="회원 정보를 찾을 수 없습니다.",

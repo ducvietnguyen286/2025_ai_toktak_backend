@@ -568,14 +568,23 @@ class UserService:
             logger.warning(f"Cannot get user from Redis: {e}")
 
         # 2. Nếu không có, lấy từ DB
-        user = User.query.get(user_id) 
+        user = User.query.get(user_id)
         if user:
             # 3. Cache lại vào Redis
             try:
-                user_json = json.dumps(user._to_json() if hasattr(user, "_to_json") else user.to_dict())
+                user_json = json.dumps(
+                    user._to_json() if hasattr(user, "_to_json") else user.to_dict()
+                )
                 redis_client.setex(redis_key, 86400, user_json)
             except Exception as e:
                 logger.warning(f"Cannot save user to Redis: {e}")
             # Nếu muốn trả về dict
             return user._to_json() if hasattr(user, "_to_json") else user.to_dict()
         return None
+
+    @staticmethod
+    def find_user_with_out_session(id):
+        user = User.query.get(id)
+        if not user:
+            return None
+        return user
