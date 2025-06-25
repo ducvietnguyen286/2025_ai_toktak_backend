@@ -42,6 +42,7 @@ class UserVideoTemplates(db.Model, BaseModel):
     is_advance = db.Column(db.Integer, default=0, nullable=False)
     is_hashtag = db.Column(db.Integer, default=0, nullable=False)
     hashtag = db.Column(db.Text, nullable=False, default="[]")
+    typecast_voice = db.Column(db.String(100), default="")
     voice = db.Column(db.String(100), default="")
     voice_type = db.Column(db.String(100), default="")
 
@@ -65,6 +66,8 @@ class UserVideoTemplates(db.Model, BaseModel):
             "is_purchase_guide": self.is_purchase_guide,
             "voice_gender": self.voice_gender,
             "voice_id": self.voice_id,
+            "voice": self.voice,
+            "voice_type": self.voice_type,
             "is_video_hooking": self.is_video_hooking,
             "is_caption_top": self.is_caption_top,
             "is_caption_last": self.is_caption_last,
@@ -78,8 +81,6 @@ class UserVideoTemplates(db.Model, BaseModel):
             "is_hashtag": self.is_hashtag,
             "hashtag": json.loads(self.hashtag),
             "subscribe_video": self.subscribe_video,
-            "voice": self.voice,
-            "voice_type": self.voice_type,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }

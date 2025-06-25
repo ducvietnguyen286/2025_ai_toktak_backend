@@ -21,6 +21,7 @@ class Batch(db.Model, BaseModel):
     is_paid_advertisements = db.Column(db.Integer, default=0)
     is_advance = db.Column(db.Integer, default=0)
     voice_google = db.Column(db.Integer, default=1)
+    voice_typecast = db.Column(db.String(100), default="")
     voice = db.Column(db.String(100), default="")
     voice_type = db.Column(db.String(100), default="")
     process_status = db.Column(db.String(50), default="PENDING")
@@ -44,6 +45,8 @@ class Batch(db.Model, BaseModel):
             "is_paid_advertisements": self.is_paid_advertisements,
             "is_advance": self.is_advance,
             "template_info": self.template_info,
+            "voice": self.voice,
+            "voice_type": self.voice_type,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }

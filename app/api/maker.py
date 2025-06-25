@@ -1062,11 +1062,14 @@ class APIGetVoices(Resource):
     def get(self):
         try:
             voices = const.SETUP_VOICES
-
             typecast_voices = get_typecast_voices()
 
             female = "여성"
             male = "남성"
+
+            results = []
+
+            results.extend(voices)
 
             for typecast_voice in typecast_voices:
                 sex = typecast_voice.get("sex")
@@ -1093,10 +1096,10 @@ class APIGetVoices(Resource):
                     "audio_url": typecast_voice.get("audio_url"),
                     "type": Voices.TYPECAST.value,
                 }
-                voices.append(voice)
+                results.append(voice)
 
             return Response(
-                data=voices,
+                data=results,
                 message="Get Voices Success",
                 code=200,
             ).to_dict()
