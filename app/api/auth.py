@@ -198,8 +198,8 @@ class APIMe(Resource):
     @jwt_required()
     def get(self):
         try:
-            user_login = AuthService.get_current_identity(no_cache=True)
-            user_login_id = user_login.id
+            user_login_id = AuthService.get_user_id()
+            user_login = UserService.find_user_with_out_session(user_login_id)
             if not user_login:
                 return Response(
                     status=401,

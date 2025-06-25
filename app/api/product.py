@@ -252,7 +252,7 @@ class ProductMultiUpdateAPI(Resource):
                     filename = file.filename
                     save_path = os.path.join(folder_path, filename)
                     file.save(save_path)
-                    
+
                     output_caption_file = save_path.replace("static/", "").replace(
                         "\\", "/"
                     )
@@ -744,3 +744,41 @@ class MultiGroupCreateApi(Resource):
                     message_en="An error occurred while processing the request.",
                     code=500,
                 ).to_dict()
+
+
+@ns.route("/save_product_image")
+class SaveProductImage(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            today = datetime.now()
+            file_url = ""
+            user_id = AuthService.get_user_id()
+            current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
+            file = request.files.get(f"product_image_file")
+            logger.info(f"request.files: {request.files}")
+            logger.info(f"request.form: {request.form}")
+            
+            if file:
+                folder_path = f"static/voice/product_upload/{today.strftime('%Y_%m_%d')}/{user_id}"
+                os.makedirs(folder_path, exist_ok=True)
+                filename = file.filename
+                save_path = os.path.join(folder_path, filename)
+                file.save(save_path)
+                output_caption_file = save_path.replace("static/", "").replace(
+                    "\\", "/"
+                )
+                file_url = f"{current_domain}/{output_caption_file}"
+            return Response(
+                data={"file_url": file_url},
+                message="모든 제품이 성공적으로 추가되었습니다.",
+                message_en="Upload Product Successfully.",
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"save_product_image products error: {str(e)}")
+            return Response(
+                message="제품 추가 중 오류가 발생했습니다.",
+                message_en="Upload Product Error.",
+                code=201,
+            ).to_dict()

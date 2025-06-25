@@ -812,6 +812,7 @@ class APIGetStatusUploadWithBatch(Resource):
                         notification = NotificationServices.find_notification_sns(
                             sns_post_id, notification_type
                         )
+                        notification_id = notification.get("id", 0)
                         if not notification:
                             notification = NotificationServices.create_notification(
                                 user_id=post_detail["user_id"],
@@ -827,7 +828,7 @@ class APIGetStatusUploadWithBatch(Resource):
                         ):
                             status_check_sns = const.UPLOADED
                             NotificationServices.update_notification(
-                                notification.id,
+                                notification_id,
                                 status=const.NOTIFICATION_SUCCESS,
                                 title=f"✅Instagram 업로드에 성공했습니다.",
                                 description="업로드가 잘 됐는지 한 번만 확인해 주세요 😊",
@@ -840,7 +841,7 @@ class APIGetStatusUploadWithBatch(Resource):
                             and link_type != SocialMedia.INSTAGRAM.value
                         ):
                             NotificationServices.update_notification(
-                                notification.id,
+                                notification_id,
                                 title=f"✅{notification_type} 업로드에 성공했습니다.",
                                 status=const.NOTIFICATION_SUCCESS,
                                 description=error_message,
@@ -852,7 +853,7 @@ class APIGetStatusUploadWithBatch(Resource):
                         ):
                             description_korea = replace_phrases_in_text(error_message)
                             NotificationServices.update_notification(
-                                notification.id,
+                                notification_id,
                                 status=const.NOTIFICATION_FALSE,
                                 title=f"❌{notification_type} 업로드에 실패했습니다.",
                                 description=error_message,

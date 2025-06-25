@@ -36,6 +36,7 @@ from app.third_parties.aliexpress import TokenAliExpress
 from app.third_parties.facebook import FacebookTokenService
 from app.third_parties.tiktok import TiktokTokenService
 from app.third_parties.twitter import TwitterTokenService
+from app.lib.string import generate_random_nick_name
 from app.rabbitmq.producer import (
     send_facebook_message,
     send_instagram_message,
@@ -1834,7 +1835,7 @@ class APINiceAuth(Resource):
             return Response(
                 code=201,
                 message="Lỗi khi gọi máy chủ mã hóa NICE",
-            ).to_dict() 
+            ).to_dict()
 
 
 @ns.route("/checkplus_success")
@@ -1842,7 +1843,7 @@ class APINiceAuthSuccess(Resource):
     @jwt_required()
     def get(self):
         try:
-            enc_data = request.args.get("EncodeData")  
+            enc_data = request.args.get("EncodeData")
             result_item = {
                 "EncodeData": enc_data,
             }
@@ -1978,8 +1979,8 @@ class APIGetTodo(Resource):
     @jwt_required()
     def get(self):
         try:
-            current_user = AuthService.get_current_identity(no_cache=True)
-            profile_member = ProfileServices.profile_by_user_id(current_user.id)
+            user_id = AuthService.get_user_id()
+            profile_member = ProfileServices.profile_by_user_id(user_id)
             if not profile_member:
                 return Response(
                     message="회원 정보를 찾을 수 없습니다.",
@@ -2009,36 +2010,60 @@ class APIGetTodo(Resource):
 class APIUpdateTodoGuide(Resource):
     @jwt_required()
     def post(self):
-        subject = get_jwt_identity()
-        if subject is None:
-            return None
+        try:
+            user_id = AuthService.get_user_id()
+            profile_member = ProfileServices.profile_by_user_id(user_id)
+            if not profile_member:
+                user_details = UserService.find_user_by_redis(user_id)
+                nick_name = generate_random_nick_name(user_details["email"])
+                design_settings = {
+                    "background_color": "#E8F0FE",
+                    "main_text_color": "#0A1929",
+                    "sub_text_color": "#6B7F99",
+                    "notice_color": "#6B7F99",
+                    "notice_background_color": "#FFFFFF",
+                    "product_background_color": "#FFFFFF",
+                    "product_name_color": "#6B7F99",
+                    "product_price_color": "#1E4C94",
+                    "show_price": 1,
+                }
+                guide_info = [{"id": i + 1, "is_completed": False} for i in range(10)]
+                profile_member = ProfileServices.create_profile(
+                    user_id=user_id,
+                    nick_name=nick_name,
+                    status=0,
+                    design_settings=json.dumps(design_settings),
+                    guide_info=json.dumps(guide_info),
+                )
+            payload = ns.payload or {}
+            guide_info = json.loads(profile_member.guide_info)
 
-        user_id = int(subject)
-        profile_member = ProfileServices.profile_by_user_id(user_id)
-        if not profile_member:
+            exists = any(item["id"] == payload.get("id", 0) for item in guide_info)
+            if not exists:
+                guide_info = [{"id": i + 1, "is_completed": False} for i in range(10)]
+                guide_info.append(payload)
+                profile_member.guide_info = json.dumps(guide_info)
+                profile_member.save()
+            else:
+                for item in guide_info:
+                    if item["id"] == payload.get("id", 0):
+                        item["is_completed"] = payload.get("is_completed", 0)
+                        break
+                profile_member.guide_info = json.dumps(guide_info)
+                profile_member.save()
+
             return Response(
-                message="회원 정보를 찾을 수 없습니다.",
-                message_en="Member information not found.",
-                status=201,
+                data=guide_info,
+                message="업데이트가 성공적으로 완료되었습니다.",
+                message_en="Update completed successfully.",
             ).to_dict()
-        payload = ns.payload or {}
-        guide_info = json.loads(profile_member.guide_info)
 
-        exists = any(item["id"] == payload.get("id", 0) for item in guide_info)
-        if not exists:
-            guide_info.append(payload)
-            profile_member.guide_info = json.dumps(guide_info)
-            profile_member.save()
-        else:
-            for item in guide_info:
-                if item["id"] == payload.get("id", 0):
-                    item["is_completed"] = payload.get("is_completed", 0)
-                    break
-            profile_member.guide_info = json.dumps(guide_info)
-            profile_member.save()
-
-        return Response(
-            data=guide_info,
-            message="업데이트가 성공적으로 완료되었습니다.",
-            message_en="Update completed successfully.",
-        ).to_dict()
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="처리 중 오류가 발생했습니다.",
+                message_en="An error occurred while processing your request.",
+                data=str(e),
+                status=500,
+            ).to_dict()

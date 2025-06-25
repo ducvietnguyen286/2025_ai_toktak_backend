@@ -26,14 +26,11 @@ class NotificationServices:
         notification = Notification(*args, **kwargs)
         notification.save()
         user_details = UserService.find_user_by_redis(kwargs.get("user_id"))
-        logger.info(f"User details create_notification: {user_details}")
         if not user_details:
             return {"error": "user_not_found", "message": "User not found"}
         try:
-            logger.info(kwargs)
             kwargs["email"] = user_details["email"]
             kwargs["name"] = user_details["name"]
-            logger.info(kwargs)
 
             NOTIFICATION_API_URL = os.getenv("NOTIFICATION_API_BASE_URL")
             res = requests.post(
