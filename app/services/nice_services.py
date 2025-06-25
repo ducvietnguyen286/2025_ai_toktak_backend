@@ -31,7 +31,7 @@ class NiceAuthService:
 
         if not all([sitecode, sitepasswd, cb_encode_path, url_verify_result]):
             return {
-                "code": 400,
+                "code": 201,
                 "message": "Thiếu biến môi trường cấu hình.",
                 "data": {},
             }
@@ -50,7 +50,7 @@ class NiceAuthService:
                 UserService.update_user_with_out_session(user_id, password_certificate=reqseq)
             else:
                 return {
-                    "code": 400,
+                    "code": 201,
                     "message": "Not have user.",
                     "data": {},
                 }
@@ -67,8 +67,6 @@ class NiceAuthService:
                 f"7:ERR_URL{len(errorurl)}:{errorurl}"
                 f"9:CUSTOMIZE{len(customize)}:{customize}"
             )
-            logger.info(plaindata)
-
             # Mã hóa dữ liệu
 
             enc_data = NiceAuthService.run_command(
