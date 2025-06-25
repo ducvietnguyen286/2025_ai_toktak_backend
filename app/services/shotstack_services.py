@@ -1237,23 +1237,37 @@ def google_speech_to_text(audio_file, config=None):
 def get_typecast_voices():
     try:
         cache_typecast_voices = redis_client.get("typecast_voices")
-        if cache_typecast_voices:
-            return json.loads(cache_typecast_voices)
-        API_KEY = os.environ.get("TYPECAST_API_KEY", "")
-        response = requests.get(
-            "https://typecast.ai/api/actor",
-            headers={"Authorization": f"Bearer {API_KEY}"},
+        voices = (
+            cache_typecast_voices.decode("utf-8") if cache_typecast_voices else None
         )
-        if response.status_code == 200:
-            actors = response.json().get("result", [])
-            redis_client.set("typecast_voices", json.dumps(actors), ex=60 * 60 * 24)
-            return actors
+        if len(voices) > 0:
+            return json.loads(voices)
         else:
-            log_make_video_message(
-                f"Lỗi khi lấy giọng nói từ Typecast API: {response.status_code} - {response.text}"
+            API_KEY = os.environ.get("TYPECAST_API_KEY", "")
+            response = requests.get(
+                "https://typecast.ai/api/actor",
+                headers={"Authorization": f"Bearer {API_KEY}"},
             )
-            return []
+            if response.status_code == 200:
+                actors = response.json().get("result", [])
+                unique_actors = []
+                checked_actors = {}
+                for actor in actors:
+                    actor_id = actor.get("actor_id")
+                    if not checked_actors.get(actor_id):
+                        unique_actors.append(actor)
+                        checked_actors[actor_id] = True
+                redis_client.set(
+                    "typecast_voices", json.dumps(unique_actors), ex=60 * 60 * 24
+                )
+                return unique_actors
+            else:
+                log_make_video_message(
+                    f"Lỗi khi lấy giọng nói từ Typecast API: {response.status_code} - {response.text}"
+                )
+                return []
     except Exception as e:
+        traceback.print_exc()
         log_make_video_message(f"Lỗi khi kết nối Typecast API: {str(e)}")
         return []
 
