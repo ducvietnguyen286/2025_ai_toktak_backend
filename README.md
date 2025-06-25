@@ -31,13 +31,18 @@ rm -rf /var/www/2025_ai_toktak_be/logs/*
 sudo systemctl restart nginx 
 pm2 reload all
 
-sudo systemctl restart consumer_toktak
-sudo systemctl restart consumer_toktak_tiktok
-sudo systemctl restart consumer_toktak_twitter
-sudo systemctl restart consumer_toktak_youtube
-sudo systemctl restart consumer_toktak_thread
-sudo systemctl restart consumer_toktak_instagram
-sudo systemctl restart toktak.service
+
+sudo systemctl restart toktak
+sudo systemctl restart create_content_1
+sudo systemctl restart create_content_2
+
+
+sudo systemctl restart consumer-facebook
+sudo systemctl restart consumer-tiktok
+sudo systemctl restart consumer-twitter
+sudo systemctl restart consumer-youtube
+sudo systemctl restart consumer-thread
+sudo systemctl restart consumer-instagram
 
 sudo systemctl restart nginx 
 
