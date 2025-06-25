@@ -391,6 +391,11 @@ class CoupangScraper:
             proxies = self.proxies()
             cert_ssl_path = self.cert_ssl_path()
 
+            logger.info("Get Page HTML: {0}".format(url))
+            logger.info("Proxies: {0}".format(proxies))
+            logger.info("Cert SSL Path: {0}".format(cert_ssl_path))
+            logger.info("Headers: {0}".format(headers))
+
             response = session.get(
                 url,
                 headers=headers,
