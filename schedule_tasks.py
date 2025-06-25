@@ -42,13 +42,10 @@ from app.models.notification import Notification
 from app.models.request_log import RequestLog
 from app.models.request_social_log import RequestSocialLog
 from app.models.video_create import VideoCreate
-
-from app.ais.chatgpt import (
-    translate_notifications_batch,
-)
+ 
 from sqlalchemy import or_, text
 
-from app.third_parties.telegram import send_telegram_message, send_slack_message
+from app.third_parties.telegram import   send_slack_message
 
 
 UPLOAD_BASE_PATH = "uploads"
@@ -79,8 +76,9 @@ def configure_logging(app):
         os.makedirs(LOG_DIR)
 
     log_filename = os.path.join(
-        LOG_DIR, "schedule_tasks.log"
-    )  # Không cần ghi ngày ở đây
+        LOG_DIR,
+        f"schedule_tasks_{datetime.now().strftime('%Y-%m-%d')}.log"
+    )
 
     file_handler = TimedRotatingFileHandler(
         log_filename,
@@ -119,119 +117,7 @@ def delete_folder_if_exists(folder_path, app):
         app.logger.error(f"Error deleting folder {folder_path}: {str(e)}")
 
 
-def split_message(text, max_length=4000):
-    """Chia tin nhắn thành nhiều đoạn dưới max_length ký tự"""
-    return [text[i : i + max_length] for i in range(0, len(text), max_length)]
-
-
-def format_notification_message(notification_detail, fe_current_domain, user=None):
-    email = user.email if user else ""
-    now_korea = datetime.now(timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
-    return (
-        f"======================================================================\n"
-        f"[{now_korea}] [Toktak Notification {fe_current_domain}]\n"
-        f"- User Email: {email}\n"
-        f"- Notification ID: {notification_detail.get('id')}\n"
-        f"- Batch ID: {notification_detail.get('batch_id')}\n"
-        f"- Title: {notification_detail.get('title')}\n"
-        f"- Description: {notification_detail.get('description')}\n"
-        f"{notification_detail.get('description_korea')}\n"
-        f"======================================================================\n"
-    )
-
-
-def send_slack_notifications(app):
-    """Gửi Notification đến Slack cho những bản ghi chưa gửi (send_telegram = 0)"""
-    app.logger.info("🔔 Start send_slack_notifications...")
-
-    with app.app_context():
-        try:
-            notifications = (
-                db.session.query(Notification)
-                .filter(
-                    Notification.send_telegram == 0,
-                    Notification.status == const.NOTIFICATION_FALSE,
-                )
-                .order_by(Notification.created_at)
-                .limit(10)
-                .all()
-            )
-
-            if not notifications:
-                app.logger.info("✅ No pending notifications to send.")
-                return
-
-            fe_current_domain = os.environ.get("FE_DOMAIN") or "http://localhost:5000"
-
-            user_ids = [n.user_id for n in notifications]
-            users = UserService.find_users(user_ids)
-            user_dict = {user.id: user for user in users}
-
-            for notification in notifications:
-                try:
-                    # Đánh dấu đã gửi SLACK NGAY và commit, tránh race/trùng
-                    notification.send_telegram = 1
-                    notification.save()
-                    db.session.commit()
-
-                    notification_detail = notification.to_dict()
-                    user = user_dict.get(notification.user_id)
-
-                    message = format_notification_message(
-                        notification_detail, fe_current_domain, user=user
-                    )
-
-                    message_parts = split_message(message)
-                    for idx, part in enumerate(message_parts):
-                        send_slack_message(part)
-
-                except Exception as single_error:
-                    app.logger.error(
-                        f"❌ Error sending notification ID {notification.id}: {str(single_error)}"
-                    )
-                    db.session.rollback()
-        except Exception as e:
-            app.logger.exception(f"❌ Error in send_slack_notifications: {str(e)}")
-        finally:
-            db.session.remove()
-
-
-def translate_notification(app):
-    """Gửi Notification đến Telegram cho những bản ghi chưa gửi (send_telegram = 0)"""
-    app.logger.info("Start translate_notification...")
-
-    with app.app_context():
-        try:
-            notifications = (
-                db.session.query(Notification)
-                .filter(
-                    Notification.status == const.NOTIFICATION_FALSE,
-                    Notification.description != "",
-                    or_(
-                        Notification.description_korea == None,
-                        Notification.description_korea == "",
-                    ),
-                )
-                .order_by(Notification.id.desc())
-                .limit(10)
-                .all()
-            )
-
-            if not notifications:
-                return
-
-            notification_data = [
-                {"id": notification.id, "text": notification.description}
-                for notification in notifications
-            ]
-
-            translated_results = translate_notifications_batch(notification_data)
-            if translated_results:
-                NotificationServices.update_translated_notifications(translated_results)
-
-        except Exception as e:
-            app.logger.error(f"Error in translate_notification: {str(e)}")
-
+ 
 
 def cleanup_pending_batches(app):
     """Xóa Batch có process_status = 'PENDING', các Post liên quan và thư mục"""
@@ -345,51 +231,7 @@ def cleanup_request_log(app):
             # CRITICAL: Cleanup session to prevent connection leaks
             db.session.remove()
 
-
-def check_urls_health(app):
-    """Check the health of predefined URLs and send one combined Telegram alert if any fail."""
-    app.logger.info("Start checking URL health...")
-
-    # 103.98.152.125
-    # 3.38.117.230
-    # 43.203.118.116
-    # 3.35.172.6
-
-    urls = [
-        "https://scraper.vodaplay.vn/ping",
-        "https://scraper.play-tube.net/ping",
-        "https://scraper.canvasee.com/ping",
-        "https://scraper.bodaplay.ai/ping",
-    ]
-
-    headers = {"User-Agent": "ToktakHealthChecker/1.0"}
-    timeout_sec = 10
-    fe_current_domain = os.environ.get("FE_DOMAIN") or "http://localhost:5000"
-
-    failed_reports = []
-
-    for url in urls:
-        try:
-            response = requests.get(url, headers=headers, timeout=timeout_sec)
-            if response.status_code != 200:
-                failed_reports.append(
-                    f"⚠️ [URL Check Failed]({url})\nStatus Code: `{response.status_code}`"
-                )
-        except Exception as e:
-            failed_reports.append(f"❌ [URL Unreachable]({url})\nError: `{str(e)}`")
-
-    if failed_reports:
-        message = (
-            f"*Domain:* `{fe_current_domain}`\n"
-            f"*Failed URL Reports:* 🚨\n\n" + "\n\n".join(failed_reports)
-        )
-        app.logger.warning("Some URLs failed health check.")
-        send_slack_message(message)
-        # send_telegram_message(message, app, parse_mode="Markdown")
-    else:
-        app.logger.info("✅ All URLs are healthy.")
-
-
+ 
 def auto_extend_subscription_task(app):
     app.logger.info("Start auto_extend_subscription_task...")
     with app.app_context():
@@ -498,13 +340,6 @@ def auto_kill_long_connections(app):
                 pass
 
 
-def create_notification_task():
-    try:
-        app.logger.info("Check : Created a new notification successfully.")
-    except Exception as e:
-        app.logger.error(f"Error creating notification: {str(e)}")
-
-
 def start_scheduler(app):
     """Khởi động Scheduler với các công việc theo lịch trình"""
     scheduler = BackgroundScheduler()
@@ -524,23 +359,6 @@ def start_scheduler(app):
 
     every_3_hours_trigger = CronTrigger(hour="*/3", minute=0, timezone=kst)
 
-    scheduler.add_job(
-        func=lambda: check_urls_health(app),
-        trigger=every_3_hours_trigger,
-        id="check_urls_health",
-    )
-
-    scheduler.add_job(
-        func=lambda: translate_notification(app),
-        trigger=every_2_minutes_trigger,
-        id="translate_notification",
-    )
-
-    scheduler.add_job(
-        func=lambda: send_slack_notifications(app),
-        trigger=every_2_minutes_trigger,
-        id="send_slack_notifications",
-    )
 
     scheduler.add_job(
         func=lambda: cleanup_pending_batches(app),
@@ -553,12 +371,7 @@ def start_scheduler(app):
         id="cleanup_request_log",
     )
 
-    scheduler.add_job(
-        func=lambda: create_notification_task(),
-        trigger=every_hour_trigger,
-        id="create_notification_task",
-    )
-
+  
     scheduler.add_job(
         func=exchange_facebook_token,
         trigger=two_am_kst_trigger,
