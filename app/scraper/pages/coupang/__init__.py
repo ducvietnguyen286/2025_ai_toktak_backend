@@ -179,9 +179,9 @@ class CoupangScraper:
             real_url = "https://m.coupang.com" + path_mobile + "?" + query_params
 
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            # exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
-            # if exist_data:
-            #     return json.loads(exist_data.response)
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            if exist_data:
+                return json.loads(exist_data.response)
 
             # added_headers = {"referer": real_url}
 
