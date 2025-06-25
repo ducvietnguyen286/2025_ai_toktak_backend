@@ -804,6 +804,8 @@ class APIGetStatusUploadWithBatch(Resource):
                                 title=f"🔄{notification_type}에 업로드 중입니다.",
                             )
                             notification_id = notification.id
+                        else:
+                            notification_id = notification.get("id", 0)
                         
                         
 
