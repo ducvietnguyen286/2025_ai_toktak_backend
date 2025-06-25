@@ -38,8 +38,6 @@ class NotificationServices:
             )
         except Exception as e:
             logger.error(str(e))
-            return {"error": "exception", "message": str(e)}
-
         # notification = Notification(*args, **kwargs)
         # notification.save()
         return notification
