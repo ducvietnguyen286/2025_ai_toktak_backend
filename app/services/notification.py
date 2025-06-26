@@ -255,11 +255,14 @@ class NotificationServices:
         return notification
 
     @staticmethod
-    def create_or_update_notification_by_type_and_batch(render_id, **kwargs):
-        # Tìm notification cũ
-        notification = Notification.objects(render_id=render_id).first()
+    def create_notification_render_id(**kwargs):
+        render_id = kwargs.get("render_id")
+        if not render_id:
+            return None
+        notification = select_with_filter_one(
+            Notification, filters=[Notification.render_id == render_id]
+        )
         if notification:
             NotificationServices.update_notification(notification.id, **kwargs)
         else:
-            # Tạo mới nếu chưa có
             NotificationServices.create_notification(**kwargs)
