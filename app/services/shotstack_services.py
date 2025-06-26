@@ -96,6 +96,8 @@ class ShotStackService:
 
         if not using_voice:
             using_voice = VoiceService.get_default_voice()
+            if not type(using_voice) == dict:
+                using_voice = using_voice.to_dict()
 
         if voice_type == Voices.GOOGLE.value:
             mp3_file, audio_duration = text_to_speech_kr_old(
