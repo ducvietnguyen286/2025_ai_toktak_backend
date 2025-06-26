@@ -278,7 +278,7 @@ class FacebookService(BaseService):
         selected_page_id = self.user_link.page_id if is_all else page_id
 
         token_page = FacebookTokenService.fetch_page_token_backend(
-            user_link=self.user_link, page_id=selected_page_id, is_all=is_all
+            user_link_id=self.user_link.id, page_id=selected_page_id, is_all=is_all
         )
 
         if not is_all and not token_page:
