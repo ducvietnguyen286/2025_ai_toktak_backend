@@ -46,6 +46,15 @@ class VoiceService:
         return [voice._to_json() for voice in voices]
 
     @staticmethod
+    def get_frontend_voices():
+        voices = select_with_filter(
+            Voice,
+            order_by=[Voice.id.desc()],
+            filters=[],
+        )
+        return [voice.to_dict() for voice in voices]
+
+    @staticmethod
     def update_voice(id, *args, **kwargs):
         voice = Voice.query.get(id)
         voice.update(**kwargs)

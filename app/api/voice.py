@@ -30,7 +30,7 @@ class GetVoices(Resource):
             if voice_cache:
                 voices = json.loads(voice_cache)
             else:
-                voices = VoiceService.get_voices()
+                voices = VoiceService.get_frontend_voices()
                 redis_client.set("toktak:voices", json.dumps(voices))
             return Response(
                 message="Lấy danh sách voice thành công",
