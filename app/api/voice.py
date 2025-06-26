@@ -62,6 +62,7 @@ class UpdateVoices(Resource):
             "model_version": {"type": "string"},
             "xapi_audio_format": {"type": "string"},
             "xapi_hd": {"type": "boolean"},
+            "order": {"type": "number"},
         },
         required=["url"],
     )
@@ -83,6 +84,8 @@ class UpdateVoices(Resource):
                 update_data["xapi_audio_format"] = args.get("xapi_audio_format")
             if args.get("xapi_hd", None):
                 update_data["xapi_hd"] = args.get("xapi_hd")
+            if args.get("order", None):
+                update_data["order"] = args.get("order")
             if update_data:
                 VoiceService.update_voice(voice_id, update_data)
             return Response(

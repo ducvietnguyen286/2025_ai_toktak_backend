@@ -49,7 +49,7 @@ class VoiceService:
     def get_frontend_voices():
         voices = select_with_filter(
             Voice,
-            order_by=[Voice.id.desc()],
+            order_by=[Voice.order.asc()],
             filters=[],
         )
         return [voice.to_dict() for voice in voices]

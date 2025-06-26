@@ -20,6 +20,7 @@ class Voice(db.Model, BaseModel):
     model_version = db.Column(db.String(255), nullable=False, default="latest")
     xapi_audio_format = db.Column(db.String(255), nullable=False, default="mp3")
     xapi_hd = db.Column(db.Boolean, nullable=False, default=True)
+    order = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
