@@ -198,8 +198,8 @@ class APIMe(Resource):
     @jwt_required()
     def get(self):
         try:
-            user_login = AuthService.get_current_identity(no_cache=True)
-            user_login_id = user_login.id
+            user_login_id = AuthService.get_user_id()
+            user_login = UserService.find_user_with_out_session(user_login_id)
             if not user_login:
                 return Response(
                     status=401,
@@ -370,11 +370,12 @@ class APIMeUpdate(Resource):
             message = f"🏢 회사명이 변경되었습니다. ({user_login.company_name} → {company_name})"
 
         if update_data:  # Chỉ update nếu có dữ liệu
-            noticication = NotificationServices.create_notification(
+            notification = NotificationServices.create_notification(
                 notification_type="update_user",
                 user_id=user_login.id,
                 title=message,
             )
+            
             update_data["updated_at"] = datetime.now()
 
             user_login = AuthService.update(user_login.id, **update_data)

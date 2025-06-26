@@ -138,3 +138,6 @@ sudo systemctl restart main_toktak_watchdog.service
 
 
 sudo systemctl status main_consumer_toktak_youtube.service
+
+
+journalctl -u main_toktak.service -f
