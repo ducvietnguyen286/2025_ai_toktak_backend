@@ -812,7 +812,6 @@ class APIGetStatusUploadWithBatch(Resource):
                         notification = NotificationServices.find_notification_sns(
                             sns_post_id, notification_type
                         )
-                        notification_id = notification.get("id", 0)
                         if not notification:
                             notification = NotificationServices.create_notification(
                                 user_id=post_detail["user_id"],
@@ -820,6 +819,13 @@ class APIGetStatusUploadWithBatch(Resource):
                                 post_id=sns_post_id,
                                 notification_type=notification_type,
                                 title=f"🔄{notification_type}에 업로드 중입니다.",
+                            )
+                            notification_id = notification.id
+                        else:
+                            notification_id = (
+                                notification.get("id")
+                                if type(notification) == dict
+                                else (notification.id if notification else 0)
                             )
 
                         if (

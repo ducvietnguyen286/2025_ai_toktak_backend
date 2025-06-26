@@ -756,9 +756,6 @@ class SaveProductImage(Resource):
             user_id = AuthService.get_user_id()
             current_domain = os.environ.get("CURRENT_DOMAIN") or "http://localhost:5000"
             file = request.files.get(f"product_image_file")
-            logger.info(f"request.files: {request.files}")
-            logger.info(f"request.form: {request.form}")
-            
             if file:
                 folder_path = f"static/voice/product_upload/{today.strftime('%Y_%m_%d')}/{user_id}"
                 os.makedirs(folder_path, exist_ok=True)

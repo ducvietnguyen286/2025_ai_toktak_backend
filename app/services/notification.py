@@ -31,23 +31,17 @@ class NotificationServices:
         try:
             kwargs["email"] = user_details["email"]
             kwargs["name"] = user_details["name"]
+            kwargs["notification_id"] = notification.id
 
             NOTIFICATION_API_URL = os.getenv("NOTIFICATION_API_BASE_URL")
-            res = requests.post(
+            requests.post(
                 f"{NOTIFICATION_API_URL}/notification/create-notification", json=kwargs
             )
-            if res.status_code == 201:
-                return res.json()  
-            else:
-                logger.error(res.text)
-                return {"error": res.status_code, "message": res.text}
         except Exception as e:
             logger.error(str(e))
-            return {"error": "exception", "message": str(e)}
-
         # notification = Notification(*args, **kwargs)
         # notification.save()
-        # return notification
+        return notification
 
     @staticmethod
     def find(id):
@@ -55,6 +49,16 @@ class NotificationServices:
 
     @staticmethod
     def update_notification(id, *args, **kwargs):
+        try:
+            api_kwargs = kwargs.copy()
+            api_kwargs["notification_id"] = id
+            NOTIFICATION_API_URL = os.getenv("NOTIFICATION_API_BASE_URL")
+            requests.post(
+                f"{NOTIFICATION_API_URL}/notification/update-notification-by-notification-id", json=api_kwargs
+            )
+        except Exception as e:
+            logger.error(str(e))
+            
         return update_by_id(Notification, id, kwargs)
 
     @staticmethod
