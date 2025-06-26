@@ -1057,60 +1057,6 @@ class APIDeletePostBatch(Resource):
             ).to_dict()
 
 
-@ns.route("/get-voices")
-class APIGetVoices(Resource):
-    def get(self):
-        try:
-            voices = const.SETUP_VOICES
-            typecast_voices = get_typecast_voices()
-
-            female = "여성"
-            male = "남성"
-
-            results = []
-
-            results.extend(voices)
-
-            for typecast_voice in typecast_voices:
-                sex = typecast_voice.get("sex")
-                if female in sex:
-                    gender = Voices.FEMALE.value
-                elif male in sex:
-                    gender = Voices.MALE.value
-                else:
-                    gender = Voices.MALE.value
-
-                voice = {
-                    "id": typecast_voice.get("actor_id"),
-                    "name": (
-                        typecast_voice.get("name")["ko"]
-                        if typecast_voice.get("name")["ko"]
-                        else typecast_voice.get("name")["en"]
-                    ),
-                    "name_en": (
-                        typecast_voice.get("name")["en"]
-                        if typecast_voice.get("name")["en"]
-                        else typecast_voice.get("name")["ko"]
-                    ),
-                    "gender": gender,
-                    "audio_url": typecast_voice.get("audio_url"),
-                    "type": Voices.TYPECAST.value,
-                }
-                results.append(voice)
-
-            return Response(
-                data=results,
-                message="Get Voices Success",
-                code=200,
-            ).to_dict()
-        except Exception as e:
-            logger.error(f"Exception: Get Voices Fail  :  {str(e)}")
-            return Response(
-                message="Get Voices Fail",
-                code=201,
-            ).to_dict()
-
-
 @ns.route("/template_video")
 class APITemplateVideo(Resource):
 
