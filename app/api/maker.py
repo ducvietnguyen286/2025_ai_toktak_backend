@@ -820,6 +820,13 @@ class APIGetStatusUploadWithBatch(Resource):
                                 notification_type=notification_type,
                                 title=f"🔄{notification_type}에 업로드 중입니다.",
                             )
+                            notification_id = notification.id
+                        else:
+                            notification_id = (
+                                notification.get("id")
+                                if type(notification) == dict
+                                else (notification.id if notification else 0)
+                            )
 
                         if (
                             link_type == SocialMedia.INSTAGRAM.value
@@ -827,7 +834,7 @@ class APIGetStatusUploadWithBatch(Resource):
                         ):
                             status_check_sns = const.UPLOADED
                             NotificationServices.update_notification(
-                                notification.id,
+                                notification_id,
                                 status=const.NOTIFICATION_SUCCESS,
                                 title=f"✅Instagram 업로드에 성공했습니다.",
                                 description="업로드가 잘 됐는지 한 번만 확인해 주세요 😊",
@@ -840,7 +847,7 @@ class APIGetStatusUploadWithBatch(Resource):
                             and link_type != SocialMedia.INSTAGRAM.value
                         ):
                             NotificationServices.update_notification(
-                                notification.id,
+                                notification_id,
                                 title=f"✅{notification_type} 업로드에 성공했습니다.",
                                 status=const.NOTIFICATION_SUCCESS,
                                 description=error_message,
@@ -852,7 +859,7 @@ class APIGetStatusUploadWithBatch(Resource):
                         ):
                             description_korea = replace_phrases_in_text(error_message)
                             NotificationServices.update_notification(
-                                notification.id,
+                                notification_id,
                                 status=const.NOTIFICATION_FALSE,
                                 title=f"❌{notification_type} 업로드에 실패했습니다.",
                                 description=error_message,

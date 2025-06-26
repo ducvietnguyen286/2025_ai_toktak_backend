@@ -26,31 +26,22 @@ class NotificationServices:
         notification = Notification(*args, **kwargs)
         notification.save()
         user_details = UserService.find_user_by_redis(kwargs.get("user_id"))
-        logger.info(f"User details create_notification: {user_details}")
         if not user_details:
             return {"error": "user_not_found", "message": "User not found"}
         try:
-            logger.info(kwargs)
             kwargs["email"] = user_details["email"]
             kwargs["name"] = user_details["name"]
-            logger.info(kwargs)
+            kwargs["notification_id"] = notification.id
 
             NOTIFICATION_API_URL = os.getenv("NOTIFICATION_API_BASE_URL")
-            res = requests.post(
+            requests.post(
                 f"{NOTIFICATION_API_URL}/notification/create-notification", json=kwargs
             )
-            if res.status_code == 201:
-                return res.json()  
-            else:
-                logger.error(res.text)
-                return {"error": res.status_code, "message": res.text}
         except Exception as e:
             logger.error(str(e))
-            return {"error": "exception", "message": str(e)}
-
         # notification = Notification(*args, **kwargs)
         # notification.save()
-        # return notification
+        return notification
 
     @staticmethod
     def find(id):
@@ -58,6 +49,17 @@ class NotificationServices:
 
     @staticmethod
     def update_notification(id, *args, **kwargs):
+        try:
+            api_kwargs = kwargs.copy()
+            api_kwargs["notification_id"] = id
+            NOTIFICATION_API_URL = os.getenv("NOTIFICATION_API_BASE_URL")
+            requests.post(
+                f"{NOTIFICATION_API_URL}/notification/update-notification-by-notification-id",
+                json=api_kwargs,
+            )
+        except Exception as e:
+            logger.error(str(e))
+
         return update_by_id(Notification, id, kwargs)
 
     @staticmethod
@@ -251,3 +253,16 @@ class NotificationServices:
         session.add(notification)
         session.commit()
         return notification
+
+    @staticmethod
+    def create_notification_render_id(**kwargs):
+        render_id = kwargs.get("render_id")
+        if not render_id:
+            return None
+        notification = select_with_filter_one(
+            Notification, filters=[Notification.render_id == render_id]
+        )
+        if notification:
+            NotificationServices.update_notification(notification.id, **kwargs)
+        else:
+            NotificationServices.create_notification(**kwargs)
