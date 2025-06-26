@@ -113,7 +113,7 @@ class GetPublicConfig(Resource):
         if settings_dict["IS_MAINTANCE"] == "1":
             if remote_ip in ALLOWED_IPS:
                 settings_dict["IS_MAINTANCE"] = "0"
-        
+
         # settings_dict["remote_ip"] = remote_ip
         settings_dict.pop("ALLOWED_IPS", None)
         # logger.info(settings_dict)
@@ -125,26 +125,25 @@ class GetPublicConfig(Resource):
             data=settings_dict,
             message="Get Public setting",
         ).to_dict()
-        
+
+
 @ns.route("/ping")
 class APIPingStatus(Resource):
     def get(self):
-        
+
         return Response(
             data={},
             message="Ping Oke",
         ).to_dict()
 
 
-
-
 def get_real_ip():
     # Ưu tiên Cloudflare header
-    ip = request.headers.get('CF-Connecting-IP')
+    ip = request.headers.get("CF-Connecting-IP")
     if not ip:
         # Nếu không có, lấy từ chuỗi X-Forwarded-For
-        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         # Trường hợp X-Forwarded-For có dạng "client, proxy1, proxy2"
-        if ',' in ip:
-            ip = ip.split(',')[0].strip()
+        if "," in ip:
+            ip = ip.split(",")[0].strip()
     return ip

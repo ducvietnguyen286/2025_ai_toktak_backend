@@ -22,9 +22,9 @@ from app.api.product import ns as product_ns
 from app.api.schedule import ns as schedule_ns
 from app.api.payment import ns as payment_ns
 from app.api.debug import ns as debug_ns
+from app.api.voice import ns as voices_ns
 
 bp = Blueprint("api", __name__, url_prefix="/api/v1")
-bp_html = Blueprint("html", __name__, url_prefix="/html")
 
 api = Api(bp, version="1.0", title="Flask API", description="Flask API", doc="/docs/")
 
@@ -48,3 +48,4 @@ api.add_namespace(ns=product_ns)
 api.add_namespace(ns=schedule_ns)
 api.add_namespace(ns=payment_ns)
 api.add_namespace(ns=debug_ns)
+api.add_namespace(ns=voices_ns)

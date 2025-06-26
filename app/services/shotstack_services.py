@@ -21,6 +21,7 @@ import base64
 from app.services.post import PostService
 
 import srt
+from app.services.voice import VoiceService
 import const
 
 # import ffmpeg
@@ -89,19 +90,20 @@ class ShotStackService:
 
         # Chọn giọng nói ngẫu nhiên
 
+        using_voice = VoiceService.find_one_voice_by_filter(
+            string_id=voice, type=voice_type
+        )
+
+        if not using_voice:
+            using_voice = VoiceService.get_default_voice()
+
         if voice_type == Voices.GOOGLE.value:
-            korean_voice = get_korean_voice_google(voice)
             mp3_file, audio_duration = text_to_speech_kr_old(
-                korean_voice, origin_caption, dir_path, config
+                using_voice, origin_caption, dir_path, config
             )
         else:
-            korean_voice = get_korean_typecast_voice(voice)
-
-            korean_voice_config = typecast_voice_setup(korean_voice)
-            config.update(korean_voice_config)
-
             mp3_file, audio_duration = text_to_speech_kr(
-                korean_voice, origin_caption, dir_path, config=config
+                using_voice, origin_caption, dir_path, config=config
             )
 
         video_urls = ShotStackService.get_random_videos(2)
@@ -951,15 +953,15 @@ def text_to_speech_kr_old(korean_voice, text, disk_path="output", config=None):
             "input": {"text": text},
             "voice": {
                 "languageCode": "ko-KR",
-                "name": korean_voice["name"],
-                "ssmlGender": korean_voice["ssmlGender"],
+                "name": korean_voice.get("name", ""),
+                "ssmlGender": korean_voice.get("gender", ""),
             },
             "audioConfig": {"audioEncoding": "MP3"},
         }
 
         # Nếu giọng không thuộc Chirp3-HD, thêm speakingRate
         if korean_voice["name"] not in chirp3_hd_voices:
-            payload["audioConfig"]["speakingRate"] = GOOGLE_API_SPEED
+            payload["audioConfig"]["speakingRate"] = korean_voice.get("tempo", 1)
 
         headers = {"Content-Type": "application/json"}
         response = requests.post(
@@ -1010,31 +1012,9 @@ def text_to_speech_kr(
         }
 
         text = split_text_by_words(text, max_length=480)
-        print(text)
 
         audio_files = []
         audio_duration = 0
-
-        style_label_v2 = korean_voice.get("style_label_v2", [])
-        style_data = {}
-        model_version = "latest"
-        for style_label in style_label_v2:
-            display_name = style_label.get("display_name", "")
-            if display_name == "SSFM-V2.1":
-                model_version = style_label.get("name", "latest")
-                style_data = style_label.get("data", {})
-
-        if not style_data:
-            latest_style_label = style_label_v2[-1]
-            style_data = latest_style_label.get("data", {})
-
-        emotion_tone_preset = ""
-        if style_data:
-            if "normal" in style_data:
-                normal = style_data.get("normal", "")
-                emotion_tone_preset = normal[0]
-            else:
-                emotion_tone_preset = ""
 
         for index in range(len(text)):
             text_chunk = text[index]
@@ -1042,15 +1022,17 @@ def text_to_speech_kr(
             payload = {
                 "text": text_chunk,
                 "lang": "auto",
-                "actor_id": korean_voice["actor_id"],
-                "xapi_hd": True,
-                "model_version": model_version,
-                "xapi_audio_format": "mp3",
-                "volumn": config.get("volumn", 100),
-                "speed_x": config.get("speed_x", 1),
-                "tempo": config.get("tempo", 1),
+                "actor_id": korean_voice.get("string_id", ""),
+                "xapi_hd": korean_voice.get("xapi_hd", True),
+                "model_version": korean_voice.get("model_version", "latest"),
+                "xapi_audio_format": korean_voice.get("xapi_audio_format", "mp3"),
+                "volumn": korean_voice.get("volumn", 100),
+                "speed_x": korean_voice.get("speed_x", 1),
+                "tempo": korean_voice.get("tempo", 1),
                 "max_seconds": 60,
             }
+
+            emotion_tone_preset = korean_voice.get("emotion_tone_preset", "")
 
             if emotion_tone_preset:
                 payload["emotion_tone_preset"] = emotion_tone_preset
@@ -1238,13 +1220,13 @@ def google_speech_to_text(audio_file, config=None):
         return ""
 
 
-def get_typecast_voices():
+def get_typecast_voices(no_cache=False):
     try:
         cache_typecast_voices = redis_client.get("typecast_voices")
         voices = (
             cache_typecast_voices.decode("utf-8") if cache_typecast_voices else None
         )
-        if len(voices) > 0:
+        if len(voices) > 0 and not no_cache:
             return json.loads(voices)
         else:
             API_KEY = os.environ.get("TYPECAST_API_KEY", "")
