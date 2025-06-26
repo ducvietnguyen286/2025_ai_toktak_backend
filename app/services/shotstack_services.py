@@ -1029,9 +1029,9 @@ def text_to_speech_kr(
                 "xapi_hd": korean_voice.get("xapi_hd", True),
                 "model_version": korean_voice.get("model_version", "latest"),
                 "xapi_audio_format": korean_voice.get("xapi_audio_format", "mp3"),
-                "volumn": korean_voice.get("volumn", 100),
-                "speed_x": korean_voice.get("speed_x", 1),
-                "tempo": korean_voice.get("tempo", 1),
+                "volumn": int(korean_voice.get("volumn", 100)),
+                "speed_x": float(korean_voice.get("speed_x", 1)),
+                "tempo": float(korean_voice.get("tempo", 1)),
                 "max_seconds": 60,
             }
 
