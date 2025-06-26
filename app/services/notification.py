@@ -259,9 +259,10 @@ class NotificationServices:
         render_id = kwargs.get("render_id")
         if not render_id:
             return None
-        notification = Notification.objects(render_id=render_id).first()
+        notification = select_with_filter_one(
+            Notification, filters=[Notification.render_id == render_id]
+        )
         if notification:
             NotificationServices.update_notification(notification.id, **kwargs)
         else:
-            # Tạo mới nếu chưa có
             NotificationServices.create_notification(**kwargs)
