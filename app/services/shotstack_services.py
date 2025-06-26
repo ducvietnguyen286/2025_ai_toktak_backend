@@ -1019,15 +1019,13 @@ def text_to_speech_kr(
         audio_files = []
         audio_duration = 0
 
-        log_make_video_message(f"korean_voice: {korean_voice}")
-
         for index in range(len(text)):
             text_chunk = text[index]
 
             payload = {
                 "text": text_chunk,
                 "lang": "auto",
-                "actor_id": korean_voice.get("string_id", ""),
+                "actor_id": korean_voice.get("id", ""),
                 "xapi_hd": korean_voice.get("xapi_hd", True),
                 "model_version": korean_voice.get("model_version", "latest"),
                 "xapi_audio_format": korean_voice.get("xapi_audio_format", "mp3"),
