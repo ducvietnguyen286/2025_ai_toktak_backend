@@ -180,20 +180,27 @@ class ShortstackWebhook(Resource):
 
                         if status == "failed":
                             BatchService.update_batch(batch_id, status="2")
-                            NotificationServices.create_notification(
-                                user_id=post_detail.user_id,
-                                batch_id=post_detail.batch_id,
-                                status=const.NOTIFICATION_FALSE,
-                                title="⚠️ 비디오 생성에 실패했습니다. 다시 시도해주세요.",
-                                description=f"AI Shotstack  {str(error)}",
-                            )
+                            data_update = {
+                                "notification_type": "shortstack_video",
+                                "render_id": render_id,
+                                "user_id": post_detail.user_id,
+                                "batch_id": post_detail.batch_id,
+                                "status": const.NOTIFICATION_FALSE,
+                                "title": "⚠️ 비디오 생성에 실패했습니다. 다시 시도해주세요.",
+                                "description": f"AI Shotstack  {str(error)}",
+                            }
                         else:
-                            NotificationServices.create_notification(
-                                user_id=post_detail.user_id,
-                                batch_id=post_detail.batch_id,
-                                title="🎥 비디오 생성이 완료되었습니다. 이제 공유할 수 있습니다.",
-                                description=json.dumps(payload),
-                            )
+                            data_update = {
+                                "notification_type": "shortstack_video",
+                                "render_id": render_id,
+                                "user_id": post_detail.user_id,
+                                "batch_id": post_detail.batch_id,
+                                "title": "🎥 비디오 생성이 완료되었습니다. 이제 공유할 수 있습니다.",
+                                "description": json.dumps(payload),
+                            }
+                        NotificationServices.create_notification_render_id(
+                            **data_update
+                        )
                 file_download_attr = download_video(video_url, batch_id)
                 if file_download_attr:
                     file_path = file_download_attr["file_path"]
