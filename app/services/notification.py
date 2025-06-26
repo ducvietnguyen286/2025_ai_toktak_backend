@@ -54,11 +54,12 @@ class NotificationServices:
             api_kwargs["notification_id"] = id
             NOTIFICATION_API_URL = os.getenv("NOTIFICATION_API_BASE_URL")
             requests.post(
-                f"{NOTIFICATION_API_URL}/notification/update-notification-by-notification-id", json=api_kwargs
+                f"{NOTIFICATION_API_URL}/notification/update-notification-by-notification-id",
+                json=api_kwargs,
             )
         except Exception as e:
             logger.error(str(e))
-            
+
         return update_by_id(Notification, id, kwargs)
 
     @staticmethod
@@ -252,3 +253,13 @@ class NotificationServices:
         session.add(notification)
         session.commit()
         return notification
+
+    @staticmethod
+    def create_or_update_notification_by_type_and_batch(render_id, **kwargs):
+        # Tìm notification cũ
+        notification = Notification.objects(render_id=render_id).first()
+        if notification:
+            NotificationServices.update_notification(notification.id, **kwargs)
+        else:
+            # Tạo mới nếu chưa có
+            NotificationServices.create_notification(**kwargs)
