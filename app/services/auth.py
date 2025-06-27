@@ -469,7 +469,7 @@ class AuthService:
             return 0
         if subscription in ("NEW_USER"):
             # Nếu đã qua 7 ngày thì False
-            if created_at < datetime.now() - timedelta(days=7):
+            if created_at < datetime.now() - timedelta(days=3):
                 return 0
             else:
                 return 1

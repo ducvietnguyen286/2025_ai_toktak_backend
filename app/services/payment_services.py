@@ -958,9 +958,10 @@ class PaymentService:
 
             expiring_payments = Payment.query.filter(
                 func.date(Payment.end_date) == today,
-                Payment.status == "ACTIVE",
+                Payment.status == "PAID",
                 Payment.method != "NEW_USER",
             ).all()
+            logger.info(expiring_payments)
 
             for old_payment in expiring_payments:
                 user = old_payment.user
@@ -1047,11 +1048,17 @@ class PaymentService:
                     db.session.add(new_payment)
                     db.session.commit()
                     data_email = {
-                        "user": user,
-                        "payment": new_payment,
+                        "customer_name": user.name or user.email,
+                        "package_name": new_payment.package_name,
+                        "amount": new_payment.amount,
+                        "order_id": new_payment.order_id,
+                        "end_date": new_payment.end_date.strftime("%Y-%m-%d"),
                     }
                     send_email(
-                        user.email, "Payment Confirmation", "renew_payment", data_email
+                        user.email,
+                        "요금제 자동 결제가 완료되었습니다",
+                        "renewal_success.html",
+                        data_email,
                     )
                     log_make_repayment_message(
                         f"✅ Gia hạn thành công cho user {user.email}"
