@@ -31,6 +31,7 @@ class NotificationServices:
         try:
             kwargs["email"] = user_details["email"]
             kwargs["name"] = user_details["name"]
+            kwargs["notification_id"] = notification.id
 
             NOTIFICATION_API_URL = os.getenv("NOTIFICATION_API_BASE_URL")
             requests.post(
@@ -48,6 +49,17 @@ class NotificationServices:
 
     @staticmethod
     def update_notification(id, *args, **kwargs):
+        try:
+            api_kwargs = kwargs.copy()
+            api_kwargs["notification_id"] = id
+            NOTIFICATION_API_URL = os.getenv("NOTIFICATION_API_BASE_URL")
+            requests.post(
+                f"{NOTIFICATION_API_URL}/notification/update-notification-by-notification-id",
+                json=api_kwargs,
+            )
+        except Exception as e:
+            logger.error(str(e))
+
         return update_by_id(Notification, id, kwargs)
 
     @staticmethod
@@ -241,3 +253,16 @@ class NotificationServices:
         session.add(notification)
         session.commit()
         return notification
+
+    @staticmethod
+    def create_notification_render_id(**kwargs):
+        render_id = kwargs.get("render_id")
+        if not render_id:
+            return None
+        notification = select_with_filter_one(
+            Notification, filters=[Notification.render_id == render_id]
+        )
+        if notification:
+            NotificationServices.update_notification(notification.id, **kwargs)
+        else:
+            NotificationServices.create_notification(**kwargs)
