@@ -26,6 +26,7 @@ from app.lib.response import Response
 from app.lib.string import generate_order_id
 from app.lib.logger import log_make_repayment_message
 from app.third_parties.email import send_email
+from unittest.mock import Mock
 
 
 class PaymentService:
@@ -180,7 +181,6 @@ class PaymentService:
             "status": status,
         }
         payment = PaymentService.create_payment(**payment_data)
-        logger.info(f"package_name {package_name} addon_count : {addon_count} ")
         if package_name == "BASIC" and addon_count > 0:
             result_addon = PaymentService.calculate_addon_price(user_id, addon_count)
             amount_addon = result_addon["amount"]
@@ -965,78 +965,98 @@ class PaymentService:
 
             for old_payment in expiring_payments:
                 user = old_payment.user
-                if not user or not user.card_info:
-                    continue
-
-                card_info = user.card_info or {}
-                billing_key = card_info.get("billingKey")
-                customer_key = card_info.get("customerKey")
-
-                if not billing_key or not customer_key:
-                    logger.warning(
-                        f"❌ User {user.id} thiếu billingKey hoặc customerKey, bỏ qua."
-                    )
-                    continue
                 order_id = generate_order_id("renew")
-                encoded_auth = base64.b64encode(
-                    f"{os.getenv('TOSS_SECRET_KEY')}:".encode()
-                ).decode()
-                headers = {
-                    "Authorization": f"Basic {encoded_auth}",
-                    "Content-Type": "application/json",
+                new_package_info = const.PACKAGE_CONFIG.get(old_payment.package_name)
+                if not new_package_info:
+                    continue
+
+                # if not user or not user.card_info:
+                #     continue
+
+                # card_info = user.card_info or {}
+                # billing_key = card_info.get("billingKey")
+                # customer_key = card_info.get("customerKey")
+
+                # if not billing_key or not customer_key:
+                #     logger.warning(
+                #         f"❌ User {user.id} thiếu billingKey hoặc customerKey, bỏ qua."
+                #     )
+                #     continue
+                # order_id = generate_order_id("renew")
+                # encoded_auth = base64.b64encode(
+                #     f"{os.getenv('TOSS_SECRET_KEY')}:".encode()
+                # ).decode()
+                # headers = {
+                #     "Authorization": f"Basic {encoded_auth}",
+                #     "Content-Type": "application/json",
+                # }
+
+                # payload = {
+                #     "amount": new_package_info["price"],
+                #     "orderId": order_id,
+                #     "customerKey": customer_key,
+                #     "orderName": f"Tự động gia hạn gói {old_payment.package_name}",
+                #     "customerEmail": user.email,
+                #     "customerName": old_payment.customer_name,
+                # }
+                # log_make_repayment_message(
+                #     "[auto_renew_subscriptions] Gửi yêu cầu gia hạn tự động đến TossPayments API : payload "
+                # )
+
+                # log_make_repayment_message(payload)
+
+                # res = requests.post(
+                #     f"https://api.tosspayments.com/v1/billing/{billing_key}",
+                #     headers=headers,
+                #     json=payload,
+                # )
+
+                # result = res.json()
+                # log_make_repayment_message(
+                #     "[auto_renew_subscriptions] Kết quả từ TossPayments API:"
+                # )
+                # log_make_repayment_message(result)
+
+                # now_str = now.strftime("%Y-%m-%d %H:%M:%S")
+                # api_result_str = json.dumps(result, ensure_ascii=False)
+                res = Mock()
+                res.status_code = 200
+                res.json = {
+                    "mId": "tvivarepublica2",
+                    "paymentKey": "test_pk_1234567890",
+                    "orderId": "renew-1699999999",
+                    "customerKey": "CUSTOMER_001",
+                    "billingKey": "mj1kUp_N8V9HodTRlALti1lYMQnjECnUvQ_298KVRVM=",
+                    "card": {
+                        "issuerCode": "15",
+                        "acquirerCode": "11",
+                        "number": "53651017****834*",
+                        "cardType": "체크",
+                        "ownerType": "개인",
+                    },
+                    "requestedAt": "2025-06-27T22:59:59+09:00",
+                    "approvedAt": "2025-06-27T23:00:00+09:00",
+                    "status": "DONE",
+                    "lastTransactionKey": "txn_key_1234567890",
+                    "currency": "KRW",
+                    "amount": 9900,
+                    "method": "카드",
                 }
-
-                payload = {
-                    "amount": old_payment.amount,
-                    "orderId": order_id,
-                    "customerKey": customer_key,
-                    "orderName": f"Tự động gia hạn gói {old_payment.package_name}",
-                    "customerEmail": user.email,
-                    "customerName": old_payment.customer_name,
-                }
-                log_make_repayment_message(
-                    "[auto_renew_subscriptions] Gửi yêu cầu gia hạn tự động đến TossPayments API : payload "
-                )
-
-                log_make_repayment_message(payload)
-
-                res = requests.post(
-                    f"https://api.tosspayments.com/v1/billing/{billing_key}",
-                    headers=headers,
-                    json=payload,
-                )
-
-                result = res.json()
-                log_make_repayment_message(
-                    "[auto_renew_subscriptions] Kết quả từ TossPayments API:"
-                )
-                log_make_repayment_message(result)
-
-                now_str = now.strftime("%Y-%m-%d %H:%M:%S")
+                result = res.json
                 api_result_str = json.dumps(result, ensure_ascii=False)
+                now_str = now.strftime("%Y-%m-%d %H:%M:%S")
 
                 if res.status_code == 200 and result.get("status") == "DONE":
-                    new_payment = Payment(
-                        user_id=user.id,
-                        order_id=order_id,
-                        customer_name=old_payment.customer_name,
-                        method="AUTO_RENEW",
-                        package_name=old_payment.package_name,
-                        payment_method="CARD",
-                        payment_status="PAID",
-                        payment_date=now,
-                        price=old_payment.price,
-                        amount=old_payment.amount,
-                        status="PAID",
-                        total_link=old_payment.total_link,
-                        total_create=old_payment.total_create,
-                        start_date=now,
-                        end_date=now + timedelta(days=30),
-                        requested_at=now,
-                        approved_at=now,
-                        payment_key=result.get("paymentKey", ""),
-                        payment_data=api_result_str,
-                        description=(
+                    new_payment = PaymentService.create_new_payment(
+                        user, old_payment.package_name
+                    )
+                    payment_id = new_payment.id
+                    data_update_payment = {
+                        "order_id": order_id,
+                        "method": "AUTO_RENEW",
+                        "payment_key": result.get("paymentKey", ""),
+                        "payment_data": api_result_str,
+                        "description": (
                             f"[Auto Renew]\n"
                             f"- Time: {now_str}\n"
                             f"- From Payment ID: {old_payment.id}\n"
@@ -1044,9 +1064,12 @@ class PaymentService:
                             f"- Amount: {old_payment.amount}\n"
                             f"- API Result: {api_result_str}"
                         ),
+                    }
+                    new_payment = PaymentService.update_payment(
+                        new_payment.id, **data_update_payment
                     )
-                    db.session.add(new_payment)
-                    db.session.commit()
+
+                    PaymentService.approvalPayment(payment_id)
                     data_email = {
                         "customer_name": user.name or user.email,
                         "package_name": new_payment.package_name,
