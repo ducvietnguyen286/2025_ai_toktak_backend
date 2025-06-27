@@ -1102,6 +1102,8 @@ class PaymentService:
                         f"❌ Gia hạn thất bại cho user {user.email}: {fail_msg}"
                     )
 
+            return len(expiring_payments)
+
         except Exception as ex:
             tb = traceback.format_exc()
             log_make_repayment_message(
