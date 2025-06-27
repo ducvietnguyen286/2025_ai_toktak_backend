@@ -305,7 +305,11 @@ class AuthService:
     def refresh_token():
         current_user = get_jwt_identity()
         access_token = create_access_token(identity=current_user)
-        return {"access_token": access_token}
+        refresh_token = create_refresh_token(identity=current_user)
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+        }
 
     @staticmethod
     def get_user_id():
@@ -399,7 +403,9 @@ class AuthService:
             secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
         )
 
-        new_user = UserService.update_user_with_out_session(user.id, password=random_string)
+        new_user = UserService.update_user_with_out_session(
+            user.id, password=random_string
+        )
 
         return new_user
 

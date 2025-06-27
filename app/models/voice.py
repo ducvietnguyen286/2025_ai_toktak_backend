@@ -14,7 +14,7 @@ class Voice(db.Model, BaseModel):
     image_url = db.Column(db.String(1024), nullable=False, default="")
     audio_url = db.Column(db.String(1024), nullable=False, default="")
     type = db.Column(db.String(20), nullable=False, default="typecast")
-    styles = db.Column(db.Text)
+    styles = db.Column(db.Text, default="[]")
     volumn = db.Column(db.Float, nullable=False, default=100)
     speed_x = db.Column(db.Float, nullable=False, default=1)
     tempo = db.Column(db.Float, nullable=False, default=1)
