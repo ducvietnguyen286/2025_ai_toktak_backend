@@ -397,8 +397,8 @@ def get_subscription_name(subscription):
         return subscription
 
 
-def generate_order_id():
-    raw_id = f"order_{uuid.uuid4().hex[:16]}"
+def generate_order_id(tag="order"):
+    raw_id = f"{tag}_{uuid.uuid4().hex[:16]}"
     return re.sub(r"[^a-zA-Z0-9_-]", "", raw_id)
 
 

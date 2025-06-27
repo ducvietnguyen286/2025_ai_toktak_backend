@@ -25,7 +25,7 @@ from app.extensions import db
 import secrets
 import string
 from dateutil.relativedelta import relativedelta
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.extensions import redis_client
 from gevent import sleep
 
@@ -399,7 +399,9 @@ class AuthService:
             secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
         )
 
-        new_user = UserService.update_user_with_out_session(user.id, password=random_string)
+        new_user = UserService.update_user_with_out_session(
+            user.id, password=random_string
+        )
 
         return new_user
 
@@ -458,3 +460,17 @@ class AuthService:
 
             extended += 1
         return extended
+
+    @staticmethod
+    def check_subscription_allowed(subscription, created_at):
+        # subscription: str
+        # created_at: datetime (object)
+        if subscription in ("FREE", "BASIC"):
+            return 0
+        if subscription in ("NEW_USER"):
+            # Nếu đã qua 7 ngày thì False
+            if created_at < datetime.now() - timedelta(days=7):
+                return 0
+            else:
+                return 1
+        return 1
