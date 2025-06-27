@@ -4,6 +4,7 @@ Script to initialize voice data in the database
 Run this script to create default voices from Google and Typecast
 """
 
+import json
 import sys
 import os
 
@@ -57,6 +58,7 @@ def init_google_voices():
                     name_en=voice["name_en"],
                     gender=voice["gender"],
                     audio_url=voice["audio_url"],
+                    image_url=voice["image_url"],
                     type=Voices.GOOGLE.value,
                 )
                 success_count += 1
@@ -128,7 +130,9 @@ def init_typecast_voices():
                 ),
                 "gender": gender,
                 "audio_url": voice.get("audio_url", ""),
+                "image_url": voice.get("img_url", ""),
                 "type": Voices.TYPECAST.value,
+                "styles": json.dumps(style_label_v2),
                 "volumn": 100,
                 "speed_x": 0.7,
                 "tempo": 1.5,
