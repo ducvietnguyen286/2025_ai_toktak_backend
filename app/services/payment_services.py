@@ -24,6 +24,8 @@ from app.services.user import UserService
 from app.lib.response import Response
 
 from app.lib.string import generate_order_id
+from app.lib.logger import log_make_repayment_message
+from app.third_parties.email import send_email
 
 
 class PaymentService:
@@ -134,7 +136,7 @@ class PaymentService:
 
     @staticmethod
     def has_active_subscription(user_id):
-        today = datetime.now().date() 
+        today = datetime.now().date()
         active_payment = (
             Payment.query.filter_by(user_id=user_id)
             .filter(func.date(Payment.end_date) >= today)
@@ -883,7 +885,7 @@ class PaymentService:
             return Response(
                 message="승인이 완료되었습니다.",
                 message_en="Approval has been completed",
-                data={"payment": payment._to_json()},
+                # data={"payment": payment},
                 code=200,
             ).to_dict()
         except requests.RequestException as e:
@@ -902,11 +904,11 @@ class PaymentService:
 
     @staticmethod
     def report_payment_by_type(data_search):
-        
+
         histories = Payment.query.filter(Payment.method != "NEW_USER")
         package_name = data_search.get("package_name", "")
         status = data_search.get("status", "")
-        
+
         if package_name != "":
             histories = histories.filter(Payment.package_name == package_name)
         if status != "":
@@ -940,11 +942,138 @@ class PaymentService:
                 ) + timedelta(days=1)
                 histories = histories.filter(Payment.created_at < to_date)
 
-        
         total = histories.count()
-        total_price = histories.with_entities(func.coalesce(func.sum(Payment.price), 0)).scalar()
+        total_price = histories.with_entities(
+            func.coalesce(func.sum(Payment.price), 0)
+        ).scalar()
 
-        return {
-            "total": total,
-            "total_price": total_price
-        }
+        return {"total": total, "total_price": total_price}
+
+    @staticmethod
+    def auto_renew_subscriptions():
+        try:
+            # chạy lúc 23 giờ đêm mỗi ngày
+            now = datetime.now()
+            today = now.date()
+
+            expiring_payments = Payment.query.filter(
+                func.date(Payment.end_date) == today,
+                Payment.status == "ACTIVE",
+                Payment.method != "NEW_USER",
+            ).all()
+
+            for old_payment in expiring_payments:
+                user = old_payment.user
+                if not user or not user.card_info:
+                    continue
+
+                card_info = user.card_info or {}
+                billing_key = card_info.get("billingKey")
+                customer_key = card_info.get("customerKey")
+
+                if not billing_key or not customer_key:
+                    logger.warning(
+                        f"❌ User {user.id} thiếu billingKey hoặc customerKey, bỏ qua."
+                    )
+                    continue
+                order_id = generate_order_id("renew")
+                encoded_auth = base64.b64encode(
+                    f"{os.getenv('TOSS_SECRET_KEY')}:".encode()
+                ).decode()
+                headers = {
+                    "Authorization": f"Basic {encoded_auth}",
+                    "Content-Type": "application/json",
+                }
+
+                payload = {
+                    "amount": old_payment.amount,
+                    "orderId": order_id,
+                    "customerKey": customer_key,
+                    "orderName": f"Tự động gia hạn gói {old_payment.package_name}",
+                    "customerEmail": user.email,
+                    "customerName": old_payment.customer_name,
+                }
+                log_make_repayment_message(
+                    "[auto_renew_subscriptions] Gửi yêu cầu gia hạn tự động đến TossPayments API : payload "
+                )
+
+                log_make_repayment_message(payload)
+
+                res = requests.post(
+                    f"https://api.tosspayments.com/v1/billing/{billing_key}",
+                    headers=headers,
+                    json=payload,
+                )
+
+                result = res.json()
+                log_make_repayment_message(
+                    "[auto_renew_subscriptions] Kết quả từ TossPayments API:"
+                )
+                log_make_repayment_message(result)
+
+                now_str = now.strftime("%Y-%m-%d %H:%M:%S")
+                api_result_str = json.dumps(result, ensure_ascii=False)
+
+                if res.status_code == 200 and result.get("status") == "DONE":
+                    new_payment = Payment(
+                        user_id=user.id,
+                        order_id=order_id,
+                        customer_name=old_payment.customer_name,
+                        method="AUTO_RENEW",
+                        package_name=old_payment.package_name,
+                        payment_method="CARD",
+                        payment_status="PAID",
+                        payment_date=now,
+                        price=old_payment.price,
+                        amount=old_payment.amount,
+                        status="PAID",
+                        total_link=old_payment.total_link,
+                        total_create=old_payment.total_create,
+                        start_date=now,
+                        end_date=now + timedelta(days=30),
+                        requested_at=now,
+                        approved_at=now,
+                        payment_key=result.get("paymentKey", ""),
+                        payment_data=api_result_str,
+                        description=(
+                            f"[Auto Renew]\n"
+                            f"- Time: {now_str}\n"
+                            f"- From Payment ID: {old_payment.id}\n"
+                            f"- Order ID: {order_id}\n"
+                            f"- Amount: {old_payment.amount}\n"
+                            f"- API Result: {api_result_str}"
+                        ),
+                    )
+                    db.session.add(new_payment)
+                    db.session.commit()
+                    data_email = {
+                        "user": user,
+                        "payment": new_payment,
+                    }
+                    send_email(
+                        user.email, "Payment Confirmation", "renew_payment", data_email
+                    )
+                    log_make_repayment_message(
+                        f"✅ Gia hạn thành công cho user {user.email}"
+                    )
+                else:
+                    fail_msg = result.get("message", "Không rõ lỗi")
+                    old_payment.description = (
+                        f"{old_payment.description}\n"
+                        f"[Auto Renew Failed]\n"
+                        f"- Time: {now_str}\n"
+                        f"- From Payment ID: {old_payment.id}\n"
+                        f"- Order ID: {order_id}\n"
+                        f"- Lỗi: {fail_msg}\n"
+                        f"- API Result: {api_result_str}"
+                    )
+                    db.session.commit()
+                    log_make_repayment_message(
+                        f"❌ Gia hạn thất bại cho user {user.email}: {fail_msg}"
+                    )
+
+        except Exception as ex:
+            tb = traceback.format_exc()
+            log_make_repayment_message(
+                f"[auto_renew_subscriptions] Exception: {ex}\n{tb}"
+            )
