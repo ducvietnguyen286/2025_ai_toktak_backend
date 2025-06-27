@@ -7,6 +7,7 @@ from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
 
 from app.decorators import admin_required, parameters, required_admin
+from app.enums.voices import Voices
 from app.lib.response import Response
 from app.services.shotstack_services import (
     ShotStackService,
@@ -47,14 +48,38 @@ class GetVoices(Resource):
             ).to_dict()
 
 
+@ns.route("/get-admin-voices")
+class GetVoices(Resource):
+
+    @jwt_required()
+    @admin_required()
+    def get(self):
+        try:
+            voices = VoiceService.get_voices()
+            return Response(
+                message="Lấy danh sách voice thành công",
+                data=voices,
+                status=200,
+            ).to_dict()
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
+            return Response(
+                message="Lấy danh sách voice thất bại",
+                data={},
+                status=500,
+            ).to_dict()
+
+
 @ns.route("/update-voices")
 class UpdateVoices(Resource):
 
+    @jwt_required()
     @admin_required()
     @parameters(
         type="object",
         properties={
-            "voice_id": {"type": "string"},
+            "voice_id": {"type": "number"},
             "tempo": {"type": "number"},
             "speed_x": {"type": "number"},
             "volumn": {"type": "number"},
@@ -64,36 +89,40 @@ class UpdateVoices(Resource):
             "xapi_hd": {"type": "boolean"},
             "order": {"type": "number"},
         },
-        required=["url"],
+        required=["voice_id"],
     )
     def post(self, args):
         try:
-            voice_id = args.get("voice_id", "")
+            voice_id = args.get("voice_id", 0)
             update_data = {}
-            if args.get("tempo", None):
+            if "tempo" in args:
                 update_data["tempo"] = args.get("tempo")
-            if args.get("speed_x", None):
+            if "speed_x" in args:
                 update_data["speed_x"] = args.get("speed_x")
-            if args.get("volumn", None):
+            if "volumn" in args:
                 update_data["volumn"] = args.get("volumn")
-            if args.get("emotion_tone_preset", None):
+            if "emotion_tone_preset" in args:
                 update_data["emotion_tone_preset"] = args.get("emotion_tone_preset")
-            if args.get("model_version", None):
+            if "model_version" in args:
                 update_data["model_version"] = args.get("model_version")
-            if args.get("xapi_audio_format", None):
+            if "xapi_audio_format" in args:
                 update_data["xapi_audio_format"] = args.get("xapi_audio_format")
-            if args.get("xapi_hd", None):
+            if "xapi_hd" in args:
                 update_data["xapi_hd"] = args.get("xapi_hd")
-            if args.get("order", None):
+            if "order" in args:
                 update_data["order"] = args.get("order")
             if update_data:
-                VoiceService.update_voice(voice_id, update_data)
+                VoiceService.update_voice(voice_id, **update_data)
+                redis_client.delete("toktak:voices")
+
             return Response(
                 message="Cập nhật voice thành công",
                 data={},
                 status=200,
             ).to_dict()
         except Exception as e:
+            print(e)
+            traceback.print_exc()
             return Response(
                 message="Cập nhật voice thất bại",
                 data={},
@@ -104,6 +133,7 @@ class UpdateVoices(Resource):
 @ns.route("/refresh-voice")
 class RefreshVoice(Resource):
 
+    @jwt_required()
     @admin_required()
     def post(self):
         try:
@@ -113,27 +143,45 @@ class RefreshVoice(Resource):
                 voice["actor_id"]: voice for voice in current_voice_typecasts
             }
 
+            print(current_voice_typecasts_dict)
+
             for voice in voices:
                 if voice["type"] == "typecast":
                     if voice["string_id"] not in current_voice_typecasts_dict:
                         VoiceService.delete_voice(voice["id"])
                     else:
+                        sex = current_voice_typecasts_dict[voice["string_id"]].get(
+                            "sex", []
+                        )
+                        if "여성" in sex:
+                            gender = Voices.FEMALE.value
+                        else:
+                            gender = Voices.MALE.value
+
+                        styles = current_voice_typecasts_dict[voice["string_id"]][
+                            "style_label_v2"
+                        ]
+
+                        update_data = {
+                            "name": current_voice_typecasts_dict[voice["string_id"]][
+                                "name"
+                            ]["ko"],
+                            "name_en": current_voice_typecasts_dict[voice["string_id"]][
+                                "name"
+                            ]["en"],
+                            "gender": gender,
+                            "image_url": current_voice_typecasts_dict[
+                                voice["string_id"]
+                            ]["img_url"],
+                            "audio_url": current_voice_typecasts_dict[
+                                voice["string_id"]
+                            ]["audio_url"],
+                            "styles": json.dumps(styles),
+                        }
+
                         VoiceService.update_voice(
                             voice["id"],
-                            {
-                                "name": current_voice_typecasts[voice["string_id"]][
-                                    "name"
-                                ],
-                                "name_en": current_voice_typecasts[voice["string_id"]][
-                                    "name_en"
-                                ],
-                                "gender": current_voice_typecasts[voice["string_id"]][
-                                    "gender"
-                                ],
-                                "audio_url": current_voice_typecasts[
-                                    voice["string_id"]
-                                ]["audio_url"],
-                            },
+                            **update_data,
                         )
                         current_voice_typecasts_dict.pop(voice["string_id"])
 
@@ -165,6 +213,8 @@ class RefreshVoice(Resource):
                     name_en=voice["name"]["en"] if voice["name"]["en"] else "",
                     gender=voice["gender"],
                     audio_url=voice["audio_url"],
+                    image_url=voice["img_url"],
+                    styles=json.dumps(style_label_v2),
                     type="typecast",
                     volumn=100,
                     speed_x=1,
@@ -183,6 +233,8 @@ class RefreshVoice(Resource):
                 status=200,
             ).to_dict()
         except Exception as e:
+            print(e)
+            traceback.print_exc()
             return Response(
                 message="Làm mới voice thất bại",
                 data={},
@@ -192,6 +244,9 @@ class RefreshVoice(Resource):
 
 @ns.route("/test-typecast")
 class TestTypecast(Resource):
+
+    @jwt_required()
+    @admin_required()
     def post(self):
         from flask import request
 

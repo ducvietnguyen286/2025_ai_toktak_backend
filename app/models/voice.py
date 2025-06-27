@@ -11,8 +11,10 @@ class Voice(db.Model, BaseModel):
     name = db.Column(db.String(255), nullable=False, default="")
     name_en = db.Column(db.String(255), nullable=False, default="")
     gender = db.Column(db.String(10), nullable=False, default="male")
+    image_url = db.Column(db.String(1024), nullable=False, default="")
     audio_url = db.Column(db.String(1024), nullable=False, default="")
     type = db.Column(db.String(20), nullable=False, default="typecast")
+    styles = db.Column(db.Text)
     volumn = db.Column(db.Float, nullable=False, default=100)
     speed_x = db.Column(db.Float, nullable=False, default=1)
     tempo = db.Column(db.Float, nullable=False, default=1)
@@ -24,6 +26,8 @@ class Voice(db.Model, BaseModel):
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
+    to_json_parse = ("styles",)
+
     def to_dict(self):
         return {
             "id": self.string_id,
@@ -31,6 +35,7 @@ class Voice(db.Model, BaseModel):
             "name": self.name,
             "name_en": self.name_en,
             "gender": self.gender,
+            "image_url": self.image_url,
             "audio_url": self.audio_url,
             "type": self.type,
             "volumn": self.volumn,
@@ -40,6 +45,7 @@ class Voice(db.Model, BaseModel):
             "model_version": self.model_version,
             "xapi_audio_format": self.xapi_audio_format,
             "xapi_hd": self.xapi_hd,
+            "order": self.order,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
