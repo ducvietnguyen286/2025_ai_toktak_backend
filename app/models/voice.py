@@ -35,6 +35,7 @@ class Voice(db.Model, BaseModel):
             "int_id": self.id,
             "name": self.name,
             "name_en": self.name_en,
+            "name_google": self.name_google,
             "gender": self.gender,
             "image_url": self.image_url,
             "audio_url": self.audio_url,
