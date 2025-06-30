@@ -26,6 +26,7 @@ from app.lib.response import Response
 from app.lib.string import generate_order_id
 from app.lib.logger import log_make_repayment_message
 from app.third_parties.email import send_email
+from unittest.mock import Mock
 
 
 class PaymentService:
@@ -180,7 +181,6 @@ class PaymentService:
             "status": status,
         }
         payment = PaymentService.create_payment(**payment_data)
-        logger.info(f"package_name {package_name} addon_count : {addon_count} ")
         if package_name == "BASIC" and addon_count > 0:
             result_addon = PaymentService.calculate_addon_price(user_id, addon_count)
             amount_addon = result_addon["amount"]
@@ -955,24 +955,33 @@ class PaymentService:
             # chạy lúc 23 giờ đêm mỗi ngày
             now = datetime.now()
             today = now.date()
-
+            log_make_repayment_message("[auto_renew_subscriptions] ")
             expiring_payments = Payment.query.filter(
                 func.date(Payment.end_date) == today,
-                Payment.status == "ACTIVE",
+                Payment.status == "PAID",
                 Payment.method != "NEW_USER",
             ).all()
 
             for old_payment in expiring_payments:
+                old_payment_id = old_payment.id
+                old_payment_amount = old_payment.amount
+
                 user = old_payment.user
-                if not user or not user.card_info:
+                log_make_repayment_message(f"User {user.id} hết hạn .")
+                order_id = generate_order_id("renew")
+                new_package_info = const.PACKAGE_CONFIG.get(old_payment.package_name)
+                if not new_package_info:
                     continue
 
-                card_info = user.card_info or {}
-                billing_key = card_info.get("billingKey")
-                customer_key = card_info.get("customerKey")
+                if not user or not user.card_info:
+                    continue
+                log_make_repayment_message(user.card_info)
+                card_info_json = json.loads(user.card_info)
+                billing_key = card_info_json.get("billingKey")
+                customer_key = card_info_json.get("customerKey")
 
                 if not billing_key or not customer_key:
-                    logger.warning(
+                    log_make_repayment_message(
                         f"❌ User {user.id} thiếu billingKey hoặc customerKey, bỏ qua."
                     )
                     continue
@@ -986,10 +995,10 @@ class PaymentService:
                 }
 
                 payload = {
-                    "amount": old_payment.amount,
+                    "amount": new_package_info["price"],
                     "orderId": order_id,
                     "customerKey": customer_key,
-                    "orderName": f"Tự động gia hạn gói {old_payment.package_name}",
+                    "orderName": f"{old_payment.package_name} 요금제를 자동 갱신합니다.",
                     "customerEmail": user.email,
                     "customerName": old_payment.customer_name,
                 }
@@ -998,6 +1007,12 @@ class PaymentService:
                 )
 
                 log_make_repayment_message(payload)
+
+                payment_data_log = {
+                    "payment_id": old_payment.id,
+                    "description": f"결제 ID {old_payment.id}의 자동 갱신",
+                }
+                PaymentService.create_payment_log(**payment_data_log)
 
                 res = requests.post(
                     f"https://api.tosspayments.com/v1/billing/{billing_key}",
@@ -1015,65 +1030,113 @@ class PaymentService:
                 api_result_str = json.dumps(result, ensure_ascii=False)
 
                 if res.status_code == 200 and result.get("status") == "DONE":
-                    new_payment = Payment(
-                        user_id=user.id,
-                        order_id=order_id,
-                        customer_name=old_payment.customer_name,
-                        method="AUTO_RENEW",
-                        package_name=old_payment.package_name,
-                        payment_method="CARD",
-                        payment_status="PAID",
-                        payment_date=now,
-                        price=old_payment.price,
-                        amount=old_payment.amount,
-                        status="PAID",
-                        total_link=old_payment.total_link,
-                        total_create=old_payment.total_create,
-                        start_date=now,
-                        end_date=now + timedelta(days=30),
-                        requested_at=now,
-                        approved_at=now,
-                        payment_key=result.get("paymentKey", ""),
-                        payment_data=api_result_str,
-                        description=(
+                    new_payment = PaymentService.create_new_payment(
+                        user, old_payment.package_name
+                    )
+                    payment_id = new_payment.id
+
+                    now = datetime.now()
+                    start_date = (now + timedelta(days=1)).replace(
+                        hour=0, minute=0, second=0, microsecond=0
+                    )
+                    end_date = (start_date + relativedelta(months=1)).replace(
+                        hour=23, minute=59, second=59, microsecond=0
+                    )
+
+                    data_update_payment = {
+                        "order_id": order_id,
+                        "method": "AUTO_RENEW",
+                        "start_date": start_date,
+                        "end_date": end_date,
+                        "payment_key": result.get("paymentKey", ""),
+                        "payment_data": api_result_str,
+                        "description": (
                             f"[Auto Renew]\n"
                             f"- Time: {now_str}\n"
-                            f"- From Payment ID: {old_payment.id}\n"
+                            f"- From Payment ID: {old_payment_id}\n"
                             f"- Order ID: {order_id}\n"
-                            f"- Amount: {old_payment.amount}\n"
+                            f"- Amount: {old_payment_amount}\n"
                             f"- API Result: {api_result_str}"
                         ),
-                    )
-                    db.session.add(new_payment)
-                    db.session.commit()
-                    data_email = {
-                        "user": user,
-                        "payment": new_payment,
                     }
+                    new_payment = PaymentService.update_payment(
+                        new_payment.id, **data_update_payment
+                    )
+
+                    PaymentService.approvalPayment(payment_id)
+                    data_email = {
+                        "customer_name": user.name or user.email,
+                        "package_name": new_payment.package_name,
+                        "amount": new_payment.amount,
+                        "order_id": new_payment.order_id,
+                        "end_date": new_payment.end_date.strftime("%Y-%m-%d"),
+                    }
+
+                    payment_data_log = {
+                        "payment_id": payment_id,
+                        "raw_response": json.dumps(result, ensure_ascii=False),
+                        "response_json": result,
+                        "description": (
+                            f"[Auto Renew]\n"
+                            f"- Time: {now_str}\n"
+                            f"- From Payment ID: {old_payment_id}\n"
+                            f"- Order ID: {order_id}\n"
+                            f"- Amount: {old_payment_amount}\n"
+                            f"- API Result: {api_result_str}"
+                        ),
+                    }
+                    PaymentService.create_payment_log(**payment_data_log)
+
                     send_email(
-                        user.email, "Payment Confirmation", "renew_payment", data_email
+                        user.email,
+                        "요금제 자동 결제가 완료되었습니다",
+                        "renewal_success.html",
+                        data_email,
                     )
                     log_make_repayment_message(
                         f"✅ Gia hạn thành công cho user {user.email}"
                     )
                 else:
                     fail_msg = result.get("message", "Không rõ lỗi")
-                    old_payment.description = (
+                    error_message = (
                         f"{old_payment.description}\n"
                         f"[Auto Renew Failed]\n"
                         f"- Time: {now_str}\n"
-                        f"- From Payment ID: {old_payment.id}\n"
+                        f"- From Payment ID: {old_payment_id}\n"
                         f"- Order ID: {order_id}\n"
                         f"- Lỗi: {fail_msg}\n"
                         f"- API Result: {api_result_str}"
                     )
-                    db.session.commit()
+                    old_payment.description = error_message
                     log_make_repayment_message(
                         f"❌ Gia hạn thất bại cho user {user.email}: {fail_msg}"
                     )
+
+                    payment_data_log = {
+                        "payment_id": payment_id,
+                        "raw_response": json.dumps(result, ensure_ascii=False),
+                        "response_json": result,
+                        "description": error_message,
+                    }
+                    PaymentService.create_payment_log(**payment_data_log)
+
+            return len(expiring_payments)
 
         except Exception as ex:
             tb = traceback.format_exc()
             log_make_repayment_message(
                 f"[auto_renew_subscriptions] Exception: {ex}\n{tb}"
             )
+
+    @staticmethod
+    def deletePaymentNewUser(user_id):
+        try:
+            Payment.query.filter(
+                Payment.user_id == user_id,
+                Payment.method == "NEW_USER",
+            ).delete(synchronize_session=False)
+            db.session.commit()
+        except Exception as ex:
+            db.session.rollback()
+            return 0
+        return 1

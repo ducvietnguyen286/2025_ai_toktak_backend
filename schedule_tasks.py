@@ -32,6 +32,7 @@ from app.models.post import Post
 from app.models.notification import Notification
 from app.services.user import UserService
 from app.services.auth import AuthService
+from app.services.payment_services import PaymentService
 from pytz import timezone
 import requests
 
@@ -42,10 +43,10 @@ from app.models.notification import Notification
 from app.models.request_log import RequestLog
 from app.models.request_social_log import RequestSocialLog
 from app.models.video_create import VideoCreate
- 
+
 from sqlalchemy import or_, text
 
-from app.third_parties.telegram import   send_slack_message
+from app.third_parties.telegram import send_slack_message
 
 
 UPLOAD_BASE_PATH = "uploads"
@@ -76,8 +77,7 @@ def configure_logging(app):
         os.makedirs(LOG_DIR)
 
     log_filename = os.path.join(
-        LOG_DIR,
-        f"schedule_tasks_{datetime.now().strftime('%Y-%m-%d')}.log"
+        LOG_DIR, f"schedule_tasks_{datetime.now().strftime('%Y-%m-%d')}.log"
     )
 
     file_handler = TimedRotatingFileHandler(
@@ -116,8 +116,6 @@ def delete_folder_if_exists(folder_path, app):
     except Exception as e:
         app.logger.error(f"Error deleting folder {folder_path}: {str(e)}")
 
-
- 
 
 def cleanup_pending_batches(app):
     """Xóa Batch có process_status = 'PENDING', các Post liên quan và thư mục"""
@@ -219,10 +217,17 @@ def cleanup_request_log(app):
                 .delete(synchronize_session=False)
             )
 
+            notification_deleted = (
+                db.session.query(Notification)
+                .filter(Notification.created_at < three_days_ago)
+                .delete(synchronize_session=False)
+            )
+
             db.session.commit()
             app.logger.info(
                 f"🧹 Đã xóa: {req_deleted} request_logs, {social_deleted} request_social_logs, "
                 f"{video_deleted} video_create cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+                f"{notification_deleted} notification cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
             )
         except Exception as e:
             db.session.rollback()
@@ -231,7 +236,7 @@ def cleanup_request_log(app):
             # CRITICAL: Cleanup session to prevent connection leaks
             db.session.remove()
 
- 
+
 def auto_extend_subscription_task(app):
     app.logger.info("Start auto_extend_subscription_task...")
     with app.app_context():
@@ -241,6 +246,21 @@ def auto_extend_subscription_task(app):
             db.session.commit()
         except Exception as e:
             app.logger.error(f"Error in auto_extend_subscription_task: {str(e)}")
+            db.session.rollback()
+        finally:
+            # CRITICAL: Cleanup session to prevent connection leaks
+            db.session.remove()
+
+
+def auto_extend_payment_task(app):
+    app.logger.info("Start auto_extend_payment_task...")
+    with app.app_context():
+        try:
+            count = PaymentService.auto_renew_subscriptions()
+            app.logger.info(f"✓ Auto-payment {count}   users")
+            db.session.commit()
+        except Exception as e:
+            app.logger.error(f"Error in auto_extend_payment_task: {str(e)}")
             db.session.rollback()
         finally:
             # CRITICAL: Cleanup session to prevent connection leaks
@@ -358,7 +378,9 @@ def start_scheduler(app):
     twelve_oh_one_trigger = CronTrigger(hour=0, minute=1, timezone=kst)
 
     every_3_hours_trigger = CronTrigger(hour="*/3", minute=0, timezone=kst)
-
+    eleven_pm_kst_trigger = CronTrigger(hour=23, minute=0, timezone=kst)
+    
+    
 
     scheduler.add_job(
         func=lambda: cleanup_pending_batches(app),
@@ -371,7 +393,6 @@ def start_scheduler(app):
         id="cleanup_request_log",
     )
 
-  
     scheduler.add_job(
         func=exchange_facebook_token,
         trigger=two_am_kst_trigger,
@@ -393,7 +414,13 @@ def start_scheduler(app):
         trigger=twelve_oh_one_trigger,
         id="auto_extend_subscription_task",
     )
-
+    
+    scheduler.add_job(
+        func=lambda: auto_extend_payment_task(app),
+        trigger=eleven_pm_kst_trigger,
+        id="auto_extend_payment_task",
+    )
+     
     # Auto kill long database connections every minute
     scheduler.add_job(
         func=lambda: auto_kill_long_connections(app),

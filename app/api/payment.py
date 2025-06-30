@@ -655,3 +655,49 @@ class APIBillingAuthorizationsFail(Resource):
                 message_en="An error occurred during payment confirmation.",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/toss-webhook")
+class TossWebhook(Resource):
+    def post(self):
+        try:
+            data = request.get_json()
+            status = data.get("status")
+            order_id = data.get("orderId")
+
+            payment_data_log = {
+                "status_code": status,
+                "response_json": data,
+            }
+
+            if status == "DONE":
+                payment_data_log["description"] = (
+                    f"[VI] Thanh toán thành công cho đơn {order_id}\n"
+                    f"[KO] 주문 {order_id}의 결제가 성공했습니다."
+                )
+                logger.info(f"[Webhook] ✅ Thanh toán thành công - {order_id}")
+
+            elif status == "CANCELED":
+                payment_data_log["description"] = (
+                    f"[VI] Thanh toán bị hủy cho đơn {order_id}\n"
+                    f"[KO] 주문 {order_id}의 결제가 취소되었습니다."
+                )
+                logger.warning(f"[Webhook] ❌ Thanh toán bị hủy - {order_id}")
+
+            else:
+                payment_data_log["description"] = (
+                    f"[VI] Webhook nhận trạng thái không xác định: {status}\n"
+                    f"[KO] 알 수 없는 상태 수신됨: {status}"
+                )
+
+            PaymentService.create_payment_log(**payment_data_log)
+
+            return Response(
+                message="Đã nhận webhook", data={"status": status}, code=200
+            ).to_dict()
+
+        except Exception as ex:
+            logger.error(f"[Webhook] ❌ Lỗi xử lý webhook: {ex}")
+            return Response(
+                message="Xử lý thất bại", data={"status": "FAILED"}, code=500
+            ).to_dict()

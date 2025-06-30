@@ -16,6 +16,7 @@ from app.services.notification import NotificationServices
 from app.lib.string import get_level_images, get_subscription_name
 import const
 from app.extensions import redis_client
+from app.services.payment_services import PaymentService
 
 ns = Namespace(name="auth", description="Auth API")
 
@@ -259,6 +260,9 @@ class APIMe(Resource):
                 user_dict["subscription"], created_at
             )
             user_dict["can_download"] = can_download
+            
+            # PaymentService.auto_renew_subscriptions()
+            
             try:
                 key_redis = const.REDIS_KEY_TOKTAK.get("user_info_me", "user:me")
                 redis_key = f"{key_redis}:{user_login.id}"
