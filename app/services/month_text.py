@@ -39,7 +39,7 @@ class MonthTextService:
         redis_client.set(
             f"toktak:month_texts_{month_key}",
             json.dumps(month_texts_json),
-            ex=int((end_of_month - datetime.now()).total_seconds()),
+            ex=int((end_of_day_of_month - datetime.now()).total_seconds()),
         )
 
     @staticmethod
