@@ -10,6 +10,7 @@ class Voice(db.Model, BaseModel):
     string_id = db.Column(db.String(255), nullable=False, index=True)
     name = db.Column(db.String(255), nullable=False, default="")
     name_en = db.Column(db.String(255), nullable=False, default="")
+    name_google = db.Column(db.String(255), default="")
     gender = db.Column(db.String(10), nullable=False, default="male")
     image_url = db.Column(db.String(1024), nullable=False, default="")
     audio_url = db.Column(db.String(1024), nullable=False, default="")

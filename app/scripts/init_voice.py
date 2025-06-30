@@ -51,11 +51,21 @@ def init_google_voices():
                 string_id=voice["id"], type=Voices.GOOGLE.value
             )
 
+            korean_voices = const.KOREAN_VOICES
+
+            setting_voice = None
+
+            for korean_voice in korean_voices:
+                if korean_voice["index"] == int(voice["id"]):
+                    setting_voice = korean_voice
+                    break
+
             if not existing_voice:
                 VoiceService.create_voice(
                     string_id=voice["id"],
                     name=voice["name"],
                     name_en=voice["name_en"],
+                    name_google=setting_voice["name"],
                     gender=voice["gender"],
                     audio_url=voice["audio_url"],
                     image_url=voice["image_url"],
