@@ -99,6 +99,7 @@ class ShotStackService:
 
         if not type(using_voice) == dict:
             using_voice = using_voice.to_dict()
+            voice_type = Voices.GOOGLE.value
 
         if voice_type == Voices.GOOGLE.value:
             mp3_file, audio_duration = text_to_speech_kr_old(
@@ -951,19 +952,21 @@ def text_to_speech_kr_old(korean_voice, text, disk_path="output", config=None):
             "ko-KR-Chirp3-HD-Orus",
         }
 
+        gender = korean_voice.get("gender", "MALE")
+
         # # Payload gửi lên Google API
         payload = {
             "input": {"text": text},
             "voice": {
                 "languageCode": "ko-KR",
-                "name": korean_voice.get("name", ""),
-                "ssmlGender": korean_voice.get("gender", ""),
+                "name": korean_voice.get("name_google", ""),
+                "ssmlGender": gender.upper(),
             },
             "audioConfig": {"audioEncoding": "MP3"},
         }
 
         # Nếu giọng không thuộc Chirp3-HD, thêm speakingRate
-        if korean_voice["name"] not in chirp3_hd_voices:
+        if korean_voice["name_google"] not in chirp3_hd_voices:
             payload["audioConfig"]["speakingRate"] = korean_voice.get("tempo", 1)
 
         headers = {"Content-Type": "application/json"}
