@@ -261,7 +261,7 @@ class APIMe(Resource):
             )
             user_dict["can_download"] = can_download
             
-            PaymentService.auto_renew_subscriptions()
+            # PaymentService.auto_renew_subscriptions()
             
             try:
                 key_redis = const.REDIS_KEY_TOKTAK.get("user_info_me", "user:me")
