@@ -9,7 +9,8 @@ class PaymentLog(db.Model, BaseModel):
     id = db.Column(db.Integer, primary_key=True)
     payment_id = db.Column(db.Integer, db.ForeignKey("payments.id"), nullable=True)
     status_code = db.Column(db.Integer)
-    response_json = db.Column(db.Text)  # Toàn bộ phản hồi từ Toss
+    response_json = db.Column(db.Text)  
+    description = db.Column(db.Text)  
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     # Quan hệ 1-n với Payment
@@ -20,6 +21,7 @@ class PaymentLog(db.Model, BaseModel):
             "id": self.id,
             "payment_id": self.payment_id,
             "status_code": self.status_code,
+            "description": self.description,
             "response_json": self.response_json,
             "created_at": (
                 self.created_at.strftime("%Y-%m-%d %H:%M:%S")

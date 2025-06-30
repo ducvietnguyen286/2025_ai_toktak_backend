@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <title>구독 자동 결제 실패</title>
+    </head>
+    <body>
+        <h2>{{ customer_name }} 님, 안녕하세요</h2>
+        <p>요금제 <strong>{{ package_name }}</strong> 의 자동 결제가 실패하였습니다.</p>
+        <p>실패 사유: <strong>{{ fail_reason }}</strong></p>
+        <p>주문 번호: <code>{{ order_id }}</code></p>
+        <br />
+        <p>카드 정보가 올바른지 확인해주시고, 다시 시도해 주세요.</p>
+        <p><a href=\"{{ retry_url }}\">결제 다시 시도하기</a></p>
+        <br />
+        <p>- Toktak 고객센터</p>
+    </body>
+</html>
