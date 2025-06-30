@@ -189,6 +189,12 @@ class RefreshVoice(Resource):
                 style_label_v2 = voice.get("style_label_v2", [])
                 style_data = {}
                 model_version = "latest"
+                sex = voice.get("sex", [])
+                if "여성" in sex:
+                    gender = Voices.FEMALE.value
+                else:
+                    gender = Voices.MALE.value
+
                 for style_label in style_label_v2:
                     display_name = style_label.get("display_name", "")
                     if display_name == "SSFM-V2.1":
@@ -211,7 +217,7 @@ class RefreshVoice(Resource):
                     string_id=voice["actor_id"],
                     name=voice["name"]["ko"] if voice["name"]["ko"] else "",
                     name_en=voice["name"]["en"] if voice["name"]["en"] else "",
-                    gender=voice["gender"],
+                    gender=gender,
                     audio_url=voice["audio_url"],
                     image_url=voice["img_url"],
                     styles=json.dumps(style_label_v2),
