@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from app.extensions import db
 from app.models.month_text import MonthText
 from app.extensions import redis_client
+from app.lib.logger import logger
 
 
 class MonthTextService:
@@ -29,10 +30,10 @@ class MonthTextService:
         end_of_month = datetime.now().replace(day=1) + timedelta(days=31)
         end_of_month = end_of_month.replace(day=1) - timedelta(days=1)
 
-        print(end_of_month)
-        print(datetime.now())
-        print(end_of_month - datetime.now())
-        print(int((end_of_month - datetime.now()).total_seconds()))
+        logger.info(end_of_month)
+        logger.info(datetime.now())
+        logger.info(end_of_month - datetime.now())
+        logger.info(int((end_of_month - datetime.now()).total_seconds()))
 
         redis_client.set(
             f"toktak:month_texts_{month_key}",
