@@ -1232,7 +1232,7 @@ def get_typecast_voices(no_cache=False):
         voices = (
             cache_typecast_voices.decode("utf-8") if cache_typecast_voices else None
         )
-        if len(voices) > 0 and not no_cache:
+        if voices and len(voices) > 0 and not no_cache:
             return json.loads(voices)
         else:
             API_KEY = os.environ.get("TYPECAST_API_KEY", "")
