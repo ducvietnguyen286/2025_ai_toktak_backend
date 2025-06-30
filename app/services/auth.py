@@ -159,109 +159,6 @@ class AuthService:
 
         return user, new_user_referral_code, is_new_user
 
-        if social_account:
-            user = User.query.get(social_account.user_id)
-        else:
-            if not email:
-                level = 0
-                level_info = get_level_images(level)
-                subscription_expired = datetime.now() + relativedelta(months=1)
-                user = User(
-                    email=email,
-                    name=name,
-                    avatar=avatar,
-                    level=level,
-                    contact=provider,
-                    subscription_expired=subscription_expired,
-                    level_info=json.dumps(level_info),
-                )
-                user.save()
-                is_new_user = 1
-                # Create Basic for new User
-                object_start_time = datetime.now()
-                data_new_user_history = {
-                    "user_id": user.id,
-                    "type": "user",
-                    "type_2": "NEW_USER",
-                    "object_id": user.id,
-                    "object_start_time": object_start_time,
-                    "object_end_time": subscription_expired,
-                    "title": "신규 가입 선물",
-                    "description": "신규 가입 선물",
-                    "value": 30,
-                    "num_days": 30,
-                }
-                UserService.create_user_history(**data_new_user_history)
-
-                # payment history
-                payment = PaymentService.create_new_payment(
-                    user, "BASIC", "PAID", 0, "NEW_USER"
-                )
-
-            else:
-                user = User.query.filter_by(email=email).first()
-
-            if not user and email:
-                level = 0
-                level_info = get_level_images(level)
-
-                subscription_expired = datetime.now() + relativedelta(months=1)
-                user = User(
-                    email=email,
-                    name=name,
-                    avatar=avatar,
-                    level=level,
-                    contact=provider,
-                    subscription="NEW_USER",
-                    subscription_expired=subscription_expired,
-                    batch_total=const.PACKAGE_CONFIG["BASIC"]["batch_total"],
-                    batch_remain=const.PACKAGE_CONFIG["BASIC"]["batch_remain"],
-                    total_link_active=const.PACKAGE_CONFIG["BASIC"][
-                        "total_link_active"
-                    ],
-                    level_info=json.dumps(level_info),
-                )
-
-                user.save()
-
-                # Create Basic for new User
-                object_start_time = datetime.now()
-                data_new_user_history = {
-                    "user_id": user.id,
-                    "type": "user",
-                    "type_2": "NEW_USER",
-                    "object_id": user.id,
-                    "object_start_time": object_start_time,
-                    "object_end_time": subscription_expired,
-                    "title": "신규 가입 선물",
-                    "description": "신규 가입 선물",
-                    "value": 30,
-                    "num_days": 30,
-                }
-                UserService.create_user_history(**data_new_user_history)
-
-                # payment history
-                payment = PaymentService.create_new_payment(
-                    user, "BASIC", "PAID", 0, "NEW_USER"
-                )
-
-                is_new_user = 1
-
-                if referral_code != "":
-                    user_history = ReferralService.use_referral_code(
-                        referral_code, user
-                    )
-                    if user_history:
-                        new_user_referral_code = 1
-
-            social_account = SocialAccount(
-                user_id=user.id,
-                provider=provider,
-                provider_user_id=provider_user_id,
-                access_token=access_token,
-            )
-            social_account.save()
-        return user, new_user_referral_code, is_new_user
 
     @staticmethod
     def get_facebook_user_info(access_token, person_id):
@@ -425,7 +322,8 @@ class AuthService:
                 subscription = "BASIC"
                 total_link_active = 1
                 batch_total = UserService.get_total_batch_total(user_id)
-
+        elif user_subscription == "NEW_USER":
+            process_delete = PaymentService.deletePaymentNewUser(user_id)
         user_detail = AuthService.update(
             user_id,
             subscription=subscription,
@@ -437,6 +335,7 @@ class AuthService:
             batch_no_limit_sns=0,
             total_link_active=total_link_active,
         )
+        
         return user_detail
 
     @staticmethod
