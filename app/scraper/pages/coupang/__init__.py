@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 import requests
 import hashlib
 from app.extensions import redis_client
-from app.scraper import get_real_url
+from app.lib.url import get_real_url
 
 from app.services.crawl_data import CrawlDataService
 

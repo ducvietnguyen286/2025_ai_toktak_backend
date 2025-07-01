@@ -8,7 +8,7 @@ import requests
 
 from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
-from app.lib.string import un_shotend_url
+from app.lib.url import un_shotend_url
 from app.scraper.pages.amazon.parser import Parser
 from app.services.crawl_data import CrawlDataService
 
@@ -18,25 +18,9 @@ class AmazonScraper:
         self.url = params["url"]
 
     def proxies(self):
-        auth = "hekqlibd:llv12cujeqjr"
-
-        proxy_path = os.path.join(os.getcwd(), "app/scraper/pages/coupang/proxies.txt")
-
-        if not os.path.exists(proxy_path):
-            logger.error("Proxy file not found: {0}".format(proxy_path))
-            return {}
-
-        with open(proxy_path, "r") as file:
-            proxy_list = file.read().splitlines()
-
-        selected_proxy = random.choice(proxy_list)
-
-        if not selected_proxy.startswith("http"):
-            selected_proxy = f"http://{auth}@{selected_proxy}"
-
         return {
-            "http": selected_proxy,
-            "https": selected_proxy,
+            "http": "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80/",
+            "https": "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80/",
         }
 
     def run(self):

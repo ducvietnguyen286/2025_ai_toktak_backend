@@ -9,7 +9,7 @@ from app.lib.logger import logger
 from urllib.parse import urlparse
 
 from app.scraper.pages.domeggook.parser import Parser
-from app.scraper import get_real_url
+from app.lib.url import get_real_url
 
 
 class DomeggookScraper:

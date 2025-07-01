@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 import requests
 from app.lib.logger import logger
 from app.services.crawl_data import CrawlDataService
-from app.scraper import get_real_url
+from app.lib.url import get_real_url
 
 
 class AliExpressScraper:
@@ -17,7 +17,7 @@ class AliExpressScraper:
     def run(self):
         return self.run_scraper()
 
-    def run_scraper(self):            
+    def run_scraper(self):
         real_url = get_real_url(real_url)
 
         # Push
@@ -169,12 +169,12 @@ class AliExpressScraper:
             return {}
 
     def run_api_ali_data_hub_2(self, real_url):
-        try:            
+        try:
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
             exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
             if exist_data:
                 return json.loads(exist_data.response)
-            
+
             parsed_url = urlparse(real_url)
             product_id = parsed_url.path.split("/")[-1].split(".")[0]
 
@@ -315,7 +315,7 @@ class AliExpressScraper:
             exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
             if exist_data:
                 return json.loads(exist_data.response)
-            
+
             parsed_url = urlparse(real_url)
             product_id = parsed_url.path.split("/")[-1].split(".")[0]
 
