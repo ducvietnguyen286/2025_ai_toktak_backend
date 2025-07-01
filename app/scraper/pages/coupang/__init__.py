@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 import requests
 import hashlib
 from app.extensions import redis_client
+from app.lib.url import get_real_url
 
 from app.services.crawl_data import CrawlDataService
 
@@ -112,8 +113,6 @@ class CoupangScraper:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
             return {}
-
-    def un_shortend_url(self, url, retry=0):
         try:
             cookie_jar = CookieJar()
             session = requests.Session()
@@ -150,33 +149,7 @@ class CoupangScraper:
             base_url = self.url
             real_url = self.url
 
-            parsed_url = urlparse(real_url)
-            netloc = parsed_url.netloc
-
-            if netloc == "link.coupang.com":
-                real_url = self.un_shortend_url(real_url)
-                parsed_url = urlparse(real_url)
-
-            path = parsed_url.path
-
-            query_params = parsed_url.query
-            query_params_dict = parse_qs(query_params)
-
-            item_id = query_params_dict.get("itemId")
-            vendor_item_id = query_params_dict.get("vendorItemId")
-
-            path = path.replace("/vp/", "/vm/")
-            target_item_id = item_id[0] if item_id else ""
-            target_vendor_item_id = vendor_item_id[0] if vendor_item_id else ""
-
-            path_mobile = path
-            query_params = ""
-            if target_item_id != "":
-                query_params = query_params + "&itemId=" + target_item_id
-            if target_vendor_item_id != "":
-                query_params = query_params + "&vendorItemId=" + target_vendor_item_id
-            query_params = query_params[1:]
-            real_url = "https://m.coupang.com" + path_mobile + "?" + query_params
+            real_url = get_real_url(real_url)
 
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
             exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
