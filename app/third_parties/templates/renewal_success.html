@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <title>구독 자동 갱신 완료</title>
+    </head>
+    <body>
+        <h2>{{ customer_name }} 님, 안녕하세요 👋</h2>
+        <p><strong>{{ package_name }}</strong> 요금제가 성공적으로 자동 갱신되었습니다.</p>
+        <p>결제 금액: <strong>{{ amount }}원</strong></p>
+        <p>주문 번호: <code>{{ order_id }}</code></p>
+        <p>이용 기간: ~ {{ end_date }}</p>
+        <br />
+        <p>항상 이용해주셔서 감사합니다.</p>
+        <p>- Toktak 팀 드림</p>
+    </body>
+</html>

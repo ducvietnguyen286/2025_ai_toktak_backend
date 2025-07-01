@@ -739,8 +739,10 @@ class APISaveAdminNotification(Resource):
             "ask_again": {"type": "integer"},
             "button_cancel": {"type": "string"},
             "button_oke": {"type": "string"},
+            "popup_type": {"type": "string"},
+            "toasts_color": {"type": "string"},
         },
-        required=["country", "title"],
+        required=["title"],
     )
     def post(self, args):
         country = args.get("country", "")
@@ -749,12 +751,14 @@ class APISaveAdminNotification(Resource):
         title = args.get("title", "")
         url = args.get("url", "")
         icon = args.get("icon", "")
-        ask_again = args.get("ask_again",0)
-        repeat_duration = args.get("repeat_duration",0)
+        ask_again = args.get("ask_again", 0)
+        repeat_duration = args.get("repeat_duration", 0)
         redirect_type = args.get("redirect_type", "")
         notification_id = args.get("notification_id", "")
         button_cancel = args.get("button_cancel", "")
         button_oke = args.get("button_oke", "")
+        popup_type = args.get("popup_type", "")
+        toasts_color = args.get("toasts_color", "")
 
         if notification_id != "":
             # Cập nhật thông báo
@@ -771,6 +775,8 @@ class APISaveAdminNotification(Resource):
                 repeat_duration=repeat_duration,
                 button_cancel=button_cancel,
                 button_oke=button_oke,
+                popup_type=popup_type,
+                toasts_color=toasts_color,
             )
             if not notification:
                 return Response(
@@ -799,6 +805,8 @@ class APISaveAdminNotification(Resource):
                 repeat_duration=repeat_duration,
                 button_cancel=button_cancel,
                 button_oke=button_oke,
+                popup_type=popup_type,
+                toasts_color=toasts_color,
             )
             if not notification:
                 return Response(

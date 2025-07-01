@@ -16,6 +16,7 @@ from app.services.notification import NotificationServices
 from app.lib.string import get_level_images, get_subscription_name
 import const
 from app.extensions import redis_client
+from app.services.payment_services import PaymentService
 
 ns = Namespace(name="auth", description="Auth API")
 
@@ -246,6 +247,7 @@ class APIMe(Resource):
                     f"Reset User : {user_login.id}  from {user_login.subscription} expired_date :  {expired_date}  current_date : {current_date}"
                 )
                 user_login = AuthService.reset_free_user(user_login)
+            created_at = user_login.created_at
 
             subscription_name = get_subscription_name(user_login.subscription)
 
@@ -254,6 +256,13 @@ class APIMe(Resource):
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)
 
+            can_download = AuthService.check_subscription_allowed(
+                user_dict["subscription"], created_at
+            )
+            user_dict["can_download"] = can_download
+            
+            # PaymentService.auto_renew_subscriptions()
+            
             try:
                 key_redis = const.REDIS_KEY_TOKTAK.get("user_info_me", "user:me")
                 redis_key = f"{key_redis}:{user_login.id}"
@@ -375,7 +384,7 @@ class APIMeUpdate(Resource):
                 user_id=user_login.id,
                 title=message,
             )
-            
+
             update_data["updated_at"] = datetime.now()
 
             user_login = AuthService.update(user_login.id, **update_data)
