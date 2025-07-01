@@ -216,6 +216,12 @@ def cleanup_request_log(app):
                 .filter(VideoCreate.created_at < three_days_ago)
                 .delete(synchronize_session=False)
             )
+            
+            notification_deleted = (
+                db.session.query(Notification)
+                .filter(Notification.created_at < five_days_ago)
+                .delete(synchronize_session=False)
+            )
 
             notification_deleted = (
                 db.session.query(Notification)
@@ -227,7 +233,11 @@ def cleanup_request_log(app):
             app.logger.info(
                 f"🧹 Đã xóa: {req_deleted} request_logs, {social_deleted} request_social_logs, "
                 f"{video_deleted} video_create cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+<<<<<<< HEAD
+                f"{notification_deleted} video_create cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+=======
                 f"{notification_deleted} notification cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+>>>>>>> 60a8c0dc993f2dcce2d9a9e80bf0e12f4ff63021
             )
         except Exception as e:
             db.session.rollback()
