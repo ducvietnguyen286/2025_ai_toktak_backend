@@ -588,3 +588,42 @@ class UserService:
         if not user:
             return None
         return user
+
+
+    @staticmethod
+    def report_users_dashboard(data_search):
+
+        histories = User.query
+
+        time_range = data_search.get("time_range", "")
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                histories = histories.filter(User.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                histories = histories.filter(User.created_at < to_date)
+
+        total = histories.count()
+
+        return total
