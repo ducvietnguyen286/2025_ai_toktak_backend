@@ -179,13 +179,12 @@ class APIReportDashboard(Resource):
         from_date = request.args.get("from_date", "", type=str)
         to_date = request.args.get("to_date", "", type=str)
         data_search = {
-            "type": "user",
-            "type_2": "NEW_USER",
             "time_range": selected_date_type,
             "from_date": from_date,
             "to_date": to_date,
         }
-        new_users = UserService.report_user_by_type(data_search)
+        # new_users = UserService.report_user_by_type(data_search)
+        new_users = UserService.report_users_dashboard(data_search)
 
         data_search = {
             "type": "referral",
