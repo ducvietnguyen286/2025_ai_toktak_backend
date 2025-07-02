@@ -384,6 +384,10 @@ class CoupangScraper:
                     verify=cert_ssl_path,
                 )
                 info = response.content
+                file_html = open("demo.html", "w", encoding="utf-8")
+                file_html.write(info.decode("utf-8"))
+                file_html.close()
+                break
 
                 html = BeautifulSoup(info, "html.parser")
                 ld_json = html.find("script", {"type": "application/ld+json"})
@@ -391,13 +395,10 @@ class CoupangScraper:
                     continue
                 break
 
-            # file_html = open("demo.html", "w", encoding="utf-8")
-            # file_html.write(info.decode("utf-8"))
-            # file_html.close()
-            if ld_json is None:
-                count = count + 1
-                return self.get_page_html(url, count, added_headers)
-            return {"html": html, "url": response.url, "headers": headers}
+            # if ld_json is None:
+            #     count = count + 1
+            #     return self.get_page_html(url, count, added_headers)
+            # return {"html": html, "url": response.url, "headers": headers}
         except Exception as e:
             logger.error(e)
             traceback.print_exc()
