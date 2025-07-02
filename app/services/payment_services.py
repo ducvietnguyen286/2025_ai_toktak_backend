@@ -833,6 +833,7 @@ class PaymentService:
                             "description": "Basic 추가 기능을 구매하세요.",
                             "value": 0,
                             "num_days": 0,
+                            "total_link_active": 0,
                         }
                         UserService.create_user_history(**data_user_history)
                 else:
@@ -873,6 +874,8 @@ class PaymentService:
                         "description": package_data["pack_description"],
                         "value": package_data["batch_total"],
                         "num_days": package_data["batch_remain"],
+                        "total_link_active": package_data["total_link_active"],
+                        "admin_description": package_name,
                     }
                     UserService.create_user_history(**data_user_history)
             else:
@@ -1129,14 +1132,68 @@ class PaymentService:
             )
 
     @staticmethod
+    def auto_payment_basic_free(user_id_login):
+        try:
+            user = UserService.find_user_with_out_session(user_id_login)
+            subscription = user.subscription
+
+            if subscription == "FREE":
+                now = datetime.now()
+            else:
+                now = user.subscription_expired
+            logger.info(f"auto_payment_basic_free {now} datetime")
+            today = now.date()
+            new_payment = PaymentService.create_new_payment(user, "BASIC")
+            payment_id = new_payment.id
+
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = (start_date + relativedelta(months=1)).replace(
+                hour=23, minute=59, second=59, microsecond=0
+            )
+            order_id = generate_order_id("free_basic")
+            data_update_payment = {
+                "order_id": order_id,
+                "method": "AUTO_FREE_BASIC",
+                "start_date": start_date,
+                "end_date": end_date,
+                "payment_key": "",
+                "payment_data": "",
+                "description": (
+                    f"[Free User when save Card]\n" f"Card Info: {user.card_info}\n"
+                ),
+            }
+            new_payment = PaymentService.update_payment(
+                new_payment.id, **data_update_payment
+            )
+
+            PaymentService.approvalPayment(payment_id)
+            data_email = {
+                "customer_name": user.name or user.email,
+                "start_date": new_payment.start_date.strftime("%Y-%m-%d"),
+                "end_date": new_payment.end_date.strftime("%Y-%m-%d"),
+            }
+
+            send_email(
+                user.email,
+                "무료 BASIC 요금제 제공 안내",
+                "free_basic_success.html",
+                data_email,
+            )
+            log_make_repayment_message(f"✅ Free Basic for user save Card {user.email}")
+
+        except Exception as ex:
+            tb = traceback.format_exc()
+            log_make_repayment_message(
+                f"[auto_renew_subscriptions] Exception: {ex}\n{tb}"
+            )
+
+    @staticmethod
     def deletePaymentNewUser(user_id):
         try:
             Payment.query.filter(
                 Payment.user_id == user_id,
                 Payment.method == "NEW_USER",
             ).delete(synchronize_session=False)
-            db.session.commit()
         except Exception as ex:
-            db.session.rollback()
             return 0
         return 1

@@ -133,6 +133,7 @@ class AuthService:
                 "description": "신규 가입 선물",
                 "value": 30,
                 "num_days": 30,
+                "total_link_active": 1,
             }
             UserService.create_user_history(**data_new_user_history)
 
@@ -323,7 +324,7 @@ class AuthService:
                 total_link_active = 1
                 batch_total = UserService.get_total_batch_total(user_id)
         elif user_subscription == "NEW_USER":
-            process_delete = PaymentService.deletePaymentNewUser(user_id)
+            PaymentService.deletePaymentNewUser(user_id)
         user_detail = AuthService.update(
             user_id,
             subscription=subscription,
