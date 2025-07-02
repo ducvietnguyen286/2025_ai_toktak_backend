@@ -1190,8 +1190,6 @@ class PaymentService:
                 Payment.user_id == user_id,
                 Payment.method == "NEW_USER",
             ).delete(synchronize_session=False)
-            db.session.commit()
         except Exception as ex:
-            db.session.rollback()
             return 0
         return 1
