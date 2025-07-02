@@ -1129,6 +1129,58 @@ class PaymentService:
             )
 
     @staticmethod
+    def auto_payment_basic_free(user_id_login):
+        try:
+            user = UserService.find_user_with_out_session(user_id_login)
+            now = datetime.now()
+            today = now.date()
+            new_payment = PaymentService.create_new_payment(user, "BASIC")
+            payment_id = new_payment.id
+
+            start_date = (now + timedelta(days=1)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            end_date = (start_date + relativedelta(months=1)).replace(
+                hour=23, minute=59, second=59, microsecond=0
+            )
+            order_id = generate_order_id()
+            data_update_payment = {
+                "order_id": order_id,
+                "method": "AUTO_RENEW",
+                "start_date": start_date,
+                "end_date": end_date,
+                "payment_key": "",
+                "payment_data": "",
+                "description": (
+                    f"[Free User when save Card]\n" f"Card Info: {user.card_info}\n"
+                ),
+            }
+            new_payment = PaymentService.update_payment(
+                new_payment.id, **data_update_payment
+            )
+
+            PaymentService.approvalPayment(payment_id)
+            data_email = {
+                "customer_name": user.name or user.email,
+                "start_date": new_payment.start_date.strftime("%Y-%m-%d"),
+                "end_date": new_payment.end_date.strftime("%Y-%m-%d"),
+            }
+
+            send_email(
+                user.email,
+                "무료 BASIC 요금제 제공 안내",
+                "free_basic_success.html",
+                data_email,
+            )
+            log_make_repayment_message(f"✅ Free Basic for user save Card {user.email}")
+
+        except Exception as ex:
+            tb = traceback.format_exc()
+            log_make_repayment_message(
+                f"[auto_renew_subscriptions] Exception: {ex}\n{tb}"
+            )
+
+    @staticmethod
     def deletePaymentNewUser(user_id):
         try:
             Payment.query.filter(

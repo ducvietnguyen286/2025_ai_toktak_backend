@@ -378,10 +378,10 @@ def get_subscription_name(subscription):
         if subscription == "FREE":
             subscription_name = "무료 체험"
         elif subscription == "COUPON_STANDARD":
-            subscription_name = "기업형 스탠다드 플랜"
-        elif subscription == "NEW_USER":
-            subscription_name = "베이직 플랜"
+            subscription_name = "쿠폰"
         elif subscription == "COUPON_KOL":
+            subscription_name = "쿠폰"
+        elif subscription == "NEW_USER":
             subscription_name = "베이직 플랜"
         else:
             package_data = const.PACKAGE_CONFIG.get(subscription_name)
