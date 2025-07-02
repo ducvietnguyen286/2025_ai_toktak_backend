@@ -245,6 +245,7 @@ class APIUsedCoupon(Resource):
                         "description": coupon_code.code,
                         "value": coupon_code.value,
                         "num_days": coupon_code.num_days,
+                        "total_link_active": coupon_code.total_link_active,
                     }
 
                     UserService.create_user_history(**data_user_history)

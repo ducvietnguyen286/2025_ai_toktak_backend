@@ -833,6 +833,7 @@ class PaymentService:
                             "description": "Basic 추가 기능을 구매하세요.",
                             "value": 0,
                             "num_days": 0,
+                            "total_link_active": 0,
                         }
                         UserService.create_user_history(**data_user_history)
                 else:
