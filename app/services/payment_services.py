@@ -873,6 +873,8 @@ class PaymentService:
                         "description": package_data["pack_description"],
                         "value": package_data["batch_total"],
                         "num_days": package_data["batch_remain"],
+                        "total_link_active": package_data["total_link_active"],
+                        "admin_description": package_name,
                     }
                     UserService.create_user_history(**data_user_history)
             else:
@@ -1143,10 +1145,10 @@ class PaymentService:
             end_date = (start_date + relativedelta(months=1)).replace(
                 hour=23, minute=59, second=59, microsecond=0
             )
-            order_id = generate_order_id()
+            order_id = generate_order_id("free_basic")
             data_update_payment = {
                 "order_id": order_id,
-                "method": "AUTO_RENEW",
+                "method": "AUTO_FREE_BASIC",
                 "start_date": start_date,
                 "end_date": end_date,
                 "payment_key": "",
