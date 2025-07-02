@@ -348,6 +348,10 @@ class UserService:
                 synchronize_session=False
             )
 
+            UserHistory.query.filter(UserHistory.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+
             User.query.filter(User.id.in_(user_ids)).delete(synchronize_session=False)
 
             db.session.commit()
@@ -588,7 +592,6 @@ class UserService:
         if not user:
             return None
         return user
-
 
     @staticmethod
     def report_users_dashboard(data_search):

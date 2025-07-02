@@ -9,7 +9,7 @@ from app.services.notification import NotificationServices
 from app.services.user import UserService
 from app.decorators import parameters, admin_required
 from app.lib.response import Response
-from app.lib.logger import logger
+from app.lib.logger import logger, log_make_repayment_message
 from dateutil.parser import isoparse
 import const
 import traceback
@@ -583,9 +583,9 @@ class APIBillingAuthorizations(Resource):
             }
 
             PaymentService.create_payment_log(**payment_data_log)
-            logger.info("_------------------------------------payment_data_log")
-            logger.info(payment_data_log)
-            logger.info(payment_data)
+            log_make_repayment_message("------------payment_data_log------------")
+            log_make_repayment_message(payment_data_log)
+            log_make_repayment_message(payment_data)
 
             if status_code == 200:
                 # Thanh toán thành công, cập nhật DB
@@ -593,6 +593,8 @@ class APIBillingAuthorizations(Resource):
                     "card_info": json.dumps(payment_data),
                 }
                 UserService.update_user(user_detail.id, **data_update_user)
+                # Tặng 1 tháng BASIC miễn phí
+                PaymentService.auto_payment_basic_free(user_id_login)
 
                 return Response(
                     message="Tosspayment 결제가 완료되었습니다",
@@ -604,6 +606,7 @@ class APIBillingAuthorizations(Resource):
 
             return Response(
                 message=message,
+                message_en="Payment error via Tosspayment",
                 data={
                     "status": "FAILED",
                     "fail_reason": payment_data.get("message", "Thanh toán thất bại"),

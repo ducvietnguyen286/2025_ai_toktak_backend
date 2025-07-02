@@ -276,6 +276,7 @@ class NiceAuthService:
                         "description": basic_package["pack_description"],
                         "value": basic_package["batch_total"],
                         "num_days": basic_package["batch_remain"],
+                        "total_link_active": basic_package["total_link_active"],
                     }
                     UserService.create_user_history(**data_user_history)
 

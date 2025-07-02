@@ -133,6 +133,7 @@ class AuthService:
                 "description": "신규 가입 선물",
                 "value": 30,
                 "num_days": 30,
+                "total_link_active": 1,
             }
             UserService.create_user_history(**data_new_user_history)
 
