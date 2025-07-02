@@ -26,7 +26,7 @@ class CoupangScraper:
         self.count_retry = 5
 
     def run(self):
-        return self.run_puppeteer()
+        return self.run_crawler_mobile()
 
     def proxies(self, index=0):
         proxies = [
