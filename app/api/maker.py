@@ -310,6 +310,10 @@ class APICreateBatchSync(Resource):
 
             batch_res = batch._to_json()
             batch_res["posts"] = posts
+            
+            name = data.get("name")
+            product_name = name[:10] if isinstance(name, str) else ""
+            batch_res["product_name"] = product_name
 
             batch_id = batch.id
 
