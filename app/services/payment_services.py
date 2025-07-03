@@ -1135,14 +1135,18 @@ class PaymentService:
     def auto_payment_basic_free(user_id_login):
         try:
             user = UserService.find_user_with_out_session(user_id_login)
-            now = datetime.now()
+            subscription = user.subscription
+
+            if subscription == "FREE":
+                now = datetime.now()
+            else:
+                now = user.subscription_expired
+            logger.info(f"auto_payment_basic_free {now} datetime")
             today = now.date()
             new_payment = PaymentService.create_new_payment(user, "BASIC")
             payment_id = new_payment.id
 
-            start_date = (now + timedelta(days=1)).replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
             end_date = (start_date + relativedelta(months=1)).replace(
                 hour=23, minute=59, second=59, microsecond=0
             )
@@ -1190,8 +1194,6 @@ class PaymentService:
                 Payment.user_id == user_id,
                 Payment.method == "NEW_USER",
             ).delete(synchronize_session=False)
-            db.session.commit()
         except Exception as ex:
-            db.session.rollback()
             return 0
         return 1

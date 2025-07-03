@@ -244,7 +244,7 @@ class APIMe(Resource):
             )
             if expired_date and expired_date < current_date:
                 log_reset_user_message(
-                    f"Reset User : {user_login.id}  from {user_login.subscription} expired_date :  {expired_date}  current_date : {current_date}"
+                    f"Reset User : {user_login.id} {user_login.email}  from {user_login.subscription} expired_date :  {expired_date}  current_date : {current_date}"
                 )
                 user_login = AuthService.reset_free_user(user_login)
             created_at = user_login.created_at
