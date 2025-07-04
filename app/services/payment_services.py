@@ -808,7 +808,12 @@ class PaymentService:
                             code=201,
                         ).to_dict()
 
-            payment = PaymentService.update_payment(payment_id, status="PAID")
+            data_payment = {
+                "status": "PAID",
+                "approved_at": datetime.now(),
+            }
+
+            payment = PaymentService.update_payment(payment_id, **data_payment)
             if payment:
                 user_id = payment.user_id
                 package_name = payment.package_name
@@ -962,6 +967,7 @@ class PaymentService:
             expiring_payments = Payment.query.filter(
                 func.date(Payment.end_date) == today,
                 Payment.status == "PAID",
+                Payment.is_renew == 0,
                 Payment.method != "NEW_USER",
             ).all()
 
@@ -974,11 +980,15 @@ class PaymentService:
                 order_id = generate_order_id("renew")
                 new_package_info = const.PACKAGE_CONFIG.get(old_payment.package_name)
                 if not new_package_info:
-                    log_make_repayment_message(f"User {user.id} {user.email} {old_payment.package_name} không tồn tại.")
+                    log_make_repayment_message(
+                        f"User {user.id} {user.email} {old_payment.package_name} không tồn tại."
+                    )
                     continue
 
                 if not user or not user.card_info:
-                    log_make_repayment_message(f"User {user.id} {user.email} hkhông đăng kí thẻ để tự động gia hạn .")
+                    log_make_repayment_message(
+                        f"User {user.id} {user.email} hkhông đăng kí thẻ để tự động gia hạn ."
+                    )
                     continue
                 log_make_repayment_message(user.card_info)
                 card_info_json = json.loads(user.card_info)
@@ -1092,6 +1102,11 @@ class PaymentService:
                     }
                     PaymentService.create_payment_log(**payment_data_log)
 
+                    data_update_old_payment = {"is_renew": 1}
+                    PaymentService.update_payment(
+                        old_payment_id, **data_update_old_payment
+                    )
+
                     send_email(
                         user.email,
                         "요금제 자동 결제가 완료되었습니다",
@@ -1112,7 +1127,14 @@ class PaymentService:
                         f"- Lỗi: {fail_msg}\n"
                         f"- API Result: {api_result_str}"
                     )
-                    old_payment.description = error_message
+                    data_update_old_payment = {
+                        "description": error_message,
+                        "is_renew": 1,
+                    }
+                    PaymentService.update_payment(
+                        old_payment_id, **data_update_old_payment
+                    )
+
                     log_make_repayment_message(
                         f"❌ Gia hạn thất bại cho user {user.email}: {fail_msg}"
                     )

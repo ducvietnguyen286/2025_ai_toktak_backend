@@ -50,7 +50,7 @@ class APICreateNewPayment(Resource):
         if active:
             active_status = active.status
             if active_status == "PENDING":
-                message = f"{package_name} 패키지를 구매하셨습니다.<br> 서비스 이용을 위해 시스템의 확인을 기다려 주세요."
+                message = f"고객님께서 {package_name} 패키지 구매를 요청하셨습니다. 서비스 이용을 위해 시스템의 확인을 기다려 주시기 바랍니다."
                 message_en = f" You have purchased the {package_name} package. Please wait for system confirmation to start using the service."
                 return Response(
                     message=message, message_en=message_en, code=201
