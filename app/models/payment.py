@@ -32,6 +32,7 @@ class Payment(db.Model, BaseModel):
     payment_key = db.Column(db.String(255), nullable=False)
     payment_data = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text, nullable=False)
+    is_renew = db.Column(db.Integer, default=0)
 
     created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(
@@ -63,6 +64,7 @@ class Payment(db.Model, BaseModel):
             "parent_id": self.parent_id,
             "fail_reason": self.fail_reason,
             "description": self.description,
+            "is_renew": self.is_renew,
             "requested_at": (
                 self.requested_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.requested_at
