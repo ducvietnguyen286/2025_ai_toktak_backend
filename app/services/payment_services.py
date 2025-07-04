@@ -958,7 +958,7 @@ class PaymentService:
             # chạy lúc 23 giờ đêm mỗi ngày
             now = datetime.now()
             today = now.date()
-            log_make_repayment_message("[auto_renew_subscriptions] ")
+            log_make_repayment_message("Begin[auto_renew_subscriptions] ")
             expiring_payments = Payment.query.filter(
                 func.date(Payment.end_date) == today,
                 Payment.status == "PAID",
@@ -970,13 +970,15 @@ class PaymentService:
                 old_payment_amount = old_payment.amount
 
                 user = old_payment.user
-                log_make_repayment_message(f"User {user.id} hết hạn .")
+                log_make_repayment_message(f"User {user.id} {user.email} hết hạn .")
                 order_id = generate_order_id("renew")
                 new_package_info = const.PACKAGE_CONFIG.get(old_payment.package_name)
                 if not new_package_info:
+                    log_make_repayment_message(f"User {user.id} {user.email} {old_payment.package_name} không tồn tại.")
                     continue
 
                 if not user or not user.card_info:
+                    log_make_repayment_message(f"User {user.id} {user.email} hkhông đăng kí thẻ để tự động gia hạn .")
                     continue
                 log_make_repayment_message(user.card_info)
                 card_info_json = json.loads(user.card_info)
@@ -985,7 +987,7 @@ class PaymentService:
 
                 if not billing_key or not customer_key:
                     log_make_repayment_message(
-                        f"❌ User {user.id} thiếu billingKey hoặc customerKey, bỏ qua."
+                        f"❌ User {user.id} {user.email}  thiếu billingKey hoặc customerKey, bỏ qua."
                     )
                     continue
                 order_id = generate_order_id("renew")
