@@ -42,10 +42,10 @@ from app.models.notification import Notification
 from app.models.request_log import RequestLog
 from app.models.request_social_log import RequestSocialLog
 from app.models.video_create import VideoCreate
- 
+
 from sqlalchemy import or_, text
 
-from app.third_parties.telegram import   send_slack_message
+from app.third_parties.telegram import send_slack_message
 
 
 UPLOAD_BASE_PATH = "uploads"
@@ -76,8 +76,7 @@ def configure_logging(app):
         os.makedirs(LOG_DIR)
 
     log_filename = os.path.join(
-        LOG_DIR,
-        f"schedule_tasks_{datetime.now().strftime('%Y-%m-%d')}.log"
+        LOG_DIR, f"schedule_tasks_{datetime.now().strftime('%Y-%m-%d')}.log"
     )
 
     file_handler = TimedRotatingFileHandler(
@@ -116,8 +115,6 @@ def delete_folder_if_exists(folder_path, app):
     except Exception as e:
         app.logger.error(f"Error deleting folder {folder_path}: {str(e)}")
 
-
- 
 
 def cleanup_pending_batches(app):
     """Xóa Batch có process_status = 'PENDING', các Post liên quan và thư mục"""
@@ -231,7 +228,7 @@ def cleanup_request_log(app):
             # CRITICAL: Cleanup session to prevent connection leaks
             db.session.remove()
 
- 
+
 def auto_extend_subscription_task(app):
     app.logger.info("Start auto_extend_subscription_task...")
     with app.app_context():
@@ -359,7 +356,6 @@ def start_scheduler(app):
 
     every_3_hours_trigger = CronTrigger(hour="*/3", minute=0, timezone=kst)
 
-
     scheduler.add_job(
         func=lambda: cleanup_pending_batches(app),
         trigger=one_am_kst_trigger,
@@ -371,19 +367,18 @@ def start_scheduler(app):
         id="cleanup_request_log",
     )
 
-  
     scheduler.add_job(
-        func=exchange_facebook_token,
+        func=lambda: exchange_facebook_token(app),
         trigger=two_am_kst_trigger,
         id="exchange_facebook_token",
     )
     scheduler.add_job(
-        func=exchange_instagram_token,
+        func=lambda: exchange_instagram_token(app),
         trigger=three_am_kst_trigger,
         id="exchange_instagram_token",
     )
     scheduler.add_job(
-        func=exchange_thread_token,
+        func=lambda: exchange_thread_token(app),
         trigger=four_am_kst_trigger,
         id="exchange_thread_token",
     )
