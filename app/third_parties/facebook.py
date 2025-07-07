@@ -225,8 +225,8 @@ class FacebookTokenService:
 
                 return True
             else:
-                user_link.status = 0
-                user_link.save()
+                # user_link.status = 0
+                # user_link.save()
 
                 log_facebook_message(f"Error exchanging token: {data}")
                 return False
