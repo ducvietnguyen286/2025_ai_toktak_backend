@@ -575,31 +575,40 @@ class APIGetBatch(Resource):
                     message="Bạn không có quyền truy cập",
                     status=403,
                 ).to_dict()
+            batch = redis_client.get(f"toktak:batch:{id}")
+            if not batch:
+                batch = BatchService.find_batch(id)
+                if batch:
+                    batch = batch._to_json()
+                    redis_client.set(
+                        f"toktak:batch:{id}",
+                        json.dumps(batch),
+                        ex=60 * 60 * 24,
+                    )
+            else:
+                batch = json.loads(batch)
 
-            batch = BatchService.find_batch(id)
             if not batch:
                 return Response(
                     message="Batch không tồn tại",
                     status=404,
                 ).to_dict()
 
-            if user_id != batch.user_id:
+            if user_id != batch.get("user_id"):
                 return Response(
                     message="Bạn không có quyền truy cập",
                     status=403,
                 ).to_dict()
 
-            posts = PostService.get_posts_by_batch_id(batch.id)
+            posts = PostService.get_posts_by_batch_id(batch.get("id"))
 
-            batch_res = batch._to_json()
-            batch_res["posts"] = posts
+            batch["posts"] = posts
 
-            user_id = AuthService.get_user_id()
             user_info = UserService.get_user_info_detail(user_id)
-            batch_res["user_info"] = user_info
+            batch["user_info"] = user_info
 
             return Response(
-                data=batch_res,
+                data=batch,
                 message="Lấy batch thành công",
             ).to_dict()
         except Exception as e:

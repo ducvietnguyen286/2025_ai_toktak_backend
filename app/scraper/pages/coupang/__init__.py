@@ -69,11 +69,11 @@ class CoupangScraper:
         req_id = str(uuid.uuid4())
         real_url = self.url
 
-        # mobile_url = get_real_url(real_url)
+        mobile_url = get_real_url(real_url)
 
         task = {
             "req_id": req_id,
-            "url": real_url,
+            "url": mobile_url,
         }
         # Publish task to puppeteer service
         redis_client.rpush("toktak:coupang_tasks", json.dumps(task))
