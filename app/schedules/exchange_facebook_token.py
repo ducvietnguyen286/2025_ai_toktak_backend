@@ -29,5 +29,5 @@ def exchange_facebook_token(app):
             access_token = meta.get("access_token")
 
             FacebookTokenService().exchange_token(
-                user_link=user_link, access_token=access_token
+                user_link_id=user_link.id, access_token=access_token
             )
