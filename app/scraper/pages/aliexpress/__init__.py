@@ -18,7 +18,7 @@ class AliExpressScraper:
         return self.run_scraper()
 
     def run_scraper(self):
-        real_url = get_real_url(real_url)
+        real_url = get_real_url(self.url)
 
         # Push
 
