@@ -70,7 +70,6 @@ class ProductService:
             query = query.filter(Product.user_id == data_search["user_id"])
 
         if "group_id" in data_search  :
-            logger.info(f"data_search: {data_search}")
             query = query.filter(Product.group_id == data_search["group_id"])
 
         # Xử lý type_order
