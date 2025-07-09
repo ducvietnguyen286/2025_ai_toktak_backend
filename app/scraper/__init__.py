@@ -54,7 +54,6 @@ class Scraper:
             params["netloc"] = netloc
             urls = [
                 "https://scraper.vodaplay.vn/api/v1/maker/create-scraper",
-                "https://apitoktak.voda-play.com/api/v1/maker/create-scraper",
                 "https://scraper.play-tube.net/api/v1/maker/create-scraper",
                 "https://scraper.canvasee.com/api/v1/maker/create-scraper",
                 "https://scraper.bodaplay.ai/api/v1/maker/create-scraper",
@@ -92,8 +91,7 @@ class Scraper:
             "url": params["url"],
         }
 
-        response = requests.post(url, json=data_post)
-
+        response = requests.post(url, json=data_post, timeout=10)
         # Kiểm tra trạng thái HTTP trước
         if response.ok:
             result = response.json()
@@ -102,12 +100,6 @@ class Scraper:
             if result.get("code") == 200:
                 return result.get("data")  # Lấy dữ liệu khi code == 200
             else:
-                logger.error(
-                    f"Lỗi {url} từ API: code = {result.get('code')}, message = {result.get('message')}"
-                )
                 return None
         else:
-            logger.error(
-                f"Lỗi {url} HTTP: {response.status_code}, Nội dung lỗi: {response.text}"
-            )
             return None

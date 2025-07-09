@@ -216,7 +216,7 @@ def cleanup_request_log(app):
                 .filter(VideoCreate.created_at < three_days_ago)
                 .delete(synchronize_session=False)
             )
-            
+
             notification_deleted = (
                 db.session.query(Notification)
                 .filter(Notification.created_at < five_days_ago)
@@ -385,8 +385,6 @@ def start_scheduler(app):
 
     every_3_hours_trigger = CronTrigger(hour="*/3", minute=0, timezone=kst)
     eleven_pm_kst_trigger = CronTrigger(hour=23, minute=0, timezone=kst)
-    
-    
 
     scheduler.add_job(
         func=lambda: cleanup_pending_batches(app),
@@ -400,17 +398,17 @@ def start_scheduler(app):
     )
 
     scheduler.add_job(
-        func=exchange_facebook_token,
+        func=lambda: exchange_facebook_token(app),
         trigger=two_am_kst_trigger,
         id="exchange_facebook_token",
     )
     scheduler.add_job(
-        func=exchange_instagram_token,
+        func=lambda: exchange_instagram_token(app),
         trigger=three_am_kst_trigger,
         id="exchange_instagram_token",
     )
     scheduler.add_job(
-        func=exchange_thread_token,
+        func=lambda: exchange_thread_token(app),
         trigger=four_am_kst_trigger,
         id="exchange_thread_token",
     )
@@ -420,13 +418,13 @@ def start_scheduler(app):
         trigger=twelve_oh_one_trigger,
         id="auto_extend_subscription_task",
     )
-    
+
     scheduler.add_job(
         func=lambda: auto_extend_payment_task(app),
         trigger=eleven_pm_kst_trigger,
         id="auto_extend_payment_task",
     )
-     
+
     # Auto kill long database connections every minute
     scheduler.add_job(
         func=lambda: auto_kill_long_connections(app),
