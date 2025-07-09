@@ -23,27 +23,78 @@ class CoupangScraper:
     def __init__(self, params):
         self.url = params["url"]
         self.fire_crawl_key = ""
+        self.count_retry = 5
 
     def run(self):
         return self.run_crawler_mobile()
 
-    def proxies(self):
+    def proxies(self, index=0):
         proxies = [
-            "http://brd-customer-hl_8019b21f-zone-scraping_browser2-country-kr:wyfmhy3tqffj@brd.superproxy.io:33335",
-            "http://brd-customer-hl_8019b21f-zone-scraping_browser2-country-il:wyfmhy3tqffj@brd.superproxy.io:33335",
+            {
+                "server": "http://brd-customer-hl_8019b21f-zone-scraping_browser2-country-kr:wyfmhy3tqffj@brd.superproxy.io:33335",
+                "is_crt": True,
+            },
+            {
+                "server": "http://brd-customer-hl_8019b21f-zone-scraping_browser2-country-il:wyfmhy3tqffj@brd.superproxy.io:33335",
+                "is_crt": True,
+            },
+            {
+                "server": "http://27222558ddfa5c9d6449__cr.kr:69271afa03d6c430@gw.dataimpulse.com:823",
+                "is_crt": False,
+            },
+            {
+                "server": "http://spfvio0gqs:ypnQgFBX0r_ot377ec@kr.decodo.com:10000",
+                "is_crt": False,
+            },
+            {
+                "server": "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80",
+                "is_crt": False,
+            },
         ]
-
-        random_proxy = random.choice(proxies)
-        # old_proxy = "http://hekqlibd-rotate:llv12cujeqjr@p.webshare.io:80/"
-        # proxy = "http://b45ba2a7:xyuhqzh7dlyu@proxy.toolip.io:31113"
+        random_proxy = proxies[index] if index < len(proxies) else proxies[0]
         return {
-            "http": random_proxy,
-            "https": random_proxy,
+            "server": {
+                "http": random_proxy["server"],
+                "https": random_proxy["server"],
+            },
+            "is_crt": random_proxy["is_crt"],
+            "count": 3,
         }
 
     def cert_ssl_path(self):
         COUPANG_FOLDER = os.path.join(os.getcwd(), "app/scraper/pages/coupang")
         return os.path.join(COUPANG_FOLDER, "ca_cert.crt")
+
+    def run_puppeteer(self):
+        req_id = str(uuid.uuid4())
+        real_url = self.url
+
+        mobile_url = get_real_url(real_url)
+
+        task = {
+            "req_id": req_id,
+            "url": mobile_url,
+        }
+        # Publish task to puppeteer service
+        redis_client.rpush("toktak:coupang_tasks", json.dumps(task))
+
+        timeout = 30  # Giây
+        start_time = time.time()
+        print(f"Waiting for puppeteer result for req_id: {req_id}")
+        while time.time() - start_time < timeout:
+            result = redis_client.get(f"toktak:coupang_results:{req_id}")
+            if result:
+                redis_client.delete(f"toktak:coupang_results:{req_id}")
+                data = json.loads(result.decode("utf-8"))
+                if "error" in data:
+                    return None
+                return data
+            time.sleep(1)
+
+        redis_client.delete(f"toktak:coupang_results:{req_id}")
+
+        print(f"Timeout waiting for puppeteer result for req_id: {req_id}")
+        return None
 
     def run_selenium(self):
         try:
@@ -51,33 +102,7 @@ class CoupangScraper:
 
             real_url = self.url
 
-            parsed_url = urlparse(real_url)
-            netloc = parsed_url.netloc
-
-            if netloc == "link.coupang.com":
-                real_url = self.un_shortend_url(real_url)
-                parsed_url = urlparse(real_url)
-
-            path = parsed_url.path
-
-            query_params = parsed_url.query
-            query_params_dict = parse_qs(query_params)
-
-            item_id = query_params_dict.get("itemId")
-            vendor_item_id = query_params_dict.get("vendorItemId")
-
-            path = path.replace("/vp/", "/vm/")
-            target_item_id = item_id[0] if item_id else ""
-            target_vendor_item_id = vendor_item_id[0] if vendor_item_id else ""
-
-            path_mobile = path
-            query_params = ""
-            if target_item_id != "":
-                query_params = query_params + "&itemId=" + target_item_id
-            if target_vendor_item_id != "":
-                query_params = query_params + "&vendorItemId=" + target_vendor_item_id
-            query_params = query_params[1:]
-            real_url = "https://m.coupang.com" + path_mobile + "?" + query_params
+            real_url = get_real_url(real_url)
 
             task = {
                 "req_id": req_id,
@@ -113,36 +138,6 @@ class CoupangScraper:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
             return {}
-        try:
-            cookie_jar = CookieJar()
-            session = requests.Session()
-            session.cookies = cookie_jar
-            headers = random_mobile_header()
-            user_agent = generate_desktop_user_agent()
-            headers.update({"user-agent": user_agent})
-
-            logger.info("Unshortend URL: {0}".format(url))
-            response = session.get(
-                url, allow_redirects=False, headers=headers, timeout=5
-            )
-            if "Location" in response.headers:
-                redirect_url = response.headers["Location"]
-                if not urlparse(redirect_url).netloc:
-                    redirect_url = (
-                        urlparse("https://www.coupang.com")
-                        ._replace(path=redirect_url)
-                        .geturl()
-                    )
-                logger.info("Unshortend URL AFTER 22: {0}".format(redirect_url))
-                return redirect_url
-            else:
-                return url
-        except Exception as e:
-            logger.error("Exception: {0}".format(str(e)))
-            traceback.print_exc()
-            if retry < 3:
-                return self.un_shortend_url(url, retry + 1)
-            return url
 
     def run_crawler_mobile(self):
         try:
@@ -204,15 +199,20 @@ class CoupangScraper:
                 product_id, item_id[0] or "", vendor_item_id[0] or ""
             )
 
-            proxies = self.proxies()
-            cert_ssl_path = self.cert_ssl_path()
+            proxies = self.proxies(retry)
+            server = proxies["server"]
+            is_crt = proxies["is_crt"]
+            if is_crt:
+                cert_ssl_path = self.cert_ssl_path()
+            else:
+                cert_ssl_path = None
 
             session = requests.Session()
             response = session.get(
                 btf_url,
                 headers=headers,
                 timeout=5,
-                proxies=proxies,
+                proxies=server,
                 verify=cert_ssl_path,
             )
             btf_content = response.json()
@@ -318,7 +318,7 @@ class CoupangScraper:
         except Exception as e:
             logger.error("Exception GET COUPANG BRF: {0}".format(str(e)))
             traceback.print_exc()
-            if retry < 3:
+            if retry < self.count_retry:
                 return self.get_coupang_btf_content(meta_url, headers, retry + 1)
             return {
                 "images": [],
@@ -352,7 +352,7 @@ class CoupangScraper:
 
     def get_page_html(self, url, count=0, added_headers=None):
         try:
-            if count > 5:
+            if count > self.count_retry:
                 return False
 
             cookie_jar = CookieJar()
@@ -362,27 +362,43 @@ class CoupangScraper:
             if added_headers is not None:
                 headers.update(added_headers)
 
-            proxies = self.proxies()
-            cert_ssl_path = self.cert_ssl_path()
+            proxies = self.proxies(count)
+            server = proxies["server"]
+            is_crt = proxies["is_crt"]
+            number_retry = proxies["count"]
+            if is_crt:
+                cert_ssl_path = self.cert_ssl_path()
+            else:
+                cert_ssl_path = None
 
-            response = session.get(
-                url,
-                headers=headers,
-                timeout=5,
-                proxies=proxies,
-                verify=cert_ssl_path,
-            )
-            info = response.content
+            while number_retry > 0:
+                headers.update({"user-agent": generate_user_agent()})
+                number_retry = number_retry - 1
+                print("number_retry", number_retry)
+                print("count", count)
+                response = session.get(
+                    url,
+                    headers=headers,
+                    timeout=5,
+                    proxies=server,
+                    verify=cert_ssl_path,
+                )
+                info = response.content
+                file_html = open("demo.html", "w", encoding="utf-8")
+                file_html.write(info.decode("utf-8"))
+                file_html.close()
+                break
 
-            html = BeautifulSoup(info, "html.parser")
-            # file_html = open("demo.html", "w", encoding="utf-8")
-            # file_html.write(info.decode("utf-8"))
-            # file_html.close()
-            ld_json = html.find("script", {"type": "application/ld+json"})
-            if ld_json is None:
-                count = count + 1
-                return self.get_page_html(url, count, added_headers)
-            return {"html": html, "url": response.url, "headers": headers}
+                html = BeautifulSoup(info, "html.parser")
+                ld_json = html.find("script", {"type": "application/ld+json"})
+                if ld_json is None:
+                    continue
+                break
+
+            # if ld_json is None:
+            #     count = count + 1
+            #     return self.get_page_html(url, count, added_headers)
+            # return {"html": html, "url": response.url, "headers": headers}
         except Exception as e:
             logger.error(e)
             traceback.print_exc()

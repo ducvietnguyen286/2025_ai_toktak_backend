@@ -86,7 +86,7 @@ class Scraper:
             "url": params["url"],
         }
 
-        response = requests.post(url, json=data_post, timeout=10)
+        response = requests.post(url, json=data_post, timeout=5)
 
         # Kiểm tra trạng thái HTTP trước
         if response.ok:
