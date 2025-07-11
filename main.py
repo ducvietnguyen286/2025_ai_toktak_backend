@@ -6,7 +6,7 @@ monkey.patch_all()
 import os
 
 from dotenv import load_dotenv
-from flask import app, request
+from flask import abort, send_from_directory, request, jsonify
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path=dotenv_path, override=True)
@@ -42,6 +42,21 @@ def index():
         return {
             "message": "Welcome to the Flask API",
         }
+
+
+@application.route("/files/<path:filename>")
+def get_file(filename):
+    try:
+        return send_from_directory(UPLOAD_FOLDER, filename)
+    except FileNotFoundError:
+        abort(404)
+
+
+@application.route("/voice/<path:filename>")
+def serve_static(filename):
+    return send_from_directory(VOICE_FOLDER, filename)
+
+
 
 
 if __name__ == "__main__":

@@ -384,9 +384,6 @@ def start_scheduler(app):
     twelve_oh_one_trigger = CronTrigger(hour=0, minute=1, timezone=kst)
 
     every_3_hours_trigger = CronTrigger(hour="*/3", minute=0, timezone=kst)
-    eleven_pm_kst_trigger = CronTrigger(hour=23, minute=0, timezone=kst)
-    
-    
 
     scheduler.add_job(
         func=lambda: cleanup_pending_batches(app),
@@ -400,17 +397,17 @@ def start_scheduler(app):
     )
 
     scheduler.add_job(
-        func=exchange_facebook_token,
+        func=lambda: exchange_facebook_token(app),
         trigger=two_am_kst_trigger,
         id="exchange_facebook_token",
     )
     scheduler.add_job(
-        func=exchange_instagram_token,
+        func=lambda: exchange_instagram_token(app),
         trigger=three_am_kst_trigger,
         id="exchange_instagram_token",
     )
     scheduler.add_job(
-        func=exchange_thread_token,
+        func=lambda: exchange_thread_token(app),
         trigger=four_am_kst_trigger,
         id="exchange_thread_token",
     )

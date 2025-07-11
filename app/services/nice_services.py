@@ -1,4 +1,4 @@
-from app.lib.logger import logger
+from app.lib.logger import logger, log_nice_verify_message
 import subprocess
 import os
 from app.services.user import UserService
@@ -47,7 +47,9 @@ class NiceAuthService:
             user_data = UserService.find_user(user_id)
 
             if user_data:
-                UserService.update_user_with_out_session(user_id, password_certificate=reqseq)
+                UserService.update_user_with_out_session(
+                    user_id, password_certificate=reqseq
+                )
             else:
                 return {
                     "code": 201,
@@ -57,7 +59,7 @@ class NiceAuthService:
 
             returnurl = url_verify_result
             errorurl = url_verify_result
-            logger.info("---------------------------------------")
+            log_nice_verify_message("---------------------------------------")
             # Tạo plain data
             plaindata = (
                 f"7:REQ_SEQ{len(reqseq)}:{reqseq}"
@@ -82,17 +84,17 @@ class NiceAuthService:
                 "EncodeData": enc_data,
                 "endpoint": "https://nice.checkplus.co.kr/CheckPlusSafeModel/checkplus.cb",
             }
-            logger.info("---------------------------------------")
-            logger.info(result_item)
+            log_nice_verify_message("---------------------------------------")
+            log_nice_verify_message(result_item)
 
             return {"code": result_code, "message": return_msg, "data": result_item}
 
         except subprocess.CalledProcessError as e:
             return_msg = f"Command execution error: {e.output.decode()}"
-            logger.info(return_msg)
+            log_nice_verify_message(return_msg)
         except Exception as e:
             return_msg = str(e)
-            logger.info(return_msg)
+            log_nice_verify_message(return_msg)
 
         return {"code": 500, "message": return_msg, "data": result_item}
 
@@ -255,7 +257,9 @@ class NiceAuthService:
                         "total_link_active": basic_package["total_link_active"],
                     }
 
-                    UserService.update_user_with_out_session(referred_user_id, **referred_update_data)
+                    UserService.update_user_with_out_session(
+                        referred_user_id, **referred_update_data
+                    )
 
                     message = f"링크 초대로 가입이 완료되었습니다. 계정이 BASIC 요금제로 업그레이드되었으며, 사용 기간은 {referred_subscription_expired.strftime('%Y-%m-%d')}부터 {expire_date.strftime('%Y-%m-%d')}까지입니다."
                     NotificationServices.create_notification(
@@ -369,11 +373,15 @@ class NiceAuthService:
                 }
 
         except Exception as e:
-            logger.error("===== NiceAuthService checkplus_success Error =====")
-            logger.error(f"EncodeData: {enc_data}")
-            logger.error(f"Error: {str(e)}")
-            logger.error("Traceback:")
-            logger.error(traceback.format_exc())  # Ghi log traceback để biết dòng lỗi
+            log_nice_verify_message(
+                "===== NiceAuthService checkplus_success Error ====="
+            )
+            log_nice_verify_message(f"EncodeData: {enc_data}")
+            log_nice_verify_message(f"Error: {str(e)}")
+            log_nice_verify_message("Traceback:")
+            log_nice_verify_message(
+                traceback.format_exc()
+            )  # Ghi log traceback để biết dòng lỗi
             return {"code": 500, "message": str(e), "data": result_item}
 
     @staticmethod
@@ -400,7 +408,9 @@ class NiceAuthService:
             try:
                 plaindata = result.stdout.decode("euc-kr")
             except UnicodeDecodeError:
-                logger.warning("stdout decoding failed. Attempting latin1 fallback.")
+                log_nice_verify_message(
+                    "stdout decoding failed. Attempting latin1 fallback."
+                )
                 plaindata = result.stdout.decode("latin1")  # fallback nếu cần
 
         except subprocess.CalledProcessError as e:
@@ -409,12 +419,9 @@ class NiceAuthService:
             except Exception:
                 output = e.output.decode("latin1")
             plaindata = output
-            logger.error("===== NiceAuthService run_command Error =====")
-            logger.error(f"cmd: {cmd}")
-            logger.error(f"Error output: {output}")
-            logger.error("Traceback:")
-            logger.error(traceback.format_exc())
-
+            log_nice_verify_message("===== NiceAuthService run_command  =====")
+            log_nice_verify_message(f"cmd: {cmd}")
+            log_nice_verify_message(f"output: {plaindata}")
         return plaindata
 
     @staticmethod
