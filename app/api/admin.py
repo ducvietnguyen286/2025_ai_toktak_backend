@@ -20,11 +20,14 @@ import string
 import pandas as pd
 from io import BytesIO
 import traceback
+import re
+from app.extensions import bcrypt
 
 from app.services.social_post import SocialPostService
 from app.services.product import ProductService
 from app.services.batch import BatchService
 from app.services.admin_notification import AdminNotificationService
+from app.services.notification import NotificationServices
 
 ns = Namespace(name="admin", description="Admin API")
 
@@ -178,23 +181,12 @@ class APIReportDashboard(Resource):
         from_date = request.args.get("from_date", "", type=str)
         to_date = request.args.get("to_date", "", type=str)
         data_search = {
-            "type": "user",
-            "type_2": "NEW_USER",
+            "subscription": "",
             "time_range": selected_date_type,
             "from_date": from_date,
             "to_date": to_date,
         }
-        new_users = UserService.report_user_by_type(data_search)
-
-        data_search = {
-            "type": "referral",
-            "type_2": "NEW_USER",
-            "time_range": selected_date_type,
-            "from_date": from_date,
-            "to_date": to_date,
-        }
-        referral_new_users = UserService.report_user_by_type(data_search)
-        new_users = new_users + referral_new_users
+        new_users = UserService.report_user_by_subscription(data_search)
 
         data_search = {
             "subscription": "FREE",
@@ -750,8 +742,8 @@ class APISaveAdminNotification(Resource):
         title = args.get("title", "")
         url = args.get("url", "")
         icon = args.get("icon", "")
-        ask_again = args.get("ask_again",0)
-        repeat_duration = args.get("repeat_duration",0)
+        ask_again = args.get("ask_again", 0)
+        repeat_duration = args.get("repeat_duration", 0)
         redirect_type = args.get("redirect_type", "")
         notification_id = args.get("notification_id", "")
         button_cancel = args.get("button_cancel", "")
@@ -880,3 +872,69 @@ class APIDeleteAdminNotification(Resource):
                 message="사용자 삭제 중 오류",
                 code=201,
             ).to_dict()
+
+
+@ns.route("/change_password")
+class APIChangePassword(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "password": {"type": "string"},
+            "confirm_password": {"type": "string"},
+        },
+        required=["password", "confirm_password"],
+    )
+    def post(self, args):
+        password = args.get("password")
+        confirm_password = args.get("confirm_password")
+
+        if password != confirm_password:
+            return Response(
+                message="비밀번호와 비밀번호 확인이 일치하지 않습니다.",
+                message_en="Password and confirm password do not match.",
+                code=400,
+            ).to_dict()
+
+        if (
+            len(password) < 8
+            or not re.search(r"[A-Z]", password)
+            or not re.search(r"\d", password)
+            or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password)
+        ):
+            return Response(
+                message="비밀번호는 8자 이상, 대문자/숫자/특수문자 모두 포함해야 합니다.",
+                message_en="The password must be at least 8 characters long and include uppercase letters, numbers, and special characters.",
+                code=400,
+            ).to_dict()
+
+        user_login = AuthService.get_current_identity(no_cache=True)
+        if not user_login:
+            return Response(
+                message="시스템에 로그인해주세요.",
+                message_en="Vui lòng đăng nhập vào hệ thống.",
+                code=201,
+            ).to_dict()
+
+        update_data = {}
+
+        message = ""
+        if password is not None:
+            update_data["password"] = bcrypt.generate_password_hash(password).decode(
+                "utf-8"
+            )
+            update_data["updated_at"] = datetime.now()
+            user_login = AuthService.update(user_login.id, **update_data)
+
+            message = f"✏️ 비밀번호가 수정되었습니다. "
+            NotificationServices.create_notification(
+                notification_type="update_user",
+                user_id=user_login.id,
+                title=message,
+            )
+
+        return Response(
+            data=user_login._to_json(),
+            message="비밀번호가 성공적으로 변경되었습니다.",
+            message_en="Update thông tin thành công",
+        ).to_dict()
