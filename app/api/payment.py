@@ -81,7 +81,11 @@ class APICreateNewPayment(Resource):
 
             # ✅ Được phép upgrade
             message = f"{active.package_name} 요금제를 {package_name} 요금제로 성공적으로 업그레이드했습니다."
-            payment_upgrade = PaymentService.upgrade_package(current_user, package_name)
+            parent_id = active.id
+            payment_upgrade = PaymentService.upgrade_package(current_user, package_name , parent_id)
+            
+            
+                    
             NotificationServices.create_notification(
                 user_id=user_id_login,
                 title=message,
@@ -479,7 +483,6 @@ class APIPaymentConfirm(Resource):
                 payment = PaymentService.update_payment(
                     payment_id, **data_update_payment
                 )
-                logger.info(payment)
                 PaymentService.approvalPayment(payment_id)
 
                 return Response(
