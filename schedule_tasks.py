@@ -41,8 +41,10 @@ import const
 from app.services.notification import NotificationServices
 from app.models.notification import Notification
 from app.models.request_log import RequestLog
+from app.models.social_post import SocialPost
 from app.models.request_social_log import RequestSocialLog
 from app.models.video_create import VideoCreate
+from app.models.ocr_results import OCRResult
 
 from sqlalchemy import or_, text
 
@@ -204,6 +206,21 @@ def cleanup_request_log(app):
                 .delete(synchronize_session=False)
             )
 
+            # Đếm số bản ghi sẽ xóa
+            social_posts_deleted = (
+                db.session.query(SocialPost)
+                .filter(SocialPost.created_at < five_days_ago)
+                .delete(synchronize_session=False)
+            )
+            
+            ocr_results_deleted = (
+                db.session.query(OCRResult)
+                .filter(OCRResult.created_at < five_days_ago)
+                .delete(synchronize_session=False)
+            )
+            
+            
+
             # --- RequestSocialLog ---
             social_deleted = (
                 db.session.query(RequestSocialLog)
@@ -227,6 +244,8 @@ def cleanup_request_log(app):
             app.logger.info(
                 f"🧹 Đã xóa: {req_deleted} request_logs, {social_deleted} request_social_logs, "
                 f"{video_deleted} video_create cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+                f"{social_posts_deleted} social_posts cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+                f"{ocr_results_deleted} ocr_results cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
                 f"{notification_deleted} notification cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
             )
         except Exception as e:
