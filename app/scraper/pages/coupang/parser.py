@@ -108,7 +108,7 @@ def parse_mobile_response(html, url, base_url):
             or len(item_id) == 0
             or len(vendor_item_id) == 0
         ):
-            if (not item_id or len(item_id) == 0) and (
+            if (not item_id or (item_id and len(item_id) == 0)) and (
                 vendor_item_id and len(vendor_item_id) > 0
             ):
                 break_sku = sku.split("-")
