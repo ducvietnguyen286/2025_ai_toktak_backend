@@ -252,7 +252,7 @@ class PaymentService:
         return payment
 
     @staticmethod
-    def upgrade_package(current_user, new_package):
+    def upgrade_package(current_user, new_package, parent_id=0):
         user_id = current_user.id
         now = datetime.now()
         active_payment = PaymentService.has_active_subscription(user_id)
@@ -270,6 +270,7 @@ class PaymentService:
         final_price = max(0, origin_price - remaining_value)
         order_id = generate_order_id()
         new_payment = Payment(
+            parent_id=parent_id,
             user_id=user_id,
             order_id=order_id,
             package_name=new_package,
@@ -817,6 +818,14 @@ class PaymentService:
             if payment:
                 user_id = payment.user_id
                 package_name = payment.package_name
+                parent_id = payment.parent_id
+
+                if parent_id > 0:
+                    # update old payment để không thể tự động trừ tiền
+                    # vì ngày kết thúc của gói nâng cấp sẽ bằng gói mới
+                    data_update_old_payment = {"is_renew": 1}
+                    PaymentService.update_payment(parent_id, **data_update_old_payment)
+
                 user_detail = UserService.find_user(user_id)
                 if package_name == "ADDON":
 
@@ -987,7 +996,7 @@ class PaymentService:
 
                 if not user or not user.card_info:
                     log_make_repayment_message(
-                        f"User {user.id} {user.email} hkhông đăng kí thẻ để tự động gia hạn ."
+                        f"User {user.id} {user.email} không đăng kí thẻ để tự động gia hạn ."
                     )
                     continue
                 log_make_repayment_message(user.card_info)
