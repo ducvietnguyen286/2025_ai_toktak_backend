@@ -108,7 +108,9 @@ def parse_mobile_response(html, url, base_url):
             or len(item_id) == 0
             or len(vendor_item_id) == 0
         ):
-            if (not item_id or len(item_id) == 0) and len(vendor_item_id) > 0:
+            if (not item_id or len(item_id) == 0) and (
+                vendor_item_id and len(vendor_item_id) > 0
+            ):
                 break_sku = sku.split("-")
                 item_id = break_sku[-1]
 
@@ -118,6 +120,8 @@ def parse_mobile_response(html, url, base_url):
                 meta_url = "{0}?itemId={1}&vendorItemId={2}".format(
                     meta_base_url, item_id, vendor_item_id[0]
                 )
+            else:
+                meta_url = url
 
         logger.info("meta_url: {0}".format(meta_url))
 
