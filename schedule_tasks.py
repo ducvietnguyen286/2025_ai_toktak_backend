@@ -400,17 +400,17 @@ def start_scheduler(app):
     )
 
     scheduler.add_job(
-        func=exchange_facebook_token,
+        func=lambda: exchange_facebook_token(app),
         trigger=two_am_kst_trigger,
         id="exchange_facebook_token",
     )
     scheduler.add_job(
-        func=exchange_instagram_token,
+        func=lambda: exchange_instagram_token(app),
         trigger=three_am_kst_trigger,
         id="exchange_instagram_token",
     )
     scheduler.add_job(
-        func=exchange_thread_token,
+        func=lambda: exchange_thread_token(app),
         trigger=four_am_kst_trigger,
         id="exchange_thread_token",
     )

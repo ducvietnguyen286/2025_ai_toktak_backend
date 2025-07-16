@@ -308,13 +308,14 @@ def log_reset_user_message(message):
             custom_handler.close()
 
 
-def log_make_repayment_message(message):
+
+def log_nice_verify_message(message):
     now_date = datetime.datetime.now()
     new_filename = now_date.strftime("%d-%m-%Y")
     custom_handler = None  # Khởi tạo biến custom_handler
     try:
         custom_handler = handlers.RotatingFileHandler(
-            "logs/re_payment-{0}.log".format(new_filename),
+            "logs/nice_verify-{0}.log".format(new_filename),
             backupCount=14,
             encoding="utf-8",
         )
