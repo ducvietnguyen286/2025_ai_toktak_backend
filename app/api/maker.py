@@ -276,8 +276,8 @@ class APICreateBatchSync(Resource):
                 content=json.dumps(data),
                 type=batch_type,
                 count_post=len(post_types),
-                status=0,
-                process_status="PENDING",
+                status=const.DRAFT_STATUS,
+                process_status="DRAFT",
                 voice_google=voice,
                 voice_typecast=voice_typecast,
                 is_paid_advertisements=is_paid_advertisements,
@@ -288,7 +288,10 @@ class APICreateBatchSync(Resource):
             posts = []
             for post_type in post_types:
                 post = PostService.create_post(
-                    user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
+                    user_id=user_id_login,
+                    batch_id=batch.id,
+                    type=post_type,
+                    status=const.DRAFT_STATUS,
                 )
 
                 post_res = post._to_json()
@@ -296,7 +299,7 @@ class APICreateBatchSync(Resource):
 
             batch_res = batch._to_json()
             batch_res["posts"] = posts
-            
+
             name = data.get("name")
             product_name = name[:10] if isinstance(name, str) else ""
             batch_res["product_name"] = product_name
@@ -1429,7 +1432,8 @@ class APIDecrypt(Resource):
                 message="Ping not Oke",
                 code=201,
             ).to_dict()
-            
+
+
 @ns.route("/ping")
 class APIPingBatch(Resource):
     def get(self):
@@ -1442,8 +1446,7 @@ class APIPingBatch(Resource):
                 message="Ping not Oke",
                 code=201,
             ).to_dict()
-            
- 
+
 
 def _cleanup_zip(zip_path, tmp_dir, response):
     try:
