@@ -433,11 +433,17 @@ class PostService:
         try:
             logger.info(f"Update default template: {user_id}, {link_id}")
             link_id = int(link_id)
-            user_template = PostService.get_template_video_by_user_id(user_id)
             user_info = User.query.get(user_id)
             if not user_info:
                 logger.error(f"Not find User: {user_id}")
                 return None
+            user_template = PostService.get_template_video_by_user_id(user_id)
+
+            if not user_template:
+                user_template = PostService.create_user_template_make_video(
+                    user_id=user_id
+                )
+
             subscription = user_info.subscription
             if user_template:
                 link_sns = json.loads(user_template.link_sns)
