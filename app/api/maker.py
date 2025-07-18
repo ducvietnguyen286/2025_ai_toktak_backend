@@ -276,7 +276,6 @@ class APICreateBatchSync(Resource):
                 content=json.dumps(data),
                 type=batch_type,
                 count_post=len(post_types),
-                status=const.DRAFT_STATUS,
                 status=const.PENDING_STATUS,
                 process_status="PENDING",
                 
