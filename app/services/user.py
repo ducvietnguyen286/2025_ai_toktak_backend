@@ -11,6 +11,7 @@ from app.models.memberprofile import MemberProfile
 from app.models.referral_history import ReferralHistory
 from app.models.payment import Payment
 from app.models.payment_detail import PaymentDetail
+from app.models.user_video_templates import UserVideoTemplates
 from app.extensions import db
 from app.lib.logger import logger
 from sqlalchemy import select, update, delete, or_, func
@@ -328,6 +329,10 @@ class UserService:
             UserLink.query.filter(UserLink.user_id.in_(user_ids)).delete(
                 synchronize_session=False
             )
+
+            UserVideoTemplates.query.filter(
+                UserVideoTemplates.user_id.in_(user_ids)
+            ).delete(synchronize_session=False)
 
             MemberProfile.query.filter(MemberProfile.user_id.in_(user_ids)).delete(
                 synchronize_session=False
