@@ -190,6 +190,11 @@ class ShortstackWebhook(Resource):
                                 "description": f"AI Shotstack  {str(error)}",
                             }
                         else:
+                            data_update_batch = {
+                                "status": const.DRAFT_STATUS,
+                                "process_status": "DRAFT",
+                            }
+                            BatchService.update_batch(batch_id, **data_update_batch)
                             data_update = {
                                 "notification_type": "shortstack_video",
                                 "render_id": render_id,
@@ -209,6 +214,7 @@ class ShortstackWebhook(Resource):
                         batch_id,
                         video_url=video_url,
                         video_path=file_path,
+                        status=const.DRAFT_STATUS,
                     )
 
                     check_and_update_user_batch_remain(user_id, batch_id)
