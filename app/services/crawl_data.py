@@ -1,5 +1,5 @@
 from app.models.crawl_data import CrawlData
-from app.lib.query import select_with_filter_one
+from app.lib.query import select_with_filter_one, update_by_id
 
 
 class CrawlDataService:
@@ -16,3 +16,8 @@ class CrawlDataService:
             CrawlData, filters=[CrawlData.crawl_url_hash == hash]
         )
         return crawl_data
+
+    @staticmethod
+    def update_crawl_data(id, **kwargs):
+        update_by_id(CrawlData, id, kwargs)
+        return True
