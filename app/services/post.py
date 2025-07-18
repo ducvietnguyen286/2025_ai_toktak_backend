@@ -434,7 +434,11 @@ class PostService:
             logger.info(f"Update default template: {user_id}, {link_id}")
             link_id = int(link_id)
             user_template = PostService.get_template_video_by_user_id(user_id)
-
+            user_info = User.query.get(user_id)
+            if not user_info:
+                logger.error(f"Not find User: {user_id}")
+                return None
+            subscription = user_info.subscription
             if user_template:
                 link_sns = json.loads(user_template.link_sns)
 
@@ -449,7 +453,10 @@ class PostService:
                 if link_id not in link_sns["video"]:
                     link_sns["video"].append(link_id)
 
-                if link_id not in link_sns["image"]:
+                if (
+                    subscription not in ["BASIC", "NEW_USER", "INVITE_BASIC"]
+                    and link_id not in link_sns["image"]
+                ):
                     link_sns["image"].append(link_id)
 
                 data_update_template = {
