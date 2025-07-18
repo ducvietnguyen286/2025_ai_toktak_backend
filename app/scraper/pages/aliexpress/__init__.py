@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import requests
 from app.lib.logger import logger
+from app.lib.url import get_real_url
 from app.services.crawl_data import CrawlDataService
 from app.extensions import redis_client
 from app.lib.string import un_shotend_url
@@ -71,13 +72,13 @@ class AliExpressScraper:
             redis_client.set(key_redis, 1, ex=time_to_expire)
             return exist_data_norm
 
-    def run_api_ali_data_hub_6(self, request_url, check_data=False):
+    def run_api_ali_data_hub_6(self, real_url, check_data=False):
         try:
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
             exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
             if not check_data and exist_data:
                 return self.daily_check_exist_new_data_hub_6(
-                    exist_data, request_url, crawl_url_hash
+                    exist_data, real_url, crawl_url_hash
                 )
 
             parsed_url = urlparse(real_url)
@@ -210,7 +211,7 @@ class AliExpressScraper:
             logger.error("Exception: {0}".format(str(e)))
             return {}
 
-    def run_api_ali_data_hub_2(self, request_url, check_data=False):
+    def run_api_ali_data_hub_2(self, real_url, check_data=False):
         try:
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
             exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
@@ -351,7 +352,7 @@ class AliExpressScraper:
             logger.error("Exception: {0}".format(str(e)))
             return {}
 
-    def run_api_ali_data(self, request_url, check_data=False):
+    def run_api_ali_data(self, real_url, check_data=False):
         try:
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
             exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
