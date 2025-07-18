@@ -291,6 +291,7 @@ class APICreateBatchSync(Resource):
                 count_post=len(post_types),
                 status=const.PENDING_STATUS,
                 process_status="PENDING",
+                
                 voice_google=voice,
                 voice_typecast=voice_typecast,
                 is_paid_advertisements=is_paid_advertisements,
