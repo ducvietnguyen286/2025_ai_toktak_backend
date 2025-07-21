@@ -164,6 +164,16 @@ class ShortstackWebhook(Resource):
             render = payload.get("render", "")
             error = payload.get("error", "")
             user_id = 0
+            
+            
+            redis_key = f"shotstack_webhook_lock:{render_id}"
+            if redis_client.exists(redis_key):
+                log_webhook_message(f"Webhook duplicate! render_id={render_id} đã xử lý trước đó.")
+                return {"message": "Webhook already processed", "render_id": render_id}, 200
+            
+            redis_client.setex(redis_key, 600, "1")
+
+            
 
             # Ghi log thông tin nhận được
             log_webhook_message(f"Received Shotstack webhook: %{payload}")
