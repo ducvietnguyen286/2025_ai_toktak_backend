@@ -276,8 +276,9 @@ class APICreateBatchSync(Resource):
                 content=json.dumps(data),
                 type=batch_type,
                 count_post=len(post_types),
-                status=const.DRAFT_STATUS,
-                process_status="DRAFT",
+                status=const.PENDING_STATUS,
+                process_status="PENDING",
+                
                 voice_google=voice,
                 voice_typecast=voice_typecast,
                 is_paid_advertisements=is_paid_advertisements,
@@ -291,7 +292,7 @@ class APICreateBatchSync(Resource):
                     user_id=user_id_login,
                     batch_id=batch.id,
                     type=post_type,
-                    status=const.DRAFT_STATUS,
+                    status=const.PENDING_STATUS,
                 )
 
                 post_res = post._to_json()
@@ -601,7 +602,6 @@ class APIGetBatch(Resource):
             batch_res = batch._to_json()
             batch_res["posts"] = posts
 
-            user_id = AuthService.get_user_id()
             user_info = UserService.get_user_info_detail(user_id)
             batch_res["user_info"] = user_info
 
