@@ -278,6 +278,7 @@ class APICreateCoupon(Resource):
         properties={
             "image": {"type": ["string", "null"]},
             "name": {"type": ["string", "null"]},
+            "plan_coupon": {"type": ["string", "null"]},
             "type": {
                 "type": ["string", "null"],
                 "enum": [
@@ -308,6 +309,7 @@ class APICreateCoupon(Resource):
         image = args.get("image", "")
         name = args.get("name", "")
         type = args.get("type", "SUB_STANDARD")
+        plan_coupon = args.get("plan_coupon", "BASIC")
         is_check_user = args.get("is_check_user", False)
         max_per_user = args.get("max_per_user", 1)
         try:
@@ -354,6 +356,7 @@ class APICreateCoupon(Resource):
             image=image,
             name=name,
             type=type,
+            plan_coupon=plan_coupon,
             max_used=max_used,
             value=value,
             is_has_whitelist=is_has_whitelist,
