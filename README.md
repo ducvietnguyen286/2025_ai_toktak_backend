@@ -141,3 +141,20 @@ sudo systemctl status main_consumer_toktak_youtube.service
 
 
 journalctl -u main_toktak.service -f
+
+-------------------------------------
+main.py
+
+from flask import app, request , send_from_directory , abort
+
+@application.route("/files/<path:filename>")
+def get_file(filename):
+    try:
+        return send_from_directory(UPLOAD_FOLDER, filename)
+    except FileNotFoundError:
+        abort(404)
+
+
+@application.route("/voice/<path:filename>")
+def serve_static(filename):
+    return send_from_directory(VOICE_FOLDER, filename)

@@ -602,7 +602,6 @@ class APIGetBatch(Resource):
             batch_res = batch._to_json()
             batch_res["posts"] = posts
 
-            user_id = AuthService.get_user_id()
             user_info = UserService.get_user_info_detail(user_id)
             batch_res["user_info"] = user_info
 
