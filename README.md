@@ -145,6 +145,8 @@ journalctl -u main_toktak.service -f
 -------------------------------------
 main.py
 
+from flask import app, request , send_from_directory , abort
+
 @application.route("/files/<path:filename>")
 def get_file(filename):
     try:

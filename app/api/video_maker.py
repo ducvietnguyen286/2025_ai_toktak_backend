@@ -92,6 +92,7 @@ class CreateVideo(Resource):
             "images_url": images_url,
             "images_slider_url": images_slider_url,
             "product_video_url": product_video_url,
+            "voice_typecast": batch.voice_typecast,
         }
 
         result = ShotStackService.create_video_from_images_v2(data_make_video)

@@ -367,6 +367,11 @@ class UserService:
         return 1
 
     def get_user_info_detail(user_id):
+        cache_key = f"user_info_detail:{user_id}"
+        cached_data = redis_client.get(cache_key)
+        if cached_data:
+            return json.loads(cached_data)
+    
         user_login = select_by_id(User, user_id)
         if not user_login:
             return None
@@ -399,6 +404,9 @@ class UserService:
         user_dict["subscription_name"] = subscription_name
         user_dict["latest_coupon"] = latest_coupon
         user_dict["used_date_range"] = used_date_range
+        # 3. Lưu vào cache (3h = 10800s)
+        redis_client.setex(cache_key, 10800, json.dumps(user_dict, ensure_ascii=False))
+    
         return user_dict
 
     @staticmethod
