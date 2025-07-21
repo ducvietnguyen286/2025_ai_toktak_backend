@@ -81,15 +81,6 @@ class UserService:
 
     @staticmethod
     def get_latest_coupon(user_id):
-        first_coupon = select_with_filter_one(
-            CouponCode,
-            [
-                CouponCode.is_active == 1,
-                CouponCode.used_by == user_id,
-                CouponCode.expired_at >= datetime.now(),
-            ],
-            [CouponCode.used_at.asc()],
-        )
         latest_coupon = select_with_filter_one(
             CouponCode,
             [
@@ -102,10 +93,74 @@ class UserService:
 
         coupon = latest_coupon.coupon._to_json() if latest_coupon else None
         latest_coupon = latest_coupon._to_json() if latest_coupon else None
-        first_coupon = first_coupon._to_json() if first_coupon else None
         if latest_coupon:
             latest_coupon["coupon_name"] = coupon["name"] if coupon else None
-        return first_coupon, latest_coupon
+            # Chỉ lấy package_data nếu coupon có trường "plan_coupon"
+            package_data = None
+            if coupon and "plan_coupon" in coupon:
+                package_data = const.PACKAGE_CONFIG.get(coupon["plan_coupon"])
+            latest_coupon["subscription_name"] = (
+                package_data["pack_name"] if package_data else None
+            )
+
+        return latest_coupon
+
+    @staticmethod
+    def get_subscription_name(subscription, user_id):
+        subscription_name_display = {
+            "subscription_name_lable": "",
+            "subscription_name": "",
+        }
+        try:
+            subscription_name = subscription
+            if subscription == "FREE":
+                subscription_name_display["subscription_name_lable"] = (
+                    "사용 중인 플랜이 없어요😭"
+                )
+                subscription_name_display["subscription_name"] = "무료 체험"
+            elif subscription == "COUPON_STANDARD" or subscription == "COUPON_KOL":
+                subscription_name_display["subscription_name_lable"] = "베이직"
+                subscription_name_display["subscription_name"] = "쿠폰"
+                latest_coupon = select_with_filter_one(
+                    CouponCode,
+                    [
+                        CouponCode.is_active == 1,
+                        CouponCode.used_by == user_id,
+                        CouponCode.expired_at >= datetime.now(),
+                    ],
+                    [CouponCode.used_at.desc()],
+                )
+                if latest_coupon:
+                    coupon = latest_coupon.coupon._to_json() if latest_coupon else None
+                    subscription_name_display["subscription_name_lable"] = coupon[
+                        "name"
+                    ]
+                    package_data = None
+                    if coupon and "plan_coupon" in coupon:
+                        package_data = const.PACKAGE_CONFIG.get(coupon["plan_coupon"])
+                        if package_data:
+                            subscription_name_display["subscription_name"] = (
+                                package_data["pack_name"]
+                            )
+            elif subscription == "NEW_USER":
+                subscription_name_display["subscription_name_lable"] = "신규 가입 선물"
+                subscription_name_display["subscription_name"] = "베이직 플랜"
+            else:
+                package_data = const.PACKAGE_CONFIG.get(subscription_name)
+                if not package_data:
+                    subscription_name = "무료 체험"
+                subscription_name_display["subscription_name_lable"] = "신규 가입 선물"
+                subscription_name_display["subscription_name"] = package_data[
+                    "pack_name"
+                ]
+
+            return subscription_name_display
+
+        except Exception as e:
+            logger.error(
+                f"[get_subscription_name] Failed for path: {subscription} — Error: {e}"
+            )
+            return subscription
 
     @staticmethod
     def find_user(id):
@@ -371,7 +426,7 @@ class UserService:
         cached_data = redis_client.get(cache_key)
         if cached_data:
             return json.loads(cached_data)
-    
+
         user_login = select_by_id(User, user_id)
         if not user_login:
             return None
@@ -382,31 +437,17 @@ class UserService:
         elif user_login.subscription == "STANDARD":
             subscription_name = "기업형 스탠다드 플랜"
 
-        first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
+        latest_coupon = UserService.get_latest_coupon(user_login.id)
+        logger.info(f"Latest coupon for user {user_login.id}: {latest_coupon}")
 
-        start_used = None
-        if first_coupon:
-            start_used = first_coupon.get("used_at")
-        elif latest_coupon:
-            start_used = latest_coupon.get("used_at")
-
-        last_used = latest_coupon.get("expired_at") if latest_coupon else None
-
-        used_date_range = ""
-        if start_used and last_used:
-            start_used = parse_date(start_used)
-            last_used = parse_date(last_used)
-            used_date_range = (
-                f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
-            )
+        if latest_coupon:
+            subscription_name = latest_coupon.get("subscription_name")
 
         user_dict = user_login._to_json()
         user_dict["subscription_name"] = subscription_name
-        user_dict["latest_coupon"] = latest_coupon
-        user_dict["used_date_range"] = used_date_range
         # 3. Lưu vào cache (3h = 10800s)
         redis_client.setex(cache_key, 10800, json.dumps(user_dict, ensure_ascii=False))
-    
+
         return user_dict
 
     @staticmethod
