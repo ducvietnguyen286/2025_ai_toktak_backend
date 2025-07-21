@@ -78,7 +78,6 @@ def log_facebook_message(message):
 
 
 def log_instagram_message(message):
-    """Log message cho Instagram - tối ưu hóa"""
     service_logger, handler = _create_service_logger("instagram")
     try:
         service_logger.info(message)
@@ -88,7 +87,6 @@ def log_instagram_message(message):
 
 
 def log_thread_message(message):
-    """Log message cho Thread - tối ưu hóa"""
     service_logger, handler = _create_service_logger("thread")
     try:
         service_logger.info(message)
@@ -98,7 +96,6 @@ def log_thread_message(message):
 
 
 def log_twitter_message(message):
-    """Log message cho Twitter - tối ưu hóa"""
     service_logger, handler = _create_service_logger("twitter")
     try:
         service_logger.info(message)
@@ -108,7 +105,6 @@ def log_twitter_message(message):
 
 
 def log_tiktok_message(message):
-    """Log message cho TikTok - tối ưu hóa"""
     service_logger, handler = _create_service_logger("tiktok")
     try:
         service_logger.info(message)
@@ -118,7 +114,6 @@ def log_tiktok_message(message):
 
 
 def log_youtube_message(message):
-    """Log message cho YouTube - tối ưu hóa"""
     service_logger, handler = _create_service_logger("youtube")
     try:
         service_logger.info(message)
@@ -128,7 +123,6 @@ def log_youtube_message(message):
 
 
 def log_create_content_message(message):
-    """Log message cho Create Content - tối ưu hóa"""
     service_logger, handler = _create_service_logger("create_content")
     try:
         service_logger.info(message)
@@ -138,7 +132,6 @@ def log_create_content_message(message):
 
 
 def log_socket_message(message):
-    """Log message cho Socket - tối ưu hóa"""
     service_logger, handler = _create_service_logger("socket")
     try:
         service_logger.info(message)
@@ -148,7 +141,6 @@ def log_socket_message(message):
 
 
 def log_make_video_message(message):
-    """Log message cho Make Video - tối ưu hóa với error handling"""
     service_logger, handler = _create_service_logger("make_video")
     try:
         service_logger.info(message)
@@ -161,7 +153,6 @@ def log_make_video_message(message):
 
 
 def log_webhook_message(message):
-    """Log message cho Webhook - tối ưu hóa với error handling"""
     service_logger, handler = _create_service_logger("webhook")
     try:
         service_logger.info(message)
@@ -174,7 +165,6 @@ def log_webhook_message(message):
 
 
 def log_celery_worker_message(message):
-    """Log message cho Celery Worker - tối ưu hóa"""
     service_logger, handler = _create_service_logger("celery_worker")
     try:
         service_logger.info(message)
@@ -184,7 +174,6 @@ def log_celery_worker_message(message):
 
 
 def log_mongo_database(message):
-    """Log message cho MongoDB - tối ưu hóa"""
     service_logger, handler = _create_service_logger("mongo_queries")
     try:
         service_logger.info(message)
@@ -194,7 +183,6 @@ def log_mongo_database(message):
 
 
 def log_reset_user_message(message):
-    """Log message cho Reset User - tối ưu hóa với error handling"""
     service_logger, handler = _create_service_logger("reset_user")
     try:
         service_logger.info(message)
@@ -216,3 +204,30 @@ def log_nice_verify_message(message):
         if handler:
             service_logger.removeHandler(handler)
             handler.close()
+
+# ============================================================================
+# CONSUMER LOGGING UTILITIES - GIẢM CODE LẶP LẠI
+# ============================================================================
+def setup_consumer_logging(app, consumer_name):
+    """
+    Setup logging cho consumer - tránh code lặp lại trong các consumer files
+    Args:
+        app: Flask app instance
+        consumer_name: Tên consumer (FACEBOOK, INSTAGRAM, etc.)
+    Returns:
+        Logger instance
+    """
+    app.logger.setLevel(logging.DEBUG)
+    app.logger.info(f"Start {consumer_name} Consumer...")
+    return app.logger
+
+def get_consumer_logger(consumer_name):
+    """
+    Lấy logger cho consumer với hierarchy
+    Args:
+        consumer_name: Tên consumer
+    Returns:
+        Logger instance với tên phân cấp
+    """
+    logger_name = f"app.consumers.{consumer_name.lower()}"
+    return logging.getLogger(logger_name)
