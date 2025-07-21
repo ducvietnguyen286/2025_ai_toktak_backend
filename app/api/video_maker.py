@@ -338,6 +338,8 @@ def check_and_update_user_batch_remain(user_id: int, batch_id: int):
             return False  # Không tìm thấy user
 
         batch_remain = current_user.batch_remain
+        subscription = current_user.subscription
+        subscription_expired = current_user.subscription_expired
         new_batch_remain = max(current_user.batch_remain - 1, 0)
 
         log_webhook_message(
@@ -349,8 +351,8 @@ def check_and_update_user_batch_remain(user_id: int, batch_id: int):
         data_user_history = {
             "user_id": user_id,
             "batch_id": batch_id,
-            "subscription": current_user.subscription,
-            "subscription_expired": current_user.subscription_expired,
+            "subscription": subscription,
+            "subscription_expired": subscription_expired,
             "old_batch_remain": batch_remain,
             "new_batch_remain": new_batch_remain,
             "description": f"[Cap Nhat batch_remain  ] user_id={user_id}, batch_id={batch_id}, batch_remain={batch_remain}, new_batch_remain={new_batch_remain}",
