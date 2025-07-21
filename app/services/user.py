@@ -12,6 +12,7 @@ from app.models.referral_history import ReferralHistory
 from app.models.payment import Payment
 from app.models.payment_detail import PaymentDetail
 from app.models.user_video_templates import UserVideoTemplates
+from app.models.coupon_user_histories import CouponUserHistories
 from app.extensions import db
 from app.lib.logger import logger
 from sqlalchemy import select, update, delete, or_, func
@@ -684,3 +685,10 @@ class UserService:
         total = histories.count()
 
         return total
+
+    
+    @staticmethod
+    def create_coupon_user_histories(*args, **kwargs):
+        user_history_detail = CouponUserHistories(*args, **kwargs)
+        user_history_detail.save()
+        return user_history_detail

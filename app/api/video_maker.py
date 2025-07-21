@@ -333,7 +333,7 @@ def check_and_update_user_batch_remain(user_id: int, batch_id: int):
         if redis_client.exists(redis_key):
             return False  # Đã cập nhật rồi
 
-        current_user = UserService.find_user(user_id)
+        current_user = UserService.find_user_with_out_session(user_id)
         if not current_user:
             return False  # Không tìm thấy user
 
@@ -346,8 +346,20 @@ def check_and_update_user_batch_remain(user_id: int, batch_id: int):
 
         UserService.update_user(user_id, batch_remain=new_batch_remain)
 
+        data_user_history = {
+            "user_id": user_id,
+            "batch_id": batch_id,
+            "subscription": current_user.subscription,
+            "subscription_expired": current_user.subscription_expired,
+            "old_batch_remain": batch_remain,
+            "new_batch_remain": new_batch_remain,
+            "description": f"[Cap Nhat batch_remain  ] user_id={user_id}, batch_id={batch_id}, batch_remain={batch_remain}, new_batch_remain={new_batch_remain}",
+        }
+
+        UserService.create_coupon_user_histories(**data_user_history)
+
         # Đặt key trong Redis với TTL là 5 phút (300 giây)
-        redis_client.setex(redis_key, 300, "1")
+        redis_client.setex(redis_key, 3000, "1")
         return True  # Đã cập nhật thành công
 
     except Exception as e:
