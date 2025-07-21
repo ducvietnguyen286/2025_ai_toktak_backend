@@ -12,6 +12,7 @@ from werkzeug.exceptions import default_exceptions
 load_dotenv(override=False)
 
 from app.lib.logger import setup_consumer_logging
+from app.lib.logger import log_facebook_message
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db
 from app.config import configs as config
