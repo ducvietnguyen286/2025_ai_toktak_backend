@@ -12,6 +12,7 @@ from werkzeug.exceptions import default_exceptions
 load_dotenv(override=False)
 
 from app.lib.logger import log_tiktok_message
+from app.lib.logger import setup_consumer_logging
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db
 from app.config import configs as config
@@ -27,8 +28,7 @@ RABBITMQ_QUEUE_TIKTOK = os.environ.get("RABBITMQ_QUEUE_TIKTOK") or "hello"
 
 
 def __config_logging(app):
-    app.logger.setLevel(logging.DEBUG)
-    app.logger.info("Start TIKTOK Consumer...")
+    return setup_consumer_logging(app, "TIKTOK")
 
 
 def __init_app(app):
