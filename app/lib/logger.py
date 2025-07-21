@@ -2,6 +2,7 @@ import logging
 import datetime
 import logging.handlers as handlers
 import os
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -231,3 +232,91 @@ def get_consumer_logger(consumer_name):
     """
     logger_name = f"app.consumers.{consumer_name.lower()}"
     return logging.getLogger(logger_name)
+
+# ============================================================================
+# CRITICAL LOGGING - CHO CÁC TÌNH HUỐNG NGHIÊM TRỌNG VỚI ALERT
+# ============================================================================
+
+def log_critical_infrastructure(message, component="SYSTEM", send_alert=False):
+    """
+    Log cho critical infrastructure issues - cần attention ngay lập tức
+    
+    Args:
+        message: Chi tiết lỗi critical
+        component: Thành phần hệ thống (DATABASE, REDIS, QUEUE, DISK, SECURITY)
+        send_alert: Có gửi alert qua Slack/Telegram không
+    """
+    
+    # Đảm bảo .env được load (fix cho vấn đề environment)
+    load_dotenv()
+    
+    logger = logging.getLogger(__name__)
+    critical_msg = f"🔥 [CRITICAL-{component}] {message}"
+    logger.critical(critical_msg)
+    
+    if send_alert:
+        try:
+            from app.third_parties.telegram import send_slack_message, send_telegram_message
+            
+            current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            alert_text = f"🚨 CRITICAL SYSTEM ALERT\n\n{critical_msg}\n\nTime: {current_time}\nServer: TokTak Production"
+            
+            # Gửi Slack alert
+            slack_success = send_slack_message(alert_text)
+            if slack_success:
+                logger.info("✅ Critical alert sent to Slack successfully")
+            else:
+                logger.warning("⚠️ Failed to send Slack alert")
+            
+            # Gửi Telegram alert
+            telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+            if telegram_token:
+                send_telegram_message(alert_text)
+                logger.info("✅ Critical alert sent to Telegram successfully")
+                
+        except Exception as e:
+            logger.error(f"❌ Failed to send critical alert: {e}")
+
+def log_critical_database(message, current_connections=None, max_connections=None):
+    """Log cho database critical issues"""
+    load_dotenv()
+    
+    if current_connections and max_connections:
+        usage_percent = (current_connections / max_connections) * 100
+        full_message = f"{message}\nConnections: {current_connections}/{max_connections} ({usage_percent:.1f}%)"
+    else:
+        full_message = message
+    
+    log_critical_infrastructure(full_message, "DATABASE", send_alert=True)
+
+def log_critical_security(event, ip=None, user_id=None, details=None):
+    """Log cho security incidents critical"""
+    load_dotenv()
+    
+    context = []
+    if ip:
+        context.append(f"IP:{ip}")
+    if user_id:
+        context.append(f"User:{user_id}")
+    if details:
+        context.append(f"Details:{details}")
+    
+    context_str = " | " + " | ".join(context) if context else ""
+    message = f"SECURITY INCIDENT: {event}{context_str}"
+    log_critical_infrastructure(message, "SECURITY", send_alert=True)
+
+def log_critical_emergency_kill(killed_count, total_connections):
+    """Log cho emergency mass connection kill"""
+    load_dotenv()
+    
+    message = f"EMERGENCY: Mass killed {killed_count} database connections\nTotal connections before: {total_connections}\nAction taken to prevent system crash"
+    log_critical_infrastructure(message, "EMERGENCY", send_alert=True)
+
+def log_critical_service_down(service_name, error_details=None):
+    """Log cho service down critical"""
+    load_dotenv()
+    
+    message = f"{service_name} service is DOWN"
+    if error_details:
+        message += f"\nError: {error_details}"
+    log_critical_infrastructure(message, "SERVICE", send_alert=True)
