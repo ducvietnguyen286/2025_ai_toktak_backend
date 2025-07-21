@@ -13,7 +13,7 @@ import json
 
 from app.services.auth import AuthService
 from app.services.notification import NotificationServices
-from app.lib.string import get_level_images, get_subscription_name
+from app.lib.string import get_level_images 
 import const
 from app.extensions import redis_client
 from app.services.payment_services import PaymentService
@@ -249,10 +249,11 @@ class APIMe(Resource):
                 user_login = AuthService.reset_free_user(user_login)
             created_at = user_login.created_at
 
-            subscription_name = get_subscription_name(user_login.subscription)
+            subscription_name_display  = UserService.get_subscription_name(user_login.subscription , user_login.id)
 
             user_dict = user_login._to_json()
-            user_dict["subscription_name"] = subscription_name
+            user_dict["subscription_name_display"] = subscription_name_display
+            user_dict["subscription_name"] = subscription_name_display['subscription_name']
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)
 
@@ -440,14 +441,14 @@ class APIUserProfile(Resource):
                     level_info=json.dumps(level_info),
                 )
 
-            subscription_name = get_subscription_name(user_login.subscription)
-
-            first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
+            subscription_name_display = UserService.get_subscription_name(user_login.subscription , user_login.id)
+            
             user_histories = UserService.get_all_user_history_by_user_id(user_login.id)
             user_dict = user_login._to_json()
             user_dict["user_histories"] = user_histories
-            user_dict["latest_coupon"] = latest_coupon
-            user_dict["subscription_name"] = subscription_name
+            user_dict["subscription_name_display"] = subscription_name_display
+            user_dict["subscription_name"] = subscription_name_display['subscription_name']
+            
 
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)
