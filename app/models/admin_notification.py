@@ -20,6 +20,11 @@ class AdminNotification(db.Model, BaseModel):
     status = db.Column(db.Integer, default=0)
     ask_again = db.Column(db.Integer, default=0)
     repeat_duration = db.Column(db.Integer, default=0)
+    
+    
+    popup_type = db.Column(db.String(255))
+    toasts_color = db.Column(db.String(255))
+    
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
@@ -37,6 +42,10 @@ class AdminNotification(db.Model, BaseModel):
             "repeat_duration": self.repeat_duration,
             "button_cancel": self.button_cancel,
             "button_oke": self.button_oke,
+            "popup_type": self.popup_type,
+            "toasts_color": self.toasts_color,
+            
+            
             "created_at": (
                 self.created_at.strftime("%Y-%m-%d %H:%M:%S")
                 if self.created_at
