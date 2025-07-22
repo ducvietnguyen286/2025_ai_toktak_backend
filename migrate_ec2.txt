@@ -1,2 +1,3 @@
-ALTER TABLE `payments` 
-ADD COLUMN `parent_id` INT NULL AFTER `id`;
+SET SQL_SAFE_UPDATES = 0;
+UPDATE `users` SET `subscription` = 'COUPON_BUSINESS' WHERE (`subscription` = 'COUPON_STANDARD');
+

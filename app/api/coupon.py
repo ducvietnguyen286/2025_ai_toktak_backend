@@ -35,6 +35,7 @@ class APIUsedCoupon(Resource):
         current_user_id = current_user.id
         code = args.get("code", "")
         coupon = CouponService.find_coupon_by_code(code)
+        message = "쿠폰이 정상적으로 등록되었습니다.<br/>스탠다드 플랜을 이용해 보세요!"
         if coupon == "not_exist":
             return Response(
                 message="유효하지 않은 쿠폰입니다.<br/>쿠폰 번호를 확인해 주세요😭",
@@ -92,7 +93,7 @@ class APIUsedCoupon(Resource):
         # kiểm tra xem user đã dùng mã mời của KOL hay chưa
         # Nếu đã dùng của người khác thì không được dùng của KOL cũ
         if coupon.type == "KOL_COUPON":
-
+            
             login_is_auth_nice = current_user.is_auth_nice
             if login_is_auth_nice == 0:
                 return Response(
@@ -142,6 +143,9 @@ class APIUsedCoupon(Resource):
                     login_subscription_expired = (
                         current_user.subscription_expired or datetime.datetime.now()
                     )
+                    
+                    plan_coupon = coupon.plan_coupon
+                    total_link_active = coupon_code.total_link_active
 
                     if coupon.type == "DISCOUNT":
                         pass
@@ -164,8 +168,8 @@ class APIUsedCoupon(Resource):
 
                         current_user.batch_no_limit_sns = 1
                         # tong so luong kenh co the lien ket
-                        current_user.total_link_active = 7
-                        current_user.subscription = "COUPON_STANDARD"
+                        current_user.total_link_active = total_link_active
+                        current_user.subscription = "COUPON_" + plan_coupon
                         expired_at = login_subscription_expired + datetime.timedelta(
                             days=coupon_code.num_days
                         )
@@ -183,6 +187,12 @@ class APIUsedCoupon(Resource):
                         )
                         redis_client.delete(redis_user_batch_key)
                         redis_client.delete(redis_user_batch_sns_key)
+                        if plan_coupon == "BASIC":
+                            message = "쿠폰이 정상적으로 등록되었습니다.<br/>베이직 플랜을 이용해 보세요!"
+                        elif plan_coupon == "STANDARD":
+                            message = "쿠폰이 정상적으로 등록되었습니다.<br/>스탠다드 플랜을 이용해 보세요!"
+                        elif plan_coupon == "BUSINESS":
+                            message = "쿠폰이 정상적으로 등록되었습니다.<br/>기업형 스탠다드 플랜을 이용해 보세요!"
 
                     elif coupon.type == "SUB_PREMIUM":
                         pass
@@ -226,6 +236,7 @@ class APIUsedCoupon(Resource):
                         )
                         redis_client.delete(redis_user_batch_key)
                         redis_client.delete(redis_user_batch_sns_key)
+                        message = "쿠폰이 정상적으로 등록되었습니다.<br/>베이직 플랜을 이용해 보세요!"
 
                     coupon = session.merge(coupon)
                     coupon_code = session.merge(coupon_code)
@@ -266,7 +277,8 @@ class APIUsedCoupon(Resource):
 
         return Response(
             data=result,
-            message="Sử dụng thành công",
+            message=message,
+            message_en="Coupon is successfully registered.<br/>Please use the plan!",
         ).to_dict()
 
 
