@@ -10,6 +10,7 @@ from app.lib.response import Response
 from app.services.auth import AuthService
 from app.services.coupon import CouponService
 from app.services.user import UserService
+from app.services.post import PostService
 from app.services.notification import NotificationServices
 
 ns = Namespace(name="coupon", description="User API")
@@ -188,6 +189,21 @@ class APIUsedCoupon(Resource):
                         redis_client.delete(redis_user_batch_key)
                         redis_client.delete(redis_user_batch_sns_key)
                         if plan_coupon == "BASIC":
+                            
+                            user_template = PostService.get_template_video_by_user_id(current_user_id)
+
+                            if user_template:
+                                link_sns = json.loads(user_template.link_sns)
+                                link_sns["image"]=[]
+                                data_update_template = {
+                                    "link_sns": json.dumps(link_sns),
+                                }
+
+                                user_template = PostService.update_template(
+                                    user_template.id, **data_update_template
+                                )
+                    
+                            
                             message = "쿠폰이 정상적으로 등록되었습니다.<br/>베이직 플랜을 이용해 보세요!"
                         elif plan_coupon == "STANDARD":
                             message = "쿠폰이 정상적으로 등록되었습니다.<br/>스탠다드 플랜을 이용해 보세요!"
