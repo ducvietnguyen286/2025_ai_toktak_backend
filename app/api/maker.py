@@ -624,13 +624,9 @@ class APIBatchs(Resource):
     @jwt_required()
     def get(self):
         user_id = AuthService.get_user_id()
-
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
-
         batches = BatchService.get_all_batches(page, per_page, user_id)
-        logger.info(f"Get all batches for user {user_id} - Page: {page}, Per Page: {per_page}") 
-        logger.info(f"Total batches found: {batches}")
         return {
             "status": True,
             "message": "Success",
