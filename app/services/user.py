@@ -440,8 +440,6 @@ class UserService:
             subscription_name = "기업형 스탠다드 플랜"
 
         latest_coupon = UserService.get_latest_coupon(user_login.id)
-        logger.info(f"Latest coupon for user {user_login.id}: {latest_coupon}")
-
         if latest_coupon:
             subscription_name = latest_coupon.get("subscription_name")
 
