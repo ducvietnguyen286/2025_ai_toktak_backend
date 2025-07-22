@@ -35,6 +35,7 @@ class APIUsedCoupon(Resource):
         current_user_id = current_user.id
         code = args.get("code", "")
         coupon = CouponService.find_coupon_by_code(code)
+        message = "쿠폰이 정상적으로 등록되었습니다.<br/>스탠다드 플랜을 이용해 보세요!"
         if coupon == "not_exist":
             return Response(
                 message="유효하지 않은 쿠폰입니다.<br/>쿠폰 번호를 확인해 주세요😭",
@@ -92,7 +93,7 @@ class APIUsedCoupon(Resource):
         # kiểm tra xem user đã dùng mã mời của KOL hay chưa
         # Nếu đã dùng của người khác thì không được dùng của KOL cũ
         if coupon.type == "KOL_COUPON":
-
+            
             login_is_auth_nice = current_user.is_auth_nice
             if login_is_auth_nice == 0:
                 return Response(
@@ -186,6 +187,12 @@ class APIUsedCoupon(Resource):
                         )
                         redis_client.delete(redis_user_batch_key)
                         redis_client.delete(redis_user_batch_sns_key)
+                        if plan_coupon == "BASIC":
+                            message = "쿠폰이 정상적으로 등록되었습니다.<br/>베이직 플랜을 이용해 보세요!"
+                        elif plan_coupon == "STANDARD":
+                            message = "쿠폰이 정상적으로 등록되었습니다.<br/>스탠다드 플랜을 이용해 보세요!"
+                        elif plan_coupon == "BUSINESS":
+                            message = "쿠폰이 정상적으로 등록되었습니다.<br/>기업형 스탠다드 플랜을 이용해 보세요!"
 
                     elif coupon.type == "SUB_PREMIUM":
                         pass
@@ -229,6 +236,7 @@ class APIUsedCoupon(Resource):
                         )
                         redis_client.delete(redis_user_batch_key)
                         redis_client.delete(redis_user_batch_sns_key)
+                        message = "쿠폰이 정상적으로 등록되었습니다.<br/>베이직 플랜을 이용해 보세요!"
 
                     coupon = session.merge(coupon)
                     coupon_code = session.merge(coupon_code)
@@ -269,7 +277,8 @@ class APIUsedCoupon(Resource):
 
         return Response(
             data=result,
-            message="Sử dụng thành công",
+            message=message,
+            message_en="Coupon is successfully registered.<br/>Please use the plan!",
         ).to_dict()
 
 
