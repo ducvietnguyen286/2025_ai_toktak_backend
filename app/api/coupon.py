@@ -142,6 +142,9 @@ class APIUsedCoupon(Resource):
                     login_subscription_expired = (
                         current_user.subscription_expired or datetime.datetime.now()
                     )
+                    
+                    plan_coupon = coupon.plan_coupon
+                    total_link_active = coupon_code.total_link_active
 
                     if coupon.type == "DISCOUNT":
                         pass
@@ -164,8 +167,8 @@ class APIUsedCoupon(Resource):
 
                         current_user.batch_no_limit_sns = 1
                         # tong so luong kenh co the lien ket
-                        current_user.total_link_active = 7
-                        current_user.subscription = "COUPON_STANDARD"
+                        current_user.total_link_active = total_link_active
+                        current_user.subscription = "COUPON_" + plan_coupon
                         expired_at = login_subscription_expired + datetime.timedelta(
                             days=coupon_code.num_days
                         )

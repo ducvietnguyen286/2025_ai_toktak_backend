@@ -50,6 +50,7 @@ class UserService:
             coupon_dict = coupon.coupon._to_json()
             coupon_code = coupon._to_json()
             coupon_code["coupon_name"] = coupon_dict["name"]
+            coupon_code["plan_coupon"] = coupon_dict["plan_coupon"]
             coupon_code["type"] = "coupon"
             coupons.append(coupon_code)
 
@@ -119,7 +120,7 @@ class UserService:
                     "사용 중인 플랜이 없어요😭"
                 )
                 subscription_name_display["subscription_name"] = "무료 체험"
-            elif subscription == "COUPON_STANDARD" or subscription == "COUPON_KOL":
+            elif "COUPON_" in subscription:
                 subscription_name_display["subscription_name_lable"] = "베이직"
                 subscription_name_display["subscription_name"] = "쿠폰"
                 latest_coupon = select_with_filter_one(
