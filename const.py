@@ -342,3 +342,6 @@ SETUP_VOICES = [
 REDIS_KEY_TOKTAK = {
     "user_info_me": "user_info:me",
 }
+
+
+BASIC_USER = ["COUPON_BASIC", "BASIC", "NEW_USER", "INVITE_BASIC"]
