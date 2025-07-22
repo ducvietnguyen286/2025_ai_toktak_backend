@@ -151,7 +151,11 @@ class ShortstackWebhook(Resource):
     def post(self):
         try:
             # Lấy payload JSON từ request
+            
             payload = request.get_json()
+            
+            # Ghi log thông tin nhận được
+            log_webhook_message(f"Received Shotstack webhook: %{payload}")
             if not payload:
                 return {"message": "No JSON payload provided"}, 400
 
@@ -173,10 +177,6 @@ class ShortstackWebhook(Resource):
             
             redis_client.setex(redis_key, 600, "1")
 
-            
-
-            # Ghi log thông tin nhận được
-            log_webhook_message(f"Received Shotstack webhook: %{payload}")
             if action == "render" and video_url != "":
                 create_video_detail = VideoService.update_video_create(
                     render_id, status=status, video_url=video_url

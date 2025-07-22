@@ -42,6 +42,7 @@ class CouponCode(db.Model, BaseModel):
             ),
             "type": self.coupon.type if self.coupon else None,
             "coupon_name": self.coupon.name if self.coupon else None,
+            "plan_coupon": self.coupon.plan_coupon if self.coupon else None,
             "username": self.user.username if self.user else None,
             "email": self.user.email if self.user else None,
             "id": self.id,
