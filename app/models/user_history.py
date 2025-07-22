@@ -17,4 +17,4 @@ class UserHistory(db.Model, BaseModel):
     value = db.Column(db.Text)
     num_days = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
-
+    total_link_active = db.Column(db.Integer, default=0)

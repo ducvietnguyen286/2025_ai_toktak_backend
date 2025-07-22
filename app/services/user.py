@@ -11,6 +11,8 @@ from app.models.memberprofile import MemberProfile
 from app.models.referral_history import ReferralHistory
 from app.models.payment import Payment
 from app.models.payment_detail import PaymentDetail
+from app.models.user_video_templates import UserVideoTemplates
+from app.models.coupon_user_histories import CouponUserHistories
 from app.extensions import db
 from app.lib.logger import logger
 from sqlalchemy import select, update, delete, or_, func
@@ -48,6 +50,7 @@ class UserService:
             coupon_dict = coupon.coupon._to_json()
             coupon_code = coupon._to_json()
             coupon_code["coupon_name"] = coupon_dict["name"]
+            coupon_code["plan_coupon"] = coupon_dict["plan_coupon"]
             coupon_code["type"] = "coupon"
             coupons.append(coupon_code)
 
@@ -80,15 +83,6 @@ class UserService:
 
     @staticmethod
     def get_latest_coupon(user_id):
-        first_coupon = select_with_filter_one(
-            CouponCode,
-            [
-                CouponCode.is_active == 1,
-                CouponCode.used_by == user_id,
-                CouponCode.expired_at >= datetime.now(),
-            ],
-            [CouponCode.used_at.asc()],
-        )
         latest_coupon = select_with_filter_one(
             CouponCode,
             [
@@ -101,10 +95,74 @@ class UserService:
 
         coupon = latest_coupon.coupon._to_json() if latest_coupon else None
         latest_coupon = latest_coupon._to_json() if latest_coupon else None
-        first_coupon = first_coupon._to_json() if first_coupon else None
         if latest_coupon:
             latest_coupon["coupon_name"] = coupon["name"] if coupon else None
-        return first_coupon, latest_coupon
+            # Chỉ lấy package_data nếu coupon có trường "plan_coupon"
+            package_data = None
+            if coupon and "plan_coupon" in coupon:
+                package_data = const.PACKAGE_CONFIG.get(coupon["plan_coupon"])
+            latest_coupon["subscription_name"] = (
+                package_data["pack_name"] if package_data else None
+            )
+
+        return latest_coupon
+
+    @staticmethod
+    def get_subscription_name(subscription, user_id):
+        subscription_name_display = {
+            "subscription_name_lable": "",
+            "subscription_name": "",
+        }
+        try:
+            subscription_name = subscription
+            if subscription == "FREE":
+                subscription_name_display["subscription_name_lable"] = (
+                    "사용 중인 플랜이 없어요😭"
+                )
+                subscription_name_display["subscription_name"] = "무료 체험"
+            elif "COUPON_" in subscription:
+                subscription_name_display["subscription_name_lable"] = "베이직"
+                subscription_name_display["subscription_name"] = "쿠폰"
+                latest_coupon = select_with_filter_one(
+                    CouponCode,
+                    [
+                        CouponCode.is_active == 1,
+                        CouponCode.used_by == user_id,
+                        CouponCode.expired_at >= datetime.now(),
+                    ],
+                    [CouponCode.used_at.desc()],
+                )
+                if latest_coupon:
+                    coupon = latest_coupon.coupon._to_json() if latest_coupon else None
+                    subscription_name_display["subscription_name_lable"] = coupon[
+                        "name"
+                    ]
+                    package_data = None
+                    if coupon and "plan_coupon" in coupon:
+                        package_data = const.PACKAGE_CONFIG.get(coupon["plan_coupon"])
+                        if package_data:
+                            subscription_name_display["subscription_name"] = (
+                                package_data["pack_name"]
+                            )
+            elif subscription == "NEW_USER":
+                subscription_name_display["subscription_name_lable"] = "신규 가입 선물"
+                subscription_name_display["subscription_name"] = "베이직 플랜"
+            else:
+                package_data = const.PACKAGE_CONFIG.get(subscription_name)
+                if not package_data:
+                    subscription_name = "무료 체험"
+                subscription_name_display["subscription_name_lable"] = "신규 가입 선물"
+                subscription_name_display["subscription_name"] = package_data[
+                    "pack_name"
+                ]
+
+            return subscription_name_display
+
+        except Exception as e:
+            logger.error(
+                f"[get_subscription_name] Failed for path: {subscription} — Error: {e}"
+            )
+            return subscription
 
     @staticmethod
     def find_user(id):
@@ -329,6 +387,10 @@ class UserService:
                 synchronize_session=False
             )
 
+            UserVideoTemplates.query.filter(
+                UserVideoTemplates.user_id.in_(user_ids)
+            ).delete(synchronize_session=False)
+
             MemberProfile.query.filter(MemberProfile.user_id.in_(user_ids)).delete(
                 synchronize_session=False
             )
@@ -348,6 +410,10 @@ class UserService:
                 synchronize_session=False
             )
 
+            UserHistory.query.filter(UserHistory.user_id.in_(user_ids)).delete(
+                synchronize_session=False
+            )
+
             User.query.filter(User.id.in_(user_ids)).delete(synchronize_session=False)
 
             db.session.commit()
@@ -358,6 +424,11 @@ class UserService:
         return 1
 
     def get_user_info_detail(user_id):
+        cache_key = f"user_info_detail:{user_id}"
+        cached_data = redis_client.get(cache_key)
+        if cached_data:
+            return json.loads(cached_data)
+
         user_login = select_by_id(User, user_id)
         if not user_login:
             return None
@@ -368,28 +439,17 @@ class UserService:
         elif user_login.subscription == "STANDARD":
             subscription_name = "기업형 스탠다드 플랜"
 
-        first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
+        latest_coupon = UserService.get_latest_coupon(user_login.id)
+        logger.info(f"Latest coupon for user {user_login.id}: {latest_coupon}")
 
-        start_used = None
-        if first_coupon:
-            start_used = first_coupon.get("used_at")
-        elif latest_coupon:
-            start_used = latest_coupon.get("used_at")
-
-        last_used = latest_coupon.get("expired_at") if latest_coupon else None
-
-        used_date_range = ""
-        if start_used and last_used:
-            start_used = parse_date(start_used)
-            last_used = parse_date(last_used)
-            used_date_range = (
-                f"{start_used.strftime('%Y.%m.%d')}~{last_used.strftime('%Y.%m.%d')}"
-            )
+        if latest_coupon:
+            subscription_name = latest_coupon.get("subscription_name")
 
         user_dict = user_login._to_json()
         user_dict["subscription_name"] = subscription_name
-        user_dict["latest_coupon"] = latest_coupon
-        user_dict["used_date_range"] = used_date_range
+        # 3. Lưu vào cache (3h = 10800s)
+        redis_client.setex(cache_key, 10800, json.dumps(user_dict, ensure_ascii=False))
+
         return user_dict
 
     @staticmethod
@@ -588,3 +648,48 @@ class UserService:
         if not user:
             return None
         return user
+
+    @staticmethod
+    def report_users_dashboard(data_search):
+
+        histories = User.query
+
+        time_range = data_search.get("time_range", "")
+        if time_range == "today":
+            start_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "last_week":
+            start_date = datetime.now() - timedelta(days=7)
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "last_month":
+            start_date = datetime.now() - timedelta(days=30)
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "last_year":
+            start_date = datetime.now() - timedelta(days=365)
+            histories = histories.filter(User.created_at >= start_date)
+
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                histories = histories.filter(User.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(
+                    data_search["to_date"], "%Y-%m-%d"
+                ) + timedelta(days=1)
+                histories = histories.filter(User.created_at < to_date)
+
+        total = histories.count()
+
+        return total
+
+    
+    @staticmethod
+    def create_coupon_user_histories(*args, **kwargs):
+        user_history_detail = CouponUserHistories(*args, **kwargs)
+        user_history_detail.save()
+        return user_history_detail

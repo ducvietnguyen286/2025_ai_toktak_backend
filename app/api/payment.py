@@ -9,7 +9,7 @@ from app.services.notification import NotificationServices
 from app.services.user import UserService
 from app.decorators import parameters, admin_required
 from app.lib.response import Response
-from app.lib.logger import logger
+from app.lib.logger import logger, log_make_repayment_message
 from dateutil.parser import isoparse
 import const
 import traceback
@@ -50,7 +50,7 @@ class APICreateNewPayment(Resource):
         if active:
             active_status = active.status
             if active_status == "PENDING":
-                message = f"{package_name} 패키지를 구매하셨습니다.<br> 서비스 이용을 위해 시스템의 확인을 기다려 주세요."
+                message = f"고객님께서 {package_name} 패키지 구매를 요청하셨습니다. 서비스 이용을 위해 시스템의 확인을 기다려 주시기 바랍니다."
                 message_en = f" You have purchased the {package_name} package. Please wait for system confirmation to start using the service."
                 return Response(
                     message=message, message_en=message_en, code=201
@@ -81,7 +81,11 @@ class APICreateNewPayment(Resource):
 
             # ✅ Được phép upgrade
             message = f"{active.package_name} 요금제를 {package_name} 요금제로 성공적으로 업그레이드했습니다."
-            payment_upgrade = PaymentService.upgrade_package(current_user, package_name)
+            parent_id = active.id
+            payment_upgrade = PaymentService.upgrade_package(current_user, package_name , parent_id)
+            
+            
+                    
             NotificationServices.create_notification(
                 user_id=user_id_login,
                 title=message,
@@ -479,7 +483,6 @@ class APIPaymentConfirm(Resource):
                 payment = PaymentService.update_payment(
                     payment_id, **data_update_payment
                 )
-                logger.info(payment)
                 PaymentService.approvalPayment(payment_id)
 
                 return Response(
@@ -583,9 +586,9 @@ class APIBillingAuthorizations(Resource):
             }
 
             PaymentService.create_payment_log(**payment_data_log)
-            logger.info("_------------------------------------payment_data_log")
-            logger.info(payment_data_log)
-            logger.info(payment_data)
+            log_make_repayment_message("------------payment_data_log------------")
+            log_make_repayment_message(payment_data_log)
+            log_make_repayment_message(payment_data)
 
             if status_code == 200:
                 # Thanh toán thành công, cập nhật DB
@@ -593,6 +596,8 @@ class APIBillingAuthorizations(Resource):
                     "card_info": json.dumps(payment_data),
                 }
                 UserService.update_user(user_detail.id, **data_update_user)
+                # Tặng 1 tháng BASIC miễn phí
+                PaymentService.auto_payment_basic_free(user_id_login)
 
                 return Response(
                     message="Tosspayment 결제가 완료되었습니다",
@@ -604,6 +609,7 @@ class APIBillingAuthorizations(Resource):
 
             return Response(
                 message=message,
+                message_en="Payment error via Tosspayment",
                 data={
                     "status": "FAILED",
                     "fail_reason": payment_data.get("message", "Thanh toán thất bại"),
@@ -654,4 +660,50 @@ class APIBillingAuthorizationsFail(Resource):
                 message="결제 확인 중 오류가 발생했습니다.",
                 message_en="An error occurred during payment confirmation.",
                 code=201,
+            ).to_dict()
+
+
+@ns.route("/toss-webhook")
+class TossWebhook(Resource):
+    def post(self):
+        try:
+            data = request.get_json()
+            status = data.get("status")
+            order_id = data.get("orderId")
+
+            payment_data_log = {
+                "status_code": status,
+                "response_json": data,
+            }
+
+            if status == "DONE":
+                payment_data_log["description"] = (
+                    f"[VI] Thanh toán thành công cho đơn {order_id}\n"
+                    f"[KO] 주문 {order_id}의 결제가 성공했습니다."
+                )
+                logger.info(f"[Webhook] ✅ Thanh toán thành công - {order_id}")
+
+            elif status == "CANCELED":
+                payment_data_log["description"] = (
+                    f"[VI] Thanh toán bị hủy cho đơn {order_id}\n"
+                    f"[KO] 주문 {order_id}의 결제가 취소되었습니다."
+                )
+                logger.warning(f"[Webhook] ❌ Thanh toán bị hủy - {order_id}")
+
+            else:
+                payment_data_log["description"] = (
+                    f"[VI] Webhook nhận trạng thái không xác định: {status}\n"
+                    f"[KO] 알 수 없는 상태 수신됨: {status}"
+                )
+
+            PaymentService.create_payment_log(**payment_data_log)
+
+            return Response(
+                message="Đã nhận webhook", data={"status": status}, code=200
+            ).to_dict()
+
+        except Exception as ex:
+            logger.error(f"[Webhook] ❌ Lỗi xử lý webhook: {ex}")
+            return Response(
+                message="Xử lý thất bại", data={"status": "FAILED"}, code=500
             ).to_dict()

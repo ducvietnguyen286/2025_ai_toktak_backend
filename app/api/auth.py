@@ -13,9 +13,10 @@ import json
 
 from app.services.auth import AuthService
 from app.services.notification import NotificationServices
-from app.lib.string import get_level_images, get_subscription_name
+from app.lib.string import get_level_images 
 import const
 from app.extensions import redis_client
+from app.services.payment_services import PaymentService
 
 ns = Namespace(name="auth", description="Auth API")
 
@@ -243,17 +244,26 @@ class APIMe(Resource):
             )
             if expired_date and expired_date < current_date:
                 log_reset_user_message(
-                    f"Reset User : {user_login.id}  from {user_login.subscription} expired_date :  {expired_date}  current_date : {current_date}"
+                    f"Reset User : {user_login.id} {user_login.email}  from {user_login.subscription} expired_date :  {expired_date}  current_date : {current_date}"
                 )
                 user_login = AuthService.reset_free_user(user_login)
+            created_at = user_login.created_at
 
-            subscription_name = get_subscription_name(user_login.subscription)
+            subscription_name_display  = UserService.get_subscription_name(user_login.subscription , user_login.id)
 
             user_dict = user_login._to_json()
-            user_dict["subscription_name"] = subscription_name
+            user_dict["subscription_name_display"] = subscription_name_display
+            user_dict["subscription_name"] = subscription_name_display['subscription_name']
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)
 
+            can_download = AuthService.check_subscription_allowed(
+                user_dict["subscription"], created_at
+            )
+            user_dict["can_download"] = can_download
+            
+            # PaymentService.auto_renew_subscriptions()
+            
             try:
                 key_redis = const.REDIS_KEY_TOKTAK.get("user_info_me", "user:me")
                 redis_key = f"{key_redis}:{user_login.id}"
@@ -375,7 +385,7 @@ class APIMeUpdate(Resource):
                 user_id=user_login.id,
                 title=message,
             )
-            
+
             update_data["updated_at"] = datetime.now()
 
             user_login = AuthService.update(user_login.id, **update_data)
@@ -431,14 +441,14 @@ class APIUserProfile(Resource):
                     level_info=json.dumps(level_info),
                 )
 
-            subscription_name = get_subscription_name(user_login.subscription)
-
-            first_coupon, latest_coupon = UserService.get_latest_coupon(user_login.id)
+            subscription_name_display = UserService.get_subscription_name(user_login.subscription , user_login.id)
+            
             user_histories = UserService.get_all_user_history_by_user_id(user_login.id)
             user_dict = user_login._to_json()
             user_dict["user_histories"] = user_histories
-            user_dict["latest_coupon"] = latest_coupon
-            user_dict["subscription_name"] = subscription_name
+            user_dict["subscription_name_display"] = subscription_name_display
+            user_dict["subscription_name"] = subscription_name_display['subscription_name']
+            
 
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)

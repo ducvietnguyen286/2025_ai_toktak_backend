@@ -276,8 +276,9 @@ class APICreateBatchSync(Resource):
                 content=json.dumps(data),
                 type=batch_type,
                 count_post=len(post_types),
-                status=0,
+                status=const.PENDING_STATUS,
                 process_status="PENDING",
+                
                 voice_google=voice,
                 voice_typecast=voice_typecast,
                 is_paid_advertisements=is_paid_advertisements,
@@ -288,7 +289,10 @@ class APICreateBatchSync(Resource):
             posts = []
             for post_type in post_types:
                 post = PostService.create_post(
-                    user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
+                    user_id=user_id_login,
+                    batch_id=batch.id,
+                    type=post_type,
+                    status=const.PENDING_STATUS,
                 )
 
                 post_res = post._to_json()
@@ -296,6 +300,10 @@ class APICreateBatchSync(Resource):
 
             batch_res = batch._to_json()
             batch_res["posts"] = posts
+
+            name = data.get("name")
+            product_name = name[:10] if isinstance(name, str) else ""
+            batch_res["product_name"] = product_name
 
             batch_id = batch.id
 
@@ -594,7 +602,6 @@ class APIGetBatch(Resource):
             batch_res = batch._to_json()
             batch_res["posts"] = posts
 
-            user_id = AuthService.get_user_id()
             user_info = UserService.get_user_info_detail(user_id)
             batch_res["user_info"] = user_info
 
@@ -614,23 +621,20 @@ class APIGetBatch(Resource):
 
 @ns.route("/batchs")
 class APIBatchs(Resource):
-
+    @jwt_required()
     def get(self):
         user_id = AuthService.get_user_id()
-
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
-
         batches = BatchService.get_all_batches(page, per_page, user_id)
-
         return {
             "status": True,
             "message": "Success",
-            "total": batches.total,
-            "page": batches.page,
-            "per_page": batches.per_page,
-            "total_pages": batches.pages,
-            "data": [batch_detail.to_dict() for batch_detail in batches.items],
+            "total": batches['total'],
+            "page": batches['page'],
+            "per_page": batches['per_page'],
+            "total_pages": batches['pages'],
+            "data": [batch_detail.to_dict() for batch_detail in batches['items']],
         }, 200
 
 
@@ -1425,7 +1429,8 @@ class APIDecrypt(Resource):
                 message="Ping not Oke",
                 code=201,
             ).to_dict()
-            
+
+
 @ns.route("/ping")
 class APIPingBatch(Resource):
     def get(self):
@@ -1438,8 +1443,7 @@ class APIPingBatch(Resource):
                 message="Ping not Oke",
                 code=201,
             ).to_dict()
-            
- 
+
 
 def _cleanup_zip(zip_path, tmp_dir, response):
     try:

@@ -50,6 +50,7 @@ class ShotStackService:
         is_ai_image = config["SHOTSTACK_AI_IMAGE"]
         MUSIC_BACKGROUP_VOLUMN = float(config["MUSIC_BACKGROUP_VOLUMN"])
         IS_GOOGLE_DRIVER = int(config["IS_GOOGLE_DRIVER"])
+        IS_S3_DRIVER = int(config["IS_S3_DRIVER"])
         video_size_json = config["VIDEO_SIZE"] or '{"width": 1200, "height": 800}'
         video_size = json.loads(video_size_json)
 
@@ -368,6 +369,21 @@ class ShotStackService:
                     },
                 },
                 {"provider": "shotstack", "exclude": True},
+            ]
+        if IS_S3_DRIVER == 1:
+            S3_BUCKET_NAME = config["S3_BUCKET_NAME"]
+            date_create_s3 = datetime.datetime.now().strftime("%Y/%m/%d")
+            payload["output"]["destinations"] = [
+                {
+                    "provider": "s3",
+                    "options": {
+                        "region": "ap-northeast-2",
+                        "bucket": S3_BUCKET_NAME,
+                        "prefix": date_create_s3,
+                        "filename": f"short_video_{batch_id}",
+                    },
+                },
+                # {"provider": "shotstack", "exclude": True},
             ]
 
         # Header với API Key

@@ -92,6 +92,7 @@ class CreateVideo(Resource):
             "images_url": images_url,
             "images_slider_url": images_slider_url,
             "product_video_url": product_video_url,
+            "voice_typecast": batch.voice_typecast,
         }
 
         result = ShotStackService.create_video_from_images_v2(data_make_video)
@@ -150,7 +151,11 @@ class ShortstackWebhook(Resource):
     def post(self):
         try:
             # Lấy payload JSON từ request
+            
             payload = request.get_json()
+            
+            # Ghi log thông tin nhận được
+            log_webhook_message(f"Received Shotstack webhook: %{payload}")
             if not payload:
                 return {"message": "No JSON payload provided"}, 400
 
@@ -163,9 +168,15 @@ class ShortstackWebhook(Resource):
             render = payload.get("render", "")
             error = payload.get("error", "")
             user_id = 0
+            
+            
+            redis_key = f"shotstack_webhook_lock:{render_id}"
+            if redis_client.exists(redis_key):
+                log_webhook_message(f"Webhook duplicate! render_id={render_id} đã xử lý trước đó.")
+                return {"message": "Webhook already processed", "render_id": render_id}, 200
+            
+            redis_client.setex(redis_key, 600, "1")
 
-            # Ghi log thông tin nhận được
-            log_webhook_message(f"Received Shotstack webhook: %{payload}")
             if action == "render" and video_url != "":
                 create_video_detail = VideoService.update_video_create(
                     render_id, status=status, video_url=video_url
@@ -190,6 +201,11 @@ class ShortstackWebhook(Resource):
                                 "description": f"AI Shotstack  {str(error)}",
                             }
                         else:
+                            data_update_batch = {
+                                "status": const.DRAFT_STATUS,
+                                "process_status": "DRAFT",
+                            }
+                            BatchService.update_batch(batch_id, **data_update_batch)
                             data_update = {
                                 "notification_type": "shortstack_video",
                                 "render_id": render_id,
@@ -209,6 +225,7 @@ class ShortstackWebhook(Resource):
                         batch_id,
                         video_url=video_url,
                         video_path=file_path,
+                        status=const.DRAFT_STATUS,
                     )
 
                     check_and_update_user_batch_remain(user_id, batch_id)
@@ -326,11 +343,13 @@ def check_and_update_user_batch_remain(user_id: int, batch_id: int):
         if redis_client.exists(redis_key):
             return False  # Đã cập nhật rồi
 
-        current_user = UserService.find_user(user_id)
+        current_user = UserService.find_user_with_out_session(user_id)
         if not current_user:
             return False  # Không tìm thấy user
 
         batch_remain = current_user.batch_remain
+        subscription = current_user.subscription
+        subscription_expired = current_user.subscription_expired
         new_batch_remain = max(current_user.batch_remain - 1, 0)
 
         log_webhook_message(
@@ -339,8 +358,20 @@ def check_and_update_user_batch_remain(user_id: int, batch_id: int):
 
         UserService.update_user(user_id, batch_remain=new_batch_remain)
 
+        data_user_history = {
+            "user_id": user_id,
+            "batch_id": batch_id,
+            "subscription": subscription,
+            "subscription_expired": subscription_expired,
+            "old_batch_remain": batch_remain,
+            "new_batch_remain": new_batch_remain,
+            "description": f"[Cap Nhat batch_remain  ] user_id={user_id}, batch_id={batch_id}, batch_remain={batch_remain}, new_batch_remain={new_batch_remain}",
+        }
+
+        UserService.create_coupon_user_histories(**data_user_history)
+
         # Đặt key trong Redis với TTL là 5 phút (300 giây)
-        redis_client.setex(redis_key, 300, "1")
+        redis_client.setex(redis_key, 3000, "1")
         return True  # Đã cập nhật thành công
 
     except Exception as e:
