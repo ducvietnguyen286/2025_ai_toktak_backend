@@ -13,6 +13,7 @@ class CouponUserHistories(db.Model, BaseModel):
     type = db.Column(db.String(500))
     type_2 = db.Column(db.String(500))
     object_id = db.Column(db.Integer, default=0)
+    total_link_active = db.Column(db.Integer, default=0)
     title = db.Column(db.String(255), nullable=False)
     subscription = db.Column(db.String(255), nullable=False)
     subscription_expired = db.Column(db.DateTime, nullable=True)
