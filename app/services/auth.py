@@ -160,7 +160,6 @@ class AuthService:
 
         return user, new_user_referral_code, is_new_user
 
-
     @staticmethod
     def get_facebook_user_info(access_token, person_id):
         user_info_url = f"https://graph.facebook.com/v22.0/{person_id}"
@@ -340,7 +339,7 @@ class AuthService:
             batch_no_limit_sns=0,
             total_link_active=total_link_active,
         )
-        
+
         return user_detail
 
     @staticmethod
@@ -367,13 +366,10 @@ class AuthService:
 
     @staticmethod
     def check_subscription_allowed(subscription, created_at):
-        # subscription: str
-        # created_at: datetime (object)
-        if subscription in ("FREE", "BASIC"):
-            return 0
-        if subscription in ("NEW_USER"):
+        if subscription in ("FREE", "NEW_USER", "COUPON_BASIC", "INVITE_BASIC"):
             # Nếu đã qua 7 ngày thì False
-            if created_at < datetime.now() - timedelta(days=3):
+            today = datetime.now().date()
+            if created_at.date() <= (today - timedelta(days=3)):
                 return 0
             else:
                 return 1
