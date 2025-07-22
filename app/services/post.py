@@ -460,7 +460,7 @@ class PostService:
                     link_sns["video"].append(link_id)
 
                 if (
-                    subscription not in ["BASIC", "NEW_USER", "INVITE_BASIC"]
+                    subscription not in const.BASIC_USER
                     and link_id not in link_sns["image"]
                 ):
                     link_sns["image"].append(link_id)
