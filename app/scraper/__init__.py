@@ -2,6 +2,7 @@ from app.scraper.pages.coupang import CoupangScraper
 from app.scraper.pages.domeggook import DomeggookScraper
 from app.scraper.pages.aliexpress import AliExpressScraper
 from app.scraper.pages.ebay import EbayScraper
+from app.scraper.pages.naver import NaverScraper
 from app.scraper.pages.shopee import ShopeeScarper
 from app.scraper.pages.amazon import AmazonScraper
 from app.scraper.pages.walmart import WalmartScraper
@@ -35,6 +36,8 @@ def get_page_scraper(params):
         scraper = WalmartScraper(params)
     elif "shopee." in netloc:
         scraper = ShopeeScarper(params)
+    elif "naver." in netloc:
+        scraper = NaverScraper(params)
     return scraper.run()
 
 

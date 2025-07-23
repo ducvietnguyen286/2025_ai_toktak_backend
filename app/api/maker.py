@@ -291,7 +291,6 @@ class APICreateBatchSync(Resource):
                 count_post=len(post_types),
                 status=const.PENDING_STATUS,
                 process_status="PENDING",
-                
                 voice_google=voice,
                 voice_typecast=voice_typecast,
                 is_paid_advertisements=is_paid_advertisements,
@@ -657,11 +656,11 @@ class APIBatchs(Resource):
         return {
             "status": True,
             "message": "Success",
-            "total": batches['total'],
-            "page": batches['page'],
-            "per_page": batches['per_page'],
-            "total_pages": batches['pages'],
-            "data": [batch_detail.to_dict() for batch_detail in batches['items']],
+            "total": batches["total"],
+            "page": batches["page"],
+            "per_page": batches["per_page"],
+            "total_pages": batches["pages"],
+            "data": [batch_detail.to_dict() for batch_detail in batches["items"]],
         }, 200
 
 
