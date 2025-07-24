@@ -99,3 +99,56 @@ class Payment(db.Model, BaseModel):
                 else None
             ),
         }
+        
+        
+    def to_dict_user(self):
+        return {
+            "email": self.user.email if self.user else None,
+            "current_user_subscription": self.user.subscription if self.user else None,
+            "id": self.id,
+            "method": self.method,
+            "customer_name": self.customer_name,
+            "package_name": self.package_name,
+            "price": self.price,
+            "amount": self.amount,
+            "status": self.status,
+            "total_link": self.total_link,
+            "total_create": self.total_create,
+            "parent_id": self.parent_id,
+            "fail_reason": self.fail_reason,
+            "description": self.description,
+            "is_renew": self.is_renew,
+            "requested_at": (
+                self.requested_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.requested_at
+                else None
+            ),
+            "approved_at": (
+                self.approved_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.approved_at
+                else None
+            ),
+            "payment_date": (
+                self.payment_date.strftime("%Y-%m-%d %H:%M:%S")
+                if self.payment_date
+                else None
+            ),
+            "start_date": (
+                self.start_date.strftime("%Y-%m-%d %H:%M:%S")
+                if self.start_date
+                else None
+            ),
+            "end_date": (
+                self.end_date.strftime("%Y-%m-%d %H:%M:%S") if self.end_date else None
+            ),
+            "created_at": (
+                self.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.created_at
+                else None
+            ),
+            "updated_at": (
+                self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.updated_at
+                else None
+            ),
+        }

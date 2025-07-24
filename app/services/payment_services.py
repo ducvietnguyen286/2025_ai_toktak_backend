@@ -1253,3 +1253,28 @@ class PaymentService:
         except Exception as ex:
             return 0
         return 1
+
+    @staticmethod
+    def get_user_billings(data_search):
+        query = Payment.query.filter(Payment.method != "NEW_USER")
+        search_key = data_search.get("search_key", "")
+        user_id_login = data_search.get("user_id_login", "")
+        query = query.filter(Payment.user_id == user_id_login)
+
+        if search_key != "":
+            search_pattern = f"%{search_key}%"
+            query = query.filter(
+                or_(
+                    Payment.package_name.ilike(search_pattern),
+                    Payment.customer_name.ilike(search_pattern),
+                    Payment.user.has(User.email.ilike(search_pattern)),
+                )
+            )
+
+         
+        query = query.order_by(Payment.id.desc())
+
+        pagination = query.paginate(
+            page=data_search["page"], per_page=data_search["per_page"], error_out=False
+        )
+        return pagination
