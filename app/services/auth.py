@@ -366,7 +366,7 @@ class AuthService:
 
     @staticmethod
     def check_subscription_allowed(subscription, created_at):
-        if subscription in ("FREE", "NEW_USER", "COUPON_BASIC", "INVITE_BASIC"):
+        if subscription in ("FREE", "NEW_USER", "INVITE_BASIC"):
             # Nếu đã qua 7 ngày thì False
             today = datetime.now().date()
             if created_at.date() <= (today - timedelta(days=3)):
