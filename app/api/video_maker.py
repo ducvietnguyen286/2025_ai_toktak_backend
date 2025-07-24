@@ -98,6 +98,10 @@ class CreateVideo(Resource):
             user_id=user_id_login,
             batch_id=batch.id,
             type="video",
+            thumbnail=images_url,
+            images=json.dumps(images_slider_url),
+            captions=json.dumps(captions),
+            title=product_name,
             status=const.PENDING_STATUS,
         )
 
