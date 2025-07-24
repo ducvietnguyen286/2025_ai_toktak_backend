@@ -170,6 +170,7 @@ class PaymentService:
             "order_id": order_id,
             "amount": origin_price,
             "price": origin_price,
+            "next_payment": origin_price,
             "start_date": start_date,
             "end_date": end_date,
             "customer_name": current_user.name or current_user.email,
@@ -177,6 +178,7 @@ class PaymentService:
             "method": method,
             "requested_at": start_date,
             "total_link": PACKAGE_CONFIG[package_name]["total_link"],
+            "next_total_link": PACKAGE_CONFIG[package_name]["total_link"],
             "description": f"{package_name} 패키지를 구매하기",
             "status": status,
         }
@@ -196,7 +198,7 @@ class PaymentService:
             logger.info(
                 f"package_name {package_name} addon_count : {addon_count}  data_update_payment : {data_update_payment}"
             )
-            PaymentService.create_addon_payment_detail(user_id, payment.id)
+            PaymentService.create_addon_payment_detail(user_id, payment.id, addon_count)
 
         return payment
 
@@ -240,29 +242,32 @@ class PaymentService:
         return payment
 
     @staticmethod
-    def create_addon_payment_detail(user_id, payment_id):
+    def create_addon_payment_detail(user_id, payment_id, addon_count=1):
         result = PaymentService.calculate_addon_price(user_id, 1)
         payment_data = {
             "user_id": user_id,
             "payment_id": payment_id,
-            "amount": result["amount"],
+            "amount": result["amount"] * addon_count,
             "price": result["price"],
+            "description": f"User by addon with {addon_count}",
         }
-        payment = PaymentService.create_payment_detail(**payment_data)
-        return payment
+        payment_detail = PaymentService.create_payment_detail(**payment_data)
+        return payment_detail
 
     @staticmethod
     def upgrade_package(current_user, new_package, parent_id=0):
         user_id = current_user.id
         now = datetime.now()
         active_payment = PaymentService.has_active_subscription(user_id)
+        log_make_repayment_message(active_payment)
+        log_make_repayment_message(active_payment.next_payment)
 
         if not active_payment:
             return PaymentService.create_new_payment(user_id, new_package)
 
         # Tính tiền còn lại của gói cũ
         remaining_days = (active_payment.end_date - now).days
-        old_price_per_day = active_payment.price / PACKAGE_DURATION_DAYS
+        old_price_per_day = active_payment.next_payment / PACKAGE_DURATION_DAYS
         remaining_value = round(old_price_per_day * remaining_days)
 
         origin_price = PACKAGE_CONFIG[new_package]["price"]
@@ -275,6 +280,7 @@ class PaymentService:
             order_id=order_id,
             package_name=new_package,
             amount=origin_price,
+            next_payment=origin_price,
             customer_name=current_user.name or current_user.email,
             method="REQUEST_UPGRADE",
             price=final_price,
@@ -282,6 +288,7 @@ class PaymentService:
             start_date=now,
             end_date=active_payment.end_date,
             total_link=PACKAGE_CONFIG[new_package]["total_link"],
+            next_total_link=PACKAGE_CONFIG[new_package]["total_link"],
             total_create=PACKAGE_CONFIG[new_package]["total_create"],
             description=f"{new_package} 추가 기능을 구매하세요",
         )
@@ -566,9 +573,9 @@ class PaymentService:
                     "new_package_price_origin": 0,
                     "start_date": start_date_default.strftime("%Y-%m-%d"),
                     "end_date": end_date_default.strftime("%Y-%m-%d"),
-                    "next_payment": (end_date_default + timedelta(days=1)).strftime(
-                        "%Y-%m-%d"
-                    ),
+                    "next_date_payment": (
+                        end_date_default + timedelta(days=1)
+                    ).strftime("%Y-%m-%d"),
                 }
 
             # Lấy payment hiện tại còn hạn
@@ -613,9 +620,9 @@ class PaymentService:
                     "discount_welcome": discount_welcome,
                     "start_date": start_date_default.strftime("%Y-%m-%d"),
                     "end_date": end_date_default.strftime("%Y-%m-%d"),
-                    "next_payment": (end_date_default + timedelta(days=1)).strftime(
-                        "%Y-%m-%d"
-                    ),
+                    "next_date_payment": (
+                        end_date_default + timedelta(days=1)
+                    ).strftime("%Y-%m-%d"),
                 }
 
             current_package = current_payment.package_name
@@ -654,7 +661,7 @@ class PaymentService:
                         start_date.strftime("%Y-%m-%d") if start_date else None
                     ),
                     "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
-                    "next_payment": (
+                    "next_date_payment": (
                         (end_date + timedelta(days=1)).strftime("%Y-%m-%d")
                         if end_date
                         else None
@@ -685,7 +692,7 @@ class PaymentService:
                         start_date.strftime("%Y-%m-%d") if start_date else None
                     ),
                     "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
-                    "next_payment": (
+                    "next_date_payment": (
                         (end_date + timedelta(days=1)).strftime("%Y-%m-%d")
                         if end_date
                         else None
@@ -726,7 +733,7 @@ class PaymentService:
                 "discount_welcome": discount_welcome,
                 "start_date": start_date.strftime("%Y-%m-%d") if start_date else None,
                 "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
-                "next_payment": (
+                "next_date_payment": (
                     (end_date + timedelta(days=1)).strftime("%Y-%m-%d")
                     if end_date
                     else None
@@ -819,11 +826,26 @@ class PaymentService:
                 user_id = payment.user_id
                 package_name = payment.package_name
                 parent_id = payment.parent_id
+                total_link = payment.total_link
+                object_id = payment.id
+                start_date = payment.start_date
+                end_date = payment.end_date
+                child_amount = payment.amount
+                child_total_link = payment.total_link
 
                 if parent_id > 0:
+
+                    payment_parent = PaymentService.find_payment(parent_id)
+                    parent_amount = payment_parent.amount
+                    parent_total_link = payment_parent.total_link
+
                     # update old payment để không thể tự động trừ tiền
                     # vì ngày kết thúc của gói nâng cấp sẽ bằng gói mới
-                    data_update_old_payment = {"is_renew": 1}
+                    data_update_old_payment = {
+                        "is_renew": 1,
+                        "next_payment": child_amount + parent_amount,
+                        "next_total_link": min(child_total_link + parent_total_link, 7),
+                    }
                     PaymentService.update_payment(parent_id, **data_update_old_payment)
 
                 user_detail = UserService.find_user(user_id)
@@ -832,7 +854,7 @@ class PaymentService:
                     if user_detail:
                         total_link_active = user_detail.total_link_active
                         data_update = {
-                            "total_link_active": total_link_active + payment.total_link,
+                            "total_link_active": total_link_active + total_link,
                         }
 
                         UserService.update_user(user_id, **data_update)
@@ -840,9 +862,9 @@ class PaymentService:
                             "user_id": user_id,
                             "type": "payment",
                             "type_2": package_name,
-                            "object_id": payment.id,
-                            "object_start_time": payment.start_date,
-                            "object_end_time": payment.end_date,
+                            "object_id": object_id,
+                            "object_start_time": start_date,
+                            "object_end_time": end_date,
                             "title": "Basic 추가 기능을 구매하세요.",
                             "description": "Basic 추가 기능을 구매하세요.",
                             "value": 0,
@@ -978,6 +1000,7 @@ class PaymentService:
                 Payment.status == "PAID",
                 Payment.is_renew == 0,
                 Payment.method != "NEW_USER",
+                Payment.package_name != "ADDON",
             ).all()
 
             for old_payment in expiring_payments:

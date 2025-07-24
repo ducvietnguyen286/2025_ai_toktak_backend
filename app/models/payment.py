@@ -8,7 +8,7 @@ class Payment(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    parent_id = db.Column(db.Integer, db.ForeignKey("payments.id"), nullable=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey("payments.id"), default=0)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     order_id = db.Column(db.String(255), nullable=False)
     customer_name = db.Column(db.String(255), nullable=False)
@@ -19,9 +19,11 @@ class Payment(db.Model, BaseModel):
     payment_date = db.Column(db.DateTime, nullable=False)
     price = db.Column(db.Float, nullable=False)
     amount = db.Column(db.Float, nullable=False)
+    next_payment = db.Column(db.Float, nullable=False, default=0)
 
     status = db.Column(db.String(255), default="PENDING")
     total_link = db.Column(db.Integer, default=0)
+    next_total_link = db.Column(db.Integer, default=0)
     total_create = db.Column(db.Integer, default=10)
 
     start_date = db.Column(db.DateTime, nullable=False, default=datetime.now)
@@ -35,9 +37,7 @@ class Payment(db.Model, BaseModel):
     is_renew = db.Column(db.Integer, default=0)
 
     created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
-    updated_at = db.Column(
-        db.DateTime, default=datetime.now, onupdate=datetime.now
-    )
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     user = db.relationship("User", lazy="joined")
     parent = db.relationship("Payment", remote_side=[id], lazy="joined")
