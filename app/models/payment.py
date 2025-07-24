@@ -8,7 +8,7 @@ class Payment(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    parent_id = db.Column(db.Integer, db.ForeignKey("payments.id"), nullable=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey("payments.id"), default=0)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     order_id = db.Column(db.String(255), nullable=False)
     customer_name = db.Column(db.String(255), nullable=False)
@@ -19,9 +19,11 @@ class Payment(db.Model, BaseModel):
     payment_date = db.Column(db.DateTime, nullable=False)
     price = db.Column(db.Float, nullable=False)
     amount = db.Column(db.Float, nullable=False)
+    next_payment = db.Column(db.Float, nullable=False, default=0)
 
     status = db.Column(db.String(255), default="PENDING")
     total_link = db.Column(db.Integer, default=0)
+    next_total_link = db.Column(db.Integer, default=0)
     total_create = db.Column(db.Integer, default=10)
 
     start_date = db.Column(db.DateTime, nullable=False, default=datetime.now)
@@ -35,9 +37,7 @@ class Payment(db.Model, BaseModel):
     is_renew = db.Column(db.Integer, default=0)
 
     created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
-    updated_at = db.Column(
-        db.DateTime, default=datetime.now, onupdate=datetime.now
-    )
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     user = db.relationship("User", lazy="joined")
     parent = db.relationship("Payment", remote_side=[id], lazy="joined")
@@ -56,6 +56,59 @@ class Payment(db.Model, BaseModel):
             "package_name": self.package_name,
             "payment_method": self.payment_method,
             "payment_status": self.payment_status,
+            "price": self.price,
+            "amount": self.amount,
+            "status": self.status,
+            "total_link": self.total_link,
+            "total_create": self.total_create,
+            "parent_id": self.parent_id,
+            "fail_reason": self.fail_reason,
+            "description": self.description,
+            "is_renew": self.is_renew,
+            "requested_at": (
+                self.requested_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.requested_at
+                else None
+            ),
+            "approved_at": (
+                self.approved_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.approved_at
+                else None
+            ),
+            "payment_date": (
+                self.payment_date.strftime("%Y-%m-%d %H:%M:%S")
+                if self.payment_date
+                else None
+            ),
+            "start_date": (
+                self.start_date.strftime("%Y-%m-%d %H:%M:%S")
+                if self.start_date
+                else None
+            ),
+            "end_date": (
+                self.end_date.strftime("%Y-%m-%d %H:%M:%S") if self.end_date else None
+            ),
+            "created_at": (
+                self.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.created_at
+                else None
+            ),
+            "updated_at": (
+                self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.updated_at
+                else None
+            ),
+        }
+        
+        
+    def to_dict_user(self):
+        return {
+            "email": self.user.email if self.user else None,
+            "current_user_subscription": self.user.subscription if self.user else None,
+            "id": self.id,
+            "method": self.method,
+            "customer_name": self.customer_name,
+            "package_name": self.package_name,
             "price": self.price,
             "amount": self.amount,
             "status": self.status,

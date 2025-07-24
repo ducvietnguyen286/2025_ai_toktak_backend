@@ -11,7 +11,7 @@ class PaymentDetail(db.Model, BaseModel):
     payment_id = db.Column(db.Integer, db.ForeignKey("payments.id"), nullable=True)
     price = db.Column(db.Float, nullable=False)
     amount = db.Column(db.Float, nullable=False)
-
+    description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
     updated_at = db.Column(
         db.DateTime, default=datetime.now, onupdate=datetime.now

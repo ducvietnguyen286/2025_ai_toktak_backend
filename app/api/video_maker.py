@@ -70,7 +70,11 @@ class CreateVideo(Resource):
             if not isinstance(url, str):
                 return {"message": "Each URL must be a string"}, 400
         batch_type = const.TYPE_NORMAL
-        post_types = ["video", "image", "blog"]
+        post_types = [
+            "image",
+            "blog",
+            "video"
+        ]
         voice = 2
         voice_typecast = ""
         is_paid_advertisements = 0
@@ -93,17 +97,17 @@ class CreateVideo(Resource):
             is_advance=is_advance,
             template_info=template_info,
         )
-
-        post = PostService.create_post(
-            user_id=user_id_login,
-            batch_id=batch.id,
-            type="video",
-            thumbnail=images_url,
-            images=json.dumps(images_slider_url),
-            captions=json.dumps(captions),
-            title=product_name,
-            status=const.PENDING_STATUS,
-        )
+        for post_type in post_types:
+            post = PostService.create_post(
+                user_id=user_id_login,
+                batch_id=batch.id,
+                type=post_type,
+                thumbnail=images_url,
+                images=json.dumps(images_slider_url),
+                captions=json.dumps(captions),
+                title=product_name,
+                status=const.PENDING_STATUS,
+            )
 
         voice_google = random.randint(1, 4)  # Chọn số nguyên từ 1 đến 4
 
