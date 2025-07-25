@@ -406,8 +406,6 @@ class ShotStackService:
 
         try:
             # Gửi yêu cầu POST đến Shotstack API
-            log_make_video_message(payload)
-            log_make_video_message(json.dumps(payload))
             response = requests.post(
                 SHOTSTACK_URL, headers=headers, data=json.dumps(payload)
             )

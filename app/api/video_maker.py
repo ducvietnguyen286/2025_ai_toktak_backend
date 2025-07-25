@@ -70,11 +70,7 @@ class CreateVideo(Resource):
             if not isinstance(url, str):
                 return {"message": "Each URL must be a string"}, 400
         batch_type = const.TYPE_NORMAL
-        post_types = [
-            "image",
-            "blog",
-            "video"
-        ]
+        post_types = ["image", "blog", "video"]
         voice = 2
         voice_typecast = ""
         is_paid_advertisements = 0
@@ -233,13 +229,13 @@ class ShortstackWebhook(Resource):
                     if is_s3_file_public(url_s3):
                         redis_client.setex(redis_key, 600, "1")
                         video_url = url_s3
+                        render_id = render  # Copy thì render_id sẽ là render
 
             else:
                 if action == "render" and url_download != "":
                     if is_s3_file_public(url_download):
                         redis_client.setex(redis_key, 600, "1")
                         video_url = url_download
-
             if video_url != "":
                 create_video_detail = VideoService.update_video_create(
                     render_id, status=status, video_url=video_url
@@ -280,6 +276,10 @@ class ShortstackWebhook(Resource):
                         NotificationServices.create_notification_render_id(
                             **data_update
                         )
+                else:
+                    log_webhook_message(
+                        f"Không có create_video_detail : render_id={render_id}, status={status}, video_url={video_url}"
+                    )
                 file_download_attr = download_video(video_url, batch_id)
                 if file_download_attr:
                     file_path = file_download_attr["file_path"]
@@ -290,7 +290,6 @@ class ShortstackWebhook(Resource):
                         video_path=file_path,
                         status=const.DRAFT_STATUS,
                     )
-
                     check_and_update_user_batch_remain(user_id, batch_id)
 
             return {
