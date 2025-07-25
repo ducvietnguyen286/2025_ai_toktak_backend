@@ -271,7 +271,7 @@ class APIUsedCoupon(Resource):
                         "title": coupon_code.coupon.name,
                         "description": coupon_code.code,
                         "value": coupon_code.value,
-                        "num_days": coupon_code.num_days,
+                        "num_days": coupon_code.value,
                         "total_link_active": coupon_code.total_link_active,
                     }
 
