@@ -707,3 +707,27 @@ class TossWebhook(Resource):
             return Response(
                 message="Xử lý thất bại", data={"status": "FAILED"}, code=500
             ).to_dict()
+
+
+@ns.route("/get_histories")
+class APIGetHistory(Resource):
+    @jwt_required()
+    def get(self):
+        user_id_login = AuthService.get_user_id()
+        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+        data_search = {
+            "page": page,
+            "per_page": per_page,
+            "user_id_login": user_id_login,
+        }
+        billings = PaymentService.get_user_billings(data_search)
+        return {
+            "status": True,
+            "message": "Success",
+            "total": billings.total,
+            "page": billings.page,
+            "per_page": billings.per_page,
+            "total_pages": billings.pages,
+            "data": [billing_detail.to_dict_user() for billing_detail in billings.items],
+        }, 200

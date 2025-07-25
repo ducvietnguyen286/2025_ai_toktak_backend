@@ -365,7 +365,7 @@ class ShotStackService:
                 "size": {"width": video_size["width"], "height": video_size["height"]},
                 # "size": video_size,
             },
-            "callback": f"{current_domain}/api/v1/video_maker/shotstack_webhook",
+            "callback": f"{current_domain}/api/v1/video_maker/shotstack_webhook?batch_id={batch_id}",
         }
 
         if layout_advance:
@@ -395,14 +395,19 @@ class ShotStackService:
                         "filename": f"short_video_{batch_id}",
                     },
                 },
-                # {"provider": "shotstack", "exclude": True},
+                {"provider": "shotstack", "exclude": True},
             ]
+            s3_url = f"https://{S3_BUCKET_NAME}.s3.ap-northeast-2.amazonaws.com/{date_create_s3}/short_video_{batch_id}.mp4"
+            payload["callback"] =  f"{current_domain}/api/v1/video_maker/shotstack_webhook?batch_id={batch_id}&is_s3=1&url_s3={s3_url}"
+             
 
         # Header với API Key
         headers = {"x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json"}
 
         try:
             # Gửi yêu cầu POST đến Shotstack API
+            log_make_video_message(payload)
+            log_make_video_message(json.dumps(payload))
             response = requests.post(
                 SHOTSTACK_URL, headers=headers, data=json.dumps(payload)
             )
