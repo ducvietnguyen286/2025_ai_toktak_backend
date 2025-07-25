@@ -224,12 +224,23 @@ class APICreateBatchSync(Resource):
                 voice = 2
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
-
+            logger.error(f"Scraper data for URL: {url}")
             data = Scraper().scraper({"url": url})
 
             # return data
-
+            logger.error(f"Scraper data  : {data}")
+            check_data_scraper = True
             if not data:
+                check_data_scraper = False
+            else:
+                logger.error(f"Scraper data  : {data}")
+                image_url = data.get("image", "")
+                if not (
+                    image_url.startswith("http://") or image_url.startswith("https://")
+                ):
+                    check_data_scraper = False
+            # Dữ liệu cào không hợp lệ
+            if not check_data_scraper:
                 NotificationServices.create_notification(
                     user_id=user_id_login,
                     status=const.NOTIFICATION_FALSE,
@@ -250,7 +261,6 @@ class APICreateBatchSync(Resource):
                     },
                     code=201,
                 ).to_dict()
-
             thumbnail_url = data.get("image", "")
             thumbnails = data.get("thumbnails", [])
 
@@ -278,7 +288,6 @@ class APICreateBatchSync(Resource):
                 count_post=len(post_types),
                 status=const.PENDING_STATUS,
                 process_status="PENDING",
-                
                 voice_google=voice,
                 voice_typecast=voice_typecast,
                 is_paid_advertisements=is_paid_advertisements,
@@ -630,11 +639,11 @@ class APIBatchs(Resource):
         return {
             "status": True,
             "message": "Success",
-            "total": batches['total'],
-            "page": batches['page'],
-            "per_page": batches['per_page'],
-            "total_pages": batches['pages'],
-            "data": [batch_detail.to_dict() for batch_detail in batches['items']],
+            "total": batches["total"],
+            "page": batches["page"],
+            "per_page": batches["per_page"],
+            "total_pages": batches["pages"],
+            "data": [batch_detail.to_dict() for batch_detail in batches["items"]],
         }, 200
 
 
