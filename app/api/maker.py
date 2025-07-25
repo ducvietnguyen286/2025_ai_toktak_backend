@@ -227,34 +227,10 @@ class APICreateBatchSync(Resource):
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
 
-            data = Scraper().scraper({"url": url})
+            data = {}
 
-            # return data
-
-            if not data:
-                NotificationServices.create_notification(
-                    user_id=user_id_login,
-                    status=const.NOTIFICATION_FALSE,
-                    title=f"❌ 해당 {url} 은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
-                    description=f"Scraper False {url}",
-                )
-
-                redis_client.set(
-                    redis_user_batch_key, current_user.batch_remain + 1, ex=180
-                )
-
-                return Response(
-                    message=MessageError.NO_ANALYZE_URL.value["message"],
-                    data={
-                        "error_message": MessageError.NO_ANALYZE_URL.value[
-                            "error_message"
-                        ]
-                    },
-                    code=201,
-                ).to_dict()
-
-            thumbnail_url = data.get("image", "")
-            thumbnails = data.get("thumbnails", [])
+            thumbnail_url = ""
+            thumbnails = []
 
             data["input_url"] = url
             data["base_url"] = ""
@@ -1251,7 +1227,7 @@ class APICreateScraper(Resource):
         try:
             url = args.get("url", "")
 
-            data_scraper = Scraper().scraper({"url": url})
+            data_scraper = Scraper().scraper({"url": url, "batch_id": "123459"})
             logger.error(data_scraper)
             if not data_scraper:
                 return Response(

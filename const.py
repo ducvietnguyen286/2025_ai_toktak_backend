@@ -234,6 +234,13 @@ POST_PROCESSING_STATUS = {
     "FAILED": "FAILED",
 }
 
+BATCH_PROCESSING_STATUS = {
+    "PENDING": "PENDING",
+    "PROCESSING": "PROCESSING",
+    "COMPLETED": "COMPLETED",
+    "FAILED": "FAILED",
+}
+
 
 REDIS_KEY_TOKTAK = {
     "user_info_me": "user_info:me",

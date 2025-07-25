@@ -1,9 +1,12 @@
+import json
 import os
 import time
 from urllib.parse import urlparse
 from app.lib.string import un_shotend_url
 import requests
 from gevent import sleep
+
+from app.services.crawl_data import CrawlDataService
 
 
 class NaverScraper:
@@ -23,6 +26,14 @@ class NaverScraper:
     def run_api_bright_data(self, request_url):
         parsed_url = urlparse(request_url)
         real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
+
+        product_id = parsed_url.path.split("/")[-1]
+        if not product_id:
+            return None
+
+        exist_data = CrawlDataService.find_crawl_data(product_id, "NAVER")
+        if exist_data:
+            return json.loads(exist_data.response)
 
         url = "https://api.brightdata.com/datasets/v3/trigger"
         headers = {
@@ -44,9 +55,9 @@ class NaverScraper:
         while True:
             status = self.check_status_bright_data(snapshot_id)
             sleep(2)
-            if status["status"] == "ready":
+            if status["status"] == "ready" or status["status"] == "failed":
                 break
-            if time.time() - start_time > 60:
+            if time.time() - start_time > 300:
                 break
         if status["status"] != "ready":
             return None
@@ -94,6 +105,14 @@ class NaverScraper:
             "video_thumbnail": "",
         }
 
+        CrawlDataService.create_crawl_data(
+            site="NAVER",
+            input_url=self.url,
+            crawl_url=real_url,
+            crawl_url_hash=product_id,
+            request=json.dumps("{}"),
+            response=json.dumps(result),
+        )
         return result
 
     def check_status_bright_data(self, snapshot_id):

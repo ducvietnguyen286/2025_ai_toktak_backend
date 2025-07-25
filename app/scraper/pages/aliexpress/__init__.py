@@ -84,7 +84,7 @@ class AliExpressScraper:
             real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
 
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "ALIEXPRESS")
             if not check_data and exist_data:
                 return self.daily_check_exist_new_data_hub_6(
                     exist_data, request_url, crawl_url_hash

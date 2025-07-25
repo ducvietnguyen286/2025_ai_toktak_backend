@@ -19,6 +19,7 @@ from app.lib.string import (
 )
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
+from app.scraper import Scraper
 from app.services.batch import BatchService
 from app.services.image_template import ImageTemplateService
 from app.services.notification import NotificationServices
@@ -26,6 +27,7 @@ from app.services.post import PostService
 from app.services.shorten_services import ShortenServices
 from app.extensions import redis_client
 from app.services.shotstack_services import ShotStackService
+from app.services.user import UserService
 from app.services.video_service import VideoService
 import const
 import asyncio
@@ -42,8 +44,29 @@ class CreateContent:
             with app.app_context():
                 self.app = app
                 batch_id = self.create_batch()
+                if not batch_id:
+                    BatchService.update_batch(
+                        batch_id, process_status=const.BATCH_PROCESSING_STATUS["FAILED"]
+                    )
+                    return None
+
                 batch_id = self.create_images(batch_id)
-                self.create_posts(batch_id)
+                if not batch_id:
+                    BatchService.update_batch(
+                        batch_id, process_status=const.BATCH_PROCESSING_STATUS["FAILED"]
+                    )
+                    return None
+
+                batch_id = self.create_posts(batch_id)
+                if not batch_id:
+                    BatchService.update_batch(
+                        batch_id, process_status=const.BATCH_PROCESSING_STATUS["FAILED"]
+                    )
+                    return None
+
+                BatchService.update_batch(
+                    batch_id, process_status=const.BATCH_PROCESSING_STATUS["COMPLETED"]
+                )
             return True
         except Exception as e:
             log_create_content_message(f"Error in create_content: {e}")
@@ -54,8 +77,36 @@ class CreateContent:
             batch = self.batch
             data = self.data
             batch_id = batch.id
+            user_id = batch.user_id
+
+            if batch.process_status == const.BATCH_PROCESSING_STATUS["COMPLETED"]:
+                return batch_id
+
+            BatchService.update_batch(
+                batch_id,
+                process_status=const.BATCH_PROCESSING_STATUS["PROCESSING"],
+            )
 
             url = data.get("input_url", "")
+
+            data = Scraper().scraper({"url": url, "batch_id": batch_id})
+
+            if not data:
+                NotificationServices.create_notification(
+                    user_id=user_id,
+                    status=const.NOTIFICATION_FALSE,
+                    title=f"❌ 해당 {url} 은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                    description=f"Scraper False {url}",
+                )
+
+                redis_user_batch_key = f"toktak:users:batch_remain:{user_id}"
+                user = UserService.find_user(user_id)
+                redis_client.set(redis_user_batch_key, user.batch_remain + 1, ex=180)
+
+                return None
+
+            thumbnail_url = data.get("image", "")
+            thumbnails = data.get("thumbnails", [])
 
             shorten_link, is_shorted = ShortenServices.shorted_link(url)
             data["base_url"] = shorten_link
@@ -68,6 +119,8 @@ class CreateContent:
 
             BatchService.update_batch(
                 batch_id,
+                thumbnail=thumbnail_url,
+                thumbnails=json.dumps(thumbnails),
                 base_url=shorten_link,
                 shorten_link=shorten_link,
                 content=json.dumps(data),
@@ -555,7 +608,7 @@ def process_create_post_blog(process_images, data, batch, post):
     batch_id = batch.id
     try:
         response = call_chatgpt_create_blog(process_images, data, post.id)
-        
+
         if response:
             parse_caption = json.loads(response)
             parse_response = parse_caption.get("response", {})
@@ -563,7 +616,7 @@ def process_create_post_blog(process_images, data, batch, post):
             docx_content = parse_response.get("docx_content", "")
 
             ads_text = get_ads_content(url)
-            
+
             res_txt = DocxMaker().make_txt(
                 docx_title,
                 ads_text,
