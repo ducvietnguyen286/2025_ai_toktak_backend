@@ -75,7 +75,7 @@ class AliExpressScraper:
     def run_api_ali_data_hub_6(self, real_url, check_data=False):
         try:
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "ALIEXPRESS")
             if not check_data and exist_data:
                 return self.daily_check_exist_new_data_hub_6(
                     exist_data, real_url, crawl_url_hash

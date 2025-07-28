@@ -1,3 +1,4 @@
+import datetime
 from http.cookiejar import CookieJar
 import json
 import os
@@ -5,9 +6,10 @@ import random
 import time
 import traceback
 import uuid
+
 from app.lib.header import generate_desktop_user_agent, generate_user_agent
 from app.lib.logger import logger
-from app.scraper.pages.coupang.headers import random_mobile_header, random_web_header
+from app.scraper.pages.coupang.headers import random_mobile_header
 from app.scraper.pages.coupang.parser import Parser
 from urllib.parse import urlparse, parse_qs
 from bs4 import BeautifulSoup
@@ -16,17 +18,281 @@ import hashlib
 from app.extensions import redis_client
 from app.lib.url import get_real_url
 
+import concurrent.futures
 from app.services.crawl_data import CrawlDataService
 
 
 class CoupangScraper:
     def __init__(self, params):
         self.url = params["url"]
+        self.batch_id = params.get("batch_id", "")
         self.fire_crawl_key = ""
         self.count_retry = 5
 
     def run(self):
-        return self.run_crawler_mobile()
+        return self.run_sub_server()
+
+    def run_sub_server(self):
+        try:
+            real_url = get_real_url(self.url)
+            crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "COUPANG")
+            if exist_data:
+                now = datetime.datetime.now()
+                if now - exist_data.created_at > datetime.timedelta(minutes=10):
+                    CrawlDataService.delete_crawl_data(exist_data.id)
+                    exist_data = None
+
+                return json.loads(exist_data.response)
+
+            sub_server_urls = os.getenv("SUB_SERVER_URLS", "")
+            sub_server_urls = sub_server_urls.split(",")
+
+            if len(sub_server_urls) == 0:
+                return None
+
+            api_config = []
+
+            for sub_server_url in sub_server_urls:
+                api_config.append(
+                    {
+                        "scraper_url": f"{sub_server_url}/api/crawl",
+                        "cancel_url": f"{sub_server_url}/api/crawl/:request_id",
+                        "status_url": f"{sub_server_url}/api/status",
+                        "health_check_url": f"{sub_server_url}/api/health",
+                    }
+                )
+
+            def health_check(health_check_url):
+                try:
+                    resp = requests.get(health_check_url)
+                    res_json = resp.json()
+                    if resp.status_code == 200 and res_json.get("overall") == True:
+                        return True
+                except Exception as e:
+                    logger.error(f"Error health checking: {e}")
+
+            final_api_config = []
+            for config in api_config:
+                if health_check(config["health_check_url"]):
+                    final_api_config.append(config)
+
+            def call_api(api_url):
+                try:
+                    payload = {"url": self.url, "request_id": str(self.batch_id)}
+                    resp = requests.post(
+                        api_url,
+                        json=payload,
+                        timeout=120,
+                    )
+                    if resp.status_code == 200:
+                        res_json = resp.json()
+                        return res_json
+                except Exception as e:
+                    logger.error(f"Error calling {api_url}: {e}")
+                    print("error", e)
+                return None
+
+            def poll_status(status_url, timeout_seconds=120):
+                """Poll status API cho đến khi có kết quả hoặc timeout"""
+                start_time = time.time()
+                poll_interval = 5  # Poll mỗi 5 giây
+
+                while time.time() - start_time < timeout_seconds:
+                    try:
+                        resp = requests.get(
+                            f"{status_url}",
+                            params={"request_id": self.batch_id},
+                            timeout=10,
+                        )
+
+                        if resp.status_code == 200:
+                            result = resp.json()
+                            status = result.get("status")
+
+                            logger.info(
+                                f"Poll status: {status} for request_id: {self.batch_id}"
+                            )
+
+                            if status == "completed":
+                                logger.info(
+                                    f"Job completed for request_id: {self.batch_id}"
+                                )
+                                return result  # Trả về data
+                            elif status == "failed":
+                                logger.error(
+                                    f"Job failed for request_id: {self.batch_id}"
+                                )
+                                return None
+                            elif status == "queue" or status == "processing":
+                                # Tiếp tục polling
+                                time.sleep(poll_interval)
+                            else:
+                                logger.warning(
+                                    f"Unknown status: {status} for request_id: {self.batch_id}"
+                                )
+                                time.sleep(poll_interval)
+                        else:
+                            logger.error(
+                                f"Status API returned {resp.status_code} for request_id: {self.batch_id}"
+                            )
+                            time.sleep(poll_interval)
+                    except Exception as e:
+                        logger.error(
+                            f"Error polling status for request_id {self.batch_id}: {e}"
+                        )
+                        time.sleep(poll_interval)
+
+                logger.error(f"Polling timeout for request_id: {self.batch_id}")
+                return None
+
+            def cancel_job(cancel_url):
+                try:
+                    final_url = cancel_url.replace(":request_id", self.batch_id)
+                    resp = requests.delete(final_url, timeout=10)
+                    logger.info(
+                        f"Cancel job request sent to {final_url}, status: {resp.status_code}"
+                    )
+                except Exception as e:
+                    logger.error(f"Error canceling job at {cancel_url}: {e}")
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+                future_to_config = {
+                    executor.submit(call_api, config["scraper_url"]): config
+                    for config in final_api_config
+                }
+
+                logger.info(f"Started {len(future_to_config)} concurrent API calls")
+
+                completed_futures = []
+                for future in concurrent.futures.as_completed(
+                    future_to_config, timeout=60
+                ):
+                    try:
+                        result = future.result()
+                        config = future_to_config[future]
+
+                        logger.info(
+                            f"API {config['scraper_url']} completed, result: {result is not None}"
+                        )
+
+                        if result and isinstance(result, dict):
+                            logger.info(
+                                f"Valid result received from {config['scraper_url']}"
+                            )
+
+                            if result.get("status") == "queued":
+                                logger.info(
+                                    f"Job queued, polling status for request_id: {self.batch_id}"
+                                )
+
+                                final_result = poll_status(config["status_url"], 120)
+
+                                if final_result:
+                                    for other_future in future_to_config:
+                                        if (
+                                            other_future != future
+                                            and not other_future.done()
+                                        ):
+                                            cancelled = other_future.cancel()
+                                            other_config = future_to_config[
+                                                other_future
+                                            ]
+                                            logger.info(
+                                                f"Cancel future {other_config['scraper_url']}: {cancelled}"
+                                            )
+
+                                    for other_config in api_config:
+                                        if other_config != config:
+                                            logger.info(
+                                                f"Sending cancel request to {other_config['cancel_url']}"
+                                            )
+                                            cancel_job(other_config["cancel_url"])
+
+                                    logger.info(
+                                        f"Job completed successfully from {config['scraper_url']}"
+                                    )
+
+                                    result = (
+                                        final_result.get("data")
+                                        if final_result
+                                        else None
+                                    )
+
+                                    if not result:
+                                        return None
+
+                                    CrawlDataService.create_crawl_data(
+                                        site="COUPANG",
+                                        input_url=self.url,
+                                        crawl_url=real_url,
+                                        crawl_url_hash=crawl_url_hash,
+                                        request=json.dumps("{}"),
+                                        response=json.dumps(result),
+                                    )
+                                    return result
+                                else:
+                                    logger.error(
+                                        f"Polling failed for request_id: {self.batch_id}"
+                                    )
+                            else:
+                                for other_future in future_to_config:
+                                    if (
+                                        other_future != future
+                                        and not other_future.done()
+                                    ):
+                                        cancelled = other_future.cancel()
+                                        other_config = future_to_config[other_future]
+                                        logger.info(
+                                            f"Cancel future {other_config['scraper_url']}: {cancelled}"
+                                        )
+
+                                for other_config in api_config:
+                                    if other_config != config:
+                                        logger.info(
+                                            f"Sending cancel request to {other_config['cancel_url']}"
+                                        )
+                                        cancel_job(other_config["cancel_url"])
+
+                                logger.info(
+                                    f"Job completed successfully from {config['scraper_url']}"
+                                )
+
+                                result = result.get("data") if result else None
+
+                                if not result:
+                                    return None
+
+                                CrawlDataService.create_crawl_data(
+                                    site="COUPANG",
+                                    input_url=self.url,
+                                    crawl_url=real_url,
+                                    crawl_url_hash=crawl_url_hash,
+                                    request=json.dumps("{}"),
+                                    response=json.dumps(result),
+                                )
+                                return result
+                        else:
+                            logger.warning(
+                                f"Invalid or empty result from {config['scraper_url']}"
+                            )
+
+                    except Exception as e:
+                        config = future_to_config[future]
+                        logger.error(f"Exception in {config['scraper_url']}: {e}")
+
+                logger.warning(
+                    f"All {len(completed_futures)} API calls completed but no valid result found"
+                )
+
+            return None
+        except concurrent.futures.TimeoutError:
+            logger.error("All API calls timed out")
+            return None
+        except Exception as e:
+            logger.error("Exception: {0}".format(str(e)))
+            traceback.print_exc()
+            return None
 
     def proxies(self, index=0):
         proxies = [
@@ -113,7 +379,6 @@ class CoupangScraper:
             start_time = time.time()
             while time.time() - start_time < timeout:
                 result = redis_client.get(f"toktak:result_coupang:{req_id}")
-                print("result", result)
                 if result:
                     redis_client.delete(f"toktak:result_coupang:{req_id}")
                     return json.loads(result)

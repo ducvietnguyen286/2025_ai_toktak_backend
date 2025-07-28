@@ -10,6 +10,8 @@ from urllib.parse import urlparse
 
 from app.scraper.pages.domeggook.parser import Parser
 from app.lib.url import get_real_url
+from app.scraper.pages.domeggook.parser import Parser, extract_images_and_text
+from urllib.parse import unquote
 
 
 class DomeggookScraper:
@@ -27,18 +29,73 @@ class DomeggookScraper:
             real_url = get_real_url(self.url)
             parsed_url = urlparse(real_url)
             product_id = parsed_url.path.strip("/").split("/")[-1]
-            domeggook_data = self.get_page_html(real_url)
-            if not domeggook_data:
-                return {}
-            # file_html = open("demo.html", "w", encoding="utf-8")
-            # file_html.write(str(domeggook_data))
-            # file_html.close()
-            response = Parser(domeggook_data).parse(real_url)
 
-            response["meta_id"] = ""
-            response["item_id"] = product_id
-            response["vendor_id"] = ""
-            return response
+            url = f"https://esapi.domeggook.com/product/_doc/{product_id}"
+
+            domeggook_token = os.getenv("DOMEGGOOK_TOKEN", "")
+
+            headers = {"Authorization": f"Bearer {domeggook_token}"}
+
+            res = requests.get(url, headers=headers)
+            res_json = res.json()
+
+            if not res_json.get("result"):
+                domeggook_data = self.get_page_html(real_url)
+                if not domeggook_data:
+                    return {}
+                # file_html = open("demo.html", "w", encoding="utf-8")
+                # file_html.write(str(domeggook_data))
+                # file_html.close()
+                response = Parser(domeggook_data).parse(real_url)
+                response["meta_id"] = ""
+                response["item_id"] = product_id
+                response["vendor_id"] = ""
+                return response
+
+            product_info = res_json.get("data")
+            product_source = product_info.get("_source")
+
+            quantity = product_source.get("qty")
+            quantity_number = quantity.get("inventory", 0)
+            thumbnail = product_source.get("thumb")
+            image = thumbnail.get("original", "")
+            price = product_source.get("price")
+            price_number = price.get("dome", 0)
+            price_formatted = f"{price_number:,}원"
+            seller = product_source.get("seller")
+            seller_company = seller.get("company")
+            seller_name = seller_company.get("name")
+
+            description = product_source.get("desc")
+            description_contents = description.get("contents", "")
+            description_contents_html = BeautifulSoup(
+                description_contents.get("item", ""), "html.parser"
+            )
+            images, gifs, iframes, text = extract_images_and_text(
+                description_contents_html
+            )
+
+            result = {
+                "name": product_source.get("title"),
+                "description": "",
+                "stock": quantity_number > 0,
+                "domain": real_url,
+                "brand": "",
+                "image": image,
+                "thumbnails": [image],
+                "price": price_formatted,
+                "url": real_url,
+                "base_url": real_url,
+                "store_name": seller_name,
+                "url_crawl": real_url,
+                "show_free_shipping": 0,
+                "images": images,
+                "text": text,
+                "iframes": iframes,
+                "gifs": gifs,
+            }
+            return result
+
         except Exception as e:
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
