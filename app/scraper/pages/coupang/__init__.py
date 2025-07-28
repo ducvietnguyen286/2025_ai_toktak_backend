@@ -140,7 +140,7 @@ class CoupangScraper:
                                     f"Job failed for request_id: {self.batch_id}"
                                 )
                                 return None
-                            elif status == "queue" or status == "processing":
+                            elif status == "queued" or status == "in_progress":
                                 # Tiếp tục polling
                                 time.sleep(poll_interval)
                             else:
