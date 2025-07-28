@@ -7,7 +7,7 @@ import time
 import traceback
 import uuid
 
-from app.lib.header import generate_desktop_user_agent, generate_user_agent
+from app.lib.header import generate_user_agent
 from app.lib.logger import logger
 from app.scraper.pages.coupang.headers import random_mobile_header
 from app.scraper.pages.coupang.parser import Parser
@@ -16,9 +16,9 @@ from bs4 import BeautifulSoup
 import requests
 import hashlib
 from app.extensions import redis_client
+import concurrent.futures
 from app.lib.url import get_real_url
 
-import concurrent.futures
 from app.services.crawl_data import CrawlDataService
 
 
@@ -29,6 +29,7 @@ class CoupangScraper:
         self.fire_crawl_key = ""
         self.real_url = get_real_url(self.url)
         self.crawl_url_hash = hashlib.sha1(self.real_url.encode()).hexdigest()
+        self.count_retry = 5
 
     def run(self):
         return self.run_wrap_sub_server()
