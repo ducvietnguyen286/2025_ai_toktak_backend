@@ -60,16 +60,17 @@ class Scraper:
 
                     real_url = get_real_url(params["url"])
 
+                    site = get_site_by_url(real_url)
+
                     crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
                     # Check exists với crawl_url_hash
-                    exists = CrawlDataService.find_crawl_data(crawl_url_hash)
+                    exists = CrawlDataService.find_crawl_data(crawl_url_hash, site)
                     if (
                         not exists
                         and response
                         and "images" in response
                         and len(response["images"]) > 0
                     ):
-                        site = get_site_by_url(real_url)
                         CrawlDataService.create_crawl_data(
                             site=site,
                             input_url=params["url"],

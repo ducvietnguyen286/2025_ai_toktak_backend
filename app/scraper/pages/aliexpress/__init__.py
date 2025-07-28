@@ -171,7 +171,7 @@ class AliExpressScraper:
     def run_api_ali_data_hub_2(self, real_url):
         try:
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "ALIEXPRESS")
             if exist_data:
                 return json.loads(exist_data.response)
 
@@ -312,7 +312,7 @@ class AliExpressScraper:
     def run_api_ali_data(self, real_url):
         try:
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "ALIEXPRESS")
             if exist_data:
                 return json.loads(exist_data.response)
 

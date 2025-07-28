@@ -32,7 +32,7 @@ class AmazonScraper:
             request_url = un_shotend_url(request_url)
 
         crawl_url_hash = hashlib.sha1(request_url.encode()).hexdigest()
-        exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+        exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "AMAZON")
         if exist_data:
             return json.loads(exist_data.response)
 
