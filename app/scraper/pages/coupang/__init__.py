@@ -253,6 +253,7 @@ class CoupangScraper:
                                     logger.error(
                                         f"Polling failed for request_id: {self.batch_id}"
                                     )
+                                    return None
                             else:
                                 for other_future in future_to_config:
                                     if (
@@ -294,10 +295,12 @@ class CoupangScraper:
                             logger.warning(
                                 f"Invalid or empty result from {config['scraper_url']}"
                             )
+                            return None
 
                     except Exception as e:
                         config = future_to_config[future]
                         logger.error(f"Exception in {config['scraper_url']}: {e}")
+                        return None
 
                 logger.warning(
                     f"All {len(completed_futures)} API calls completed but no valid result found"
