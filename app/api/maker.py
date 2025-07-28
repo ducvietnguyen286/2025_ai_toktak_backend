@@ -1434,7 +1434,21 @@ class APIDecrypt(Resource):
                 message="Ping not Oke",
                 code=201,
             ).to_dict()
-
+            
+@ns.route("/ping")
+class APIPingBatch(Resource):
+    def get(self):
+        try:
+            return Response(
+                message="Ping Oke.",
+            ).to_dict()
+        except Exception as e:
+            return Response(
+                message="Ping not Oke",
+                code=201,
+            ).to_dict()
+            
+ 
 
 def _cleanup_zip(zip_path, tmp_dir, response):
     try:

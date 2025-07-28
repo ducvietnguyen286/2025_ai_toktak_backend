@@ -55,9 +55,9 @@ def create_app():
 def main():
     app = create_app()
     with app.app_context():
-        exchange_thread_token()
-        exchange_instagram_token()
-        exchange_facebook_token()
+        exchange_thread_token(app)
+        exchange_instagram_token(app)
+        exchange_facebook_token(app)
     #     import_image_template()
     #     import_month_text()
     #     import_youtube_client()

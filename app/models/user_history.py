@@ -13,6 +13,7 @@ class UserHistory(db.Model, BaseModel):
     object_end_time = db.Column(db.DateTime)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
+    admin_description = db.Column(db.Text)
     value = db.Column(db.Text)
     num_days = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)

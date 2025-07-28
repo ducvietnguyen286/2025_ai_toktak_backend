@@ -507,7 +507,7 @@ class UserService:
 
     @staticmethod
     def report_user_by_subscription(data_search):
-        histories = User.query
+        histories = User.query.filter(User.user_type == const.USER)
         subscription = data_search.get("subscription", "")
 
         if subscription != "":

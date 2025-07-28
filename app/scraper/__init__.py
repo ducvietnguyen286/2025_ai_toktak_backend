@@ -87,8 +87,7 @@ class Scraper:
             "url": params["url"],
         }
 
-        response = requests.post(url, json=data_post, timeout=5)
-
+        response = requests.post(url, json=data_post, timeout=10)
         # Kiểm tra trạng thái HTTP trước
         if response.ok:
             result = response.json()
@@ -97,12 +96,6 @@ class Scraper:
             if result.get("code") == 200:
                 return result.get("data")  # Lấy dữ liệu khi code == 200
             else:
-                logger.error(
-                    f"Lỗi {url} từ API: code = {result.get('code')}, message = {result.get('message')}"
-                )
                 return None
         else:
-            logger.error(
-                f"Lỗi {url} HTTP: {response.status_code}, Nội dung lỗi: {response.text}"
-            )
             return None
