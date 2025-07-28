@@ -27,21 +27,38 @@ class CoupangScraper:
         self.fire_crawl_key = ""
 
     def run(self):
-        return self.run_sub_server()
+        return self.run_wrap_sub_server()
 
-    def run_sub_server(self):
+    def run_wrap_sub_server(self):
         try:
             real_url = self.get_real_url()
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
             exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "COUPANG")
             if exist_data:
                 now = datetime.datetime.now()
-                if now - exist_data.created_at > datetime.timedelta(minutes=10):
-                    CrawlDataService.delete_crawl_data(exist_data.id)
-                    exist_data = None
+                if (now - exist_data.created_at) <= datetime.timedelta(days=30):
+                    return json.loads(exist_data.response)
 
-                return json.loads(exist_data.response)
+                new_data = self.run_sub_server()
+                if new_data:
+                    try:
+                        CrawlDataService.update_crawl_data(
+                            exist_data.id, json.dumps(new_data)
+                        )
+                    except Exception as e:
+                        logger.error(f"Error updating crawl data: {e}")
+                    return new_data
+                else:
+                    return json.loads(exist_data.response)
 
+            return self.run_sub_server()
+        except Exception as e:
+            logger.error("Exception: {0}".format(str(e)))
+            traceback.print_exc()
+            return None
+
+    def run_sub_server(self):
+        try:
             sub_server_urls = os.getenv("SUB_SERVER_URLS", "")
             sub_server_urls = sub_server_urls.split(",")
 
