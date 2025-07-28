@@ -347,6 +347,15 @@ def convert_video_path(path: str, domain: str):
         return ""
 
 
+def get_video_path_or_url(post_json, current_domain):
+    video_url = post_json.get("video_url", "")
+    video_path = post_json.get("video_path", "")
+    # Nếu video_url chứa https://toktaks3 thì ưu tiên trả về video_url
+    if "https://toktaks3" in video_url:
+        return video_url
+    # Nếu không thì convert video_path
+    return convert_video_path(video_path, current_domain)
+
 def insert_hashtags_to_string(tag_string, index=6):
     new_hashtags = ["#톡탁", "#toktak"]
     tag_list = tag_string.strip().split()
