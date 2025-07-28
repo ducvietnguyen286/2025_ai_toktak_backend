@@ -1227,7 +1227,7 @@ class APICreateScraper(Resource):
         try:
             url = args.get("url", "")
 
-            data_scraper = Scraper().scraper({"url": url, "batch_id": "123459"})
+            data_scraper = Scraper().scraper({"url": url, "batch_id": "123460"})
             logger.error(data_scraper)
             if not data_scraper:
                 return Response(

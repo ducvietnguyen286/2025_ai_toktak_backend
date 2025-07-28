@@ -1,3 +1,4 @@
+import datetime
 from http.cookiejar import CookieJar
 import json
 import os
@@ -6,17 +7,15 @@ import time
 import traceback
 import uuid
 
-from openai import OpenAI
-from app.lib.header import generate_desktop_user_agent, generate_user_agent
+from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
-from app.scraper.pages.coupang.headers import random_mobile_header, random_web_header
+from app.scraper.pages.coupang.headers import random_mobile_header
 from app.scraper.pages.coupang.parser import Parser
 from urllib.parse import urlparse, parse_qs
 from bs4 import BeautifulSoup
 import requests
 import hashlib
 from app.extensions import redis_client
-import threading
 import concurrent.futures
 from app.services.crawl_data import CrawlDataService
 
@@ -36,16 +35,30 @@ class CoupangScraper:
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
             exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "COUPANG")
             if exist_data:
+                now = datetime.datetime.now()
+                if now - exist_data.created_at > datetime.timedelta(minutes=10):
+                    CrawlDataService.delete_crawl_data(exist_data.id)
+                    exist_data = None
+
                 return json.loads(exist_data.response)
 
-            api_config = [
-                {
-                    "scraper_url": "http://localhost:3000/api/crawl",
-                    "cancel_url": "http://localhost:3000/api/crawl/:request_id",
-                    "status_url": "http://localhost:3000/api/status",
-                    "health_check_url": "http://localhost:3000/api/health",
-                },
-            ]
+            sub_server_urls = os.getenv("SUB_SERVER_URLS", "")
+            sub_server_urls = sub_server_urls.split(",")
+
+            if len(sub_server_urls) == 0:
+                return None
+
+            api_config = []
+
+            for sub_server_url in sub_server_urls:
+                api_config.append(
+                    {
+                        "scraper_url": f"{sub_server_url}/api/crawl",
+                        "cancel_url": f"{sub_server_url}/api/crawl/:request_id",
+                        "status_url": f"{sub_server_url}/api/status",
+                        "health_check_url": f"{sub_server_url}/api/health",
+                    }
+                )
 
             def health_check(health_check_url):
                 try:
