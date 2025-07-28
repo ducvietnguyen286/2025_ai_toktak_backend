@@ -144,6 +144,10 @@ class UserService:
                             subscription_name_display["subscription_name"] = (
                                 package_data["pack_name"]
                             )
+                    
+                    if subscription == "COUPON_KOL":
+                        subscription_name_display["subscription_name"] = "인플루언서 쿠폰"
+                
             elif subscription == "NEW_USER":
                 subscription_name_display["subscription_name_lable"] = "신규 가입 선물"
                 subscription_name_display["subscription_name"] = "베이직 플랜"
