@@ -495,3 +495,36 @@ class PostService:
         posts = query.all()
 
         return [post_detail.to_dict() for post_detail in posts]
+
+    @staticmethod
+    def get_posts_avaiable_post(ids, date_check="2025-05-31"):
+        # Query tất cả các post có id trong ids và status hợp lệ
+        posts = select_with_filter(
+            Post, filters=[Post.id.in_(ids), Post.status.in_([1, 99])]
+        )
+
+        # Gán cờ để check từng loại post
+        has_old = False  # Có post <= date_check
+        has_new = False  # Có post >  date_check
+
+        for post in posts:
+            # Lấy phần ngày
+            created_date = (
+                post.created_at.date()
+                if hasattr(post.created_at, "date")
+                else post.created_at
+            )
+            if str(created_date) <= date_check:
+                has_old = True
+            if str(created_date) > date_check:
+                has_new = True
+
+        if has_old and has_new:
+            return 1
+        elif has_old and not has_new:
+            return 2
+        elif not has_old and has_new:
+            return 0
+        else:
+            # Không có post nào, tuỳ chọn: trả về 0 hoặc None
+            return 0
