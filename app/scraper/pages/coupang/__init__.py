@@ -25,15 +25,17 @@ class CoupangScraper:
         self.url = params["url"]
         self.batch_id = params.get("batch_id", "")
         self.fire_crawl_key = ""
+        self.real_url = self.get_real_url()
+        self.crawl_url_hash = hashlib.sha1(self.real_url.encode()).hexdigest()
 
     def run(self):
         return self.run_wrap_sub_server()
 
     def run_wrap_sub_server(self):
         try:
-            real_url = self.get_real_url()
-            crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "COUPANG")
+            exist_data = CrawlDataService.find_crawl_data(
+                self.crawl_url_hash, "COUPANG"
+            )
             if exist_data:
                 now = datetime.datetime.now()
                 if (now - exist_data.created_at) <= datetime.timedelta(days=30):
@@ -239,8 +241,8 @@ class CoupangScraper:
                                     CrawlDataService.create_crawl_data(
                                         site="COUPANG",
                                         input_url=self.url,
-                                        crawl_url=real_url,
-                                        crawl_url_hash=crawl_url_hash,
+                                        crawl_url=self.real_url,
+                                        crawl_url_hash=self.crawl_url_hash,
                                         request=json.dumps("{}"),
                                         response=json.dumps(result),
                                     )
@@ -280,8 +282,8 @@ class CoupangScraper:
                                 CrawlDataService.create_crawl_data(
                                     site="COUPANG",
                                     input_url=self.url,
-                                    crawl_url=real_url,
-                                    crawl_url_hash=crawl_url_hash,
+                                    crawl_url=self.real_url,
+                                    crawl_url_hash=self.crawl_url_hash,
                                     request=json.dumps("{}"),
                                     response=json.dumps(result),
                                 )
