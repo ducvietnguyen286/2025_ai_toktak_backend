@@ -195,7 +195,7 @@ class AliExpressScraper:
             CrawlDataService.create_crawl_data(
                 site="ALIEXPRESS",
                 input_url=self.url,
-                crawl_url=request_url,
+                crawl_url=real_url,
                 crawl_url_hash=crawl_url_hash,
                 request=json.dumps(
                     {
