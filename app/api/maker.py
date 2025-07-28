@@ -26,6 +26,7 @@ from app.lib.string import (
     replace_phrases_in_text,
     get_ads_content,
     convert_video_path,
+    get_video_path_or_url,
     insert_hashtags_to_string,
     change_advance_hashtags,
 )
@@ -278,7 +279,6 @@ class APICreateBatchSync(Resource):
                 count_post=len(post_types),
                 status=const.PENDING_STATUS,
                 process_status="PENDING",
-                
                 voice_google=voice,
                 voice_typecast=voice_typecast,
                 is_paid_advertisements=is_paid_advertisements,
@@ -630,11 +630,11 @@ class APIBatchs(Resource):
         return {
             "status": True,
             "message": "Success",
-            "total": batches['total'],
-            "page": batches['page'],
-            "per_page": batches['per_page'],
-            "total_pages": batches['pages'],
-            "data": [batch_detail.to_dict() for batch_detail in batches['items']],
+            "total": batches["total"],
+            "page": batches["page"],
+            "per_page": batches["per_page"],
+            "total_pages": batches["pages"],
+            "data": [batch_detail.to_dict() for batch_detail in batches["items"]],
         }, 200
 
 
@@ -983,9 +983,7 @@ class APIHistories(Resource):
                 "data": [
                     {
                         **post_json,
-                        "video_path": convert_video_path(
-                            post_json.get("video_path", ""), current_domain
-                        ),
+                        "video_path": get_video_path_or_url(post_json, current_domain),
                     }
                     for post in posts.get("items", [])
                     if (post_json := post._to_json())
@@ -1180,12 +1178,8 @@ class APIAdminHistories(Resource):
             "data": [
                 {
                     **post_json,
-                    "video_path": convert_video_path(
-                        post_json.get("video_path", ""), current_domain
-                    ),
-                    "video_url": convert_video_path(
-                        post_json.get("video_path", ""), current_domain
-                    ),
+                    "video_path": get_video_path_or_url(post_json, current_domain),
+                    "video_url": get_video_path_or_url(post_json, current_domain),
                 }
                 for post in posts.items
                 if (post_json := post.to_dict())
