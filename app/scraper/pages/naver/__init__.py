@@ -131,6 +131,7 @@ class NaverScraper:
             return result
         except Exception as e:
             traceback.print_exc()
+            logger.error(f"Error: {traceback.format_exc()}")
             logger.error(f"Error: {e}")
             return None
 
