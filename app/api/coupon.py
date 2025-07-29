@@ -379,6 +379,7 @@ class APICreateCoupon(Resource):
                 return Response(message="이미 생성된 이름입니다.", code=201).to_dict()
             code_coupon = name
             max_used = 1
+            plan_coupon =""
 
         coupon = CouponService.create_coupon(
             image=image,

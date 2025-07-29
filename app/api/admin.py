@@ -551,6 +551,7 @@ class APIAdminSaveUser(Resource):
             "phone": {"type": ["string", "null"]},
             "subscription": {"type": ["string", "null"]},
             "subscription_expired": {"type": ["string", "null"]},
+            "created_at": {"type": ["string", "null"]},
             "batch_total": {"type": ["integer", "null"]},
             "batch_remain": {"type": ["integer", "null"]},
             "total_link_active": {"type": ["integer", "null"]},
@@ -563,6 +564,7 @@ class APIAdminSaveUser(Resource):
             phone = args.get("phone", "")
             subscription = args.get("subscription", "")
             subscription_expired = args.get("subscription_expired", "")
+            created_at = args.get("created_at", "")
             batch_total = args.get("batch_total", "")
             batch_remain = args.get("batch_remain", "")
             total_link_active = args.get("total_link_active", "")
@@ -571,6 +573,7 @@ class APIAdminSaveUser(Resource):
                 "phone": phone,
                 "subscription": subscription,
                 "subscription_expired": subscription_expired,
+                "created_at": created_at,
                 "batch_total": batch_total,
                 "batch_remain": batch_remain,
                 "total_link_active": total_link_active,
