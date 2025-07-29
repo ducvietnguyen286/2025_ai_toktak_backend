@@ -434,7 +434,7 @@ class CoupangScraper:
             real_url = get_real_url(real_url)
 
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "COUPANG")
             if exist_data:
                 return json.loads(exist_data.response)
 
