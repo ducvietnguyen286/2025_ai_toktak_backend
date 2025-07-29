@@ -83,6 +83,8 @@ class CreateContent:
 
             data = Scraper().scraper({"url": url, "batch_id": batch_id})
 
+            log_create_content_message(f"Data: {data}")
+
             if not data:
                 NotificationServices.create_notification(
                     user_id=user_id,
