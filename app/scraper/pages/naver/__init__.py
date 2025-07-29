@@ -2,6 +2,7 @@ import json
 import os
 import time
 from urllib.parse import urlparse
+from app.lib.logger import logger
 from app.lib.string import un_shotend_url
 import requests
 from gevent import sleep
@@ -50,6 +51,14 @@ class NaverScraper:
 
         response = requests.post(url, headers=headers, params=params, json=data)
         response_json = response.json()
+        if response_json.get("error"):
+            logger.error(f"Error: {response_json.get('error')}")
+            return None
+
+        if "snapshot_id" not in response_json:
+            logger.error(f"Error: {response_json}")
+            return None
+
         snapshot_id = response_json["snapshot_id"]
         start_time = time.time()
         while True:
