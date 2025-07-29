@@ -52,6 +52,9 @@ class Batch(db.Model, BaseModel):
             "template_info": self.template_info,
             "voice": self.voice,
             "voice_type": self.voice_type,
+            "error_code": self.error_code,
+            "message": self.message,
+            "error_message": self.error_message,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
