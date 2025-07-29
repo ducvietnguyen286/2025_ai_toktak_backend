@@ -25,13 +25,12 @@ class NaverScraper:
         return self.run_api_bright_data(request_url)
 
     def run_api_bright_data(self, request_url):
+        logger.info(f"Request URL: {request_url}")
+        logger.info(f"API Key: {self.api_key}")
         parsed_url = urlparse(request_url)
         real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
 
         product_id = parsed_url.path.split("/")[-1]
-        logger.info(f"Product ID: {product_id}")
-        logger.info(f"Real URL: {real_url}")
-        logger.info(f"Request URL PATH: {parsed_url.path}")
         if not product_id:
             return None
 
