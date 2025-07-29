@@ -49,6 +49,8 @@ class NaverScraper:
             {"url": real_url},
         ]
 
+        logger.info(f"Data: {data}")
+
         response = requests.post(url, headers=headers, params=params, json=data)
         response_json = response.json()
         if response_json.get("error"):
