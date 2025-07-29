@@ -25,6 +25,11 @@ class Batch(db.Model, BaseModel):
     voice = db.Column(db.String(100), default="")
     voice_type = db.Column(db.String(100), default="")
     process_status = db.Column(db.String(50), default="PENDING")
+
+    error_code = db.Column(db.String(50), nullable=True)
+    message = db.Column(db.Text, nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+
     template_info = db.Column(db.Text, nullable=True)
 
     to_json_filter = ("content", "thumbnails")

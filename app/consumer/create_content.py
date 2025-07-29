@@ -46,23 +46,14 @@ class CreateContent:
                 self.app = app
                 batch_id = self.create_batch()
                 if not batch_id:
-                    BatchService.update_batch(
-                        batch_id, process_status=const.BATCH_PROCESSING_STATUS["FAILED"]
-                    )
                     return None
 
                 batch_id = self.create_images(batch_id)
                 if not batch_id:
-                    BatchService.update_batch(
-                        batch_id, process_status=const.BATCH_PROCESSING_STATUS["FAILED"]
-                    )
                     return None
 
                 batch_id = self.create_posts(batch_id)
                 if not batch_id:
-                    BatchService.update_batch(
-                        batch_id, process_status=const.BATCH_PROCESSING_STATUS["FAILED"]
-                    )
                     return None
 
                 BatchService.update_batch(
@@ -103,6 +94,14 @@ class CreateContent:
                 redis_user_batch_key = f"toktak:users:batch_remain:{user_id}"
                 user = UserService.find_user(user_id)
                 redis_client.set(redis_user_batch_key, user.batch_remain + 1, ex=180)
+
+                BatchService.update_batch(
+                    batch_id,
+                    process_status=const.BATCH_PROCESSING_STATUS["FAILED"],
+                    error_code="201",
+                    message=MessageError.NO_ANALYZE_URL.value["message"],
+                    error_message=MessageError.NO_ANALYZE_URL.value["error_message"],
+                )
 
                 return None
 
@@ -176,6 +175,13 @@ class CreateContent:
                     f"Error creating batch content Traceback: {str(e)} at line {traceback.tb_lineno} at file {traceback.tb_frame.f_code.co_filename}"
                 )
             log_create_content_message(f"Error creating batch content: {e}")
+            BatchService.update_batch(
+                batch_id,
+                process_status=const.BATCH_PROCESSING_STATUS["FAILED"],
+                error_code="201",
+                message=MessageError.NO_ANALYZE_URL.value["message"],
+                error_message=MessageError.NO_ANALYZE_URL.value["error_message"],
+            )
             return None
 
     def create_images(self, batch_id):
@@ -268,6 +274,13 @@ class CreateContent:
                 )
 
             log_create_content_message(f"Error in create_images: {e}")
+            BatchService.update_batch(
+                batch_id,
+                process_status=const.BATCH_PROCESSING_STATUS["FAILED"],
+                error_code="201",
+                message=MessageError.NO_ANALYZE_URL.value["message"],
+                error_message=MessageError.NO_ANALYZE_URL.value["error_message"],
+            )
             return None
 
     def create_posts(self, batch_id):
