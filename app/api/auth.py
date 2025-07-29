@@ -440,7 +440,7 @@ class APIUserProfile(Resource):
                     level=level,
                     level_info=json.dumps(level_info),
                 )
-
+            created_at = user_login.created_at
             subscription_name_display = UserService.get_subscription_name(user_login.subscription , user_login.id)
             
             user_histories = UserService.get_all_user_history_by_user_id(user_login.id)
@@ -452,6 +452,10 @@ class APIUserProfile(Resource):
 
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)
+            can_download = AuthService.check_subscription_allowed(
+                user_dict["subscription"], created_at
+            )
+            user_dict["can_download"] = can_download
 
             return Response(
                 data=user_dict,
