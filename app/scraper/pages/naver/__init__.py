@@ -29,6 +29,9 @@ class NaverScraper:
         real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
 
         product_id = parsed_url.path.split("/")[-1]
+        logger.info(f"Product ID: {product_id}")
+        logger.info(f"Real URL: {real_url}")
+        logger.info(f"Request URL PATH: {parsed_url.path}")
         if not product_id:
             return None
 
