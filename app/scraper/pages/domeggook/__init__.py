@@ -8,10 +8,8 @@ from app.lib.header import generate_desktop_user_agent
 from app.lib.logger import logger
 from urllib.parse import urlparse
 
-from app.scraper.pages.domeggook.parser import Parser
-from app.lib.url import get_real_url
 from app.scraper.pages.domeggook.parser import Parser, extract_images_and_text
-from urllib.parse import unquote
+from app.lib.url import get_real_url
 
 
 class DomeggookScraper:
