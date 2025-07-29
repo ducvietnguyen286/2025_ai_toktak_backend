@@ -3,11 +3,13 @@ import hashlib
 from app.models.coupon import Coupon
 from app.models.coupon_code import CouponCode
 from app.models.user import User
+from app.models.user_history import UserHistory
 import random
 import string
 from app.extensions import redis_client, db
-from sqlalchemy import or_
+from sqlalchemy import or_, delete
 from sqlalchemy.orm import Session, aliased
+
 
 from app.lib.logger import logger
 
@@ -454,3 +456,20 @@ class CouponService:
             .all()
         )
         return [coupon._to_json() for coupon in coupons]
+
+    @staticmethod
+    def delete_by_ids(post_ids):
+        try:
+            delete_stmt = delete(CouponCode).where(CouponCode.id.in_(post_ids))
+            delete_user_histories = (
+                delete(UserHistory)
+                .where(UserHistory.object_id.in_(post_ids))
+                .where(UserHistory.type == "USED_COUPON")
+            )
+            db.session.execute(delete_stmt)
+            db.session.execute(delete_user_histories)
+            db.session.commit()
+        except Exception as ex:
+            db.session.rollback()
+            return 0
+        return 1
