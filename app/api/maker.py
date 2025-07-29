@@ -26,6 +26,7 @@ from app.lib.string import (
     replace_phrases_in_text,
     get_ads_content,
     convert_video_path,
+    get_video_path_or_url,
     insert_hashtags_to_string,
     change_advance_hashtags,
 )
@@ -992,9 +993,7 @@ class APIHistories(Resource):
                 "data": [
                     {
                         **post_json,
-                        "video_path": convert_video_path(
-                            post_json.get("video_path", ""), current_domain
-                        ),
+                        "video_path": get_video_path_or_url(post_json, current_domain),
                     }
                     for post in posts.get("items", [])
                     if (post_json := post._to_json())
@@ -1189,12 +1188,8 @@ class APIAdminHistories(Resource):
             "data": [
                 {
                     **post_json,
-                    "video_path": convert_video_path(
-                        post_json.get("video_path", ""), current_domain
-                    ),
-                    "video_url": convert_video_path(
-                        post_json.get("video_path", ""), current_domain
-                    ),
+                    "video_path": get_video_path_or_url(post_json, current_domain),
+                    "video_url": get_video_path_or_url(post_json, current_domain),
                 }
                 for post in posts.items
                 if (post_json := post.to_dict())
