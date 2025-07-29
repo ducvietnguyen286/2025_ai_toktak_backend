@@ -48,6 +48,9 @@ class Batch(db.Model, BaseModel):
             "is_paid_advertisements": self.is_paid_advertisements,
             "is_advance": self.is_advance,
             "template_info": self.template_info,
+            "error_code": self.error_code,
+            "message": self.message,
+            "error_message": self.error_message,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
