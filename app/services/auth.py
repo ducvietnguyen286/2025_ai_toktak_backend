@@ -56,6 +56,100 @@ class AuthService:
         return user
 
     @staticmethod
+    def login_speedgo(sid):
+        try:
+            url = "https://speedgo.domeggook.com/toktak/api/verify_sid.php"
+            response = requests.post(
+                url,
+                headers={
+                    "Authorization": "Bearer 1c3c768d3313a8093e993a8e8aa5f3d3",
+                },
+                json={"sid": sid},
+            )
+            is_new_user = 0
+            if response.status_code == 200:
+                res_json = response.json()
+                if res_json.get("result"):
+                    user_speedgo = res_json.get("user")
+                    if user_speedgo:
+                        provider = "SPEEDGO"
+                        provider_user_id = user_speedgo.get("id")
+                        social_account = SocialAccount.query.filter_by(
+                            provider=provider, provider_user_id=provider_user_id
+                        ).first()
+
+                        login_user_id = 0
+                        if social_account:
+                            login_user_id = social_account.user_id
+
+                        user = None
+                        if login_user_id > 0:
+                            user = User.query.get(login_user_id)
+
+                        if not user:
+                            user = User(
+                                email="",
+                                name="",
+                                avatar="",
+                                level=0,
+                                contact=provider,
+                                subscription="NEW_USER",
+                                subscription_expired=datetime.now()
+                                + relativedelta(months=1),
+                                batch_total=const.PACKAGE_CONFIG["BASIC"][
+                                    "batch_total"
+                                ],
+                                batch_remain=const.PACKAGE_CONFIG["BASIC"][
+                                    "batch_remain"
+                                ],
+                                total_link_active=const.PACKAGE_CONFIG["BASIC"][
+                                    "total_link_active"
+                                ],
+                                level_info=json.dumps(get_level_images(0)),
+                            )
+                            user.save()
+                            login_user_id = user.id
+
+                            object_start_time = datetime.now()
+                            subscription_expired = datetime.now() + relativedelta(
+                                months=1
+                            )
+                            data_new_user_history = {
+                                "user_id": login_user_id,
+                                "type": "user",
+                                "type_2": "NEW_USER",
+                                "object_id": login_user_id,
+                                "object_start_time": object_start_time,
+                                "object_end_time": subscription_expired,
+                                "title": "신규 가입 선물",
+                                "description": "신규 가입 선물",
+                                "value": 30,
+                                "num_days": 30,
+                                "total_link_active": 1,
+                            }
+                            UserService.create_user_history(**data_new_user_history)
+
+                            is_new_user = 1
+
+                        if not social_account:
+                            social_account = SocialAccount(
+                                user_id=login_user_id,
+                                provider=provider,
+                                provider_user_id=provider_user_id,
+                                access_token=sid,
+                            )
+                            social_account.save()
+                        return user, is_new_user
+                    else:
+                        return None, 0
+                else:
+                    return None, 0
+            return None
+        except Exception as e:
+            logger.error(f"login_speedgo error: {e}")
+            return None, 0
+
+    @staticmethod
     def social_login(
         provider,
         access_token,
