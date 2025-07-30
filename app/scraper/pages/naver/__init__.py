@@ -4,7 +4,7 @@ import time
 import traceback
 from urllib.parse import urlparse
 from app.lib.logger import logger
-from app.lib.string import un_shotend_url
+from app.lib.url import un_shotend_url
 import requests
 from gevent import sleep
 

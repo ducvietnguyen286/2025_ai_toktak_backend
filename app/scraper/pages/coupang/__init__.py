@@ -1,4 +1,5 @@
 import datetime
+import hmac
 from http.cookiejar import CookieJar
 import json
 import os
@@ -82,9 +83,30 @@ class CoupangScraper:
                     }
                 )
 
+            def generate_signature(body):
+                minified = ""
+                if body:
+                    minified = json.dumps(body, separators=(",", ":"), sort_keys=True)
+                timestamp = int(time.time())
+                secret_key = os.getenv("SIGNATURE_SECRET_KEY", "")
+                signature_base = f"{minified}|{timestamp}|{secret_key}"
+                signature_hash = hmac.new(
+                    secret_key.encode("utf-8"),
+                    signature_base.encode("utf-8"),
+                    hashlib.sha256,
+                ).hexdigest()
+                return signature_hash, timestamp
+
             def health_check(health_check_url):
                 try:
-                    resp = requests.get(health_check_url)
+                    signature, timestamp = generate_signature(None)
+                    resp = requests.get(
+                        health_check_url,
+                        headers={
+                            "x-signature": signature,
+                            "x-timestamp": str(timestamp),
+                        },
+                    )
                     res_json = resp.json()
                     if resp.status_code == 200 and res_json.get("overall") == True:
                         return True
@@ -99,8 +121,13 @@ class CoupangScraper:
             def call_api(api_url):
                 try:
                     payload = {"url": self.url, "request_id": str(self.batch_id)}
+                    signature, timestamp = generate_signature(payload)
                     resp = requests.post(
                         api_url,
+                        headers={
+                            "x-signature": signature,
+                            "x-timestamp": str(timestamp),
+                        },
                         json=payload,
                         timeout=120,
                     )
@@ -168,7 +195,15 @@ class CoupangScraper:
             def cancel_job(cancel_url):
                 try:
                     final_url = cancel_url.replace(":request_id", self.batch_id)
-                    resp = requests.delete(final_url, timeout=10)
+                    signature, timestamp = generate_signature(None)
+                    resp = requests.delete(
+                        final_url,
+                        headers={
+                            "x-signature": signature,
+                            "x-timestamp": str(timestamp),
+                        },
+                        timeout=10,
+                    )
                     logger.info(
                         f"Cancel job request sent to {final_url}, status: {resp.status_code}"
                     )
