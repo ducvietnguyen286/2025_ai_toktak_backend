@@ -56,15 +56,24 @@ class AuthService:
         return user
 
     @staticmethod
-    def login_speedgo(sid):
+    def login_speedgo(sid, save, grade):
         try:
             url = "https://speedgo.domeggook.com/toktak/api/verify_sid.php"
+            headers = {
+                "Authorization": "Bearer 1c3c768d3313a8093e993a8e8aa5f3d3",
+            }
+            cookies = {
+                "PHPSESSID": "b4p5cd0vckhr4404s9ac5gjrt9",
+                "ngm_grade": grade,
+                "ngm_sId": sid,
+                "ngm_save": save,
+            }
+            data = {"sid": sid}
             response = requests.post(
                 url,
-                headers={
-                    "Authorization": "Bearer 1c3c768d3313a8093e993a8e8aa5f3d3",
-                },
-                json={"sid": sid},
+                headers=headers,
+                cookies=cookies,
+                data=data,
             )
             is_new_user = 0
             if response.status_code == 200:
