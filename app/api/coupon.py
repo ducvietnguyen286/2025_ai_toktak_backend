@@ -4,7 +4,7 @@ import json
 import traceback
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
-from app.decorators import parameters
+from app.decorators import parameters, admin_required
 from app.lib.response import Response
 
 from app.services.auth import AuthService
@@ -918,3 +918,52 @@ class APIGetUserCoupon(Resource):
             data=coupon,
             message="Lấy coupon user thành công",
         ).to_dict()
+
+
+@ns.route("/delete_coupon")
+class APIDeleteCoupon(Resource):
+    @jwt_required()
+    @admin_required()
+    @parameters(
+        type="object",
+        properties={
+            "post_ids": {"type": "string"},
+        },
+        required=["post_ids"],
+    )
+    def post(self, args):
+        try:
+            post_ids = args.get("post_ids", "")
+            # Chuyển chuỗi post_ids thành list các integer
+            if not post_ids:
+                return Response(
+                    message="No post_ids provided",
+                    code=201,
+                ).to_dict()
+
+            # Tách chuỗi và convert sang list integer
+            id_list = [int(id.strip()) for id in post_ids.split(",")]
+
+            if not id_list:
+                return Response(
+                    message="Invalid post_ids format",
+                    code=201,
+                ).to_dict()
+
+            process_delete = CouponService.delete_by_ids(id_list)
+            if process_delete == 1:
+                message = "Delete coupons code Success"
+            else:
+                message = "Delete coupons code Fail"
+
+            return Response(
+                message=message,
+                code=200,
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Exception: Delete coupons code Fail  :  {str(e)}")
+            return Response(
+                message="Delete coupons code Fail",
+                code=201,
+            ).to_dict()
