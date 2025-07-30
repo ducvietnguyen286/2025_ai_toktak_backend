@@ -118,6 +118,8 @@ class CoupangScraper:
                 if health_check(config["health_check_url"]):
                     final_api_config.append(config)
 
+            random.shuffle(final_api_config)
+
             def call_api(api_url):
                 try:
                     payload = {"url": self.url, "request_id": str(self.batch_id)}
