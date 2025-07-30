@@ -83,7 +83,7 @@ class CoupangScraper:
                     }
                 )
 
-            logger.info("api_config", api_config)
+            logger.info(f"api_config: {api_config}")
 
             def generate_signature(body):
                 minified = ""
@@ -110,7 +110,7 @@ class CoupangScraper:
                         },
                     )
                     res_json = resp.json()
-                    logger.info("res_json", res_json)
+                    logger.info(f"res_json: {res_json}")
                     if resp.status_code == 200 and res_json.get("overall") == True:
                         return True
                 except Exception as e:
@@ -134,7 +134,7 @@ class CoupangScraper:
                         json=payload,
                         timeout=120,
                     )
-                    logger.info("resp", resp.json())
+                    logger.info(f"resp: {resp.json()}")
                     if resp.status_code == 200:
                         res_json = resp.json()
                         return res_json
