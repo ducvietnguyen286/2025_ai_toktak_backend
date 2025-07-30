@@ -200,7 +200,7 @@ class CoupangScraper:
 
             def cancel_job(cancel_url):
                 try:
-                    final_url = cancel_url.replace(":request_id", self.batch_id)
+                    final_url = cancel_url.replace(":request_id", str(self.batch_id))
                     signature, timestamp = generate_signature(None)
                     resp = requests.delete(
                         final_url,
