@@ -13,7 +13,7 @@ import json
 
 from app.services.auth import AuthService
 from app.services.notification import NotificationServices
-from app.lib.string import get_level_images 
+from app.lib.string import get_level_images
 import const
 from app.extensions import redis_client
 from app.services.payment_services import PaymentService
@@ -139,6 +139,38 @@ class APISocialLogin(Resource):
             ).to_dict()
 
 
+@ns.route("/login-speedgo")
+class APILoginSpeedgo(Resource):
+    @parameters(
+        type="object",
+        properties={
+            "sid": {"type": "string"},
+        },
+        required=["sid"],
+    )
+    def post(self, args):
+        sid = args.get("sid", "")
+        user, is_new_user = AuthService.login_speedgo(sid)
+        if not user:
+            return Response(
+                message="비밀번호가 정확하지 않습니다.",
+                code=201,
+            ).to_dict()
+
+        tokens = AuthService.generate_token(user)
+        tokens.update(
+            {
+                "type": "Bearer",
+                "expires_in": 7200,
+                "is_new_user": is_new_user,
+            }
+        )
+        return Response(
+            data=tokens,
+            message="Đăng nhập thành công",
+        ).to_dict()
+
+
 @ns.route("/register")
 class APIRegister(Resource):
 
@@ -249,11 +281,15 @@ class APIMe(Resource):
                 user_login = AuthService.reset_free_user(user_login)
             created_at = user_login.created_at
 
-            subscription_name_display  = UserService.get_subscription_name(user_login.subscription , user_login.id)
+            subscription_name_display = UserService.get_subscription_name(
+                user_login.subscription, user_login.id
+            )
 
             user_dict = user_login._to_json()
             user_dict["subscription_name_display"] = subscription_name_display
-            user_dict["subscription_name"] = subscription_name_display['subscription_name']
+            user_dict["subscription_name"] = subscription_name_display[
+                "subscription_name"
+            ]
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)
 
@@ -261,9 +297,9 @@ class APIMe(Resource):
                 user_dict["subscription"], created_at
             )
             user_dict["can_download"] = can_download
-            
+
             # PaymentService.auto_renew_subscriptions()
-            
+
             try:
                 key_redis = const.REDIS_KEY_TOKTAK.get("user_info_me", "user:me")
                 redis_key = f"{key_redis}:{user_login.id}"
@@ -440,18 +476,25 @@ class APIUserProfile(Resource):
                     level=level,
                     level_info=json.dumps(level_info),
                 )
+            created_at = user_login.created_at
+            subscription_name_display = UserService.get_subscription_name(
+                user_login.subscription, user_login.id
+            )
 
-            subscription_name_display = UserService.get_subscription_name(user_login.subscription , user_login.id)
-            
             user_histories = UserService.get_all_user_history_by_user_id(user_login.id)
             user_dict = user_login._to_json()
             user_dict["user_histories"] = user_histories
             user_dict["subscription_name_display"] = subscription_name_display
-            user_dict["subscription_name"] = subscription_name_display['subscription_name']
-            
+            user_dict["subscription_name"] = subscription_name_display[
+                "subscription_name"
+            ]
 
             user_dict.pop("auth_nice_result", None)
             user_dict.pop("password_certificate", None)
+            can_download = AuthService.check_subscription_allowed(
+                user_dict["subscription"], created_at
+            )
+            user_dict["can_download"] = can_download
 
             return Response(
                 data=user_dict,
