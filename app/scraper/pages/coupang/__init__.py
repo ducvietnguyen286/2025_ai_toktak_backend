@@ -222,7 +222,7 @@ class CoupangScraper:
 
                 completed_futures = []
                 for future in concurrent.futures.as_completed(
-                    future_to_config, timeout=60
+                    future_to_config, timeout=120
                 ):
                     try:
                         result = future.result()
@@ -258,7 +258,7 @@ class CoupangScraper:
                                     status = final_result.get("status")
 
                                     if status == "failed" or not data:
-                                        return None
+                                        continue
 
                                     for other_future in future_to_config:
                                         if (
@@ -273,7 +273,7 @@ class CoupangScraper:
                                                 f"Cancel future {other_config['scraper_url']}: {cancelled}"
                                             )
 
-                                    for other_config in api_config:
+                                    for other_config in final_api_config:
                                         if other_config != config:
                                             logger.info(
                                                 f"Sending cancel request to {other_config['cancel_url']}"
@@ -293,7 +293,7 @@ class CoupangScraper:
                                     logger.error(
                                         f"Polling failed for request_id: {self.batch_id}"
                                     )
-                                    return None
+                                    continue
                             else:
                                 logger.info(
                                     f"Job completed from {config['scraper_url']}"
@@ -303,7 +303,7 @@ class CoupangScraper:
                                 data = result.get("data") if result else None
 
                                 if status == "failed" or not data:
-                                    return None
+                                    continue
 
                                 for other_future in future_to_config:
                                     if (
@@ -316,7 +316,7 @@ class CoupangScraper:
                                             f"Cancel future {other_config['scraper_url']}: {cancelled}"
                                         )
 
-                                for other_config in api_config:
+                                for other_config in final_api_config:
                                     if other_config != config:
                                         logger.info(
                                             f"Sending cancel request to {other_config['cancel_url']}"
@@ -336,12 +336,12 @@ class CoupangScraper:
                             logger.warning(
                                 f"Invalid or empty result from {config['scraper_url']}"
                             )
-                            return None
+                            continue
 
                     except Exception as e:
                         config = future_to_config[future]
                         logger.error(f"Exception in {config['scraper_url']}: {e}")
-                        return None
+                        continue
 
                 logger.warning(
                     f"All {len(completed_futures)} API calls completed but no valid result found"
