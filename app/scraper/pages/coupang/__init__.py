@@ -245,6 +245,21 @@ class CoupangScraper:
                                 final_result = poll_status(config["status_url"], 120)
 
                                 if final_result:
+                                    logger.info(
+                                        f"Job completed from {config['scraper_url']}"
+                                    )
+
+                                    data = (
+                                        final_result.get("data")
+                                        if final_result
+                                        else None
+                                    )
+
+                                    status = final_result.get("status")
+
+                                    if status == "failed" or not data:
+                                        return None
+
                                     for other_future in future_to_config:
                                         if (
                                             other_future != future
@@ -265,34 +280,31 @@ class CoupangScraper:
                                             )
                                             cancel_job(other_config["cancel_url"])
 
-                                    logger.info(
-                                        f"Job completed successfully from {config['scraper_url']}"
-                                    )
-
-                                    result = (
-                                        final_result.get("data")
-                                        if final_result
-                                        else None
-                                    )
-
-                                    if not result:
-                                        return None
-
                                     CrawlDataService.create_crawl_data(
                                         site="COUPANG",
                                         input_url=self.url,
                                         crawl_url=self.real_url,
                                         crawl_url_hash=self.crawl_url_hash,
                                         request=json.dumps("{}"),
-                                        response=json.dumps(result),
+                                        response=json.dumps(data),
                                     )
-                                    return result
+                                    return data
                                 else:
                                     logger.error(
                                         f"Polling failed for request_id: {self.batch_id}"
                                     )
                                     return None
                             else:
+                                logger.info(
+                                    f"Job completed from {config['scraper_url']}"
+                                )
+
+                                status = result.get("status")
+                                data = result.get("data") if result else None
+
+                                if status == "failed" or not data:
+                                    return None
+
                                 for other_future in future_to_config:
                                     if (
                                         other_future != future
@@ -311,24 +323,15 @@ class CoupangScraper:
                                         )
                                         cancel_job(other_config["cancel_url"])
 
-                                logger.info(
-                                    f"Job completed successfully from {config['scraper_url']}"
-                                )
-
-                                result = result.get("data") if result else None
-
-                                if not result:
-                                    return None
-
                                 CrawlDataService.create_crawl_data(
                                     site="COUPANG",
                                     input_url=self.url,
                                     crawl_url=self.real_url,
                                     crawl_url_hash=self.crawl_url_hash,
                                     request=json.dumps("{}"),
-                                    response=json.dumps(result),
+                                    response=json.dumps(data),
                                 )
-                                return result
+                                return data
                         else:
                             logger.warning(
                                 f"Invalid or empty result from {config['scraper_url']}"
