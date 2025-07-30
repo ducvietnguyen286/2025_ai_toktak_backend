@@ -145,12 +145,16 @@ class APILoginSpeedgo(Resource):
         type="object",
         properties={
             "sid": {"type": "string"},
+            "save": {"type": "string"},
+            "grade": {"type": "string"},
         },
-        required=["sid"],
+        required=["sid", "save", "grade"],
     )
     def post(self, args):
         sid = args.get("sid", "")
-        user, is_new_user = AuthService.login_speedgo(sid)
+        save = args.get("save", "")
+        grade = args.get("grade", "")
+        user, is_new_user = AuthService.login_speedgo(sid, save, grade)
         if not user:
             return Response(
                 message="비밀번호가 정확하지 않습니다.",
