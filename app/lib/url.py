@@ -53,6 +53,7 @@ def un_shotend_url(url):
                 return urllib.parse.unquote(redirect_url)
 
             url = redirect_url
+            break
 
         return urllib.parse.unquote(url)
 
