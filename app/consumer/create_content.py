@@ -126,6 +126,8 @@ class CreateContent:
             if is_advance == 0:
                 url = data.get("input_url", "")
 
+                log_create_content_message(f"url: {url}")
+
                 data = Scraper().scraper({"url": url, "batch_id": batch_id})
 
                 log_create_content_message(f"data: {data}")

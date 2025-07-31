@@ -89,6 +89,7 @@ def extract_redirect_url_from_script(html_content):
 
 def get_coupang_real_url(real_url, parsed_url):
     if "link.coupang.com" in parsed_url.netloc:
+        logger.info(f"real_url: {real_url}")
         real_url = un_shotend_url(real_url)
         parsed_url = urlparse(real_url)
 
@@ -145,6 +146,7 @@ def get_aliexpress_real_url(real_url, parsed_url):
 
 
 def get_real_url(url):
+    logger.info(f"url: {url}")
     parsed_url = urlparse(url)
     netloc = parsed_url.netloc
     if "coupang." in netloc:
