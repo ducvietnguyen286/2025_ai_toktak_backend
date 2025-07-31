@@ -23,6 +23,11 @@ class Batch(db.Model, BaseModel):
     voice_google = db.Column(db.Integer, default=1)
     voice_typecast = db.Column(db.String(100), default="")
     process_status = db.Column(db.String(50), default="PENDING")
+
+    error_code = db.Column(db.String(50), nullable=True)
+    message = db.Column(db.Text, nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+
     template_info = db.Column(db.Text, nullable=True)
 
     to_json_filter = ("content", "thumbnails")
@@ -43,6 +48,9 @@ class Batch(db.Model, BaseModel):
             "is_paid_advertisements": self.is_paid_advertisements,
             "is_advance": self.is_advance,
             "template_info": self.template_info,
+            "error_code": self.error_code,
+            "message": self.message,
+            "error_message": self.error_message,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
