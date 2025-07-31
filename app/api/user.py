@@ -1654,6 +1654,8 @@ class APISNSLogin(Resource):
             "redirect_uri": os.environ.get("X_SNS_REDIRECT_URI") or "",
             "scope": "media.write tweet.read tweet.write users.read follows.read follows.write offline.access",
             "state": state_token,
+            "code_challenge": "challenge",
+            "code_challenge_method": "plain",
         }
         url = f"{url}?{urlencode(params)}"
         return redirect(url)
