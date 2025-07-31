@@ -123,56 +123,54 @@ class CreateContent:
 
             log_create_content_message(f"is_advance: {is_advance}")
 
-            if is_advance == 0:
-                url = data.get("input_url", "")
+            # if is_advance == 0:
+            url = data.get("input_url", "")
 
-                log_create_content_message(f"url: {url}")
+            log_create_content_message(f"url: {url}")
 
-                data = Scraper().scraper({"url": url, "batch_id": batch_id})
+            data = Scraper().scraper({"url": url, "batch_id": batch_id})
 
-                log_create_content_message(f"data: {data}")
+            log_create_content_message(f"data: {data}")
 
-                if not data:
-                    NotificationServices.create_notification(
-                        user_id=user_id,
-                        status=const.NOTIFICATION_FALSE,
-                        title=f"❌ 해당 {url} 은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
-                        description=f"Scraper False {url}",
-                    )
-
-                    redis_user_batch_key = f"toktak:users:batch_remain:{user_id}"
-                    user = UserService.find_user(user_id)
-                    redis_client.set(
-                        redis_user_batch_key, user.batch_remain + 1, ex=180
-                    )
-
-                    self.update_batch_error_analyze(batch_id)
-
-                    return None
-
-                thumbnail_url = data.get("image", "")
-                thumbnails = data.get("thumbnails", [])
-
-                shorten_link, is_shorted = ShortenServices.shorted_link(url)
-                data["base_url"] = shorten_link
-                data["shorten_link"] = shorten_link if is_shorted else ""
-
-                product_name = data.get("name", "")
-                product_name_cleared = call_chatgpt_clear_product_name(product_name)
-                if product_name_cleared:
-                    data["name"] = product_name_cleared
-
-                BatchService.update_batch(
-                    batch_id,
-                    thumbnail=thumbnail_url,
-                    thumbnails=json.dumps(thumbnails),
-                    base_url=shorten_link,
-                    shorten_link=shorten_link,
-                    content=json.dumps(data),
+            if not data:
+                NotificationServices.create_notification(
+                    user_id=user_id,
+                    status=const.NOTIFICATION_FALSE,
+                    title=f"❌ 해당 {url} 은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                    description=f"Scraper False {url}",
                 )
-                log_create_content_message(f"batch_id: {batch_id}")
-            else:
-                data = json.loads(batch.content)
+
+                redis_user_batch_key = f"toktak:users:batch_remain:{user_id}"
+                user = UserService.find_user(user_id)
+                redis_client.set(redis_user_batch_key, user.batch_remain + 1, ex=180)
+
+                self.update_batch_error_analyze(batch_id)
+
+                return None
+
+            thumbnail_url = data.get("image", "")
+            thumbnails = data.get("thumbnails", [])
+
+            shorten_link, is_shorted = ShortenServices.shorted_link(url)
+            data["base_url"] = shorten_link
+            data["shorten_link"] = shorten_link if is_shorted else ""
+
+            product_name = data.get("name", "")
+            product_name_cleared = call_chatgpt_clear_product_name(product_name)
+            if product_name_cleared:
+                data["name"] = product_name_cleared
+
+            BatchService.update_batch(
+                batch_id,
+                thumbnail=thumbnail_url,
+                thumbnails=json.dumps(thumbnails),
+                base_url=shorten_link,
+                shorten_link=shorten_link,
+                content=json.dumps(data),
+            )
+            log_create_content_message(f"batch_id: {batch_id}")
+            # else:
+            #     data = json.loads(batch.content)
 
             if not is_advance:
                 user_template = PostService.get_template_video_by_user_id(user_id)
