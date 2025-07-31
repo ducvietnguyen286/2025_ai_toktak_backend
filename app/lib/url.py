@@ -37,6 +37,7 @@ def un_shotend_url(url):
 
         while response.status_code in (301, 302, 303, 307, 308):
             redirect_url = response.headers.get("Location")
+            logger.info(f"redirect_url: {redirect_url}")
             if not redirect_url:
                 break
 
