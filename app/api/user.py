@@ -1652,7 +1652,7 @@ class APISNSLogin(Resource):
             "response_type": "code",
             "client_id": os.environ.get("X_CLIENT_KEY") or "",
             "redirect_uri": os.environ.get("X_SNS_REDIRECT_URI") or "",
-            "scope": "media.write%20tweet.read%20tweet.write%20users.read%20follows.read%20follows.write%20offline.access",
+            "scope": "media.write tweet.read tweet.write users.read follows.read follows.write offline.access",
             "state": state_token,
         }
         url = f"{url}?{urlencode(params)}"
