@@ -1407,7 +1407,7 @@ class APIGetCallbackYoutube(Resource):
 
 
 @ns.route("/oauth/ali-login")
-class APITiktokLogin(Resource):
+class APIAliLogin(Resource):
 
     @parameters(
         type="object",
@@ -1522,6 +1522,264 @@ class APIAliCallback(Resource):
         try:
             ALI_APP_SECRET = os.environ.get("ALI_APP_SECRET") or ""
             payload = jwt.decode(token, ALI_APP_SECRET, algorithms=["HS256"])
+            return payload
+        except Exception as e:
+            print(f"Error verify state token: {str(e)}")
+            return None
+
+
+@ns.route("/oauth/sns/login")
+class APISNSLogin(Resource):
+
+    @parameters(
+        type="object",
+        properties={
+            "provider": {
+                "type": "string",
+                "enum": ["facebook", "instagram", "thread", "x"],
+            },
+            "user_id": {"type": "string"},
+            "link_id": {"type": "string"},
+            "redirect_uri": {"type": "string"},
+        },
+        required=["provider", "user_id", "link_id", "redirect_uri"],
+    )
+    def get(self, args):
+        provider = args.get("provider")
+        user_id = args.get("user_id")
+        link_id = args.get("link_id")
+        redirect_uri = args.get("redirect_uri")
+
+        try:
+            current_user = AuthService.get_current_identity()
+            if not current_user:
+                return Response(
+                    message="Please login",
+                    code=201,
+                ).to_dict()
+
+            total_user_links = UserService.get_total_link(current_user.id)
+            total_link_active = current_user.total_link_active
+            if total_user_links >= total_link_active:
+                return Response(
+                    message=f"최대 {total_link_active}개의 채널만 설정할 수 있습니다.",
+                    status=201,
+                ).to_dict()
+
+            state_token = self.generate_state_token(
+                provider, user_id, link_id, redirect_uri
+            )
+
+            if not state_token:
+                return Response(
+                    message="Lỗi kết nối",
+                    status=400,
+                ).to_dict()
+
+            if provider == "facebook":
+                return self.get_facebook_login(state_token)
+            if provider == "instagram":
+                return self.get_instagram_login(state_token)
+            if provider == "thread":
+                return self.get_thread_login(state_token)
+            if provider == "x":
+                return self.get_x_login(state_token)
+
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
+
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
+
+    def get_facebook_login(self, state_token):
+        url = "https://www.facebook.com/v23.0/dialog/oauth"
+        params = {
+            "client_id": os.environ.get("FACEBOOK_APP_ID") or "",
+            "redirect_uri": os.environ.get("FACEBOOK_SNS_REDIRECT_URL") or "",
+            "scope": "email,public_profile,pages_read_engagement,pages_manage_posts,pages_show_list,publish_video",
+            "response_type": "code",
+            "state": state_token,
+        }
+        url = f"{url}?{urlencode(params)}"
+        return redirect(url)
+
+    def get_instagram_login(self, state_token):
+        url = "https://www.instagram.com/oauth/authorize"
+        params = {
+            "enable_fb_login": 1,
+            "client_id": os.environ.get("INSTAGRAM_APP_ID") or "",
+            "redirect_uri": os.environ.get("INSTAGRAM_SNS_REDIRECT_URL") or "",
+            "response_type": "code",
+            "scope": "instagram_business_basic,instagram_business_content_publish",
+            "state": state_token,
+        }
+        url = f"{url}?{urlencode(params)}"
+        return redirect(url)
+
+    def get_thread_login(self, state_token):
+        url = "https://threads.net/oauth/authorize"
+        params = {
+            "client_id": os.environ.get("THREAD_APP_ID") or "",
+            "redirect_uri": os.environ.get("THREAD_SNS_REDIRECT_URL") or "",
+            "scope": "threads_basic,threads_content_publish",
+            "response_type": "code",
+            "state": state_token,
+        }
+        url = f"{url}?{urlencode(params)}"
+        return redirect(url)
+
+    def get_x_login(self, state_token):
+        url = "https://x.com/i/oauth2/authorize"
+        params = {
+            "response_type": "code",
+            "client_id": os.environ.get("X_CLIENT_KEY") or "",
+            "redirect_uri": os.environ.get("X_SNS_REDIRECT_URI") or "",
+            "scope": "media.write,tweet.read,tweet.write,users.read,follows.read,follows.write,offline.access",
+            "state": state_token,
+        }
+        url = f"{url}?{urlencode(params)}"
+        return redirect(url)
+
+    def generate_state_token(self, provider, user_id, link_id, redirect_uri):
+        nonce = secrets.token_urlsafe(16)
+        payload = {
+            "nonce": nonce,
+            "provider": provider,
+            "user_id": user_id,
+            "link_id": link_id,
+            "redirect_uri": redirect_uri,
+            "exp": (datetime.datetime.now() + datetime.timedelta(days=30)).timestamp(),
+        }
+
+        token = jwt.encode(payload, TIKTOK_CLIENT_SECRET_KEY, algorithm="HS256")
+        return token
+
+
+@ns.route("/oauth/sns/callback")
+class APISNSCallback(Resource):
+    @parameters(
+        type="object",
+        properties={
+            "code": {"type": "string"},
+            "accessToken": {"type": "string"},
+            "state": {"type": "string"},
+        },
+        required=[],
+    )
+    def get(self, args):
+        try:
+            state = args.get("state")
+            payload = self.verify_state_token(state)
+
+            if not payload:
+                return Response(
+                    message="Invalid or expired state token",
+                    status=400,
+                ).to_dict()
+
+            provider = payload.get("provider")
+            user_id = payload.get("user_id")
+            link_id = payload.get("link_id")
+            redirect_uri = payload.get("redirect_uri")
+
+            current_user = UserService.find_user(user_id)
+            if not current_user:
+                return Response(
+                    message="Không tìm thấy người dùng",
+                    status=400,
+                ).to_dict()
+
+            link = LinkService.find_link(link_id)
+            if not link:
+                return Response(
+                    message="Không tìm thấy liên kết",
+                    status=400,
+                ).to_dict()
+
+            if provider == "facebook":
+                return self.get_facebook_callback(
+                    args, current_user, link, redirect_uri
+                )
+            if provider == "instagram":
+                return self.get_instagram_callback(
+                    args, current_user, link, redirect_uri
+                )
+            if provider == "thread":
+                return self.get_thread_callback(args, current_user, link, redirect_uri)
+            if provider == "x":
+                return self.get_x_callback(args, current_user, link, redirect_uri)
+
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
+
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
+
+    def get_facebook_callback(self, args, current_user, link, redirect_uri):
+        is_active = UserLinkService.update_user_link(
+            link=link, user_id=current_user.id, args=args
+        )
+        if is_active:
+            return redirect(redirect_uri)
+        else:
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
+
+    def get_instagram_callback(self, args, current_user, link, redirect_uri):
+        is_active = UserLinkService.update_user_link(
+            link=link, user_id=current_user.id, args=args
+        )
+        if is_active:
+            return redirect(redirect_uri)
+        else:
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
+
+    def get_thread_callback(self, args, current_user, link, redirect_uri):
+        is_active = UserLinkService.update_user_link(
+            link=link, user_id=current_user.id, args=args
+        )
+        if is_active:
+            return redirect(redirect_uri)
+        else:
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
+
+    def get_x_callback(self, args, current_user, link, redirect_uri):
+        is_active = UserLinkService.update_user_link(
+            link=link, user_id=current_user.id, args=args
+        )
+        if is_active:
+            return redirect(redirect_uri)
+        else:
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
+
+    def verify_state_token(self, token):
+        try:
+            payload = jwt.decode(token, TIKTOK_CLIENT_SECRET_KEY, algorithms=["HS256"])
             return payload
         except Exception as e:
             print(f"Error verify state token: {str(e)}")
