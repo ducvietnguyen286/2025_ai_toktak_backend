@@ -16,6 +16,8 @@ class UserLinkService:
         user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
         user_link_id = user_link.id if user_link else 0
 
+        print(f"user_link_id: {user_link_id}")
+
         if link.type == "X":
             UserService.update_user_link(
                 id=user_link_id,
