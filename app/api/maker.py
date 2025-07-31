@@ -79,6 +79,8 @@ def validater_create_batch(current_user, is_advance, url=""):
             "amzn.to",
             "ebay.com",
             "walmart.com",
+            "naver.com",
+            "naver.me",
         ]
         if url and url != "":
             if (
@@ -225,45 +227,11 @@ class APICreateBatchSync(Resource):
                 voice = 2
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
-            logger.error(f"Scraper data for URL: {url}")
-            data = Scraper().scraper({"url": url})
 
-            # return data
-            logger.error(f"Scraper data  : {data}")
-            check_data_scraper = True
-            if not data:
-                check_data_scraper = False
-            else:
-                logger.error(f"Scraper data  : {data}")
-                image_url = data.get("image", "")
-                if not (
-                    image_url.startswith("http://") or image_url.startswith("https://")
-                ):
-                    check_data_scraper = False
-            # Dữ liệu cào không hợp lệ
-            if not check_data_scraper:
-                NotificationServices.create_notification(
-                    user_id=user_id_login,
-                    status=const.NOTIFICATION_FALSE,
-                    title=f"❌ 해당 {url} 은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
-                    description=f"Scraper False {url}",
-                )
+            data = {}
 
-                redis_client.set(
-                    redis_user_batch_key, current_user.batch_remain + 1, ex=180
-                )
-
-                return Response(
-                    message=MessageError.NO_ANALYZE_URL.value["message"],
-                    data={
-                        "error_message": MessageError.NO_ANALYZE_URL.value[
-                            "error_message"
-                        ]
-                    },
-                    code=201,
-                ).to_dict()
-            thumbnail_url = data.get("image", "")
-            thumbnails = data.get("thumbnails", [])
+            thumbnail_url = ""
+            thumbnails = []
 
             data["input_url"] = url
             data["base_url"] = ""
@@ -593,30 +561,40 @@ class APIGetBatch(Resource):
                     message="Bạn không có quyền truy cập",
                     status=403,
                 ).to_dict()
+            batch = redis_client.get(f"toktak:batch:{id}")
+            if not batch:
+                batch = BatchService.find_batch(id)
+                if batch:
+                    batch = batch._to_json()
+                    redis_client.set(
+                        f"toktak:batch:{id}",
+                        json.dumps(batch),
+                        ex=60 * 60 * 24,
+                    )
+            else:
+                batch = json.loads(batch)
 
-            batch = BatchService.find_batch(id)
             if not batch:
                 return Response(
                     message="Batch không tồn tại",
                     status=404,
                 ).to_dict()
 
-            if user_id != batch.user_id:
+            if user_id != batch.get("user_id"):
                 return Response(
                     message="Bạn không có quyền truy cập",
                     status=403,
                 ).to_dict()
 
-            posts = PostService.get_posts_by_batch_id(batch.id)
+            posts = PostService.get_posts_by_batch_id(batch.get("id"))
 
-            batch_res = batch._to_json()
-            batch_res["posts"] = posts
+            batch["posts"] = posts
 
             user_info = UserService.get_user_info_detail(user_id)
-            batch_res["user_info"] = user_info
+            batch["user_info"] = user_info
 
             return Response(
-                data=batch_res,
+                data=batch,
                 message="Lấy batch thành công",
             ).to_dict()
         except Exception as e:
@@ -1254,7 +1232,7 @@ class APICreateScraper(Resource):
         try:
             url = args.get("url", "")
 
-            data_scraper = Scraper().scraper({"url": url})
+            data_scraper = Scraper().scraper({"url": url, "batch_id": "123460"})
             logger.error(data_scraper)
             if not data_scraper:
                 return Response(

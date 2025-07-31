@@ -8,8 +8,8 @@ from bs4 import BeautifulSoup
 import requests
 from app.lib.logger import logger
 from app.services.crawl_data import CrawlDataService
+from app.lib.url import get_real_url
 from app.extensions import redis_client
-from app.lib.string import un_shotend_url
 
 
 def normalize(data):
@@ -29,22 +29,15 @@ class AliExpressScraper:
         return self.run_scraper()
 
     def run_scraper(self):
-        if (
-            "https://s.click.aliexpress.com/" in self.url
-            or "https://a.aliexpress.com/" in self.url
-        ):
-            request_url = un_shotend_url(self.url)
-            print(request_url)
-        else:
-            request_url = self.url
+        real_url = get_real_url(self.url)
 
         # Push
 
-        data = self.run_api_ali_data_hub_6(request_url)
+        data = self.run_api_ali_data_hub_6(real_url)
         if not data:
-            data = self.run_api_ali_data(request_url)
+            data = self.run_api_ali_data(real_url)
         if not data:
-            data = self.run_api_ali_data_hub_2(request_url)
+            data = self.run_api_ali_data_hub_2(real_url)
         if not data:
             return {}
         return data
@@ -84,13 +77,12 @@ class AliExpressScraper:
             real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
 
             crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "ALIEXPRESS")
             if not check_data and exist_data:
                 return self.daily_check_exist_new_data_hub_6(
                     exist_data, request_url, crawl_url_hash
                 )
 
-            parsed_url = urlparse(real_url)
             product_id = parsed_url.path.split("/")[-1].split(".")[0]
 
             RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
@@ -222,13 +214,12 @@ class AliExpressScraper:
 
     def run_api_ali_data_hub_2(self, request_url, check_data=False):
         try:
-            parsed_url = urlparse(request_url)
-            real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
-            crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            crawl_url_hash = hashlib.sha1(request_url.encode()).hexdigest()
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "ALIEXPRESS")
             if not check_data and exist_data:
                 return json.loads(exist_data.response)
 
+            parsed_url = urlparse(request_url)
             product_id = parsed_url.path.split("/")[-1].split(".")[0]
 
             RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
@@ -321,14 +312,14 @@ class AliExpressScraper:
                 "name": item.get("title", ""),
                 "description": text,
                 "stock": 1 if in_stock else 0,
-                "domain": real_url,
+                "domain": request_url,
                 "brand": "",
                 "image": image_url,
                 "sku_images": sku_images,
                 "thumbnails": thumbnails_datas,
                 "price": price_show,
-                "url": real_url,
-                "url_crawl": real_url,
+                "url": request_url,
+                "url_crawl": request_url,
                 "base_url": self.url,
                 "store_name": store_name,
                 "show_free_shipping": 0,
@@ -345,7 +336,7 @@ class AliExpressScraper:
             CrawlDataService.create_crawl_data(
                 site="ALIEXPRESS",
                 input_url=self.url,
-                crawl_url=real_url,
+                crawl_url=request_url,
                 crawl_url_hash=crawl_url_hash,
                 request=json.dumps(
                     {
@@ -364,14 +355,12 @@ class AliExpressScraper:
 
     def run_api_ali_data(self, request_url, check_data=False):
         try:
-            parsed_url = urlparse(request_url)
-            real_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
-
-            crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
-            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash)
+            crawl_url_hash = hashlib.sha1(request_url.encode()).hexdigest()
+            exist_data = CrawlDataService.find_crawl_data(crawl_url_hash, "ALIEXPRESS")
             if not check_data and exist_data:
                 return json.loads(exist_data.response)
 
+            parsed_url = urlparse(request_url)
             product_id = parsed_url.path.split("/")[-1].split(".")[0]
 
             RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
@@ -436,14 +425,14 @@ class AliExpressScraper:
                 "name": data.get("title", ""),
                 "description": text,
                 "stock": 1 if in_stock else 0,
-                "domain": real_url,
+                "domain": request_url,
                 "brand": "",
                 "image": image_url,
                 "sku_images": sku_images,
                 "thumbnails": thumbnails_datas,
                 "price": price_show,
-                "url": real_url,
-                "url_crawl": real_url,
+                "url": request_url,
+                "url_crawl": request_url,
                 "base_url": self.url,
                 "store_name": store_name,
                 "show_free_shipping": 0,
@@ -460,7 +449,7 @@ class AliExpressScraper:
             CrawlDataService.create_crawl_data(
                 site="ALIEXPRESS",
                 input_url=self.url,
-                crawl_url=real_url,
+                crawl_url=request_url,
                 crawl_url_hash=crawl_url_hash,
                 request=json.dumps(
                     {
