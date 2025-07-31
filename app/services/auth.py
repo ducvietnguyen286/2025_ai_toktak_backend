@@ -97,23 +97,23 @@ class AuthService:
 
                         if not user:
                             user = User(
-                                email="",
+                                username=provider_user_id,
                                 name="",
                                 avatar="",
                                 level=0,
                                 contact=provider,
-                                subscription="NEW_USER",
+                                subscription="BUSINESS",
                                 subscription_expired=datetime.now()
-                                + relativedelta(months=1),
-                                batch_total=const.PACKAGE_CONFIG["BASIC"][
+                                + relativedelta(years=99),
+                                batch_total=const.PACKAGE_CONFIG["BUSINESS_SPEEDGO"][
                                     "batch_total"
                                 ],
-                                batch_remain=const.PACKAGE_CONFIG["BASIC"][
+                                batch_remain=const.PACKAGE_CONFIG["BUSINESS_SPEEDGO"][
                                     "batch_remain"
                                 ],
-                                total_link_active=const.PACKAGE_CONFIG["BASIC"][
-                                    "total_link_active"
-                                ],
+                                total_link_active=const.PACKAGE_CONFIG[
+                                    "BUSINESS_SPEEDGO"
+                                ]["total_link_active"],
                                 level_info=json.dumps(get_level_images(0)),
                             )
                             user.save()
@@ -126,7 +126,7 @@ class AuthService:
                             data_new_user_history = {
                                 "user_id": login_user_id,
                                 "type": "user",
-                                "type_2": "NEW_USER",
+                                "type_2": "BUSINESS",
                                 "object_id": login_user_id,
                                 "object_start_time": object_start_time,
                                 "object_end_time": subscription_expired,
