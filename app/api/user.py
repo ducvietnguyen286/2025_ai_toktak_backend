@@ -1753,6 +1753,10 @@ class APISNSCallback(Resource):
             ).to_dict()
 
     def get_instagram_callback(self, args, current_user, link, redirect_uri):
+        print(f"args: {args}")
+        print(f"current_user: {current_user.id}")
+        print(f"link: {link}")
+        print(f"redirect_uri: {redirect_uri}")
         is_active = UserLinkService.update_user_link(
             link=link, user_id=current_user.id, args=args
         )
