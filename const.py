@@ -219,6 +219,19 @@ PACKAGE_CONFIG = {
         "batch_sns_total": 7,
         "total_link_active": 7,
     },
+    "BUSINESS_SPEEDGO": {
+        "pack_name": "기업형 스탠다드 플랜",
+        "pack_description": "기업형 스탠다드 플랜",
+        "order_index": 3,
+        "total_create": 10000000,
+        "price": 0,
+        "price_origin": 0,
+        "total_link": 1000000,
+        "batch_total": 1000000,
+        "batch_remain": 1000000,
+        "batch_sns_total": 1000000,
+        "total_link_active": 7,
+    },
 }
 
 
@@ -240,4 +253,4 @@ REDIS_KEY_TOKTAK = {
 }
 
 
-BASIC_USER = ["COUPON_BASIC", "BASIC", "NEW_USER", "INVITE_BASIC" , "COUPON_KOL"]
+BASIC_USER = ["COUPON_BASIC", "BASIC", "NEW_USER", "INVITE_BASIC", "COUPON_KOL"]
