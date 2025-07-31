@@ -128,6 +128,8 @@ class CreateContent:
 
                 data = Scraper().scraper({"url": url, "batch_id": batch_id})
 
+                log_create_content_message(f"data: {data}")
+
                 if not data:
                     NotificationServices.create_notification(
                         user_id=user_id,
@@ -166,6 +168,7 @@ class CreateContent:
                     shorten_link=shorten_link,
                     content=json.dumps(data),
                 )
+                log_create_content_message(f"batch_id: {batch_id}")
             else:
                 data = json.loads(batch.content)
 
