@@ -1745,6 +1745,10 @@ class APISNSCallback(Resource):
     def update_sns_link(self, args, current_user, link):
         link_id = link.id
         user_link = UserService.find_user_link_exist(link_id, current_user.id)
+        print(f"user_link: {user_link}")
+        print(f"args: {args}")
+        print(f"current_user: {current_user.id}")
+        print(f"link: {link.id}")
         is_active = True
         if not user_link:
             user_link = UserService.create_user_link(
