@@ -41,21 +41,19 @@ class CoupangScraper:
                 self.crawl_url_hash, "COUPANG"
             )
             if exist_data:
-                now = datetime.datetime.now()
-                if (now - exist_data.created_at) <= datetime.timedelta(days=30):
-                    return json.loads(exist_data.response)
+                return json.loads(exist_data.response)
 
-                new_data = self.run_sub_server()
-                if new_data:
-                    try:
-                        CrawlDataService.update_crawl_data(
-                            exist_data.id, json.dumps(new_data)
-                        )
-                    except Exception as e:
-                        logger.error(f"Error updating crawl data: {e}")
-                    return new_data
-                else:
-                    return json.loads(exist_data.response)
+                # new_data = self.run_sub_server()
+                # if new_data:
+                #     try:
+                #         CrawlDataService.update_crawl_data(
+                #             exist_data.id, json.dumps(new_data)
+                #         )
+                #     except Exception as e:
+                #         logger.error(f"Error updating crawl data: {e}")
+                #     return new_data
+                # else:
+                #     return json.loads(exist_data.response)
 
             return self.run_sub_server()
         except Exception as e:
