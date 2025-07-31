@@ -122,11 +122,6 @@ class CreateContent:
             user_id = batch.user_id
 
             log_create_content_message(f"is_advance: {is_advance}")
-            log_create_content_message(
-                f"is_paid_advertisements: {is_paid_advertisements}"
-            )
-            log_create_content_message(f"narration: {narration}")
-            log_create_content_message(f"user_id: {user_id}")
 
             if is_advance == 0:
                 url = data.get("input_url", "")

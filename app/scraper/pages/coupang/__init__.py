@@ -37,13 +37,12 @@ class CoupangScraper:
 
     def run_wrap_sub_server(self):
         try:
-            exist_data = CrawlDataService.find_crawl_data(
-                self.crawl_url_hash, "COUPANG"
-            )
-            logger.info(f"exist_data: {exist_data}")
             logger.info(f"self.crawl_url_hash: {self.crawl_url_hash}")
             logger.info(f"self.url: {self.url}")
             logger.info(f"self.real_url: {self.real_url}")
+            exist_data = CrawlDataService.find_crawl_data(
+                self.crawl_url_hash, "COUPANG"
+            )
             if exist_data:
                 return json.loads(exist_data.response)
 
