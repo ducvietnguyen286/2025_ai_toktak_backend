@@ -1743,29 +1743,34 @@ class APISNSCallback(Resource):
             ).to_dict()
 
     def update_sns_link(self, args, current_user, link):
-        link_id = link.id
-        user_link = UserService.find_user_link_exist(link_id, current_user.id)
-        print(f"user_link: {user_link}")
-        print(f"args: {args}")
-        print(f"current_user: {current_user.id}")
-        print(f"link: {link.id}")
-        is_active = True
-        if not user_link:
-            user_link = UserService.create_user_link(
-                user_id=current_user.id,
-                link_id=link_id,
-                meta="{}",
-                status=1,
-            )
+        try:
+            logger.info(f"args: {args}")
+            logger.info(f"current_user: {current_user.id}")
+            logger.info(f"link: {link.id}")
+            logger.info(f"link: {link.type}")
+            link_id = link.id
+            user_link = UserService.find_user_link_exist(link_id, current_user.id)
+            is_active = True
+            if not user_link:
+                user_link = UserService.create_user_link(
+                    user_id=current_user.id,
+                    link_id=link_id,
+                    meta="{}",
+                    status=1,
+                )
 
-            is_active = UserLinkService.update_user_link(
-                link=link, user_id=current_user.id, args=args
-            )
-        else:
-            is_active = UserLinkService.update_user_link(
-                link=link, user_id=current_user.id, args=args
-            )
-        return is_active
+                is_active = UserLinkService.update_user_link(
+                    link=link, user_id=current_user.id, args=args
+                )
+            else:
+                is_active = UserLinkService.update_user_link(
+                    link=link, user_id=current_user.id, args=args
+                )
+            return is_active
+        except Exception as e:
+            traceback.print_exc()
+            logger.error("Exception: {0}".format(str(e)))
+            return False
 
     def get_facebook_callback(self, args, current_user, link, redirect_uri):
         is_active = self.update_sns_link(args, current_user, link)
