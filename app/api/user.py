@@ -1599,14 +1599,23 @@ class APISNSLogin(Resource):
             ).to_dict()
 
     def get_facebook_login(self, state_token):
-        pass
+        url = "https://www.facebook.com/v23.0/dialog/oauth"
+        params = {
+            "client_id": os.environ.get("FACEBOOK_APP_ID") or "",
+            "redirect_uri": os.environ.get("FACEBOOK_SNS_REDIRECT_URL") or "",
+            "scope": "email,public_profile,pages_read_engagement,pages_manage_posts,pages_show_list,publish_video",
+            "response_type": "code",
+            "state": state_token,
+        }
+        url = f"{url}?{urlencode(params)}"
+        return redirect(url)
 
     def get_instagram_login(self, state_token):
         url = "https://www.instagram.com/oauth/authorize"
         params = {
             "enable_fb_login": 1,
             "client_id": os.environ.get("INSTAGRAM_APP_ID") or "",
-            "redirect_uri": os.environ.get("INSTAGRAM_REDIRECT_URL") or "",
+            "redirect_uri": os.environ.get("INSTAGRAM_SNS_REDIRECT_URL") or "",
             "response_type": "code",
             "scope": "instagram_business_basic,instagram_business_content_publish",
             "state": state_token,
@@ -1618,7 +1627,7 @@ class APISNSLogin(Resource):
         url = "https://threads.net/oauth/authorize"
         params = {
             "client_id": os.environ.get("THREAD_APP_ID") or "",
-            "redirect_uri": os.environ.get("THREAD_REDIRECT_URL") or "",
+            "redirect_uri": os.environ.get("THREAD_SNS_REDIRECT_URL") or "",
             "scope": "threads_basic,threads_content_publish",
             "response_type": "code",
             "state": state_token,
@@ -1631,7 +1640,7 @@ class APISNSLogin(Resource):
         params = {
             "response_type": "code",
             "client_id": os.environ.get("X_CLIENT_KEY") or "",
-            "redirect_uri": os.environ.get("X_REDIRECT_URI") or "",
+            "redirect_uri": os.environ.get("X_SNS_REDIRECT_URI") or "",
             "scope": "media.write,tweet.read,tweet.write,users.read,follows.read,follows.write,offline.access",
             "state": state_token,
         }
@@ -1667,7 +1676,6 @@ class APISNSCallback(Resource):
     def get(self, args):
         try:
             state = args.get("state")
-
             payload = self.verify_state_token(state)
 
             if not payload:
@@ -1727,6 +1735,11 @@ class APISNSCallback(Resource):
         )
         if is_active:
             return redirect(redirect_uri)
+        else:
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
 
     def get_instagram_callback(self, args, current_user, link, redirect_uri):
         is_active = UserLinkService.update_user_link(
@@ -1734,6 +1747,11 @@ class APISNSCallback(Resource):
         )
         if is_active:
             return redirect(redirect_uri)
+        else:
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
 
     def get_thread_callback(self, args, current_user, link, redirect_uri):
         is_active = UserLinkService.update_user_link(
@@ -1741,6 +1759,11 @@ class APISNSCallback(Resource):
         )
         if is_active:
             return redirect(redirect_uri)
+        else:
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
 
     def get_x_callback(self, args, current_user, link, redirect_uri):
         is_active = UserLinkService.update_user_link(
@@ -1748,6 +1771,11 @@ class APISNSCallback(Resource):
         )
         if is_active:
             return redirect(redirect_uri)
+        else:
+            return Response(
+                message="Lỗi kết nối",
+                status=400,
+            ).to_dict()
 
     def verify_state_token(self, token):
         try:
