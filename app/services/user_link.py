@@ -23,6 +23,9 @@ class UserLinkService:
             )
 
             code = args.get("Code")
+            if not code:
+                code = args.get("code")
+
             is_active = UserLinkService.save_link_x(
                 user_link_id=user_link_id, code=code
             )
@@ -34,6 +37,9 @@ class UserLinkService:
             )
 
             access_token = args.get("AccessToken")
+            if not access_token:
+                access_token = args.get("accessToken")
+
             is_active = UserLinkService.save_link_facebook(
                 user_link_id=user_link_id, access_token=access_token
             )
@@ -45,6 +51,9 @@ class UserLinkService:
             )
 
             code = args.get("Code")
+            if not code:
+                code = args.get("code")
+
             is_active = UserLinkService.save_link_youtube(
                 user_link_id=user_link_id, code=code
             )
@@ -56,6 +65,9 @@ class UserLinkService:
             )
 
             code = args.get("Code")
+            if not code:
+                code = args.get("code")
+
             is_active = UserLinkService.save_link_thread(
                 user_link_id=user_link_id, code=code
             )
@@ -67,6 +79,9 @@ class UserLinkService:
             )
 
             code = args.get("Code")
+            if not code:
+                code = args.get("code")
+
             is_active = UserLinkService.save_link_instagram(
                 user_link_id=user_link_id, code=code
             )
