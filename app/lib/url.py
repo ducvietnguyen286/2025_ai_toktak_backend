@@ -31,7 +31,7 @@ def un_shotend_url(url):
             "upgrade-insecure-requests": "1",
             "user-agent": user_agent,
         }
-        response = session.get(url, headers=headers, allow_redirects=False)
+        response = session.get(url, headers=headers, allow_redirects=False, timeout=10)
 
         while response.status_code in (301, 302, 303, 307, 308):
             redirect_url = response.headers.get("Location")
