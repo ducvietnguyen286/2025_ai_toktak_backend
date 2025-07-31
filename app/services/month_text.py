@@ -2,6 +2,7 @@ import json
 import traceback
 import random
 from datetime import datetime, timedelta
+import calendar
 from app.extensions import db
 from app.models.month_text import MonthText
 from app.extensions import redis_client
@@ -26,8 +27,10 @@ class MonthTextService:
         rows = db.session.query(MonthText).filter(MonthText.month == month_key).all()
         month_texts_json = [month_text._to_json() for month_text in rows]
 
-        end_of_month = datetime.now().replace(day=1) + timedelta(days=31)
-        end_of_month = end_of_month.replace(day=1) - timedelta(days=1)
+        # Lấy thời điểm cuối ngày của ngày cuối cùng trong tháng hiện tại
+        now = datetime.now()
+        last_day = calendar.monthrange(now.year, now.month)[1]
+        end_of_month = datetime(now.year, now.month, last_day, 23, 59, 59)
 
         redis_client.set(
             f"toktak:month_texts_{month_key}",
