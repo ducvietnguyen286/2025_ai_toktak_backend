@@ -33,6 +33,8 @@ def un_shotend_url(url):
         }
         response = session.get(url, headers=headers, allow_redirects=False, timeout=10)
 
+        logger.info(f"response: {response}")
+
         while response.status_code in (301, 302, 303, 307, 308):
             redirect_url = response.headers.get("Location")
             if not redirect_url:
@@ -89,8 +91,9 @@ def extract_redirect_url_from_script(html_content):
 
 def get_coupang_real_url(real_url, parsed_url):
     if "link.coupang.com" in parsed_url.netloc:
-        logger.info(f"real_url: {real_url}")
+        logger.info(f"get_coupang_real_url: {real_url}")
         real_url = un_shotend_url(real_url)
+        logger.info(f"coupang_real_url: {real_url}")
         parsed_url = urlparse(real_url)
 
     path = parsed_url.path
