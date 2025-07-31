@@ -1180,6 +1180,7 @@ class APIYoutubeLogin(Resource):
         properties={
             "user_id": {"type": "string"},
             "link_id": {"type": "string"},
+            "redirect_uri": {"type": "string"},
         },
         required=["user_id", "link_id"],
     )
@@ -1187,6 +1188,7 @@ class APIYoutubeLogin(Resource):
         try:
             user_id = args.get("user_id")
             link_id = args.get("link_id")
+            redirect_uri = args.get("redirect_uri", "")
 
             client = YoutubeClientService.get_client_by_user_id(user_id)
             if not client:
@@ -1206,7 +1208,9 @@ class APIYoutubeLogin(Resource):
 
                 return redirect(PAGE_PROFILE + "?tabIndex=2&error=Not found client")
 
-            state_token = self.generate_state_token(client, user_id, link_id)
+            state_token = self.generate_state_token(
+                client, user_id, link_id, redirect_uri
+            )
             scope = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"
 
             params = {
@@ -1215,7 +1219,9 @@ class APIYoutubeLogin(Resource):
                     if isinstance(client, YoutubeClient)
                     else client.get("client_id")
                 ),
-                "redirect_uri": YOUTUBE_REDIRECT_URL,
+                "redirect_uri": (
+                    YOUTUBE_REDIRECT_URL if redirect_uri == "" else redirect_uri
+                ),
                 "response_type": "code",
                 "scope": scope,
                 "state": state_token,
@@ -1234,7 +1240,7 @@ class APIYoutubeLogin(Resource):
             print(f"Error redirect oauth youtube: {str(e)}")
             return False
 
-    def generate_state_token(self, client, user_id, link_id):
+    def generate_state_token(self, client, user_id, link_id, redirect_uri):
         nonce = secrets.token_urlsafe(16)
         client_id = client.id if isinstance(client, YoutubeClient) else client.get("id")
         payload = {
@@ -1242,6 +1248,7 @@ class APIYoutubeLogin(Resource):
             "user_id": user_id,
             "link_id": link_id,
             "client_id": str(client_id),
+            "redirect_uri": redirect_uri,
             "exp": (datetime.datetime.now() + datetime.timedelta(days=30)).timestamp(),
         }
         token = jwt.encode(payload, STATE_SECRET_KEY, algorithm="HS256")
@@ -1286,6 +1293,7 @@ class APIGetCallbackYoutube(Resource):
             client = YoutubeClientService.find_client_by_id(client_id)
             user_id = payload.get("user_id")
             link_id = payload.get("link_id")
+            redirect_uri = payload.get("redirect_uri", "")
             int_user_id = int(user_id)
             int_link_id = int(link_id)
 
@@ -1338,6 +1346,7 @@ class APIGetCallbackYoutube(Resource):
                 code=code,
                 user_link_id=user_link_id,
                 client=client,
+                redirect_uri=redirect_uri,
             )
             if not response:
                 NotificationServices.create_notification(
@@ -1551,7 +1560,7 @@ class APISNSLogin(Resource):
         redirect_uri = args.get("redirect_uri")
 
         try:
-            current_user = AuthService.get_current_identity()
+            current_user = UserService.find_user(user_id)
             if not current_user:
                 return Response(
                     message="Please login",
