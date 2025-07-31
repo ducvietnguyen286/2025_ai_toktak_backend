@@ -1,41 +1,50 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  selenium-hub:
-    image: selenium/hub:latest
-    container_name: selenium-hub
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
     ports:
-      - "4567:4444"
-    environment:
-      - GRID_MAX_SESSION=10
-      - GRID_BROWSER_TIMEOUT=120
-      - GRID_TIMEOUT=120
-    restart: always
-
-  chrome:
-    image: selenium/node-chrome:latest
+      - "5000:5000"
+    env_file:
+      - .env
     depends_on:
-      - selenium-hub
-    environment:
-      - SE_EVENT_BUS_HOST=selenium-hub
-      - SE_EVENT_BUS_PUBLISH_PORT=4442
-      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      - SE_NODE_MAX_INSTANCES=3
-      - SE_NODE_MAX_SESSIONS=3
-    volumes:
-      - /dev/shm:/dev/shm
-    restart: always
+      - redis
+    networks:
+      - app-network
 
-  firefox:
-    image: selenium/node-firefox:latest
+  sns-consumers:
+    build:
+      context: .
+      dockerfile: Dockerfile.sns
+    env_file:
+      - .env
     depends_on:
-      - selenium-hub
-    environment:
-      - SE_EVENT_BUS_HOST=selenium-hub
-      - SE_EVENT_BUS_PUBLISH_PORT=4442
-      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      - SE_NODE_MAX_INSTANCES=3
-      - SE_NODE_MAX_SESSIONS=3
-    volumes:
-      - /dev/shm:/dev/shm
-    restart: always
+      - redis
+      - api
+    networks:
+      - app-network
+
+  content-creator:
+    build:
+      context: .
+      dockerfile: Dockerfile.content
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - api
+    networks:
+      - app-network
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,35 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Create a script to run all consumers
+RUN echo '#!/bin/bash\n\
+python consumer_facebook.py &\n\
+python consumer_instagram.py &\n\
+python consumer_thread.py &\n\
+python consumer_tiktok.py &\n\
+python consumer_twitter.py &\n\
+python consumer_youtube.py &\n\
+wait' > /app/run_consumers.sh
+
+RUN chmod +x /app/run_consumers.sh
+
+# Run all consumers
+CMD ["/app/run_consumers.sh"] 
