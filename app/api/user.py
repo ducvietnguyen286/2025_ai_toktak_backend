@@ -1579,6 +1579,8 @@ class APISNSLogin(Resource):
                 provider, user_id, link_id, redirect_uri
             )
 
+            print(f"state_token: {state_token}")
+
             if not state_token:
                 return Response(
                     message="Lỗi kết nối",
@@ -1726,7 +1728,7 @@ class APISNSCallback(Resource):
                 return self.get_x_callback(args, current_user, link, redirect_uri)
 
             return Response(
-                message="Lỗi kết nối",
+                message="Lỗi kết nối 1",
                 status=400,
             ).to_dict()
 
@@ -1734,7 +1736,7 @@ class APISNSCallback(Resource):
             traceback.print_exc()
             logger.error("Exception: {0}".format(str(e)))
             return Response(
-                message="Lỗi kết nối",
+                message="Lỗi kết nối 2",
                 status=400,
             ).to_dict()
 
