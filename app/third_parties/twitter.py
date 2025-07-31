@@ -78,6 +78,8 @@ class TwitterTokenService:
 
     def fetch_token(self, code, user_link_id):
         try:
+            log_twitter_message(f"-----------X DATA: {code}-------------")
+            log_twitter_message(f"-----------X DATA: {user_link_id}-------------")
             user_link = UserService.find_user_link_by_id(user_link_id)
             # Tạo header Authorization kiểu Basic bằng cách mã hóa "client_id:client_secret"
             client_credentials = base64.b64encode(
