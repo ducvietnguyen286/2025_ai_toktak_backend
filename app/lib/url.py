@@ -43,7 +43,10 @@ def un_shotend_url(url):
             if not redirect_url.startswith(("http://", "https://")):
                 redirect_url = urljoin(url, redirect_url)
 
-            response = session.get(redirect_url, headers=headers, allow_redirects=False)
+            response = session.get(
+                redirect_url, headers=headers, allow_redirects=False, timeout=10
+            )
+            logger.info(f"response 2: {response}")
 
             if redirect_url.startswith("https://star.aliexpress.com"):
                 redirect_url_from_script = extract_redirect_url_from_script(
