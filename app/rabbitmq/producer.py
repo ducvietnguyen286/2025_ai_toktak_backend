@@ -67,6 +67,11 @@ async def send_message(queue: str, message: dict):
         return False
 
 
+async def send_run_crawler_message(message):
+    queue = os.environ.get("RABBITMQ_QUEUE_RUN_CRAWLER", "hello")
+    await send_message(queue, message)
+
+
 async def send_create_content_message(message):
     queue = os.environ.get("RABBITMQ_QUEUE_CREATE_CONTENT", "hello")
     await send_message(queue, message)
