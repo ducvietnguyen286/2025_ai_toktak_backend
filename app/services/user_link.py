@@ -10,7 +10,7 @@ from app.third_parties.youtube import YoutubeTokenService
 class UserLinkService:
 
     @staticmethod
-    def update_user_link(link, user_id, args):
+    def update_user_link(link, user_id, args, redirect_uri=""):
         is_active = False
 
         user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
@@ -30,7 +30,7 @@ class UserLinkService:
                 code = args.get("code")
 
             is_active = UserLinkService.save_link_x(
-                user_link_id=user_link_id, code=code
+                user_link_id=user_link_id, code=code, redirect_uri=redirect_uri
             )
 
         if link.type == "FACEBOOK":
@@ -58,7 +58,7 @@ class UserLinkService:
                 code = args.get("code")
 
             is_active = UserLinkService.save_link_youtube(
-                user_link_id=user_link_id, code=code
+                user_link_id=user_link_id, code=code, redirect_uri=redirect_uri
             )
 
         if link.type == "THREAD":
@@ -72,7 +72,7 @@ class UserLinkService:
                 code = args.get("code")
 
             is_active = UserLinkService.save_link_thread(
-                user_link_id=user_link_id, code=code
+                user_link_id=user_link_id, code=code, redirect_uri=redirect_uri
             )
 
         if link.type == "INSTAGRAM":
@@ -86,7 +86,7 @@ class UserLinkService:
                 code = args.get("code")
 
             is_active = UserLinkService.save_link_instagram(
-                user_link_id=user_link_id, code=code
+                user_link_id=user_link_id, code=code, redirect_uri=redirect_uri
             )
 
         if link.type == "BLOG_NAVER":
@@ -142,8 +142,10 @@ class UserLinkService:
         return is_active
 
     @staticmethod
-    def save_link_x(user_link_id, code):
-        is_active = TwitterTokenService().fetch_token(code, user_link_id)
+    def save_link_x(user_link_id, code, redirect_uri=""):
+        is_active = TwitterTokenService().fetch_token(
+            code, user_link_id, redirect_uri=redirect_uri
+        )
         if is_active:
             data = TwitterTokenService().fetch_user_info(user_link_id)
             logger.info(f"-----------TWITTER DATA: {data}-------------")
@@ -157,9 +159,9 @@ class UserLinkService:
         return is_active
 
     @staticmethod
-    def save_link_youtube(user_link_id, code):
+    def save_link_youtube(user_link_id, code, redirect_uri=""):
         is_active = YoutubeTokenService().exchange_code_for_token(
-            code=code, user_link_id=user_link_id
+            code=code, user_link_id=user_link_id, redirect_uri=redirect_uri
         )
         if is_active:
             data = YoutubeTokenService().fetch_channel_info(user_link_id)
@@ -173,9 +175,9 @@ class UserLinkService:
         return is_active
 
     @staticmethod
-    def save_link_thread(user_link_id, code):
+    def save_link_thread(user_link_id, code, redirect_uri=""):
         is_active = ThreadTokenService().exchange_code(
-            code=code, user_link_id=user_link_id
+            code=code, user_link_id=user_link_id, redirect_uri=redirect_uri
         )
         if is_active:
             is_active = ThreadTokenService().exchange_long_live_token(user_link_id)
@@ -191,9 +193,9 @@ class UserLinkService:
         return is_active
 
     @staticmethod
-    def save_link_instagram(user_link_id, code):
+    def save_link_instagram(user_link_id, code, redirect_uri=""):
         is_active = InstagramTokenService().exchange_code(
-            code=code, user_link_id=user_link_id
+            code=code, user_link_id=user_link_id, redirect_uri=redirect_uri
         )
         if is_active:
             is_active = InstagramTokenService().exchange_long_live_token(user_link_id)

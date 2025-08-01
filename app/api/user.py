@@ -1742,7 +1742,7 @@ class APISNSCallback(Resource):
                 status=400,
             ).to_dict()
 
-    def update_sns_link(self, args, current_user, link):
+    def update_sns_link(self, args, current_user, link, redirect_uri=""):
         try:
             logger.info(f"args: {args}")
             logger.info(f"current_user: {current_user.id}")
@@ -1760,11 +1760,17 @@ class APISNSCallback(Resource):
                 )
 
                 is_active = UserLinkService.update_user_link(
-                    link=link, user_id=current_user.id, args=args
+                    link=link,
+                    user_id=current_user.id,
+                    args=args,
+                    redirect_uri=redirect_uri,
                 )
             else:
                 is_active = UserLinkService.update_user_link(
-                    link=link, user_id=current_user.id, args=args
+                    link=link,
+                    user_id=current_user.id,
+                    args=args,
+                    redirect_uri=redirect_uri,
                 )
             return is_active
         except Exception as e:
@@ -1773,7 +1779,9 @@ class APISNSCallback(Resource):
             return False
 
     def get_facebook_callback(self, args, current_user, link, redirect_uri):
-        is_active = self.update_sns_link(args, current_user, link)
+        is_active = self.update_sns_link(
+            args, current_user, link, redirect_uri=redirect_uri
+        )
         if is_active:
             return redirect(redirect_uri)
         else:
@@ -1783,7 +1791,9 @@ class APISNSCallback(Resource):
             ).to_dict()
 
     def get_instagram_callback(self, args, current_user, link, redirect_uri):
-        is_active = self.update_sns_link(args, current_user, link)
+        is_active = self.update_sns_link(
+            args, current_user, link, redirect_uri=redirect_uri
+        )
         if is_active:
             return redirect(redirect_uri)
         else:
@@ -1793,7 +1803,9 @@ class APISNSCallback(Resource):
             ).to_dict()
 
     def get_thread_callback(self, args, current_user, link, redirect_uri):
-        is_active = self.update_sns_link(args, current_user, link)
+        is_active = self.update_sns_link(
+            args, current_user, link, redirect_uri=redirect_uri
+        )
         if is_active:
             return redirect(redirect_uri)
         else:
@@ -1803,7 +1815,9 @@ class APISNSCallback(Resource):
             ).to_dict()
 
     def get_x_callback(self, args, current_user, link, redirect_uri):
-        is_active = self.update_sns_link(args, current_user, link)
+        is_active = self.update_sns_link(
+            args, current_user, link, redirect_uri=redirect_uri
+        )
         if is_active:
             return redirect(redirect_uri)
         else:

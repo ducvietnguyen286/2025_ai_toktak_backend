@@ -76,7 +76,7 @@ class TwitterTokenService:
             log_twitter_message(e)
             return None
 
-    def fetch_token(self, code, user_link_id):
+    def fetch_token(self, code, user_link_id, redirect_uri=""):
         try:
             log_twitter_message(f"-----------X DATA: {code}-------------")
             log_twitter_message(f"-----------X DATA: {user_link_id}-------------")
@@ -97,7 +97,11 @@ class TwitterTokenService:
                 "grant_type": "authorization_code",
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
-                "redirect_uri": self.redirect_uri,
+                "redirect_uri": (
+                    os.environ.get("X_SNS_REDIRECT_URI")
+                    if redirect_uri
+                    else self.redirect_uri
+                ),
                 "code_verifier": "challenge",
             }
             response = requests.post(TOKEN_URL, headers=headers, data=r_data)

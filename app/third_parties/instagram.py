@@ -16,7 +16,7 @@ from app.third_parties.base_service import BaseService
 class InstagramTokenService:
 
     @staticmethod
-    def exchange_code(code, user_link_id):
+    def exchange_code(code, user_link_id, redirect_uri=""):
         try:
             log_instagram_message(
                 "------------------  EXCHANGE INSTAGRAM CODE  ------------------"
@@ -26,7 +26,11 @@ class InstagramTokenService:
 
             CLIENT_ID = os.environ.get("INSTAGRAM_APP_ID") or ""
             CLIENT_SECRET = os.environ.get("INSTAGRAM_APP_SECRET") or ""
-            REDIRECT_URL = os.environ.get("INSTAGRAM_REDIRECT_URL") or ""
+            REDIRECT_URL = (
+                os.environ.get("INSTAGRAM_SNS_REDIRECT_URL")
+                if redirect_uri
+                else os.environ.get("INSTAGRAM_REDIRECT_URL") or ""
+            )
 
             body = {
                 "grant_type": "authorization_code",
