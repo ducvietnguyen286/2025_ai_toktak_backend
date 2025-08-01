@@ -1,0 +1,75 @@
+#!/bin/bash
+
+LOG_FILE="/var/log/init_elb_script.log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+exec 2>&1
+export DEBIAN_FRONTEND=noninteractive
+export HOME=/root
+echo "===== Bắt đầu setup EC2 Ubuntu $(date) ====="
+function run_step() {
+    echo "---- Bắt đầu: $1 ----"
+    if eval "$2"; then
+        echo "✅ Thành công: $1"
+    else
+        echo "❌ Thất bại: $1"
+        exit 1
+    fi
+    echo "---- Kết thúc: $1 ----"
+    echo
+}
+# 1. Tạo thư mục /var/www và ghi test.html
+run_step "Tạo thư mục /var/www" "mkdir -p /var/www"
+# 1. Xóa thư mục cũ nếu tồn tại và tạo /var/www
+run_step "Xóa thư mục /var/www/2025_ai_toktak_be/ nếu có" "rm -rf /var/www/2025_ai_toktak_be/"
+# 2. Cập nhật hệ thống
+run_step "Cập nhật hệ thống" "apt update -y && apt upgrade -y"
+run_step "Cài thư viện hệ thống hỗ trợ OpenCV (libGL)" "apt install -y libgl1"
+# Cài python3.12 và venv nếu chưa có
+run_step "Cài đặt Python 3.12 và venv" "\
+apt install -y python3.12 python3.12-venv"
+# 3. Cài git
+run_step "Cài Git" "apt install -y git"
+# 5. Clone mã nguồn GitLab (chỉ nhánh main)
+GIT_REPO_URL="https://chibao2704%40gmail.com:haynhi%40123@gitlab.com/vodaplayvietnam/2025_ai_toktak_be.git"
+run_step "Clone mã nguồn nhánh elb_main từ GitLab về /var/www/2025_ai_toktak_be" \
+"git clone --branch elb_main --single-branch $GIT_REPO_URL /var/www/2025_ai_toktak_be"
+run_step "Thêm thư mục git vào safe.directory" "\
+git config --global --add safe.directory /var/www/2025_ai_toktak_be"
+run_step "Giải mã file elb_env.enc" "\
+cd /var/www/2025_ai_toktak_be && \
+openssl enc -d -aes-256-cbc -pbkdf2 -in elb_env.enc -out .env -pass pass:vodaplay987654321"
+# 6. Setup venv, pip và thư mục log
+run_step "Thiết lập venv và cài đặt yêu cầu Python" "\
+cd /var/www/2025_ai_toktak_be && \
+python3.12 -m venv venv && \
+source venv/bin/activate && \
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12 && \
+pip install -r requirements.txt"
+run_step "Tạo thư mục logs và cấp quyền" "\
+mkdir -p /var/www/logs_toktak && chmod -R 777 /var/www/logs_toktak"
+run_step "Copy và phân quyền run_services.sh" "\
+cp elb_start.sh run_services.sh && chmod 777 run_services.sh"
+# 7. Copy file service toktak từ source sang systemd
+run_step "Copy file elb_toktak.service sang /etc/systemd/system/toktak.service" "\
+cp /var/www/2025_ai_toktak_be/elb_toktak.service /etc/systemd/system/toktak.service"
+run_step "Reload systemd, enable & start service" "\
+systemctl daemon-reexec && \
+systemctl daemon-reload && \
+systemctl enable toktak && \
+systemctl start toktak"
+# 8. Cài Nginx và cấu hình reverse proxy nội bộ
+run_step "Cài đặt Nginx" "apt install -y nginx"
+run_step "Tạo thư mục log cho Nginx" "mkdir -p /var/www/logs && chmod -R 777 /var/www/logs"
+# 8.1 Sửa quyền thư mục logs
+run_step "Sửa quyền /var/www/2025_ai_toktak_be/logs và /var/www/logs" "\
+mkdir -p /var/www/2025_ai_toktak_be/logs && \
+chmod -R 777 /var/www/2025_ai_toktak_be/logs && \
+chmod -R 777 /var/www/logs"
+run_step "Copy file cấu hình elb_api.toktak.ai.conf sang /etc/nginx/conf.d/" "\
+cp /var/www/2025_ai_toktak_be/elb_api.toktak.ai.conf /etc/nginx/conf.d/api.toktak.ai"
+run_step "Kiểm tra cấu hình Nginx hợp lệ" "nginx -t"
+run_step "Khởi động lại Nginx" "systemctl enable nginx && systemctl restart nginx"
+# 9. Kiểm tra phản hồi từ Flask app tại curl http://127.0.0.1:8000
+run_step "Kiểm tra phản hồi Flask app" "\
+curl -s --max-time 10 http://127.0.0.1:8000 | grep -q '\"message\":\"Welcome to the Flask API\"'"
+echo "===== Kết thúc setup EC2 Ubuntu $(date) ====="
