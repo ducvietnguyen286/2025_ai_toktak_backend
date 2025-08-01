@@ -69,7 +69,7 @@ class YoutubeTokenService:
             log_youtube_message(f"Error fetch_channel_info: {str(e)}")
             return None
 
-    def exchange_code_for_token(self, code, user_link_id, client=None, redirect_uri=""):
+    def exchange_code_for_token(self, code, user_link_id, client=None):
         try:
             user_link = UserService.find_user_link_by_id(user_link_id)
 
@@ -80,9 +80,7 @@ class YoutubeTokenService:
                 "code": code,
                 "client_id": client.client_id if client else CLIENT_ID,
                 "client_secret": client.client_secret if client else CLIENT_SECRET,
-                "redirect_uri": (
-                    redirect_uri if redirect_uri else YOUTUBE_REDIRECT_URL
-                ),
+                "redirect_uri": YOUTUBE_REDIRECT_URL,
                 "grant_type": "authorization_code",
             }
 

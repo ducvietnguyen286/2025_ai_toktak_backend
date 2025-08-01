@@ -1350,7 +1350,6 @@ class APIGetCallbackYoutube(Resource):
                 code=code,
                 user_link_id=user_link_id,
                 client=client,
-                redirect_uri=redirect_uri,
             )
             if not response:
                 NotificationServices.create_notification(
