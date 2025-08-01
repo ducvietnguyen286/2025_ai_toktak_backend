@@ -1535,11 +1535,44 @@ class APICheckSNSLink(Resource):
         type="object",
         properties={
             "batchId": {"type": ["string", "null"]},
+            "listIds": {
+                "type": "array",
+                "items": {"type": "integer"},
+            },
         },
         required=[],
     )
     def post(self, args):
         try:
+            list_ids = args.get("listIds")  # Sẽ là None nếu không truyền lên
+
+            # Nếu muốn đảm bảo luôn là list để code không lỗi:
+            if list_ids is None:
+                list_ids = []
+            else:
+                post_check = PostService.get_posts_avaiable_post(list_ids)
+                if post_check == 1:
+                    # Co noi dung cu
+                    return Response(
+                        message="자동 업로드 기간이 지난 콘텐츠가 있어요 ⏰",
+                        message_en="Have Post > 2025-05-31",
+                        data={
+                            "message_title": "자동 업로드 기간이 지난 콘텐츠가 있어요 ⏰",
+                            "error_message": "지금 다운로드해서 직접 올려주세요!",
+                        },
+                        code=203,
+                    ).to_dict()
+                elif post_check == 2:
+                    return Response(
+                        message="자동 업로드 기간이 지나버렸어요 ⏰",
+                        message_en="All Post < 2025-05-31",
+                        data={
+                            "message_title": "자동 업로드 기간이 지나버렸어요 ⏰",
+                            "error_message": "지금 다운로드해서 직접 올려주세요!",
+                        },
+                        code=203,
+                    ).to_dict()
+
             batchId = args.get("batchId", None)
             current_user = AuthService.get_current_identity(no_cache=True)
             if not current_user:
