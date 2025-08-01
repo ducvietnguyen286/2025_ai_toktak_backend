@@ -41,7 +41,9 @@ class UserLinkService:
 
             access_token = args.get("AccessToken")
             if not access_token:
-                access_token = args.get("accessToken")
+                access_token = args.get("code")
+
+            logger.info(f"access_token: {access_token}")
 
             is_active = UserLinkService.save_link_facebook(
                 user_link_id=user_link_id, access_token=access_token
