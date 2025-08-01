@@ -181,15 +181,15 @@ class FacebookTokenService:
             return None
 
     @staticmethod
-    def exchange_short_token(short_token, state, user_link_id):
+    def exchange_short_token(short_token, user_link_id):
         try:
             user_link = UserService.find_user_link_by_id(user_link_id)
 
             url = "https://graph.facebook.com/v22.0/oauth/access_token"
             params = {
                 "client_id": os.environ.get("FACEBOOK_APP_ID"),
+                "client_secret": os.environ.get("FACEBOOK_APP_SECRET"),
                 "redirect_uri": os.environ.get("FACEBOOK_SNS_REDIRECT_URL"),
-                "machine_id": state,
                 "code": short_token,
             }
             response = requests.get(url, params=params, timeout=20)
