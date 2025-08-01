@@ -69,6 +69,9 @@ def action_run_crawler(message, app):
 
         log_advance_run_crawler_message(f"Run Crawler {batch_id}")
 
+        return False
+
+        log_advance_run_crawler_message(f"batch: {batch}")
         if not batch:
             log_advance_run_crawler_message("ERROR: Batch not found")
             return False

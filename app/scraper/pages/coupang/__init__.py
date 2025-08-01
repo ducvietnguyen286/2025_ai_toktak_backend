@@ -26,9 +26,11 @@ from app.services.crawl_data import CrawlDataService
 class CoupangScraper:
     def __init__(self, params):
         self.url = params["url"]
+        logger.info(f"self.url: {self.url}")
         self.batch_id = params.get("batch_id", "")
         self.fire_crawl_key = ""
         self.real_url = get_real_url(self.url)
+        logger.info(f"self.real_url: {self.real_url}")
         self.crawl_url_hash = hashlib.sha1(self.real_url.encode()).hexdigest()
         self.count_retry = 5
 
