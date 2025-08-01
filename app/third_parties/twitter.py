@@ -76,7 +76,7 @@ class TwitterTokenService:
             log_twitter_message(e)
             return None
 
-    def fetch_token(self, code, user_link_id):
+    def fetch_token(self, code, user_link_id, redirect_uri=""):
         try:
             user_link = UserService.find_user_link_by_id(user_link_id)
             # Tạo header Authorization kiểu Basic bằng cách mã hóa "client_id:client_secret"
@@ -95,7 +95,11 @@ class TwitterTokenService:
                 "grant_type": "authorization_code",
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
-                "redirect_uri": self.redirect_uri,
+                "redirect_uri": (
+                    os.environ.get("X_SNS_REDIRECT_URI")
+                    if redirect_uri
+                    else self.redirect_uri
+                ),
                 "code_verifier": "challenge",
             }
             response = requests.post(TOKEN_URL, headers=headers, data=r_data)

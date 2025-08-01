@@ -16,7 +16,7 @@ from app.third_parties.base_service import BaseService
 class ThreadTokenService:
 
     @staticmethod
-    def exchange_code(code, user_link_id):
+    def exchange_code(code, user_link_id, redirect_uri=""):
         try:
             log_thread_message(
                 "------------------  EXCHANGE THREAD CODE  ------------------"
@@ -26,7 +26,11 @@ class ThreadTokenService:
 
             CLIENT_ID = os.environ.get("THREAD_APP_ID") or ""
             CLIENT_SECRET = os.environ.get("THREAD_APP_SECRET") or ""
-            REDIRECT_URL = os.environ.get("THREAD_REDIRECT_URL") or ""
+            REDIRECT_URL = (
+                os.environ.get("THREAD_SNS_REDIRECT_URL")
+                if redirect_uri
+                else os.environ.get("THREAD_REDIRECT_URL") or ""
+            )
 
             body = {
                 "grant_type": "authorization_code",
