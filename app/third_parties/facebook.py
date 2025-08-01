@@ -181,6 +181,43 @@ class FacebookTokenService:
             return None
 
     @staticmethod
+    def exchange_short_token(short_token, state, user_link_id):
+        try:
+            user_link = UserService.find_user_link_by_id(user_link_id)
+
+            url = "https://graph.facebook.com/v22.0/oauth/access_token"
+            params = {
+                "client_id": os.environ.get("FACEBOOK_APP_ID"),
+                "redirect_uri": os.environ.get("FACEBOOK_SNS_REDIRECT_URL"),
+                "machine_id": state,
+                "code": short_token,
+            }
+            response = requests.get(url, params=params, timeout=20)
+            data = response.json()
+
+            RequestSocialLogService.create_request_social_log(
+                social="FACEBOOK",
+                social_post_id=0,
+                user_id=user_link.user_id,
+                type="exchange_short_token",
+                request=json.dumps(params),
+                response=json.dumps(data),
+            )
+
+            if "error" in data:
+                log_facebook_message(f"Error exchanging token: {data}")
+                return None
+
+            if "access_token" not in data:
+                log_facebook_message(f"Error exchanging token: {data}")
+                return None
+
+            return data
+        except Exception as e:
+            log_facebook_message(e)
+            return None
+
+    @staticmethod
     def exchange_token(access_token, user_link_id):
         try:
             user_link = UserService.find_user_link_by_id(user_link_id)
