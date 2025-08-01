@@ -1202,7 +1202,9 @@ class APIYoutubeLogin(Resource):
 
             if not client:
                 PAGE_PROFILE = (
-                    os.environ.get("FACEBOOK_APP_REDIRECT_TO_PROFILE")
+                    redirect_uri
+                    if redirect_uri
+                    else os.environ.get("FACEBOOK_APP_REDIRECT_TO_PROFILE")
                     or "https://toktak.ai/profile"
                 )
 
@@ -1219,9 +1221,7 @@ class APIYoutubeLogin(Resource):
                     if isinstance(client, YoutubeClient)
                     else client.get("client_id")
                 ),
-                "redirect_uri": (
-                    YOUTUBE_REDIRECT_URL if redirect_uri == "" else redirect_uri
-                ),
+                "redirect_uri": YOUTUBE_REDIRECT_URL,
                 "response_type": "code",
                 "scope": scope,
                 "state": state_token,
@@ -1270,10 +1270,6 @@ class APIGetCallbackYoutube(Resource):
         try:
             code = args.get("code")
             state = args.get("state")
-            PAGE_PROFILE = (
-                os.environ.get("YOUTUBE_APP_REDIRECT_TO_PROFILE")
-                or "https://toktak.ai/profile"
-            )
 
             if not state:
                 return Response(
@@ -1297,6 +1293,13 @@ class APIGetCallbackYoutube(Resource):
             int_user_id = int(user_id)
             int_link_id = int(link_id)
 
+            PAGE_PROFILE = (
+                redirect_uri
+                if redirect_uri
+                else os.environ.get("YOUTUBE_APP_REDIRECT_TO_PROFILE")
+                or "https://toktak.ai/profile"
+            )
+
             current_user = UserService.find_user(int_user_id)
             if not current_user:
                 return Response(
@@ -1306,6 +1309,7 @@ class APIGetCallbackYoutube(Resource):
             total_user_links = UserService.get_total_link(current_user.id)
             total_link_active = current_user.total_link_active
             if total_user_links >= total_link_active:
+
                 return redirect(
                     PAGE_PROFILE
                     + f"?tabIndex=2&error=ERROR_FETCHING_CHANNEL&error_message=최대 {total_link_active}개의 채널만 설정할 수 있습니다."

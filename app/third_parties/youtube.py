@@ -81,7 +81,7 @@ class YoutubeTokenService:
                 "client_id": client.client_id if client else CLIENT_ID,
                 "client_secret": client.client_secret if client else CLIENT_SECRET,
                 "redirect_uri": (
-                    YOUTUBE_REDIRECT_URL if redirect_uri == "" else redirect_uri
+                    redirect_uri if redirect_uri else YOUTUBE_REDIRECT_URL
                 ),
                 "grant_type": "authorization_code",
             }
