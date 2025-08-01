@@ -1721,7 +1721,7 @@ class APISNSCallback(Resource):
 
             if provider == "facebook":
                 return self.get_facebook_callback(
-                    args, current_user, link, redirect_uri
+                    args, current_user, link, redirect_uri, state=state
                 )
             if provider == "instagram":
                 return self.get_instagram_callback(
@@ -1745,7 +1745,7 @@ class APISNSCallback(Resource):
                 status=400,
             ).to_dict()
 
-    def update_sns_link(self, args, current_user, link, redirect_uri=""):
+    def update_sns_link(self, args, current_user, link, redirect_uri="", state=""):
         try:
             logger.info(f"args: {args}")
             logger.info(f"current_user: {current_user.id}")
@@ -1767,6 +1767,7 @@ class APISNSCallback(Resource):
                     user_id=current_user.id,
                     args=args,
                     redirect_uri=redirect_uri,
+                    state=state,
                 )
             else:
                 is_active = UserLinkService.update_user_link(
@@ -1774,6 +1775,7 @@ class APISNSCallback(Resource):
                     user_id=current_user.id,
                     args=args,
                     redirect_uri=redirect_uri,
+                    state=state,
                 )
             return is_active
         except Exception as e:
@@ -1781,9 +1783,9 @@ class APISNSCallback(Resource):
             logger.error("Exception: {0}".format(str(e)))
             return False
 
-    def get_facebook_callback(self, args, current_user, link, redirect_uri):
+    def get_facebook_callback(self, args, current_user, link, redirect_uri, state=""):
         is_active = self.update_sns_link(
-            args, current_user, link, redirect_uri=redirect_uri
+            args, current_user, link, redirect_uri=redirect_uri, state=state
         )
         if is_active:
             return redirect(redirect_uri)

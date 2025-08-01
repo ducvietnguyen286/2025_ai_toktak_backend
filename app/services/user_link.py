@@ -10,7 +10,7 @@ from app.third_parties.youtube import YoutubeTokenService
 class UserLinkService:
 
     @staticmethod
-    def update_user_link(link, user_id, args, redirect_uri=""):
+    def update_user_link(link, user_id, args, redirect_uri="", state=""):
         is_active = False
 
         user_link = UserService.find_user_link(link_id=link.id, user_id=user_id)
@@ -46,7 +46,10 @@ class UserLinkService:
             logger.info(f"access_token: {access_token}")
 
             is_active = UserLinkService.save_link_facebook(
-                user_link_id=user_link_id, access_token=access_token
+                user_link_id=user_link_id,
+                access_token=access_token,
+                redirect_uri=redirect_uri,
+                state=state,
             )
 
         if link.type == "YOUTUBE":
@@ -117,9 +120,23 @@ class UserLinkService:
         return True
 
     @staticmethod
-    def save_link_facebook(user_link_id, access_token):
+    def save_link_facebook(user_link_id, access_token, redirect_uri="", state=""):
+        if redirect_uri != "":
+            token_data = FacebookTokenService().exchange_short_token(
+                short_token=access_token, state=state, user_link_id=user_link_id
+            )
+            if token_data:
+                logger.info(
+                    f"-----------TOKEN DATA SHORT TOKEN: {token_data}-------------"
+                )
+                access_token = token_data.get("access_token")
+            else:
+                return False
+
         is_active = FacebookTokenService().exchange_token(
-            access_token=access_token, user_link_id=user_link_id
+            access_token=access_token,
+            user_link_id=user_link_id,
+            redirect_uri=redirect_uri,
         )
         fb_data = {}
         if is_active:
