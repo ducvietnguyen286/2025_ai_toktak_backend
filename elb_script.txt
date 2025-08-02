@@ -23,6 +23,10 @@ run_step "Tạo thư mục /var/www" "mkdir -p /var/www"
 run_step "Xóa thư mục /var/www/2025_ai_toktak_be/ nếu có" "rm -rf /var/www/2025_ai_toktak_be/"
 # 2. Cập nhật hệ thống
 run_step "Cập nhật hệ thống" "apt update -y && apt upgrade -y"
+
+run_step "Cài build-essential, gfortran, python3.12-dev, libatlas, libopenblas" "\
+apt install -y build-essential gfortran python3.12-dev libatlas-base-dev libopenblas-dev liblapack-dev"
+
 run_step "Cài thư viện hệ thống hỗ trợ OpenCV (libGL)" "apt install -y libgl1"
 # Cài python3.12 và venv nếu chưa có
 run_step "Cài đặt Python 3.12 và venv" "\

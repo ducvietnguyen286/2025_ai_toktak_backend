@@ -21,7 +21,6 @@ numpy
 openai==1.88.0
 opencv_python==4.11.0.86
 paddleocr==3.0.1
-pandas==2.0.3
 Pillow==11.2.1
 pillow_avif_plugin==1.5.2
 pydub==0.25.1
