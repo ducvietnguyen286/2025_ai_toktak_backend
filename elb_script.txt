@@ -82,12 +82,12 @@ echo "===== Kết thúc setup EC2 Ubuntu $(date) ====="
 SLACK_WEBHOOK_URL="https://hooks.slack.com/services/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"
 HOSTNAME=$(hostname)
 TIME=$(date +'%Y-%m-%d %H:%M:%S')
-IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4 || echo "N/A")
 INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id || echo "N/A")
+PUBLIC_IP=$(curl -s https://api.ipify.org)
 
 SLACK_MESSAGE="🚀 *EC2 $HOSTNAME đã khởi động xong!*
 • Instance ID: $INSTANCE_ID
-• IP nội bộ: $IP
+• Public IP: $PUBLIC_IP
 • Thời gian: $TIME"
 
 curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"$SLACK_MESSAGE\"}" $SLACK_WEBHOOK_URL
