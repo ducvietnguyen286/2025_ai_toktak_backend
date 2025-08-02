@@ -2,8 +2,8 @@ import io
 import os
 import traceback
 from google.cloud import vision
-from shapely import unary_union
-from shapely.geometry import Polygon
+# from shapely import unary_union
+# from shapely.geometry import Polygon
 from PIL import Image, ImageEnhance
 
 from app.lib.logger import logger
@@ -90,38 +90,38 @@ class GoogleVision:
         if texts:
             full_text = texts[0].description
 
-            raw_polygons = [
-                Polygon([(v.x, v.y) for v in text.bounding_poly.vertices])
-                for text in texts[1:]
-                if len(text.bounding_poly.vertices) >= 4
-            ]
+            # raw_polygons = [
+            #     Polygon([(v.x, v.y) for v in text.bounding_poly.vertices])
+            #     for text in texts[1:]
+            #     if len(text.bounding_poly.vertices) >= 4
+            # ]
 
-            for poly in raw_polygons:
-                if not poly.is_valid:
-                    poly = poly.buffer(0)
-                if poly.area > 0:
-                    polygons.append(poly)
+            # for poly in raw_polygons:
+            #     if not poly.is_valid:
+            #         poly = poly.buffer(0)
+            #     if poly.area > 0:
+            #         polygons.append(poly)
 
-            if not polygons:
-                ratio = 0.0
-            else:
-                image_area = image_width * image_height
-                merged_polygons = self.merge_close_polygons(
-                    polygons, distance_threshold=15
-                )
-                sum_text_area = sum(
-                    poly.area for poly in merged_polygons if not poly.is_empty
-                )
-                ratio = sum_text_area / image_area if image_area > 0 else 0.0
+            # if not polygons:
+            #     ratio = 0.0
+            # else:
+            #     image_area = image_width * image_height
+            #     merged_polygons = self.merge_close_polygons(
+            #         polygons, distance_threshold=15
+            #     )
+            #     sum_text_area = sum(
+            #         poly.area for poly in merged_polygons if not poly.is_empty
+            #     )
+            #     ratio = sum_text_area / image_area if image_area > 0 else 0.0
 
         return full_text, ratio, length_labels
 
     def merge_close_polygons(self, polygons, distance_threshold):
         buffered_polygons = [p.buffer(distance_threshold) for p in polygons]
-        merged = unary_union(buffered_polygons)
-        if merged.geom_type == "Polygon":
-            return [merged]
-        elif merged.geom_type == "MultiPolygon":
-            return list(merged.geoms)
-        else:
-            return []
+        # merged = unary_union(buffered_polygons)
+        # if merged.geom_type == "Polygon":
+        #     return [merged]
+        # elif merged.geom_type == "MultiPolygon":
+        #     return list(merged.geoms)
+        # else:
+        #     return []
