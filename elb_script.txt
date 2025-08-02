@@ -92,6 +92,13 @@ run_step "Khởi động lại Nginx" "systemctl enable nginx && systemctl resta
 # 9. Kiểm tra phản hồi từ Flask app tại curl http://127.0.0.1:8000
 run_step "Kiểm tra phản hồi Flask app" "\
 curl -s --max-time 10 http://127.0.0.1:8000 | grep -q '\"message\":\"Welcome to the Flask API\"'"
+
+# 10. Tải CPClient từ S3 và cấp quyền
+run_step "Tải CPClient từ S3 về /var/www/cpclient/" "\
+mkdir -p /var/www/cpclient && \
+curl -o /var/www/cpclient/CPClient_linux_x64 https://toktaks3.s3.ap-northeast-2.amazonaws.com/nice/Linux/CPClient_linux_x64 && \
+chmod -R 777 /var/www/cpclient"
+
 echo "===== Kết thúc setup EC2 Ubuntu $(date) ====="
 
 # 10. Gửi thông báo Slack
