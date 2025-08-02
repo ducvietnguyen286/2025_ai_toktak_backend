@@ -80,9 +80,9 @@ echo "===== Kết thúc setup EC2 Ubuntu $(date) ====="
 
 # 10. Gửi thông báo Slack
 SLACK_WEBHOOK_URL="https://hooks.slack.com/services/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"
-HOSTNAME=$(hostname)
+HOSTNAME="TOKTAK"
 TIME=$(date +'%Y-%m-%d %H:%M:%S')
-INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id || echo "N/A")
+INSTANCE_ID="N/A"
 PUBLIC_IP=$(curl -s https://api.ipify.org)
 
 SLACK_MESSAGE="🚀 *EC2 $HOSTNAME đã khởi động xong!*
