@@ -9,13 +9,7 @@ from flask import Flask
 from functools import partial
 from werkzeug.exceptions import default_exceptions
 
-from app.ais.chatgpt import call_chatgpt_clear_product_name
-from app.enums.messages import MessageError
-from app.scraper import Scraper
-from app.services.notification import NotificationServices
-from app.services.shorten_services import ShortenServices
-from app.services.user import UserService
-import const
+from app.consumer.crawl_advance import CrawlAdvance
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path=dotenv_path, override=True)
@@ -62,94 +56,13 @@ def create_app():
 
 def action_run_crawler(message, app):
     try:
-        with app.app_context():
-            batch_id = message.get("batch_id")
-            data = message.get("data")
-
-            batch = BatchService.find_batch(batch_id)
-
-            log_advance_run_crawler_message(f"Run Crawler {batch_id}")
-
-            if not batch:
-                log_advance_run_crawler_message("ERROR: Batch not found")
-                return False
-
-            if batch.is_advance == 0:
-                log_advance_run_crawler_message("ERROR: Batch is not advance")
-                return False
-
-            url = data.get("input_url", "")
-            if not url:
-                log_advance_run_crawler_message("ERROR: Url is not found")
-                return False
-
-            data = Scraper().scraper({"url": url, "batch_id": batch_id})
-
-            user_id = batch.user_id
-
-            if not data:
-                NotificationServices.create_notification(
-                    user_id=user_id,
-                    status=const.NOTIFICATION_FALSE,
-                    title=f"❌ 해당 {url} 은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
-                    description=f"Scraper False {url}",
-                )
-
-                redis_user_batch_key = f"toktak:users:batch_remain:{user_id}"
-                user = UserService.find_user(user_id)
-                redis_client.set(redis_user_batch_key, user.batch_remain + 1, ex=180)
-
-                BatchService.update_batch(
-                    batch_id,
-                    process_status=const.BATCH_PROCESSING_STATUS["FAILED"],
-                    error_code="201",
-                    message=MessageError.NO_ANALYZE_URL.value["message"],
-                    error_message=MessageError.NO_ANALYZE_URL.value["error_message"],
-                )
-
-                redis_client.set(
-                    f"toktak:batch:{batch_id}",
-                    json.dumps(batch._to_json()),
-                    ex=60 * 60 * 24,
-                )
-
-                return False
-
-            thumbnail_url = data.get("image", "")
-            thumbnails = data.get("thumbnails", [])
-
-            shorten_link, is_shorted = ShortenServices.shorted_link(url)
-            data["base_url"] = shorten_link
-            data["shorten_link"] = shorten_link if is_shorted else ""
-
-            product_name = data.get("name", "")
-            product_name_cleared = call_chatgpt_clear_product_name(product_name)
-            if product_name_cleared:
-                data["name"] = product_name_cleared
-
-            BatchService.update_batch(
-                batch_id,
-                thumbnail=thumbnail_url,
-                thumbnails=json.dumps(thumbnails),
-                base_url=shorten_link,
-                shorten_link=shorten_link,
-                content=json.dumps(data),
-            )
-
-            return True
+        batch_id = message.get("batch_id")
+        url = message.get("url")
+        CrawlAdvance(batch_id, url).crawl_advance(app)
+        return True
     except Exception as e:
-        log_advance_run_crawler_message(f"ERROR: Error create batch: {str(e)}")
-        db.session.rollback()
+        log_advance_run_crawler_message(f"ERROR: Error run crawler: {str(e)}")
         return False
-    finally:
-        # CRITICAL: Force cleanup session để tránh connection leak
-        try:
-            if db.session.is_active:
-                db.session.rollback()
-            db.session.close()
-            db.session.remove()
-        except:
-            pass
 
 
 def process_message_sync(body, app):

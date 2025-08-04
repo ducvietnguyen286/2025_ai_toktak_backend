@@ -39,8 +39,8 @@ class CreateContent:
         self.data = data
         self.app = None
 
-    def update_redis_batch(self, batch_id):
-        batch = BatchService.find_batch(batch_id)
+    def update_redis_batch(self, batch):
+        batch_id = batch.id
         if batch:
             redis_client.set(
                 f"toktak:batch:{batch_id}",
@@ -50,34 +50,34 @@ class CreateContent:
 
     def update_batch_error_analyze(self, batch_id):
         try:
-            BatchService.update_batch(
+            batch = BatchService.update_batch(
                 batch_id,
                 process_status=const.BATCH_PROCESSING_STATUS["FAILED"],
                 error_code="201",
                 message=MessageError.NO_ANALYZE_URL.value["message"],
                 error_message=MessageError.NO_ANALYZE_URL.value["error_message"],
             )
-            self.update_redis_batch(batch_id)
+            self.update_redis_batch(batch)
         except Exception as e:
             log_create_content_message(f"Error updating batch: {e}")
             return None
 
     def update_batch_completed(self, batch_id):
         try:
-            BatchService.update_batch(
+            batch = BatchService.update_batch(
                 batch_id, process_status=const.BATCH_PROCESSING_STATUS["COMPLETED"]
             )
-            self.update_redis_batch(batch_id)
+            self.update_redis_batch(batch)
         except Exception as e:
             log_create_content_message(f"Error updating batch: {e}")
             return None
 
     def update_batch_processing(self, batch_id):
         try:
-            BatchService.update_batch(
+            batch = BatchService.update_batch(
                 batch_id, process_status=const.BATCH_PROCESSING_STATUS["PROCESSING"]
             )
-            self.update_redis_batch(batch_id)
+            self.update_redis_batch(batch)
         except Exception as e:
             log_create_content_message(f"Error updating batch: {e}")
             return None
