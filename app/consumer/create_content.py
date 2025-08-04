@@ -121,9 +121,9 @@ class CreateContent:
             is_paid_advertisements = batch.is_paid_advertisements
             narration = data.get("narration", "")
             user_id = batch.user_id
+            url = data.get("input_url", "")
 
             if is_advance == 0:
-                url = data.get("input_url", "")
 
                 data = Scraper().scraper({"url": url, "batch_id": batch_id})
 
