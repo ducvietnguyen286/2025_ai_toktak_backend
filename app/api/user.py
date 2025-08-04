@@ -1745,7 +1745,7 @@ class APISNSCallback(Resource):
                 status=400,
             ).to_dict()
 
-    def update_sns_link(self, args, current_user, link, redirect_uri="", state=""):
+    def update_sns_link(self, args, current_user, link, redirect_uri=""):
         try:
             link_id = link.id
             user_link = UserService.find_user_link_exist(link_id, current_user.id)
@@ -1763,7 +1763,6 @@ class APISNSCallback(Resource):
                     user_id=current_user.id,
                     args=args,
                     redirect_uri=redirect_uri,
-                    state=state,
                 )
             else:
                 is_active = UserLinkService.update_user_link(
@@ -1771,7 +1770,6 @@ class APISNSCallback(Resource):
                     user_id=current_user.id,
                     args=args,
                     redirect_uri=redirect_uri,
-                    state=state,
                 )
             return is_active
         except Exception as e:
@@ -1779,9 +1777,9 @@ class APISNSCallback(Resource):
             logger.error("Exception: {0}".format(str(e)))
             return False
 
-    def get_facebook_callback(self, args, current_user, link, redirect_uri, state=""):
+    def get_facebook_callback(self, args, current_user, link, redirect_uri):
         is_active = self.update_sns_link(
-            args, current_user, link, redirect_uri=redirect_uri, state=state
+            args, current_user, link, redirect_uri=redirect_uri
         )
         if is_active:
             return redirect(redirect_uri)
