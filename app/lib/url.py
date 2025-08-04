@@ -31,17 +31,15 @@ def un_shotend_url(url):
             "upgrade-insecure-requests": "1",
             "user-agent": user_agent,
         }
-        response = session.get(url, headers=headers, allow_redirects=False)
+        response = session.get(url, headers=headers, allow_redirects=False, timeout=10)
 
-        while response.status_code in (301, 302, 303, 307, 308):
+        if response.status_code in (301, 302, 303, 307, 308):
             redirect_url = response.headers.get("Location")
             if not redirect_url:
-                break
+                return url
 
             if not redirect_url.startswith(("http://", "https://")):
                 redirect_url = urljoin(url, redirect_url)
-
-            response = session.get(redirect_url, headers=headers, allow_redirects=False)
 
             if redirect_url.startswith("https://star.aliexpress.com"):
                 redirect_url_from_script = extract_redirect_url_from_script(
