@@ -87,6 +87,9 @@ class CrawlAdvance:
 
             data = Scraper().scraper({"url": url, "batch_id": batch_id})
 
+            log_advance_run_crawler_message("Crawler done")
+            log_advance_run_crawler_message(f"data: {data}")
+
             user_id = batch.user_id
 
             if not data:
@@ -108,12 +111,17 @@ class CrawlAdvance:
             thumbnail_url = data.get("image", "")
             thumbnails = data.get("thumbnails", [])
 
+            log_advance_run_crawler_message("Start Shorten Link")
             shorten_link, is_shorted = ShortenServices.shorted_link(url)
+            log_advance_run_crawler_message("Shorten Link done")
+
             data["base_url"] = shorten_link
             data["shorten_link"] = shorten_link if is_shorted else ""
 
             product_name = data.get("name", "")
+            log_advance_run_crawler_message("Start Clear Product Name")
             product_name_cleared = call_chatgpt_clear_product_name(product_name)
+            log_advance_run_crawler_message("Clear Product Name done")
             if product_name_cleared:
                 data["name"] = product_name_cleared
 
