@@ -57,7 +57,7 @@ def create_app():
 def action_run_crawler(message, app):
     try:
         batch_id = message.get("batch_id")
-        url = message.get("url")
+        url = message.get("input_url")
         CrawlAdvance(batch_id, url).crawl_advance(app)
         return True
     except Exception as e:
