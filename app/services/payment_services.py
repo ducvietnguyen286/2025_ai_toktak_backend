@@ -161,7 +161,9 @@ class PaymentService:
         now = datetime.now()
         origin_price = PACKAGE_CONFIG[package_name]["price"]
         start_date = now
-        end_date = start_date + relativedelta(months=1)
+        end_date = (start_date + relativedelta(months=1)).replace(
+            hour=23, minute=59, second=59, microsecond=0
+        )
         user_id = current_user.id
         order_id = generate_order_id()
         payment_data = {
@@ -266,34 +268,40 @@ class PaymentService:
             return PaymentService.create_new_payment(user_id, new_package)
 
         # Tính tiền còn lại của gói cũ
-        remaining_days = (active_payment.end_date - now).days
-        old_price_per_day = active_payment.next_payment / PACKAGE_DURATION_DAYS
-        remaining_value = round(old_price_per_day * remaining_days)
-
-        origin_price = PACKAGE_CONFIG[new_package]["price"]
-
-        final_price = max(0, origin_price - remaining_value)
-        order_id = generate_order_id()
-        new_payment = Payment(
-            parent_id=parent_id,
-            user_id=user_id,
-            order_id=order_id,
-            package_name=new_package,
-            amount=origin_price,
-            next_payment=origin_price,
-            customer_name=current_user.name or current_user.email,
-            method="REQUEST_UPGRADE",
-            price=final_price,
-            requested_at=now,
-            start_date=now,
-            end_date=active_payment.end_date,
-            total_link=PACKAGE_CONFIG[new_package]["total_link"],
-            next_total_link=PACKAGE_CONFIG[new_package]["total_link"],
-            total_create=PACKAGE_CONFIG[new_package]["total_create"],
-            description=f"{new_package} 추가 기능을 구매하세요",
+        payment_user_ugrade_pay = PaymentService.get_payment_must_pay(
+            user_id, active_payment.id, active_payment.package_name, new_package
         )
-        db.session.add(new_payment)
-        db.session.commit()
+        origin_price = PACKAGE_CONFIG[new_package]["price"]
+        order_id = generate_order_id()
+
+        payment_data = {
+            "parent_id": parent_id,
+            "user_id": user_id,
+            "order_id": order_id,
+            "package_name": new_package,
+            "amount": origin_price,
+            "next_payment": origin_price,
+            "customer_name": current_user.name or current_user.email,
+            "method": "REQUEST_UPGRADE",
+            "price": payment_user_ugrade_pay["price"],
+            "requested_at": now,
+            "start_date": now,
+            "end_date": active_payment.end_date,
+            "total_link": PACKAGE_CONFIG[new_package]["total_link"],
+            "next_total_link": PACKAGE_CONFIG[new_package]["total_link"],
+            "total_create": PACKAGE_CONFIG[new_package]["total_create"],
+            "description": f"{new_package} 추가 기능을 구매하세요",
+        }
+        new_payment = PaymentService.create_payment(**payment_data)
+        logger.info(payment_data)
+        payment_data_log = {
+            "payment_id": new_payment.id if new_payment else None,
+            "status_code": 200,
+            "response_json": json.dumps(payment_data, ensure_ascii=False, default=str),
+            "description": json.dumps(payment_user_ugrade_pay, ensure_ascii=False, default=str),
+        }
+        logger.info(payment_data_log)
+        PaymentService.create_payment_log(**payment_data_log)
         return new_payment
 
     @staticmethod
@@ -704,11 +712,20 @@ class PaymentService:
             # tính tiền basic và addon
 
             current_price = PaymentService.get_total_price(current_payment.id)
+            # tiền 1 ngày của gói hiện tại
+            base_day_price = current_price / current_package_detail.get(
+                "duration_days", 30
+            )
+
+            # tien đã sử dụng
+            used_money = base_day_price * used_days if used_days else 0
+            money_rollback = current_price - used_money
 
             current_days = current_package_detail.get("duration_days", 30)
-            discount = int(current_price / current_days * remaining_days)
+            discount = used_money
             new_package_price = new_package_info["price"]
-            upgrade_price = max(0, new_package_price - discount)
+
+            upgrade_price = max(0, new_package_price - money_rollback)
             amount = upgrade_price
             discount_welcome = (
                 new_package_info["price_origin"] - new_package_info["price"]
@@ -723,9 +740,12 @@ class PaymentService:
                 "upgrade_origin_price": new_package_price,
                 "current_package": current_package,
                 "current_price": current_price,
+                "base_day_price": base_day_price,
                 "remaining_days": remaining_days,
                 "used_days": used_days,
-                "discount": discount,
+                "used_money": used_money,
+                "money_rollback": money_rollback,
+                "discount": used_money,
                 "amount": new_package_price,
                 "price": upgrade_price,
                 "new_package_price": new_package_price,
@@ -750,6 +770,61 @@ class PaymentService:
                 "message": "Có lỗi xảy ra khi tính toán nâng cấp.",
                 "message_en": "Error occurred while calculating upgrade.",
             }
+
+    @staticmethod
+    def get_payment_must_pay(user_id, payment_id, current_package, upgrade_package):
+        # Tính toán giá nâng cấp gói
+        current_package_detail = const.PACKAGE_CONFIG[current_package]
+        new_package_info = const.PACKAGE_CONFIG[upgrade_package]
+        today = datetime.now().date()
+        current_payment = (
+            Payment.query.filter(
+                Payment.user_id == user_id,
+                Payment.package_name != "ADDON",
+                Payment.end_date >= today,
+            )
+            .order_by(Payment.end_date.desc())
+            .first()
+        )
+
+        start_date = (
+            current_payment.start_date.date() if current_payment.start_date else None
+        )
+
+        used_days = (today - start_date).days if start_date else 0
+
+        current_price = PaymentService.get_total_price(payment_id)
+        # tiền 1 ngày của gói hiện tại
+        base_day_price = current_price / current_package_detail.get("duration_days", 30)
+
+        # tien đã sử dụng
+        used_money = base_day_price * used_days if used_days else 0
+        money_rollback = current_price - used_money
+
+        current_days = current_package_detail.get("duration_days", 30)
+        discount = used_money
+        new_package_price = new_package_info["price"]
+
+        upgrade_price = max(0, new_package_price - money_rollback)
+        discount_welcome = new_package_info["price_origin"] - new_package_info["price"]
+        return {
+            "upgrade_origin_price": new_package_price,
+            "current_package": current_package,
+            "current_price": current_price,
+            "base_day_price": base_day_price,
+            "used_days": used_days,
+            "used_money": used_money,
+            "money_rollback": money_rollback,
+            "discount": discount,
+            "amount": new_package_price,
+            "price": upgrade_price,
+            "new_package_price": new_package_price,
+            "new_package_price_origin": new_package_info["price_origin"],
+            "discount_welcome": discount_welcome,
+            "start_date": start_date.strftime("%Y-%m-%d") if start_date else None,
+            "current_package_detail": current_package_detail,
+            "current_days": current_days,
+        }
 
     @staticmethod
     def confirm_payment_toss(payment_key, order_id, amount):
@@ -1271,7 +1346,6 @@ class PaymentService:
                 )
             )
 
-         
         query = query.order_by(Payment.id.desc())
 
         pagination = query.paginate(
