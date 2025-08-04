@@ -142,7 +142,7 @@ class PaymentService:
             Payment.query.filter_by(user_id=user_id)
             .filter(func.date(Payment.end_date) >= today)
             .filter(Payment.package_name != "ADDON")
-            .order_by(Payment.end_date.desc())
+            .order_by(Payment.id.desc())
             .first()
         )
         return active_payment
@@ -907,6 +907,7 @@ class PaymentService:
                 end_date = payment.end_date
                 child_amount = payment.amount
                 child_total_link = payment.total_link
+                total_create = payment.total_create
 
                 if parent_id > 0:
 
@@ -954,7 +955,7 @@ class PaymentService:
                             message="유효하지 않은 패키지입니다.", code=201
                         ).to_dict()
 
-                    subscription_expired = payment.end_date
+                    subscription_expired = end_date
 
                     batch_total = UserService.get_total_batch_total(user_id)
                     login_user_subscription = user_detail.subscription
@@ -967,10 +968,10 @@ class PaymentService:
                     data_update = {
                         "subscription": package_name,
                         "subscription_expired": subscription_expired,
-                        "batch_total": batch_total + payment.total_create,
+                        "batch_total": batch_total + total_create,
                         "batch_remain": batch_remain,
                         "total_link_active": min(
-                            total_link_active + payment.total_link, 7
+                            total_link_active + total_link, 7
                         ),
                     }
 
@@ -978,8 +979,8 @@ class PaymentService:
                     data_user_history = {
                         "user_id": user_id,
                         "type": "payment",
-                        "object_id": payment.id,
-                        "object_start_time": payment.start_date,
+                        "object_id": object_id,
+                        "object_start_time": start_date,
                         "object_end_time": subscription_expired,
                         "title": package_data["pack_name"],
                         "description": package_data["pack_description"],

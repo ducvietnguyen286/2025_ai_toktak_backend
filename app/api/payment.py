@@ -15,6 +15,7 @@ import const
 import traceback
 import datetime
 from dateutil.relativedelta import relativedelta
+from app.enums.messages import message_payment
 
 from app.lib.string import generate_order_id
 
@@ -40,6 +41,7 @@ class APICreateNewPayment(Resource):
 
         current_user = AuthService.get_current_identity()
         user_id_login = current_user.id
+        batch_remain = current_user.batch_remain
         user_subscription = current_user.subscription
         if user_subscription == "FREE":
             message = f"{package_name} 요금제가 성공적으로 등록되었습니다."
@@ -47,55 +49,101 @@ class APICreateNewPayment(Resource):
             message = f"{package_name} 요금제가 성공적으로 등록되었습니다."
         # Kiểm tra xem đã đăng kí gói nào chưa
         active = PaymentService.has_active_subscription(user_id_login)
+        log_make_repayment_message(active)
+        # đã mua gói nhưng mà hết quyền tạo nội dung thì kiểm tra xem có gói nào còn hạn sử dụng không
+        # còn nế batch_remain == 0 thì được mua gói mới mà không cần kiểm tra gói cũ
         if active:
             active_status = active.status
+            log_make_repayment_message(active_status)
+            log_make_repayment_message(batch_remain)
             if active_status == "PENDING":
-                message = f"고객님께서 {package_name} 패키지 구매를 요청하셨습니다. 서비스 이용을 위해 시스템의 확인을 기다려 주시기 바랍니다."
-                message_en = f" You have purchased the {package_name} package. Please wait for system confirmation to start using the service."
+                message = (
+                    message_payment.CHECK_BUY_PAYMENT.value["error_message"].format(
+                        package_name=package_name
+                    ),
+                )
+                message_en = (
+                    message_payment.CHECK_BUY_PAYMENT.value["error_message_en"].format(
+                        package_name=package_name
+                    ),
+                )
                 return Response(
                     message=message, message_en=message_en, code=201
                 ).to_dict()
 
-            # Đã đăng kí gói nào chưa
-            # Không cho downgrade
-            if not PaymentService.can_upgrade(active.package_name, package_name):
-                message = f"{active.package_name}에서 {package_name}(으)로 하향 변경할 수 없습니다."
+            if batch_remain == 0:
+                # update payment cũ để lần sau không tự động gia hạn
+                old_payment = active.id
+                data_update_old_payment = {
+                    "description": json.dumps(
+                        {
+                            "vi": "Gói payment cũ sẽ không được gia hạn.",
+                            "en": "The old payment package will not be renewed.",
+                            "ko": "기존 결제 패키지는 갱신되지 않습니다.",
+                        }
+                    ),
+                    "is_renew": 1,
+                }
+                PaymentService.update_payment(old_payment, **data_update_old_payment)
+            else:
+                # Đã đăng kí gói nào chưa
+                # Không cho downgrade
+                if not PaymentService.can_upgrade(active.package_name, package_name):
+                    message = (
+                        message_payment.CHECK_UPGRADE_PAYMENT.value[
+                            "error_message"
+                        ].format(
+                            old_package_name=active.package_name,
+                            package_name=package_name,
+                        ),
+                    )
+                    message_en = (
+                        message_payment.CHECK_UPGRADE_PAYMENT.value[
+                            "error_message_en"
+                        ].format(
+                            old_package_name=active.package_name,
+                            package_name=package_name,
+                        ),
+                    )
+
+                    NotificationServices.create_notification(
+                        user_id=user_id_login,
+                        title=message,
+                        notification_type="payment",
+                    )
+                    return Response(
+                        message=message, message_en=message_en, code=201
+                    ).to_dict()
+
+                # Kiểm tra có được phép upgrade không
+                if not PaymentService.process_subscription_request(
+                    current_user, package_name
+                ):
+                    message = f"이전 요금제가 아직 유효하기 때문에 {package_name} 요금제로 업그레이드하실 수 없습니다."
+                    NotificationServices.create_notification(
+                        user_id=user_id_login,
+                        title=message,
+                        notification_type="payment",
+                    )
+                    return Response(message=message, code=201).to_dict()
+
+                # ✅ Được phép upgrade
+                message = f"{active.package_name} 요금제를 {package_name} 요금제로 성공적으로 업그레이드했습니다."
+                parent_id = active.id
+                payment_upgrade = PaymentService.upgrade_package(
+                    current_user, package_name, parent_id
+                )
+
                 NotificationServices.create_notification(
                     user_id=user_id_login,
                     title=message,
                     notification_type="payment",
                 )
-                return Response(message=message, code=201).to_dict()
-
-            # Kiểm tra có được phép upgrade không
-            if not PaymentService.process_subscription_request(
-                current_user, package_name
-            ):
-                message = f"이전 요금제가 아직 유효하기 때문에 {package_name} 요금제로 업그레이드하실 수 없습니다."
-                NotificationServices.create_notification(
-                    user_id=user_id_login,
-                    title=message,
-                    notification_type="payment",
-                )
-                return Response(message=message, code=201).to_dict()
-
-            # ✅ Được phép upgrade
-            message = f"{active.package_name} 요금제를 {package_name} 요금제로 성공적으로 업그레이드했습니다."
-            parent_id = active.id
-            payment_upgrade = PaymentService.upgrade_package(current_user, package_name , parent_id)
-            
-            
-                    
-            NotificationServices.create_notification(
-                user_id=user_id_login,
-                title=message,
-                notification_type="payment",
-            )
-            return Response(
-                message=message,
-                data={"payment": payment_upgrade._to_json()},
-                code=200,
-            ).to_dict()
+                return Response(
+                    message=message,
+                    data={"payment": payment_upgrade._to_json()},
+                    code=200,
+                ).to_dict()
 
         # Đăng kí gói mới
         payment = PaymentService.create_new_payment(
@@ -729,5 +777,7 @@ class APIGetHistory(Resource):
             "page": billings.page,
             "per_page": billings.per_page,
             "total_pages": billings.pages,
-            "data": [billing_detail.to_dict_user() for billing_detail in billings.items],
+            "data": [
+                billing_detail.to_dict_user() for billing_detail in billings.items
+            ],
         }, 200
