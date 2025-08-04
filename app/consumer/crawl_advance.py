@@ -40,11 +40,9 @@ class CrawlAdvance:
             log_advance_run_crawler_message(f"Error updating batch: {e}")
             return None
 
-    def update_batch_processing(self, batch_id):
+    def update_batch_status(self, batch_id, status):
         try:
-            batch = BatchService.update_batch(
-                batch_id, process_status=const.BATCH_PROCESSING_STATUS["CRAWLING"]
-            )
+            batch = BatchService.update_batch(batch_id, process_status=status)
             self.update_redis_batch(batch)
         except Exception as e:
             log_advance_run_crawler_message(f"Error updating batch: {e}")
@@ -67,6 +65,10 @@ class CrawlAdvance:
         try:
             batch_id = self.batch_id
             batch = BatchService.find_batch(batch_id)
+
+            self.update_batch_status(
+                batch_id, const.BATCH_PROCESSING_STATUS["CRAWLING"]
+            )
 
             log_advance_run_crawler_message(f"Run Crawler {batch_id}")
 
@@ -99,19 +101,7 @@ class CrawlAdvance:
                 user = UserService.find_user(user_id)
                 redis_client.set(redis_user_batch_key, user.batch_remain + 1, ex=180)
 
-                BatchService.update_batch(
-                    batch_id,
-                    process_status=const.BATCH_PROCESSING_STATUS["FAILED"],
-                    error_code="201",
-                    message=MessageError.NO_ANALYZE_URL.value["message"],
-                    error_message=MessageError.NO_ANALYZE_URL.value["error_message"],
-                )
-
-                redis_client.set(
-                    f"toktak:batch:{batch_id}",
-                    json.dumps(batch._to_json()),
-                    ex=60 * 60 * 24,
-                )
+                self.update_batch_error_analyze(batch_id)
 
                 return False
 
@@ -135,6 +125,8 @@ class CrawlAdvance:
                 shorten_link=shorten_link,
                 content=json.dumps(data),
             )
+
+            self.update_batch_status(batch_id, const.BATCH_PROCESSING_STATUS["CRAWLED"])
 
             return True
         except Exception as e:
