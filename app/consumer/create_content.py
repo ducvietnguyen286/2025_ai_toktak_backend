@@ -82,9 +82,17 @@ class CreateContent:
             log_create_content_message(f"Error updating batch: {e}")
             return None
 
-    def update_batch_status(self, batch_id, status):
+    def update_batch_status(
+        self, batch_id, status, message="", error_code="", error_message=""
+    ):
         try:
-            batch = BatchService.update_batch(batch_id, process_status=status)
+            batch = BatchService.update_batch(
+                batch_id,
+                process_status=status,
+                message=message,
+                error_code=error_code,
+                error_message=error_message,
+            )
             self.update_redis_batch(batch)
         except Exception as e:
             log_create_content_message(f"Error updating batch: {e}")
@@ -345,10 +353,12 @@ class CreateContent:
             log_create_content_message(f"Create posts results: {results}")
 
             is_success = True
+            failed_message = ""
 
             for idx, result in enumerate(results):
-                if result is None:
+                if result is None or result.get("is_success") is False:
                     is_success = False
+                    failed_message = result.get("message", "")
                     break
 
             if is_success:
@@ -357,7 +367,9 @@ class CreateContent:
                 )
             else:
                 self.update_batch_status(
-                    batch_id, const.BATCH_PROCESSING_STATUS["FAILED"]
+                    batch_id,
+                    const.BATCH_PROCESSING_STATUS["FAILED"],
+                    error_message=failed_message,
                 )
 
             return batch_id
@@ -525,7 +537,10 @@ class CreateContent:
                     }
                     PostService.update_post(post.id, **kwargs)
 
-                    return None
+                    return {
+                        "is_success": False,
+                        "message": message_error.get(type, ""),
+                    }
 
                 url = batch.url
                 if type == "blog":
@@ -609,7 +624,10 @@ class CreateContent:
                 kwargs = {"process_status": const.POST_PROCESSING_STATUS["COMPLETED"]}
                 PostService.update_post(post.id, **kwargs)
 
-                return post.id
+                return {
+                    "is_success": True,
+                    "post_id": post.id,
+                }
             except Exception as e:
                 if type == "video":
                     message = MessageError.CREATE_POST_VIDEO.value
@@ -649,7 +667,10 @@ class CreateContent:
                 }
                 PostService.update_post(post.id, **kwargs)
 
-                return None
+                return {
+                    "is_success": False,
+                    "message": f"Create Post False {str(e)}",
+                }
 
 
 def check_is_avif(data):
