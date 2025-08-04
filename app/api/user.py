@@ -1721,7 +1721,7 @@ class APISNSCallback(Resource):
 
             if provider == "facebook":
                 return self.get_facebook_callback(
-                    args, current_user, link, redirect_uri, state=state
+                    args, current_user, link, redirect_uri
                 )
             if provider == "instagram":
                 return self.get_instagram_callback(
