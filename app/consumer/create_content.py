@@ -83,6 +83,14 @@ class CreateContent:
             log_create_content_message(f"Error updating batch: {e}")
             return None
 
+    def update_batch_status(self, batch_id, status):
+        try:
+            batch = BatchService.update_batch(batch_id, process_status=status)
+            self.update_redis_batch(batch)
+        except Exception as e:
+            log_create_content_message(f"Error updating batch: {e}")
+            return None
+
     def create_content(self, app):
         try:
             with app.app_context():
@@ -99,7 +107,6 @@ class CreateContent:
                 if not batch_id:
                     return None
 
-                self.update_batch_completed(batch_id)
             return True
         except Exception as e:
             log_create_content_message(f"Error in create_content: {e}")
@@ -332,7 +339,28 @@ class CreateContent:
 
             app = self.app
 
-            asyncio.run(run_all_create_single_post(batch_id, posts, self, app))
+            results = asyncio.run(
+                run_all_create_single_post(batch_id, posts, self, app)
+            )
+
+            log_create_content_message(f"Create posts results: {results}")
+
+            is_success = True
+
+            for idx, result in enumerate(results):
+                if result is None:
+                    is_success = False
+                    break
+
+            if is_success:
+                self.update_batch_status(
+                    batch_id, const.BATCH_PROCESSING_STATUS["COMPLETED"]
+                )
+            else:
+                self.update_batch_status(
+                    batch_id, const.BATCH_PROCESSING_STATUS["FAILED"]
+                )
+
             return batch_id
 
         except Exception as e:
