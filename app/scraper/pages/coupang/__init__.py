@@ -125,7 +125,7 @@ class CoupangScraper:
 
             def call_api(api_url):
                 try:
-                    payload = {"url": self.url, "request_id": str(self.batch_id)}
+                    payload = {"url": self.real_url, "request_id": str(self.batch_id)}
                     signature, timestamp = generate_signature(payload)
                     resp = requests.post(
                         api_url,

@@ -163,6 +163,26 @@ def log_create_content_message(message):
     custom_handler.close()
 
 
+def log_advance_run_crawler_message(message):
+    now_date = datetime.datetime.now()
+    new_filename = now_date.strftime("%d-%m-%Y")
+    custom_handler = handlers.RotatingFileHandler(
+        "logs/advance_run_crawler-{0}.log".format(new_filename),
+        backupCount=14,
+        encoding="utf-8",
+    )
+    custom_handler.setLevel(logging.INFO)
+    custom_handler.setFormatter(formatter)
+
+    custom_logger = logging.getLogger("AdvanceRunCrawlerLogger")
+    custom_logger.setLevel(logging.INFO)
+    custom_logger.addHandler(custom_handler)
+
+    custom_logger.info(message)
+    custom_logger.removeHandler(custom_handler)
+    custom_handler.close()
+
+
 def log_socket_message(message):
     now_date = datetime.datetime.now()
     new_filename = now_date.strftime("%d-%m-%Y")
@@ -308,7 +328,6 @@ def log_reset_user_message(message):
             custom_handler.close()
 
 
-
 def log_nice_verify_message(message):
     now_date = datetime.datetime.now()
     new_filename = now_date.strftime("%d-%m-%Y")
@@ -336,8 +355,7 @@ def log_nice_verify_message(message):
         # Đảm bảo đóng handler sau khi sử dụng
         if custom_handler:
             custom_handler.close()
-            
-            
+
 
 def log_make_repayment_message(message):
     now_date = datetime.datetime.now()

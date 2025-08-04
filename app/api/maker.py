@@ -34,7 +34,7 @@ from app.lib.string import (
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
-from app.rabbitmq.producer import send_create_content_message
+from app.rabbitmq.producer import send_create_content_message, send_run_crawler_message
 from app.scraper import Scraper
 import traceback
 import random
@@ -313,6 +313,12 @@ class APICreateBatchSync(Resource):
                     "message": {"batch_id": batch_id, "data": data},
                 }
                 asyncio.run(send_create_content_message(message))
+            else:
+                message = {
+                    "action": "RUN_CRAWLER",
+                    "message": {"batch_id": batch_id, "data": data},
+                }
+                asyncio.run(send_run_crawler_message(message))
 
             return Response(
                 data=batch_res,
