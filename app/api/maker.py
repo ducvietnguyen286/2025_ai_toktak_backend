@@ -59,6 +59,7 @@ from app.services.product import ProductService
 from flask_jwt_extended import jwt_required
 from app.services.auth import AuthService
 import const
+import requests
 
 from flask_jwt_extended import (
     verify_jwt_in_request,
@@ -1279,23 +1280,36 @@ class APIDownloadZip(Resource):
                     code=201,
                 ).to_dict()
 
-            images = json.loads(post.images)
+            images = json.loads(post.images or "[]")
+            images_s3 = json.loads(post.images_s3 or "[]")
+            if len(images_s3) > 0:
+                images = images_s3
             file_list = []
+            temp_files = []
+
             current_domain = os.environ.get("CURRENT_DOMAIN") or "https://api.toktak.ai"
             upload_folder = os.path.join(os.getcwd(), f"uploads/")
             for index, image_detail in enumerate(images):
 
-                image_detail_path = image_detail.replace(
-                    f"{current_domain}/files/", upload_folder
-                )
-                if os.path.exists(image_detail_path):
-                    file_list.append(image_detail_path)
+                if image_detail.startswith("https://toktaks3"):
+                    downloaded_path = _download_s3_file_to_temp(image_detail, index)
+                    if downloaded_path:
+                        file_list.append(downloaded_path)
+                        temp_files.append(downloaded_path)
+                else:
+                    image_detail_path = image_detail.replace(
+                        f"{current_domain}/files/", upload_folder
+                    )
+                    if os.path.exists(image_detail_path):
+                        file_list.append(image_detail_path)
 
             if file_list:
                 zip_path, tmp_dir = _make_zip(file_list)
                 if request:
                     after_this_request(
-                        lambda response: _cleanup_zip(zip_path, tmp_dir, response)
+                        lambda response: _cleanup_zip(
+                            zip_path, temp_files, tmp_dir, response
+                        )
                     )
                 return send_file(
                     zip_path,
@@ -1328,7 +1342,7 @@ class APIDownloadZip(Resource):
             zip_path, tmp_dir = _make_zip(file_list)
             if request:
                 after_this_request(
-                    lambda response: _cleanup_zip(zip_path, tmp_dir, response)
+                    lambda response: _cleanup_zip(zip_path, [], tmp_dir, response)
                 )
             return send_file(
                 zip_path,
@@ -1433,12 +1447,16 @@ class APIPingBatch(Resource):
             ).to_dict()
 
 
-def _cleanup_zip(zip_path, tmp_dir, response):
+def _cleanup_zip(zip_path, temp_files, tmp_dir, response):
     try:
         if os.path.exists(zip_path):
             os.remove(zip_path)
         if os.path.exists(tmp_dir):
             shutil.rmtree(tmp_dir)
+
+        for f in temp_files:
+            if os.path.exists(f):
+                os.remove(f)
     except Exception as e:
         logger.warning(f"Không thể xóa tệp tạm: {e}")
     return response
@@ -1454,3 +1472,20 @@ def _make_zip(file_list):
             filename = os.path.basename(file_path)
             zipf.write(file_path, arcname=filename)
     return zip_path, tmp_dir
+
+
+def _download_s3_file_to_temp(url, index):
+    try:
+        response = requests.get(url, stream=True, timeout=10)
+        if response.status_code == 200:
+            temp_file = tempfile.NamedTemporaryFile(
+                delete=False, suffix=f"_{index}.jpg", prefix="toktak_"
+            )
+            with open(temp_file.name, "wb") as out_file:
+                shutil.copyfileobj(response.raw, out_file)
+            return temp_file.name
+        else:
+            logger.warning(f"Failed to download image from S3: {url}")
+    except Exception as e:
+        logger.error(f"Error downloading from S3: {e}")
+    return None

@@ -13,6 +13,7 @@ class Post(db.Model, BaseModel):
     thumbnail = db.Column(db.String(500), nullable=False, default="")
     captions = db.Column(db.Text, nullable=True)
     images = db.Column(db.Text, nullable=True)
+    images_s3 = db.Column(db.Text, nullable=True)
     title = db.Column(db.String(500), nullable=False, default="")
     subtitle = db.Column(db.String(500), nullable=False, default="")
     content = db.Column(db.Text, nullable=False, default="")
@@ -35,13 +36,11 @@ class Post(db.Model, BaseModel):
     schedule_date = db.Column(db.DateTime)
 
     created_at = db.Column(db.DateTime, default=datetime.now)  # Ngày tạo
-    updated_at = db.Column(
-        db.DateTime, default=datetime.now, onupdate=datetime.now
-    )  #
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)  #
 
     user = db.relationship("User", lazy="joined")
 
-    to_json_parse = "images"
+    to_json_parse = ("images_s3", "images")
     to_json_filter = "captions"
 
     def to_dict(self):
@@ -52,6 +51,7 @@ class Post(db.Model, BaseModel):
             "thumbnail": self.thumbnail,
             "captions": self.captions,
             "images": self.images,
+            "images_s3": self.images_s3,
             "title": self.title,
             "subtitle": self.subtitle,
             "content": self.content,

@@ -20,7 +20,7 @@ import string
 from io import BytesIO
 import traceback
 import re
-from app.extensions import bcrypt
+from app.extensions import bcrypt, redis_client
 
 from app.services.social_post import SocialPostService
 from app.services.product import ProductService
@@ -754,6 +754,9 @@ class APISaveAdminNotification(Resource):
         button_oke = args.get("button_oke", "")
         popup_type = args.get("popup_type", "")
         toasts_color = args.get("toasts_color", "")
+
+        for key in redis_client.scan_iter(f"{const.REDIS_KEY_SETTING_HOME}:*"):
+            redis_client.delete(key)
 
         if notification_id != "":
             # Cập nhật thông báo

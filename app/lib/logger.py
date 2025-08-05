@@ -143,7 +143,7 @@ def log_youtube_message(message):
     custom_handler.close()
 
 
-def log_create_content_message(message):
+def log_create_content_message(message , delemiter="----------------"):
     now_date = datetime.datetime.now()
     new_filename = now_date.strftime("%d-%m-%Y")
     custom_handler = handlers.RotatingFileHandler(
@@ -158,7 +158,9 @@ def log_create_content_message(message):
     custom_logger.setLevel(logging.INFO)
     custom_logger.addHandler(custom_handler)
 
+    custom_logger.info(delemiter)
     custom_logger.info(message)
+    custom_logger.info(delemiter)
     custom_logger.removeHandler(custom_handler)
     custom_handler.close()
 

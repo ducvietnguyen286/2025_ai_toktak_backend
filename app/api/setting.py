@@ -6,7 +6,7 @@ from app.services.video_service import VideoService
 from app.services.post import PostService
 from datetime import datetime
 from app.lib.logger import logger
-from app.extensions import db
+from app.extensions import db, redis_client
 from app.models.setting import Setting
 from app.lib.logger import logger
 from app.lib.response import Response
@@ -55,6 +55,9 @@ class APIUpdateSetting(Resource):
             settings_dict = {
                 setting.setting_name: setting.setting_value for setting in settings
             }
+            
+            for key in redis_client.scan_iter(f"{const.REDIS_KEY_SETTING_HOME}:*"):
+                redis_client.delete(key)
 
             return Response(
                 data=settings_dict,
@@ -104,47 +107,60 @@ class GetConfig(Resource):
 class GetPublicConfig(Resource):
     def get(self):
         remote_ip = get_real_ip()
-        settings = Setting.query.filter_by(status=0).all()
-        settings_dict = {
-            setting.setting_name: setting.setting_value for setting in settings
-        }
-        ALLOWED_IPS = json.loads(settings_dict["ALLOWED_IPS"])
+        redis_key = f"{const.REDIS_KEY_SETTING_HOME}:{remote_ip}"
 
-        if settings_dict["IS_MAINTANCE"] == "1":
-            if remote_ip in ALLOWED_IPS:
+        cache_data = redis_client.get(redis_key)
+        if cache_data:
+            # ✅ Lấy toàn bộ dict đã cache (bao gồm cả notification_detail)
+            full_dict = json.loads(cache_data)
+        else:
+            # ✅ Truy vấn DB lấy setting
+            settings = Setting.query.filter_by(status=0).all()
+            settings_dict = {
+                setting.setting_name: setting.setting_value for setting in settings
+            }
+
+            # ✅ Xử lý bảo trì
+            ALLOWED_IPS = json.loads(settings_dict.get("ALLOWED_IPS", "[]"))
+            if settings_dict.get("IS_MAINTANCE") == "1" and remote_ip in ALLOWED_IPS:
                 settings_dict["IS_MAINTANCE"] = "0"
-        
-        # settings_dict["remote_ip"] = remote_ip
-        settings_dict.pop("ALLOWED_IPS", None)
-        # logger.info(settings_dict)
-        # logger.info(remote_ip)
-        
-        notification_detail = AdminNotificationService.get_first_active_notification()
-        settings_dict["notification_detail"] = notification_detail.to_dict() if notification_detail else {}
+            settings_dict.pop("ALLOWED_IPS", None)
+
+            # ✅ Lấy notification
+            notification_obj = AdminNotificationService.get_first_active_notification()
+            notification_detail = (
+                notification_obj.to_dict() if notification_obj else {}
+            )
+
+            # ✅ Gộp lại toàn bộ dict
+            full_dict = settings_dict.copy()
+            full_dict["notification_detail"] = notification_detail
+
+            redis_client.setex(redis_key, 3600, json.dumps(full_dict))
+
         return Response(
-            data=settings_dict,
+            data=full_dict,
             message="Get Public setting",
         ).to_dict()
-        
+
+
 @ns.route("/ping")
 class APIPingStatus(Resource):
     def get(self):
-        
+
         return Response(
             data={},
             message="Ping Oke",
         ).to_dict()
 
 
-
-
 def get_real_ip():
     # Ưu tiên Cloudflare header
-    ip = request.headers.get('CF-Connecting-IP')
+    ip = request.headers.get("CF-Connecting-IP")
     if not ip:
         # Nếu không có, lấy từ chuỗi X-Forwarded-For
-        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         # Trường hợp X-Forwarded-For có dạng "client, proxy1, proxy2"
-        if ',' in ip:
-            ip = ip.split(',')[0].strip()
+        if "," in ip:
+            ip = ip.split(",")[0].strip()
     return ip
