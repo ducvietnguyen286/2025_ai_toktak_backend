@@ -6,6 +6,7 @@ import json
 from app.services.auth import AuthService
 from app.services.payment_services import PaymentService
 from app.services.notification import NotificationServices
+from app.services.shotstack_services import ShotStackService
 from app.services.user import UserService
 from app.decorators import parameters, admin_required
 from app.lib.response import Response
@@ -309,12 +310,11 @@ class APIAdminNotificationHistories(Resource):
 @ns.route("/admin/approval")
 class APIPaymentApproval(Resource):
     @jwt_required()
+    @admin_required()
     def post(self):
         data = request.get_json()
         payment_id = data.get("payment_id")
-
         result = PaymentService.approvalPayment(payment_id)
-
         return result
 
 
@@ -357,10 +357,15 @@ class APIDeletePending(Resource):
     )
     def post(self, args):
         try:
-            return Response(
-                message="",
-                code=200,
-            ).to_dict()
+
+            config = ShotStackService.get_settings()
+            IS_PAYMENT_DRAFT = config.get("IS_PAYMENT_DRAFT", "0")
+            # Nếu IS_PAYMENT_DRAFT là 1 thì không thực hiện xóa
+            if IS_PAYMENT_DRAFT == "1":
+                return Response(
+                    message="",
+                    code=200,
+                ).to_dict()
 
             payment_id = args.get("payment_id", "")
 
@@ -503,9 +508,6 @@ class APIPaymentConfirm(Resource):
             }
 
             PaymentService.create_payment_log(**payment_data_log)
-            logger.info("_------------------------------------payment_data_log")
-            logger.info(payment_data_log)
-            logger.info(payment_data)
 
             if status_code == 200:
                 # Thanh toán thành công, cập nhật DB
@@ -781,3 +783,166 @@ class APIGetHistory(Resource):
                 billing_detail.to_dict_user() for billing_detail in billings.items
             ],
         }, 200
+
+
+@ns.route("/refund/request")
+class RefundRequest(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            user_id_login = AuthService.get_user_id()
+            data = request.get_json()
+            payment_id = data.get("payment_id")
+
+            payment_refund_detail = PaymentService.get_payment_must_refund(payment_id)
+
+            payment_refund = PaymentService.find_refund_by_payment_id(payment_id)
+            if payment_refund:
+                error_message = message_payment.CHECK_EXITS_REFUND_PAYMENT.value[
+                    "error_message"
+                ]
+                error_message_en = message_payment.CHECK_EXITS_REFUND_PAYMENT.value[
+                    "error_message_en"
+                ]
+
+                return Response(
+                    message=error_message,
+                    message_en=error_message_en,
+                    code=201,
+                ).to_dict()
+
+            refund_data_log = {
+                "payment_id": payment_id,
+                "user_id": user_id_login,
+                "package_name": payment_refund_detail["package_name"],
+                "amount": payment_refund_detail["money_rollback"],
+                "reason": "사용자가 환불을 요청했습니다.",
+                "admin_note": "",
+            }
+
+            refund = PaymentService.create_refund_payment(**refund_data_log)
+            if not refund:
+                return Response(
+                    message=message_payment.CREATE_FAIL_REFUND_PAYMENT.value[
+                        "error_message"
+                    ],
+                    message_en=message_payment.CREATE_FAIL_REFUND_PAYMENT.value[
+                        "error_message"
+                    ],
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                message=message_payment.CREATE_REFUND_PAYMENT.value["error_message"],
+                message_en=message_payment.CREATE_REFUND_PAYMENT.value["error_message"],
+                data={"refund": refund.to_dict()},
+            ).to_dict()
+
+        except Exception as ex:
+            logger.error(f"[Webhook] ❌ Lỗi xử lý webhook: {ex}")
+            return Response(
+                message="Xử lý thất bại", data={"status": "FAILED"}, code=500
+            ).to_dict()
+
+
+
+@ns.route("/admin/refund_histories")
+class APIAdminNotificationHistories(Resource):
+    @jwt_required()
+    @admin_required()
+    def get(self):
+        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+        status = request.args.get("status", const.UPLOADED, type=int)
+        type_order = request.args.get("type_order", "", type=str)
+        type_post = request.args.get("type_post", "", type=str)
+        time_range = request.args.get("time_range", "", type=str)
+        type_payment = request.args.get("type_payment", "", type=str)
+        search_key = request.args.get("search_key", "", type=str)
+        from_date = request.args.get("from_date", "", type=str)
+        to_date = request.args.get("to_date", "", type=str)
+        data_search = {
+            "page": page,
+            "per_page": per_page,
+            "status": status,
+            "type_order": type_order,
+            "type_post": type_post,
+            "time_range": time_range,
+            "type_payment": type_payment,
+            "search_key": search_key,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        billings = PaymentService.get_admin_refund_billings(data_search)
+        return {
+            "status": True,
+            "message": "Success",
+            "total": billings.total,
+            "page": billings.page,
+            "per_page": billings.per_page,
+            "total_pages": billings.pages,
+            "data": [post.to_dict() for post in billings.items],
+        }, 200
+
+
+
+
+@ns.route("/admin/delete_refund")
+class APIDeleteAccount(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "post_ids": {"type": "string"},
+        },
+        required=["post_ids"],
+    )
+    def post(self, args):
+        try:
+            post_ids = args.get("post_ids", "")
+            # Chuyển chuỗi post_ids thành list các integer
+            if not post_ids:
+                return Response(
+                    message="No post_ids provided",
+                    code=201,
+                ).to_dict()
+
+            # Tách chuỗi và convert sang list integer
+            id_list = [int(id.strip()) for id in post_ids.split(",")]
+
+            if not id_list:
+                return Response(
+                    message="Invalid post_ids format",
+                    code=201,
+                ).to_dict()
+
+            process_delete = PaymentService.deleteRefundPayment(id_list)
+            if process_delete == 1:
+                message = "Delete Refund Success"
+            else:
+                message = "Delete Refund Fail"
+
+            return Response(
+                message=message,
+                code=200,
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Exception: Delete Refund Fail  :  {str(e)}")
+            return Response(
+                message="Delete Refund Fail",
+                code=201,
+            ).to_dict()
+            
+@ns.route("/admin/refund_detail/<path:id>")
+class APIRefundDetailById(Resource):
+
+    @jwt_required()
+    @admin_required()
+    def get(self, id):
+
+        user = PaymentService.find_refund(id)
+        return Response(
+            data=user._to_json(),
+            message="Get User Info",
+        ).to_dict()

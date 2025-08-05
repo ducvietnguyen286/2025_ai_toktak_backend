@@ -93,10 +93,25 @@ class message_payment(Enum):
         "error_message": "이미 {package_name} 요금제에 대한 구매 이력이 있습니다.",
         "error_message_en": "You already have a previous purchase order for the {package_name} package.",
     }
-    
-    CHECK_UPGRADE_PAYMENT = { 
+
+    CHECK_UPGRADE_PAYMENT = {
         "error_message": "{old_package_name}에서 {package_name}(으)로 하향 변경할 수 없습니다.",
         "error_message_en": "You cannot downgrade from {old_package_name} to {package_name}.",
+    }
+
+    CHECK_EXITS_REFUND_PAYMENT = {
+        "error_message": "이 거래에 대해 이미 환불 요청이 접수되었습니다.",
+        "error_message_en": "A refund request has already been made for this transaction.",
+    }
+
+    CREATE_REFUND_PAYMENT = {
+        "error_message": "환불 요청이 처리되었습니다.",
+        "error_message_en": "The refund request has been processed.",
+    }
+    
+    CREATE_FAIL_REFUND_PAYMENT = {
+        "error_message": "환불 요청이 처리되었습니다.",
+        "error_message_en": "The refund request has been processed.",
     }
 
     def format(self, **kwargs):

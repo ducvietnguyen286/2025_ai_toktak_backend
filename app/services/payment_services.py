@@ -4,6 +4,7 @@ from app.models.payment import Payment
 from app.models.payment_logs import PaymentLog
 from app.models.payment_detail import PaymentDetail
 from app.models.user_history import UserHistory
+from app.models.refund import Refund
 from app.extensions import db
 from sqlalchemy import and_, func, or_
 from flask import jsonify
@@ -26,7 +27,7 @@ from app.lib.response import Response
 from app.lib.string import generate_order_id
 from app.lib.logger import log_make_repayment_message
 from app.third_parties.email import send_email
-from unittest.mock import Mock
+import math
 
 
 class PaymentService:
@@ -298,7 +299,9 @@ class PaymentService:
             "payment_id": new_payment.id if new_payment else None,
             "status_code": 200,
             "response_json": json.dumps(payment_data, ensure_ascii=False, default=str),
-            "description": json.dumps(payment_user_ugrade_pay, ensure_ascii=False, default=str),
+            "description": json.dumps(
+                payment_user_ugrade_pay, ensure_ascii=False, default=str
+            ),
         }
         logger.info(payment_data_log)
         PaymentService.create_payment_log(**payment_data_log)
@@ -398,7 +401,7 @@ class PaymentService:
                     # Payment.status == "PAID",
                     Payment.end_date >= today,
                 )
-                .order_by(Payment.end_date.desc())
+                .order_by(Payment.id.desc())
                 .first()
             )
 
@@ -414,6 +417,7 @@ class PaymentService:
 
             payment_addons = PaymentService.get_payment_basic_addon(payment_basic.id)
             end_date = payment_basic.end_date.date()
+            start_date = payment_basic.start_date.date()
             remaining_days = min((end_date - today).days, 30)
             if remaining_days < 1:
                 return {
@@ -435,6 +439,17 @@ class PaymentService:
             price_to_pay = int(total_amount / duration * remaining_days)
             price_discount = total_amount - price_to_pay
 
+            current_package_detail = const.PACKAGE_CONFIG["BASIC"]
+            # tiền 1 ngày của gói hiện tại
+            base_day_price = int(
+                total_amount / current_package_detail.get("duration_days", 30)
+            )
+            used_days = (today - start_date).days if start_date else 0
+            # tien đã sử dụng
+            used_money = base_day_price * used_days if used_days else 0
+            money_rollback = total_amount - used_money
+            price_to_pay = max(0, total_amount - used_money)
+
             return {
                 "addon_count": addon_count,
                 "payment_addons": [
@@ -445,7 +460,7 @@ class PaymentService:
                 "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày. calculate_addon_price",
                 "duration": duration,
                 "amount": total_amount,
-                "discount": price_discount,
+                "discount": used_money,
                 "price": price_to_pay,
                 "addon_price": total_amount,
                 "total_discount": price_discount * addon_count,
@@ -455,6 +470,10 @@ class PaymentService:
                 "basic_payment_id": payment_basic.id,
                 "basic_price": basic_price,
                 "basic_end_date": end_date.strftime("%Y-%m-%d"),
+                "used_days": used_days,
+                "used_money": used_money,
+                "money_rollback": money_rollback,
+                "base_day_price": base_day_price,
             }
         except Exception as ex:
 
@@ -560,7 +579,6 @@ class PaymentService:
             today = datetime.now().date()
             start_date_default = today
             end_date_default = today + timedelta(days=30)
-            logger.info(addon_count)
 
             # Kiểm tra gói mới có hợp lệ không
             new_package_info = const.PACKAGE_CONFIG.get(new_package)
@@ -910,15 +928,18 @@ class PaymentService:
                 total_create = payment.total_create
 
                 if parent_id > 0:
-
                     payment_parent = PaymentService.find_payment(parent_id)
                     parent_amount = payment_parent.amount
                     parent_total_link = payment_parent.total_link
 
                     # update old payment để không thể tự động trừ tiền
                     # vì ngày kết thúc của gói nâng cấp sẽ bằng gói mới
+                    is_renew = 0
+                    if package_name != "ADDON":
+                        # Nếu là gói nâng cấp thì không cần đánh dấu is_renew
+                        is_renew = 1
                     data_update_old_payment = {
-                        "is_renew": 1,
+                        "is_renew": is_renew,
                         "next_payment": child_amount + parent_amount,
                         "next_total_link": min(child_total_link + parent_total_link, 7),
                     }
@@ -926,12 +947,10 @@ class PaymentService:
 
                 user_detail = UserService.find_user(user_id)
                 if package_name == "ADDON":
-
                     if user_detail:
                         total_link_active = user_detail.total_link_active
-                        data_update = {
-                            "total_link_active": total_link_active + total_link,
-                        }
+                        new_total_link_active = min(total_link_active + total_link, 3)
+                        data_update = {"total_link_active": new_total_link_active}
 
                         UserService.update_user(user_id, **data_update)
                         data_user_history = {
@@ -945,7 +964,7 @@ class PaymentService:
                             "description": "Basic 추가 기능을 구매하세요.",
                             "value": 0,
                             "num_days": 0,
-                            "total_link_active": 0,
+                            "total_link_active": new_total_link_active,
                         }
                         UserService.create_user_history(**data_user_history)
                 else:
@@ -970,9 +989,7 @@ class PaymentService:
                         "subscription_expired": subscription_expired,
                         "batch_total": batch_total + total_create,
                         "batch_remain": batch_remain,
-                        "total_link_active": min(
-                            total_link_active + total_link, 7
-                        ),
+                        "total_link_active": min(total_link_active + total_link, 7),
                     }
 
                     UserService.update_user(user_id, **data_update)
@@ -1332,14 +1349,16 @@ class PaymentService:
 
     @staticmethod
     def get_user_billings(data_search):
-        query = Payment.query.filter(Payment.method != "NEW_USER")
         search_key = data_search.get("search_key", "")
         user_id_login = data_search.get("user_id_login", "")
-        query = query.filter(Payment.user_id == user_id_login)
-
-        if search_key != "":
+        filters = [
+            Payment.method != "NEW_USER",
+            Payment.user_id == user_id_login,
+            Payment.status == const.PAID,
+        ]
+        if search_key:
             search_pattern = f"%{search_key}%"
-            query = query.filter(
+            filters.append(
                 or_(
                     Payment.package_name.ilike(search_pattern),
                     Payment.customer_name.ilike(search_pattern),
@@ -1347,9 +1366,129 @@ class PaymentService:
                 )
             )
 
+        query = Payment.query.filter(*filters)
         query = query.order_by(Payment.id.desc())
+        pagination = query.paginate(
+            page=data_search["page"], per_page=data_search["per_page"], error_out=False
+        )
+        return pagination
+
+    @staticmethod
+    def find_refund(id):
+        return Refund.query.get(id)
+
+    @staticmethod
+    def find_refund_by_payment_id(id):
+        return Refund.query.filter(Refund.payment_id == id).first()
+
+    @staticmethod
+    def create_refund_payment(*args, **kwargs):
+        try:
+            refund_detail = Refund(*args, **kwargs)
+            refund_detail.save()
+            return refund_detail
+        except Exception as ex:
+            logger.error(f"Error creating payment_log: {ex}")
+            return None
+
+    @staticmethod
+    def get_payment_must_refund(payment_id):
+        # Tính toán giá refund
+        today = datetime.now().date()
+        payment_detail = PaymentService.find_payment(payment_id)
+        package_name = payment_detail.package_name
+        current_package_detail = const.PACKAGE_CONFIG[package_name]
+        start_date = payment_detail.start_date.date()
+        end_date = payment_detail.end_date.date()
+        used_days = (today - start_date).days if start_date else 0
+        current_price = int(payment_detail.price)
+        # tiền 1 ngày của gói hiện tại
+        base_day_price = int(
+            current_price / current_package_detail.get("duration_days", 30)
+        )
+
+        # tien đã sử dụng
+        used_money = base_day_price * used_days if used_days else 0
+        money_rollback = current_price - used_money
+
+        current_days = current_package_detail.get("duration_days", 30)
+        discount = used_money
+
+        return {
+            "package_name": package_name,
+            "current_price": current_price,
+            "base_day_price": base_day_price,
+            "used_days": used_days,
+            "used_money": used_money,
+            "money_rollback": money_rollback,
+            "discount": discount,
+            "start_date": start_date.strftime("%Y-%m-%d") if start_date else None,
+            "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
+            "current_days": current_days,
+            "current_package_detail": current_package_detail,
+        }
+
+    @staticmethod
+    def get_admin_refund_billings(data_search):
+        query = Refund.query
+        search_key = data_search.get("search_key", "")
+
+        if search_key != "":
+            query = query.join(User, Refund.user_id == User.id)
+            search_pattern = f"%{search_key}%"
+            query = query.filter(
+                or_(
+                    Refund.package_name.ilike(search_pattern),
+                    Refund.customer_name.ilike(search_pattern),
+                    User.email.ilike(search_pattern),
+                )
+            )
+
+        # Xử lý type_order
+        order = data_search.get("type_order", "id_desc")
+        if order == "id_asc":
+            query = query.order_by(Refund.id.asc())
+        else:
+            query = query.order_by(Refund.id.desc())
+
+        # Xử lý type_Refund
+        package = data_search.get("type_payment")
+        if package in ["BASIC", "STANDARD", "BUSINESS", "FREE"]:
+            query = query.filter(Refund.package_name == package)
+
+
+        time_range = data_search.get("time_range")
+        if time_range == "today":
+            start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(Refund.created_at >= start)
+        elif time_range == "last_week":
+            query = query.filter(Refund.created_at >= datetime.now() - timedelta(days=7))
+        elif time_range == "last_month":
+            query = query.filter(Refund.created_at >= datetime.now() - timedelta(days=30))
+        elif time_range == "last_year":
+            query = query.filter(Refund.created_at >= datetime.now() - timedelta(days=365))
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                query = query.filter(Refund.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(data_search["to_date"], "%Y-%m-%d") + timedelta(days=1)
+                query = query.filter(Refund.created_at < to_date)
 
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
         return pagination
+
+    @staticmethod
+    def deleteRefundPayment(post_ids):
+        try:
+           
+            Refund.query.filter(Refund.id.in_(post_ids)).delete(
+                synchronize_session=False
+            )
+            db.session.commit()
+        except Exception as ex:
+            db.session.rollback()
+            return 0
+        return 1
