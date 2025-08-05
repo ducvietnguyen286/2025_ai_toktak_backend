@@ -2,17 +2,19 @@ from app.scraper.pages.coupang import CoupangScraper
 from app.scraper.pages.domeggook import DomeggookScraper
 from app.scraper.pages.aliexpress import AliExpressScraper
 from app.scraper.pages.ebay import EbayScraper
+from app.scraper.pages.naver import NaverScraper
 from app.scraper.pages.shopee import ShopeeScarper
 from app.scraper.pages.amazon import AmazonScraper
+from app.scraper.pages.walmart import WalmartScraper
+from app.lib.url import get_real_url, get_site_by_url
 
-from urllib.parse import urlparse
 import requests
 from app.lib.logger import logger
 import random
-from app.scraper.pages.walmart import WalmartScraper
 from app.services.crawl_data import CrawlDataService
 import hashlib
 import json
+from urllib.parse import urlparse
 
 
 def get_page_scraper(params):
@@ -20,6 +22,9 @@ def get_page_scraper(params):
     scraper = None
     parsed_url = urlparse(url)
     netloc = parsed_url.netloc
+
+    logger.info(f"netloc: {netloc}")
+
     if "domeggook." in netloc:
         scraper = DomeggookScraper(params)
     elif "coupang." in netloc:
@@ -34,20 +39,16 @@ def get_page_scraper(params):
         scraper = WalmartScraper(params)
     elif "shopee." in netloc:
         scraper = ShopeeScarper(params)
+    elif "naver." in netloc:
+        scraper = NaverScraper(params)
     return scraper.run()
 
 
 class Scraper:
-
     def scraper(self, params):
+        logger.info(f"params: {params}")
         response = get_page_scraper(params)
         if not response:
-            #     # 103.98.152.125
-            #     # 3.38.117.230
-            #     # 43.203.118.116
-            #     # 3.35.172.6
-            #     # #
-
             parsed_url = urlparse(params["url"])
             netloc = parsed_url.netloc
             logger.info(netloc)
@@ -64,9 +65,13 @@ class Scraper:
                 if new_response:
                     response = new_response
 
-                    crawl_url_hash = hashlib.sha1(params["url"].encode()).hexdigest()
+                    real_url = get_real_url(params["url"])
+
+                    site = get_site_by_url(real_url)
+
+                    crawl_url_hash = hashlib.sha1(real_url.encode()).hexdigest()
                     # Check exists với crawl_url_hash
-                    exists = CrawlDataService.find_crawl_data(crawl_url_hash)
+                    exists = CrawlDataService.find_crawl_data(crawl_url_hash, site)
                     if (
                         not exists
                         and response
@@ -74,11 +79,10 @@ class Scraper:
                         and len(response["images"]) > 0
                     ):
                         CrawlDataService.create_crawl_data(
-                            site=params["netloc"],
+                            site=site,
                             input_url=params["url"],
-                            crawl_url=params["url"],
+                            crawl_url=real_url,
                             crawl_url_hash=crawl_url_hash,
-                            # request=json.dumps(headers),
                             response=json.dumps(new_response),
                         )
                     break
@@ -86,7 +90,6 @@ class Scraper:
         return response
 
     def call_api_and_get_data(self, url, params):
-
         data_post = {
             "url": params["url"],
         }

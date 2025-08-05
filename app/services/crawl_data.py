@@ -11,9 +11,13 @@ class CrawlDataService:
         return crawl_data
 
     @staticmethod
-    def find_crawl_data(hash):
+    def find_crawl_data(hash, site):
         crawl_data = select_with_filter_one(
-            CrawlData, filters=[CrawlData.crawl_url_hash == hash]
+            CrawlData,
+            filters=[
+                CrawlData.crawl_url_hash == hash,
+                CrawlData.site == site,
+            ],
         )
         return crawl_data
 

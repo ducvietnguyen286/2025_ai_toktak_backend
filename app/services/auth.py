@@ -25,7 +25,7 @@ from app.extensions import db
 import secrets
 import string
 from dateutil.relativedelta import relativedelta
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.extensions import redis_client
 from gevent import sleep
 
@@ -133,6 +133,7 @@ class AuthService:
                 "description": "신규 가입 선물",
                 "value": 30,
                 "num_days": 30,
+                "total_link_active": 1,
             }
             UserService.create_user_history(**data_new_user_history)
 
@@ -157,110 +158,6 @@ class AuthService:
             )
             social_account.save()
 
-        return user, new_user_referral_code, is_new_user
-
-        if social_account:
-            user = User.query.get(social_account.user_id)
-        else:
-            if not email:
-                level = 0
-                level_info = get_level_images(level)
-                subscription_expired = datetime.now() + relativedelta(months=1)
-                user = User(
-                    email=email,
-                    name=name,
-                    avatar=avatar,
-                    level=level,
-                    contact=provider,
-                    subscription_expired=subscription_expired,
-                    level_info=json.dumps(level_info),
-                )
-                user.save()
-                is_new_user = 1
-                # Create Basic for new User
-                object_start_time = datetime.now()
-                data_new_user_history = {
-                    "user_id": user.id,
-                    "type": "user",
-                    "type_2": "NEW_USER",
-                    "object_id": user.id,
-                    "object_start_time": object_start_time,
-                    "object_end_time": subscription_expired,
-                    "title": "신규 가입 선물",
-                    "description": "신규 가입 선물",
-                    "value": 30,
-                    "num_days": 30,
-                }
-                UserService.create_user_history(**data_new_user_history)
-
-                # payment history
-                payment = PaymentService.create_new_payment(
-                    user, "BASIC", "PAID", 0, "NEW_USER"
-                )
-
-            else:
-                user = User.query.filter_by(email=email).first()
-
-            if not user and email:
-                level = 0
-                level_info = get_level_images(level)
-
-                subscription_expired = datetime.now() + relativedelta(months=1)
-                user = User(
-                    email=email,
-                    name=name,
-                    avatar=avatar,
-                    level=level,
-                    contact=provider,
-                    subscription="NEW_USER",
-                    subscription_expired=subscription_expired,
-                    batch_total=const.PACKAGE_CONFIG["BASIC"]["batch_total"],
-                    batch_remain=const.PACKAGE_CONFIG["BASIC"]["batch_remain"],
-                    total_link_active=const.PACKAGE_CONFIG["BASIC"][
-                        "total_link_active"
-                    ],
-                    level_info=json.dumps(level_info),
-                )
-
-                user.save()
-
-                # Create Basic for new User
-                object_start_time = datetime.now()
-                data_new_user_history = {
-                    "user_id": user.id,
-                    "type": "user",
-                    "type_2": "NEW_USER",
-                    "object_id": user.id,
-                    "object_start_time": object_start_time,
-                    "object_end_time": subscription_expired,
-                    "title": "신규 가입 선물",
-                    "description": "신규 가입 선물",
-                    "value": 30,
-                    "num_days": 30,
-                }
-                UserService.create_user_history(**data_new_user_history)
-
-                # payment history
-                payment = PaymentService.create_new_payment(
-                    user, "BASIC", "PAID", 0, "NEW_USER"
-                )
-
-                is_new_user = 1
-
-                if referral_code != "":
-                    user_history = ReferralService.use_referral_code(
-                        referral_code, user
-                    )
-                    if user_history:
-                        new_user_referral_code = 1
-
-            social_account = SocialAccount(
-                user_id=user.id,
-                provider=provider,
-                provider_user_id=provider_user_id,
-                access_token=access_token,
-            )
-            social_account.save()
         return user, new_user_referral_code, is_new_user
 
     @staticmethod
@@ -399,7 +296,9 @@ class AuthService:
             secrets.choice(string.ascii_letters + string.digits) for _ in range(60)
         )
 
-        new_user = UserService.update_user_with_out_session(user.id, password=random_string)
+        new_user = UserService.update_user_with_out_session(
+            user.id, password=random_string
+        )
 
         return new_user
 
@@ -423,7 +322,8 @@ class AuthService:
                 subscription = "BASIC"
                 total_link_active = 1
                 batch_total = UserService.get_total_batch_total(user_id)
-
+        elif user_subscription == "NEW_USER":
+            PaymentService.deletePaymentNewUser(user_id)
         user_detail = AuthService.update(
             user_id,
             subscription=subscription,
@@ -435,6 +335,7 @@ class AuthService:
             batch_no_limit_sns=0,
             total_link_active=total_link_active,
         )
+
         return user_detail
 
     @staticmethod
@@ -458,3 +359,14 @@ class AuthService:
 
             extended += 1
         return extended
+
+    @staticmethod
+    def check_subscription_allowed(subscription, created_at):
+        if subscription in ("FREE"):
+            # Nếu đã qua 7 ngày thì False
+            today = datetime.now().date()
+            if created_at.date() <= (today - timedelta(days=3)):
+                return 0
+            else:
+                return 1
+        return 1

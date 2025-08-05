@@ -9,6 +9,8 @@ from app.services.batch import BatchService
 import random
 from app.lib.logger import logger, log_webhook_message
 from app.services.notification import NotificationServices
+from flask_jwt_extended import jwt_required
+from app.services.auth import AuthService
 
 from datetime import datetime, date
 import time
@@ -37,9 +39,12 @@ class VideoStatus(Resource):
 
 @ns.route("/create_video")
 class CreateVideo(Resource):
-
+    @jwt_required()
     def post(self):
         # Lấy dữ liệu từ request
+
+        user_id_login = AuthService.get_user_id()
+
         data = request.get_json()
         images_url = data["images_url"]  # Đây là một list các URL của hình ảnh
         images_slider_url = data[
@@ -64,12 +69,46 @@ class CreateVideo(Resource):
         for url in images_url:
             if not isinstance(url, str):
                 return {"message": "Each URL must be a string"}, 400
-        batch_id = random.randint(1, 10000)  # Chọn số nguyên từ 1 đến 100
+        batch_type = const.TYPE_NORMAL
+        post_types = ["image", "blog", "video"]
+        voice = 2
+        voice_typecast = ""
+        is_paid_advertisements = 0
+        is_advance = 0
+        template_info = get_template_info(is_advance, is_paid_advertisements)
+        batch = BatchService.create_batch(
+            user_id=user_id_login,
+            url=url,
+            shorten_link="",
+            thumbnail=images_url,
+            thumbnails=json.dumps(images_slider_url),
+            content=json.dumps(data),
+            type=batch_type,
+            count_post=len(post_types),
+            status=const.PENDING_STATUS,
+            process_status="PENDING",
+            voice_google=voice,
+            voice_typecast=voice_typecast,
+            is_paid_advertisements=is_paid_advertisements,
+            is_advance=is_advance,
+            template_info=template_info,
+        )
+        for post_type in post_types:
+            post = PostService.create_post(
+                user_id=user_id_login,
+                batch_id=batch.id,
+                type=post_type,
+                thumbnail=images_url,
+                images=json.dumps(images_slider_url),
+                captions=json.dumps(captions),
+                title=product_name,
+                status=const.PENDING_STATUS,
+            )
+
         voice_google = random.randint(1, 4)  # Chọn số nguyên từ 1 đến 4
 
-        post_id = data["post_id"]
-        post = PostService.find_post(post_id)
-        batch = BatchService.find_batch(post.batch_id)
+        post_id = post.id
+        batch_id = batch.id
         batch_content = json.loads(batch.content)
 
         gifs = batch_content.get("gifs", [])
@@ -92,6 +131,7 @@ class CreateVideo(Resource):
             "images_url": images_url,
             "images_slider_url": images_slider_url,
             "product_video_url": product_video_url,
+            "voice_typecast": batch.voice_typecast,
         }
 
         result = ShotStackService.create_video_from_images_v2(data_make_video)
@@ -150,23 +190,53 @@ class ShortstackWebhook(Resource):
     def post(self):
         try:
             # Lấy payload JSON từ request
+            batch_id = request.args.get("batch_id", 1, type=int)
+            is_s3 = request.args.get("is_s3", 0, type=int)
+            log_webhook_message(
+                f"Received Shotstack batch_id: {batch_id}  is_s3: {is_s3}"
+            )
             payload = request.get_json()
+
+            # Ghi log thông tin nhận được
+            log_webhook_message(f"Received Shotstack webhook: {payload}")
             if not payload:
                 return {"message": "No JSON payload provided"}, 400
 
-            batch_id = 0
             # Lấy thông tin từ payload
             render_id = payload.get("id")
             status = payload.get("status")
-            video_url = payload.get("url")
+            url_download = payload.get("url")
             action = payload.get("action")
             render = payload.get("render", "")
             error = payload.get("error", "")
             user_id = 0
+            video_url = ""
 
-            # Ghi log thông tin nhận được
-            log_webhook_message(f"Received Shotstack webhook: %{payload}")
-            if action == "render" and video_url != "":
+            redis_key = f"shotstack_webhook_lock:{render_id}"
+            if redis_client.exists(redis_key):
+                log_webhook_message(
+                    f"Webhook duplicate! render_id={render_id} đã xử lý trước đó."
+                )
+                return {
+                    "message": "Webhook already processed",
+                    "render_id": render_id,
+                }, 200
+
+            if is_s3 == 1:
+                if action == "copy":
+                    url_s3 = request.args.get("url_s3", "", type=str)
+                    log_webhook_message(f"url_s3: {url_s3}")
+                    if is_s3_file_public(url_s3):
+                        redis_client.setex(redis_key, 600, "1")
+                        video_url = url_s3
+                        render_id = render  # Copy thì render_id sẽ là render
+
+            else:
+                if action == "render" and url_download != "":
+                    if is_s3_file_public(url_download):
+                        redis_client.setex(redis_key, 600, "1")
+                        video_url = url_download
+            if video_url != "":
                 create_video_detail = VideoService.update_video_create(
                     render_id, status=status, video_url=video_url
                 )
@@ -190,6 +260,11 @@ class ShortstackWebhook(Resource):
                                 "description": f"AI Shotstack  {str(error)}",
                             }
                         else:
+                            data_update_batch = {
+                                "status": const.DRAFT_STATUS,
+                                "process_status": "DRAFT",
+                            }
+                            BatchService.update_batch(batch_id, **data_update_batch)
                             data_update = {
                                 "notification_type": "shortstack_video",
                                 "render_id": render_id,
@@ -201,6 +276,10 @@ class ShortstackWebhook(Resource):
                         NotificationServices.create_notification_render_id(
                             **data_update
                         )
+                else:
+                    log_webhook_message(
+                        f"Không có create_video_detail : render_id={render_id}, status={status}, video_url={video_url}"
+                    )
                 file_download_attr = download_video(video_url, batch_id)
                 if file_download_attr:
                     file_path = file_download_attr["file_path"]
@@ -209,8 +288,8 @@ class ShortstackWebhook(Resource):
                         batch_id,
                         video_url=video_url,
                         video_path=file_path,
+                        status=const.DRAFT_STATUS,
                     )
-
                     check_and_update_user_batch_remain(user_id, batch_id)
 
             return {
@@ -326,11 +405,14 @@ def check_and_update_user_batch_remain(user_id: int, batch_id: int):
         if redis_client.exists(redis_key):
             return False  # Đã cập nhật rồi
 
-        current_user = UserService.find_user(user_id)
+        current_user = UserService.find_user_with_out_session(user_id)
         if not current_user:
             return False  # Không tìm thấy user
 
         batch_remain = current_user.batch_remain
+        subscription = current_user.subscription
+        subscription_expired = current_user.subscription_expired
+        total_link_active = current_user.total_link_active
         new_batch_remain = max(current_user.batch_remain - 1, 0)
 
         log_webhook_message(
@@ -339,8 +421,21 @@ def check_and_update_user_batch_remain(user_id: int, batch_id: int):
 
         UserService.update_user(user_id, batch_remain=new_batch_remain)
 
+        data_user_history = {
+            "user_id": user_id,
+            "batch_id": batch_id,
+            "subscription": subscription,
+            "subscription_expired": subscription_expired,
+            "old_batch_remain": batch_remain,
+            "new_batch_remain": new_batch_remain,
+            "total_link_active": total_link_active,
+            "description": f"[Cap Nhat batch_remain  ] user_id={user_id}, batch_id={batch_id}, batch_remain={batch_remain}, new_batch_remain={new_batch_remain}",
+        }
+
+        UserService.create_coupon_user_histories(**data_user_history)
+
         # Đặt key trong Redis với TTL là 5 phút (300 giây)
-        redis_client.setex(redis_key, 300, "1")
+        redis_client.setex(redis_key, 3000, "1")
         return True  # Đã cập nhật thành công
 
     except Exception as e:
@@ -349,3 +444,25 @@ def check_and_update_user_batch_remain(user_id: int, batch_id: int):
             f"[Redis/UserService Error] user_id={user_id}, batch_id={batch_id}, error={str(e)}"
         )
         return False  # Báo lỗi chung
+
+
+def is_s3_file_public(s3_url):
+    """Check S3 file (public) tồn tại không qua HTTP HEAD."""
+    resp = requests.head(s3_url)
+    return resp.status_code == 200
+
+
+def get_template_info(is_advance, is_paid_advertisements):
+    if is_advance:
+        return json.dumps({})
+
+    redis_key = "template_image_default"
+
+    template_image_default = redis_client.get(redis_key)
+    if template_image_default:
+        return json.dumps(
+            {
+                "image_template_id": template_image_default.decode(),
+                "is_paid_advertisements": is_paid_advertisements,
+            }
+        )

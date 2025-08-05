@@ -1,18 +1,14 @@
-from http.cookiejar import CookieJar
 import json
 import random
 import re
-import urllib.parse
 
 import hashlib
 import base64
 import string
-import traceback
 from app.lib.header import generate_desktop_user_agent
 import const
 import uuid
 from app.lib.logger import logger
-import requests
 from urllib.parse import urljoin
 
 from datetime import datetime
@@ -347,6 +343,15 @@ def convert_video_path(path: str, domain: str):
         return ""
 
 
+def get_video_path_or_url(post_json, current_domain):
+    video_url = post_json.get("video_url", "")
+    video_path = post_json.get("video_path", "")
+    # Nếu video_url chứa https://toktaks3 thì ưu tiên trả về video_url
+    if "https://toktaks3" in video_url:
+        return video_url
+    # Nếu không thì convert video_path
+    return convert_video_path(video_path, current_domain)
+
 def insert_hashtags_to_string(tag_string, index=6):
     new_hashtags = ["#톡탁", "#toktak"]
     tag_list = tag_string.strip().split()
@@ -371,34 +376,8 @@ def mask_string_with_x(name, created_at):
         masked_name = "X" * len(name)
     return f"{created_at} {masked_name}님이 초대를 수락했어요"
 
-
-def get_subscription_name(subscription):
-    try:
-        subscription_name = subscription
-        if subscription == "FREE":
-            subscription_name = "무료 체험"
-        elif subscription == "COUPON_STANDARD":
-            subscription_name = "기업형 스탠다드 플랜"
-        elif subscription == "NEW_USER":
-            subscription_name = "베이직 플랜"
-        elif subscription == "COUPON_KOL":
-            subscription_name = "베이직 플랜"
-        else:
-            package_data = const.PACKAGE_CONFIG.get(subscription_name)
-            if not package_data:
-                subscription_name = "무료 체험"
-            subscription_name = package_data["pack_name"]
-        return subscription_name
-
-    except Exception as e:
-        logger.error(
-            f"[get_subscription_name] Failed for path: {subscription} — Error: {e}"
-        )
-        return subscription
-
-
-def generate_order_id():
-    raw_id = f"order_{uuid.uuid4().hex[:16]}"
+def generate_order_id(tag="order"):
+    raw_id = f"{tag}_{uuid.uuid4().hex[:16]}"
     return re.sub(r"[^a-zA-Z0-9_-]", "", raw_id)
 
 
@@ -460,84 +439,6 @@ def split_text_by_words(text, max_length=450):
         chunks.append(" ".join(current_chunk))
 
     return chunks
-
-
-def extract_redirect_url_from_script(html_content):
-    """
-    Trích xuất giá trị window.runParams.redirectUrl từ nội dung script trong HTML
-
-    :param html_content: Nội dung HTML của trang web
-    :return: URL redirect nếu tìm thấy, None nếu không tìm thấy
-    """
-    try:
-        script_pattern = r"<script[^>]*>(.*?)</script>"
-        scripts = re.findall(script_pattern, html_content, re.DOTALL)
-
-        for script in scripts:
-            redirect_pattern = (
-                r'window\.runParams\.redirectUrl\s*=\s*[\'"]([^\'"]+)[\'"]'
-            )
-            match = re.search(redirect_pattern, script)
-            if match:
-                redirect_url = match.group(1)
-                return urllib.parse.unquote(redirect_url)
-
-        return None
-
-    except Exception as e:
-        logger.error(f"Error extracting redirect URL from script: {str(e)}")
-        return None
-
-
-def un_shotend_url(url):
-    """
-    Lấy URL gốc từ URL rút gọn.
-    Kiểm tra và theo dõi tất cả các redirect cho đến khi tìm được URL cuối cùng.
-
-    :param url: URL rút gọn cần kiểm tra
-    :return: URL gốc sau khi đã theo dõi tất cả redirect
-    """
-    try:
-        cookie_jar = CookieJar()
-        session = requests.Session()
-        session.cookies = cookie_jar
-        user_agent = generate_desktop_user_agent()
-        headers = {
-            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "accept-encoding": "gzip, deflate, br, zstd",
-            "accept-language": "en",
-            "priority": "u=0, i",
-            "referer": "",
-            "upgrade-insecure-requests": "1",
-            "user-agent": user_agent,
-        }
-        response = session.get(url, headers=headers, allow_redirects=False)
-
-        while response.status_code in (301, 302, 303, 307, 308):
-            redirect_url = response.headers.get("Location")
-            if not redirect_url:
-                break
-
-            if not redirect_url.startswith(("http://", "https://")):
-                redirect_url = urljoin(url, redirect_url)
-
-            response = session.get(redirect_url, headers=headers, allow_redirects=False)
-
-            if redirect_url.startswith("https://star.aliexpress.com"):
-                redirect_url_from_script = extract_redirect_url_from_script(
-                    response.text
-                )
-                if redirect_url_from_script:
-                    return redirect_url_from_script
-                return urllib.parse.unquote(redirect_url)
-
-            url = redirect_url
-
-        return urllib.parse.unquote(url)
-
-    except Exception as e:
-        logger.error(f"Error unshortening URL {url}: {str(e)}")
-        return url
 
 
 def parse_date(date_str):

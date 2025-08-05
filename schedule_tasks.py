@@ -32,6 +32,7 @@ from app.models.post import Post
 from app.models.notification import Notification
 from app.services.user import UserService
 from app.services.auth import AuthService
+from app.services.payment_services import PaymentService
 from pytz import timezone
 import requests
 
@@ -40,8 +41,10 @@ import const
 from app.services.notification import NotificationServices
 from app.models.notification import Notification
 from app.models.request_log import RequestLog
+from app.models.social_post import SocialPost
 from app.models.request_social_log import RequestSocialLog
 from app.models.video_create import VideoCreate
+from app.models.ocr_results import OCRResult
 
 from sqlalchemy import or_, text
 
@@ -203,6 +206,21 @@ def cleanup_request_log(app):
                 .delete(synchronize_session=False)
             )
 
+            # Đếm số bản ghi sẽ xóa
+            social_posts_deleted = (
+                db.session.query(SocialPost)
+                .filter(SocialPost.created_at < five_days_ago)
+                .delete(synchronize_session=False)
+            )
+            
+            ocr_results_deleted = (
+                db.session.query(OCRResult)
+                .filter(OCRResult.created_at < five_days_ago)
+                .delete(synchronize_session=False)
+            )
+            
+            
+
             # --- RequestSocialLog ---
             social_deleted = (
                 db.session.query(RequestSocialLog)
@@ -216,10 +234,19 @@ def cleanup_request_log(app):
                 .delete(synchronize_session=False)
             )
 
+            notification_deleted = (
+                db.session.query(Notification)
+                .filter(Notification.created_at < five_days_ago)
+                .delete(synchronize_session=False)
+            )
+
             db.session.commit()
             app.logger.info(
                 f"🧹 Đã xóa: {req_deleted} request_logs, {social_deleted} request_social_logs, "
                 f"{video_deleted} video_create cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+                f"{social_posts_deleted} social_posts cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+                f"{ocr_results_deleted} ocr_results cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+                f"{notification_deleted} notification cũ hơn {five_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
             )
         except Exception as e:
             db.session.rollback()
@@ -238,6 +265,21 @@ def auto_extend_subscription_task(app):
             db.session.commit()
         except Exception as e:
             app.logger.error(f"Error in auto_extend_subscription_task: {str(e)}")
+            db.session.rollback()
+        finally:
+            # CRITICAL: Cleanup session to prevent connection leaks
+            db.session.remove()
+
+
+def auto_extend_payment_task(app):
+    app.logger.info("Start auto_extend_payment_task...")
+    with app.app_context():
+        try:
+            count = PaymentService.auto_renew_subscriptions()
+            app.logger.info(f"✓ Auto-payment {count}   users")
+            db.session.commit()
+        except Exception as e:
+            app.logger.error(f"Error in auto_extend_payment_task: {str(e)}")
             db.session.rollback()
         finally:
             # CRITICAL: Cleanup session to prevent connection leaks
@@ -346,12 +388,15 @@ def start_scheduler(app):
     one_30_am_kst_trigger = CronTrigger(hour=1, minute=30, timezone=kst)
     two_am_kst_trigger = CronTrigger(hour=2, minute=0, timezone=kst)
     three_am_kst_trigger = CronTrigger(hour=3, minute=0, timezone=kst)
+    three_am_15_kst_trigger = CronTrigger(hour=3, minute=15, timezone=kst)
+    three_am_30_kst_trigger = CronTrigger(hour=3, minute=30, timezone=kst)
     four_am_kst_trigger = CronTrigger(hour=4, minute=0, timezone=kst)
     every_hour_trigger = CronTrigger(hour="*/1", minute=0)  # Chạy mỗi 1 tiếng
 
     twelve_oh_one_trigger = CronTrigger(hour=0, minute=1, timezone=kst)
 
     every_3_hours_trigger = CronTrigger(hour="*/3", minute=0, timezone=kst)
+    eleven_pm_kst_trigger = CronTrigger(hour=23, minute=0, timezone=kst)
 
     scheduler.add_job(
         func=lambda: cleanup_pending_batches(app),
@@ -360,7 +405,7 @@ def start_scheduler(app):
     )
     scheduler.add_job(
         func=lambda: cleanup_request_log(app),
-        trigger=one_30_am_kst_trigger,
+        trigger=three_am_30_kst_trigger,
         id="cleanup_request_log",
     )
 
@@ -371,7 +416,7 @@ def start_scheduler(app):
     )
     scheduler.add_job(
         func=lambda: exchange_instagram_token(app),
-        trigger=three_am_kst_trigger,
+        trigger=three_am_15_kst_trigger,
         id="exchange_instagram_token",
     )
     scheduler.add_job(
@@ -384,6 +429,12 @@ def start_scheduler(app):
         func=lambda: auto_extend_subscription_task(app),
         trigger=twelve_oh_one_trigger,
         id="auto_extend_subscription_task",
+    )
+
+    scheduler.add_job(
+        func=lambda: auto_extend_payment_task(app),
+        trigger=eleven_pm_kst_trigger,
+        id="auto_extend_payment_task",
     )
 
     # Auto kill long database connections every minute

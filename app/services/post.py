@@ -433,8 +433,18 @@ class PostService:
         try:
             logger.info(f"Update default template: {user_id}, {link_id}")
             link_id = int(link_id)
+            user_info = User.query.get(user_id)
+            if not user_info:
+                logger.error(f"Not find User: {user_id}")
+                return None
             user_template = PostService.get_template_video_by_user_id(user_id)
 
+            if not user_template:
+                user_template = PostService.create_user_template_make_video(
+                    user_id=user_id
+                )
+
+            subscription = user_info.subscription
             if user_template:
                 link_sns = json.loads(user_template.link_sns)
 
@@ -449,7 +459,10 @@ class PostService:
                 if link_id not in link_sns["video"]:
                     link_sns["video"].append(link_id)
 
-                if link_id not in link_sns["image"]:
+                if (
+                    subscription not in const.BASIC_USER
+                    and link_id not in link_sns["image"]
+                ):
                     link_sns["image"].append(link_id)
 
                 data_update_template = {
@@ -482,3 +495,36 @@ class PostService:
         posts = query.all()
 
         return [post_detail.to_dict() for post_detail in posts]
+
+    @staticmethod
+    def get_posts_avaiable_post(ids, date_check="2025-05-31"):
+        # Query tất cả các post có id trong ids và status hợp lệ
+        posts = select_with_filter(
+            Post, filters=[Post.id.in_(ids), Post.status.in_([1, 99])]
+        )
+
+        # Gán cờ để check từng loại post
+        has_old = False  # Có post <= date_check
+        has_new = False  # Có post >  date_check
+
+        for post in posts:
+            # Lấy phần ngày
+            created_date = (
+                post.created_at.date()
+                if hasattr(post.created_at, "date")
+                else post.created_at
+            )
+            if str(created_date) <= date_check:
+                has_old = True
+            if str(created_date) > date_check:
+                has_new = True
+
+        if has_old and has_new:
+            return 1
+        elif has_old and not has_new:
+            return 2
+        elif not has_old and has_new:
+            return 0
+        else:
+            # Không có post nào, tuỳ chọn: trả về 0 hoặc None
+            return 0

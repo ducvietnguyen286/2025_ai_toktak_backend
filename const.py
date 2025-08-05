@@ -3,6 +3,7 @@ DEFAULT_PAGE = 1
 DEFAULT_PER_PAGE = 10
 MAX_PER_PAGE = 100
 
+PENDING_STATUS = 0
 DRAFT_STATUS = 99
 UPLOADED = 1
 UPLOADED_FALSE = 2
@@ -145,7 +146,7 @@ KOREAN_VOICES = [
 ]
 
 LIMIT_BATCH = {
-    "FREE": 10,
+    "FREE": 5,
     "BASIC": 30,
     "STANDARD": 30,
     "PRO": 300,
@@ -161,11 +162,11 @@ MAX_ADDON_PER_BASIC = 2
 PACKAGE_CONFIG = {
     "BASIC": {
         "pack_name": "베이직 플랜",
-        "pack_description": "SNS 홍보를 처음 시작하는 분",
+        "pack_description": "베이직 플랜",
         "order_index": 1,
         "total_create": 30,
         "price_origin": 29900,
-        "price": 5900,
+        "price": 9900,
         "total_link": 1,
         "batch_total": 30,
         "batch_remain": 30,
@@ -181,11 +182,11 @@ PACKAGE_CONFIG = {
     },
     "INVITE_BASIC": {
         "pack_name": "초대하기 보상",
-        "pack_description": "SNS 홍보를 처음 시작하는 분",
+        "pack_description": "초대하기 보상",
         "order_index": 1,
         "total_create": 30,
         "price_origin": 29900,
-        "price": 5900,
+        "price": 9900,
         "total_link": 1,
         "batch_total": 7,
         "batch_remain": 7,
@@ -194,7 +195,7 @@ PACKAGE_CONFIG = {
     },
     "STANDARD": {
         "pack_name": "스탠다드 플랜",
-        "pack_description": "SNS를 더 빠르게 성장시키고 싶은 분",
+        "pack_description": "스탠다드 플랜",
         "order_index": 2,
         "total_create": 60,
         "price_origin": 89000,
@@ -207,7 +208,7 @@ PACKAGE_CONFIG = {
     },
     "BUSINESS": {
         "pack_name": "기업형 스탠다드 플랜",
-        "pack_description": "브랜드, 플랫폼, 에이전시 고객을 위한 플랜",
+        "pack_description": "기업형 스탠다드 플랜",
         "order_index": 3,
         "total_create": 30,
         "price": 899000,
@@ -233,7 +234,17 @@ POST_PROCESSING_STATUS = {
     "FAILED": "FAILED",
 }
 
+BATCH_PROCESSING_STATUS = {
+    "PENDING": "PENDING",
+    "PROCESSING": "PROCESSING",
+    "COMPLETED": "COMPLETED",
+    "FAILED": "FAILED",
+}
+
 
 REDIS_KEY_TOKTAK = {
     "user_info_me": "user_info:me",
 }
+
+
+BASIC_USER = ["COUPON_BASIC", "BASIC", "NEW_USER", "INVITE_BASIC", "COUPON_KOL"]

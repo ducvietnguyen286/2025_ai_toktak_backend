@@ -26,13 +26,14 @@ from app.lib.string import (
     replace_phrases_in_text,
     get_ads_content,
     convert_video_path,
+    get_video_path_or_url,
     insert_hashtags_to_string,
     change_advance_hashtags,
 )
 from app.makers.docx import DocxMaker
 from app.makers.images import ImageMaker
 from app.makers.videos import MakerVideo
-from app.rabbitmq.producer import send_create_content_message
+from app.rabbitmq.producer import send_create_content_message, send_run_crawler_message
 from app.scraper import Scraper
 import traceback
 import random
@@ -78,6 +79,8 @@ def validater_create_batch(current_user, is_advance, url=""):
             "amzn.to",
             "ebay.com",
             "walmart.com",
+            "naver.com",
+            "naver.me",
         ]
         if url and url != "":
             if (
@@ -225,34 +228,10 @@ class APICreateBatchSync(Resource):
 
             is_paid_advertisements = args.get("is_paid_advertisements", 0)
 
-            data = Scraper().scraper({"url": url})
+            data = {}
 
-            # return data
-
-            if not data:
-                NotificationServices.create_notification(
-                    user_id=user_id_login,
-                    status=const.NOTIFICATION_FALSE,
-                    title=f"❌ 해당 {url} 은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
-                    description=f"Scraper False {url}",
-                )
-
-                redis_client.set(
-                    redis_user_batch_key, current_user.batch_remain + 1, ex=180
-                )
-
-                return Response(
-                    message=MessageError.NO_ANALYZE_URL.value["message"],
-                    data={
-                        "error_message": MessageError.NO_ANALYZE_URL.value[
-                            "error_message"
-                        ]
-                    },
-                    code=201,
-                ).to_dict()
-
-            thumbnail_url = data.get("image", "")
-            thumbnails = data.get("thumbnails", [])
+            thumbnail_url = ""
+            thumbnails = []
 
             data["input_url"] = url
             data["base_url"] = ""
@@ -276,7 +255,7 @@ class APICreateBatchSync(Resource):
                 content=json.dumps(data),
                 type=batch_type,
                 count_post=len(post_types),
-                status=0,
+                status=const.PENDING_STATUS,
                 process_status="PENDING",
                 voice_google=voice,
                 voice_typecast=voice_typecast,
@@ -288,7 +267,10 @@ class APICreateBatchSync(Resource):
             posts = []
             for post_type in post_types:
                 post = PostService.create_post(
-                    user_id=user_id_login, batch_id=batch.id, type=post_type, status=0
+                    user_id=user_id_login,
+                    batch_id=batch.id,
+                    type=post_type,
+                    status=const.PENDING_STATUS,
                 )
 
                 post_res = post._to_json()
@@ -296,6 +278,10 @@ class APICreateBatchSync(Resource):
 
             batch_res = batch._to_json()
             batch_res["posts"] = posts
+
+            name = data.get("name")
+            product_name = name[:10] if isinstance(name, str) else ""
+            batch_res["product_name"] = product_name
 
             batch_id = batch.id
 
@@ -314,6 +300,12 @@ class APICreateBatchSync(Resource):
                     "message": {"batch_id": batch_id, "data": data},
                 }
                 asyncio.run(send_create_content_message(message))
+            else:
+                message = {
+                    "action": "RUN_CRAWLER",
+                    "message": {"batch_id": batch_id, "data": data},
+                }
+                asyncio.run(send_run_crawler_message(message))
 
             return Response(
                 data=batch_res,
@@ -575,31 +567,40 @@ class APIGetBatch(Resource):
                     message="Bạn không có quyền truy cập",
                     status=403,
                 ).to_dict()
+            batch = redis_client.get(f"toktak:batch:{id}")
+            if not batch:
+                batch = BatchService.find_batch(id)
+                if batch:
+                    batch = batch._to_json()
+                    redis_client.set(
+                        f"toktak:batch:{id}",
+                        json.dumps(batch),
+                        ex=60 * 60 * 24,
+                    )
+            else:
+                batch = json.loads(batch)
 
-            batch = BatchService.find_batch(id)
             if not batch:
                 return Response(
                     message="Batch không tồn tại",
                     status=404,
                 ).to_dict()
 
-            if user_id != batch.user_id:
+            if user_id != batch.get("user_id"):
                 return Response(
                     message="Bạn không có quyền truy cập",
                     status=403,
                 ).to_dict()
 
-            posts = PostService.get_posts_by_batch_id(batch.id)
+            posts = PostService.get_posts_by_batch_id(batch.get("id"))
 
-            batch_res = batch._to_json()
-            batch_res["posts"] = posts
+            batch["posts"] = posts
 
-            user_id = AuthService.get_user_id()
             user_info = UserService.get_user_info_detail(user_id)
-            batch_res["user_info"] = user_info
+            batch["user_info"] = user_info
 
             return Response(
-                data=batch_res,
+                data=batch,
                 message="Lấy batch thành công",
             ).to_dict()
         except Exception as e:
@@ -614,23 +615,20 @@ class APIGetBatch(Resource):
 
 @ns.route("/batchs")
 class APIBatchs(Resource):
-
+    @jwt_required()
     def get(self):
         user_id = AuthService.get_user_id()
-
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
-
         batches = BatchService.get_all_batches(page, per_page, user_id)
-
         return {
             "status": True,
             "message": "Success",
-            "total": batches.total,
-            "page": batches.page,
-            "per_page": batches.per_page,
-            "total_pages": batches.pages,
-            "data": [batch_detail.to_dict() for batch_detail in batches.items],
+            "total": batches["total"],
+            "page": batches["page"],
+            "per_page": batches["per_page"],
+            "total_pages": batches["pages"],
+            "data": [batch_detail.to_dict() for batch_detail in batches["items"]],
         }, 200
 
 
@@ -979,9 +977,7 @@ class APIHistories(Resource):
                 "data": [
                     {
                         **post_json,
-                        "video_path": convert_video_path(
-                            post_json.get("video_path", ""), current_domain
-                        ),
+                        "video_path": get_video_path_or_url(post_json, current_domain),
                     }
                     for post in posts.get("items", [])
                     if (post_json := post._to_json())
@@ -1176,12 +1172,8 @@ class APIAdminHistories(Resource):
             "data": [
                 {
                     **post_json,
-                    "video_path": convert_video_path(
-                        post_json.get("video_path", ""), current_domain
-                    ),
-                    "video_url": convert_video_path(
-                        post_json.get("video_path", ""), current_domain
-                    ),
+                    "video_path": get_video_path_or_url(post_json, current_domain),
+                    "video_url": get_video_path_or_url(post_json, current_domain),
                 }
                 for post in posts.items
                 if (post_json := post.to_dict())
@@ -1246,7 +1238,7 @@ class APICreateScraper(Resource):
         try:
             url = args.get("url", "")
 
-            data_scraper = Scraper().scraper({"url": url})
+            data_scraper = Scraper().scraper({"url": url, "batch_id": "123460"})
             logger.error(data_scraper)
             if not data_scraper:
                 return Response(
@@ -1425,7 +1417,8 @@ class APIDecrypt(Resource):
                 message="Ping not Oke",
                 code=201,
             ).to_dict()
-            
+
+
 @ns.route("/ping")
 class APIPingBatch(Resource):
     def get(self):
@@ -1438,8 +1431,7 @@ class APIPingBatch(Resource):
                 message="Ping not Oke",
                 code=201,
             ).to_dict()
-            
- 
+
 
 def _cleanup_zip(zip_path, tmp_dir, response):
     try:

@@ -4,12 +4,13 @@ import json
 import traceback
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource
-from app.decorators import parameters
+from app.decorators import parameters, admin_required
 from app.lib.response import Response
 
 from app.services.auth import AuthService
 from app.services.coupon import CouponService
 from app.services.user import UserService
+from app.services.post import PostService
 from app.services.notification import NotificationServices
 
 ns = Namespace(name="coupon", description="User API")
@@ -35,6 +36,7 @@ class APIUsedCoupon(Resource):
         current_user_id = current_user.id
         code = args.get("code", "")
         coupon = CouponService.find_coupon_by_code(code)
+        message = "쿠폰이 정상적으로 등록되었습니다.<br/>스탠다드 플랜을 이용해 보세요!"
         if coupon == "not_exist":
             return Response(
                 message="유효하지 않은 쿠폰입니다.<br/>쿠폰 번호를 확인해 주세요😭",
@@ -143,6 +145,9 @@ class APIUsedCoupon(Resource):
                         current_user.subscription_expired or datetime.datetime.now()
                     )
 
+                    plan_coupon = coupon.plan_coupon
+                    total_link_active = coupon_code.total_link_active
+
                     if coupon.type == "DISCOUNT":
                         pass
                     elif (
@@ -164,8 +169,8 @@ class APIUsedCoupon(Resource):
 
                         current_user.batch_no_limit_sns = 1
                         # tong so luong kenh co the lien ket
-                        current_user.total_link_active = 7
-                        current_user.subscription = "COUPON_STANDARD"
+                        current_user.total_link_active = total_link_active
+                        current_user.subscription = "COUPON_" + plan_coupon
                         expired_at = login_subscription_expired + datetime.timedelta(
                             days=coupon_code.num_days
                         )
@@ -183,6 +188,28 @@ class APIUsedCoupon(Resource):
                         )
                         redis_client.delete(redis_user_batch_key)
                         redis_client.delete(redis_user_batch_sns_key)
+                        if plan_coupon == "BASIC":
+
+                            user_template = PostService.get_template_video_by_user_id(
+                                current_user_id
+                            )
+
+                            if user_template:
+                                link_sns = json.loads(user_template.link_sns)
+                                link_sns["image"] = []
+                                data_update_template = {
+                                    "link_sns": json.dumps(link_sns),
+                                }
+
+                                user_template = PostService.update_template(
+                                    user_template.id, **data_update_template
+                                )
+
+                            message = "쿠폰이 정상적으로 등록되었습니다.<br/>베이직 플랜을 이용해 보세요!"
+                        elif plan_coupon == "STANDARD":
+                            message = "쿠폰이 정상적으로 등록되었습니다.<br/>스탠다드 플랜을 이용해 보세요!"
+                        elif plan_coupon == "BUSINESS":
+                            message = "쿠폰이 정상적으로 등록되었습니다.<br/>기업형 스탠다드 플랜을 이용해 보세요!"
 
                     elif coupon.type == "SUB_PREMIUM":
                         pass
@@ -218,6 +245,19 @@ class APIUsedCoupon(Resource):
                         coupon_code.expired_at = end_of_expired_at
                         current_user.subscription_expired = end_of_expired_at
 
+                        user_template = PostService.get_template_video_by_user_id(
+                            current_user_id
+                        )
+                        if user_template:
+                            link_sns = json.loads(user_template.link_sns)
+                            link_sns["image"] = []
+                            data_update_template = {
+                                "link_sns": json.dumps(link_sns),
+                            }
+                            user_template = PostService.update_template(
+                                user_template.id, **data_update_template
+                            )
+
                         redis_user_batch_key = (
                             f"toktak:users:batch_remain:{current_user_id}"
                         )
@@ -226,6 +266,7 @@ class APIUsedCoupon(Resource):
                         )
                         redis_client.delete(redis_user_batch_key)
                         redis_client.delete(redis_user_batch_sns_key)
+                        message = "쿠폰이 정상적으로 등록되었습니다.<br/>베이직 플랜을 이용해 보세요!"
 
                     coupon = session.merge(coupon)
                     coupon_code = session.merge(coupon_code)
@@ -244,7 +285,8 @@ class APIUsedCoupon(Resource):
                         "title": coupon_code.coupon.name,
                         "description": coupon_code.code,
                         "value": coupon_code.value,
-                        "num_days": coupon_code.num_days,
+                        "num_days": coupon_code.value,
+                        "total_link_active": coupon_code.total_link_active,
                     }
 
                     UserService.create_user_history(**data_user_history)
@@ -265,7 +307,8 @@ class APIUsedCoupon(Resource):
 
         return Response(
             data=result,
-            message="Sử dụng thành công",
+            message=message,
+            message_en="Coupon is successfully registered.<br/>Please use the plan!",
         ).to_dict()
 
 
@@ -277,6 +320,7 @@ class APICreateCoupon(Resource):
         properties={
             "image": {"type": ["string", "null"]},
             "name": {"type": ["string", "null"]},
+            "plan_coupon": {"type": ["string", "null"]},
             "type": {
                 "type": ["string", "null"],
                 "enum": [
@@ -307,6 +351,7 @@ class APICreateCoupon(Resource):
         image = args.get("image", "")
         name = args.get("name", "")
         type = args.get("type", "SUB_STANDARD")
+        plan_coupon = args.get("plan_coupon", "BASIC")
         is_check_user = args.get("is_check_user", False)
         max_per_user = args.get("max_per_user", 1)
         try:
@@ -348,11 +393,13 @@ class APICreateCoupon(Resource):
                 return Response(message="이미 생성된 이름입니다.", code=201).to_dict()
             code_coupon = name
             max_used = 1
+            plan_coupon = ""
 
         coupon = CouponService.create_coupon(
             image=image,
             name=name,
             type=type,
+            plan_coupon=plan_coupon,
             max_used=max_used,
             value=value,
             is_has_whitelist=is_has_whitelist,
@@ -871,3 +918,52 @@ class APIGetUserCoupon(Resource):
             data=coupon,
             message="Lấy coupon user thành công",
         ).to_dict()
+
+
+@ns.route("/delete_coupon")
+class APIDeleteCoupon(Resource):
+    @jwt_required()
+    @admin_required()
+    @parameters(
+        type="object",
+        properties={
+            "post_ids": {"type": "string"},
+        },
+        required=["post_ids"],
+    )
+    def post(self, args):
+        try:
+            post_ids = args.get("post_ids", "")
+            # Chuyển chuỗi post_ids thành list các integer
+            if not post_ids:
+                return Response(
+                    message="No post_ids provided",
+                    code=201,
+                ).to_dict()
+
+            # Tách chuỗi và convert sang list integer
+            id_list = [int(id.strip()) for id in post_ids.split(",")]
+
+            if not id_list:
+                return Response(
+                    message="Invalid post_ids format",
+                    code=201,
+                ).to_dict()
+
+            process_delete = CouponService.delete_by_ids(id_list)
+            if process_delete == 1:
+                message = "Delete coupons code Success"
+            else:
+                message = "Delete coupons code Fail"
+
+            return Response(
+                message=message,
+                code=200,
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Exception: Delete coupons code Fail  :  {str(e)}")
+            return Response(
+                message="Delete coupons code Fail",
+                code=201,
+            ).to_dict()

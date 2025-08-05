@@ -7,6 +7,7 @@ class Coupon(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True)
     image = db.Column(db.String(500))
+    plan_coupon = db.Column(db.String(45))
     name = db.Column(db.String(250), nullable=False)
     description = db.Column(db.Text)
     expired_from = db.Column(db.DateTime)
