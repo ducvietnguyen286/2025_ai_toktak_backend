@@ -17,7 +17,6 @@ import const
 import os
 import secrets
 import string
-import pandas as pd
 from io import BytesIO
 import traceback
 import re
