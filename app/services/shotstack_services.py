@@ -385,20 +385,21 @@ class ShotStackService:
         if IS_S3_DRIVER == 1:
             S3_BUCKET_NAME = config["S3_BUCKET_NAME"]
             date_create_s3 = datetime.datetime.now().strftime("%Y/%m/%d")
+            full_date_create_s3 = f"{date_create_s3}/{batch_id}"
             payload["output"]["destinations"] = [
                 {
                     "provider": "s3",
                     "options": {
                         "region": "ap-northeast-2",
                         "bucket": S3_BUCKET_NAME,
-                        "prefix": date_create_s3,
+                        "prefix": full_date_create_s3,
                         "filename": f"short_video_{batch_id}",
                     },
                 },
                 {"provider": "shotstack", "exclude": True},
             ]
-            s3_url = f"https://{S3_BUCKET_NAME}.s3.ap-northeast-2.amazonaws.com/{date_create_s3}/short_video_{batch_id}.mp4"
-            payload["callback"] =  f"{current_domain}/api/v1/video_maker/shotstack_webhook?batch_id={batch_id}&is_s3=1&url_s3={s3_url}"
+            s3_url = f"https://{S3_BUCKET_NAME}.s3.ap-northeast-2.amazonaws.com/{full_date_create_s3}/short_video_{batch_id}.mp4"
+            payload["callback"] =  f"{current_domain}/api/v1/video_maker/shotstack_webhook?batch_id={batch_id}&is_s3=1&url_s3={s3_url}&full_date_create_s3={full_date_create_s3}"
              
 
         # Header với API Key

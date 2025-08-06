@@ -33,8 +33,11 @@ def un_shotend_url(url):
         }
         response = session.get(url, headers=headers, allow_redirects=False, timeout=10)
 
+        logger.info(f"response: {response}")
+
         if response.status_code in (301, 302, 303, 307, 308):
             redirect_url = response.headers.get("Location")
+            logger.info(f"redirect_url: {redirect_url}")
             if not redirect_url:
                 return url
 
@@ -50,6 +53,7 @@ def un_shotend_url(url):
                 return urllib.parse.unquote(redirect_url)
 
             url = redirect_url
+            # break
 
         return urllib.parse.unquote(url)
 
@@ -87,7 +91,9 @@ def extract_redirect_url_from_script(html_content):
 
 def get_coupang_real_url(real_url, parsed_url):
     if "link.coupang.com" in parsed_url.netloc:
+        logger.info(f"get_coupang_real_url: {real_url}")
         real_url = un_shotend_url(real_url)
+        logger.info(f"coupang_real_url: {real_url}")
         parsed_url = urlparse(real_url)
 
     path = parsed_url.path
@@ -143,6 +149,7 @@ def get_aliexpress_real_url(real_url, parsed_url):
 
 
 def get_real_url(url):
+    logger.info(f"url: {url}")
     parsed_url = urlparse(url)
     netloc = parsed_url.netloc
     if "coupang." in netloc:

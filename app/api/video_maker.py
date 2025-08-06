@@ -192,6 +192,7 @@ class ShortstackWebhook(Resource):
             # Lấy payload JSON từ request
             batch_id = request.args.get("batch_id", 1, type=int)
             is_s3 = request.args.get("is_s3", 0, type=int)
+            full_date_create_s3 = request.args.get("full_date_create_s3", "", type=str)
             log_webhook_message(
                 f"Received Shotstack batch_id: {batch_id}  is_s3: {is_s3}"
             )
@@ -280,7 +281,9 @@ class ShortstackWebhook(Resource):
                     log_webhook_message(
                         f"Không có create_video_detail : render_id={render_id}, status={status}, video_url={video_url}"
                     )
-                file_download_attr = download_video(video_url, batch_id)
+                file_download_attr = download_video(
+                    video_url, batch_id, is_s3, full_date_create_s3
+                )
                 if file_download_attr:
                     file_path = file_download_attr["file_path"]
                     file_download = file_download_attr["file_download"]
@@ -309,23 +312,29 @@ class ShortstackWebhook(Resource):
             return {"message": "Internal Server Error"}, 500
 
 
-def download_video(video_url, batch_id):
+def download_video(video_url, batch_id, is_s3=0, full_date_create_s3=""):
     MAX_RETRIES = 3
     RETRY_DELAY = 2  # giây
     TIMEOUT = 20  # giây
 
     # Lấy ngày hiện tại (YYYY_MM_DD)
+    bucket = os.getenv("AWS_BUCKET")
     today = date.today().strftime("%Y_%m_%d")
-    save_dir = os.path.join("static", "voice", "gtts_voice", today, str(batch_id))
+    s3_date_create = time.strftime("%Y/%m/%d")
+    save_dir = os.path.join(
+        "static", "voice", "gtts_voice", bucket, s3_date_create, str(batch_id)
+    )
     os.makedirs(save_dir, exist_ok=True)
 
     # Thêm timestamp vào tên file để tránh trùng lặp
     timestamp = datetime.now().strftime("%H%M%S")
-    video_filename = os.path.join(save_dir, f"{batch_id}_video_{timestamp}.mp4")
+    video_filename = os.path.join(save_dir, f"short_video_{batch_id}.mp4")
 
     # Domain hiện tại
     current_domain = os.environ.get("CURRENT_DOMAIN", "http://localhost:5000")
     IS_MOUNT = int(os.environ.get("IS_MOUNT", 0))
+
+    S3_PATCH_FOLDER = os.getenv("S3_PATCH_FOLDER", "")
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -366,6 +375,8 @@ def download_video(video_url, batch_id):
                     Path(video_filename).as_posix().replace("static/voice", "/mnt")
                 )
 
+            if is_s3 == 1:
+                video_filename = f"{S3_PATCH_FOLDER}/{bucket}/{full_date_create_s3}/short_video_{batch_id}.mp4"
             return {
                 "file_path": video_filename,
                 "file_download": file_download,

@@ -26,9 +26,11 @@ from app.services.crawl_data import CrawlDataService
 class CoupangScraper:
     def __init__(self, params):
         self.url = params["url"]
+        logger.info(f"self.url: {self.url}")
         self.batch_id = params.get("batch_id", "")
         self.fire_crawl_key = ""
         self.real_url = get_real_url(self.url)
+        logger.info(f"self.real_url: {self.real_url}")
         self.crawl_url_hash = hashlib.sha1(self.real_url.encode()).hexdigest()
         self.count_retry = 5
 
@@ -37,25 +39,26 @@ class CoupangScraper:
 
     def run_wrap_sub_server(self):
         try:
+            logger.info(f"self.crawl_url_hash: {self.crawl_url_hash}")
+            logger.info(f"self.url: {self.url}")
+            logger.info(f"self.real_url: {self.real_url}")
             exist_data = CrawlDataService.find_crawl_data(
                 self.crawl_url_hash, "COUPANG"
             )
             if exist_data:
-                now = datetime.datetime.now()
-                if (now - exist_data.created_at) <= datetime.timedelta(days=30):
-                    return json.loads(exist_data.response)
+                return json.loads(exist_data.response)
 
-                new_data = self.run_sub_server()
-                if new_data:
-                    try:
-                        CrawlDataService.update_crawl_data(
-                            exist_data.id, json.dumps(new_data)
-                        )
-                    except Exception as e:
-                        logger.error(f"Error updating crawl data: {e}")
-                    return new_data
-                else:
-                    return json.loads(exist_data.response)
+                # new_data = self.run_sub_server()
+                # if new_data:
+                #     try:
+                #         CrawlDataService.update_crawl_data(
+                #             exist_data.id, json.dumps(new_data)
+                #         )
+                #     except Exception as e:
+                #         logger.error(f"Error updating crawl data: {e}")
+                #     return new_data
+                # else:
+                #     return json.loads(exist_data.response)
 
             return self.run_sub_server()
         except Exception as e:

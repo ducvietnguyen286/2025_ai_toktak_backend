@@ -34,7 +34,6 @@ pydub~=0.25.1
 Flask-SocketIO~=5.5.1
 gevent-websocket~=0.10.1
 python-docx~=1.1.2
-pandas~=2.0.3
 openpyxl~=3.1.5
 opencv-python~=4.11.0.86
 pillow-avif-plugin~=1.5.1
@@ -47,3 +46,5 @@ requests-oauthlib~=2.0.0
 google-cloud-texttospeech
 google-cloud-vision~=3.10.1
 python-dateutil~=2.9.0
+boto3
+botocore

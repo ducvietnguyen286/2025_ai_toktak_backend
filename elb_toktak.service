@@ -1,0 +1,19 @@
+[Unit]
+Description=Gunicorn instance to serve Flask - Toktak API
+After=network.target
+
+[Service]
+User=root
+Group=www-data
+WorkingDirectory=/var/www/2025_ai_toktak_be
+Environment="PATH=/usr/bin:/var/www/2025_ai_toktak_be/venv/bin:/usr/local/bin:/bin:/sbin"
+ExecStart=/var/www/2025_ai_toktak_be/run_services.sh
+
+StandardOutput=append:/var/www/logs/services_toktak_api_log.log
+StandardError=append:/var/www/logs/services_toktak_api_log.log
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+

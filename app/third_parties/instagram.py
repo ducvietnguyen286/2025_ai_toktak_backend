@@ -298,6 +298,11 @@ class InstagramService(BaseService):
                 + post.hashtag
             )
             images = json.loads(post.images)
+            images_s3 = post.images_s3
+            images_s3 = json.loads(post.images_s3 or "[]")
+            if len(images_s3) > 0:
+                images = images_s3
+            
             media_ids = []
             for index, image in enumerate(images):
                 media_id = self.upload_image(image, index=index + 1)

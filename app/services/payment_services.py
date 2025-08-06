@@ -4,6 +4,7 @@ from app.models.payment import Payment
 from app.models.payment_logs import PaymentLog
 from app.models.payment_detail import PaymentDetail
 from app.models.user_history import UserHistory
+from app.models.refund import Refund
 from app.extensions import db
 from sqlalchemy import and_, func, or_
 from flask import jsonify
@@ -26,7 +27,7 @@ from app.lib.response import Response
 from app.lib.string import generate_order_id
 from app.lib.logger import log_make_repayment_message
 from app.third_parties.email import send_email
-from unittest.mock import Mock
+import math
 
 
 class PaymentService:
@@ -142,7 +143,7 @@ class PaymentService:
             Payment.query.filter_by(user_id=user_id)
             .filter(func.date(Payment.end_date) >= today)
             .filter(Payment.package_name != "ADDON")
-            .order_by(Payment.end_date.desc())
+            .order_by(Payment.id.desc())
             .first()
         )
         return active_payment
@@ -161,7 +162,9 @@ class PaymentService:
         now = datetime.now()
         origin_price = PACKAGE_CONFIG[package_name]["price"]
         start_date = now
-        end_date = start_date + relativedelta(months=1)
+        end_date = (start_date + relativedelta(months=1)).replace(
+            hour=23, minute=59, second=59, microsecond=0
+        )
         user_id = current_user.id
         order_id = generate_order_id()
         payment_data = {
@@ -266,34 +269,42 @@ class PaymentService:
             return PaymentService.create_new_payment(user_id, new_package)
 
         # Tính tiền còn lại của gói cũ
-        remaining_days = (active_payment.end_date - now).days
-        old_price_per_day = active_payment.next_payment / PACKAGE_DURATION_DAYS
-        remaining_value = round(old_price_per_day * remaining_days)
-
-        origin_price = PACKAGE_CONFIG[new_package]["price"]
-
-        final_price = max(0, origin_price - remaining_value)
-        order_id = generate_order_id()
-        new_payment = Payment(
-            parent_id=parent_id,
-            user_id=user_id,
-            order_id=order_id,
-            package_name=new_package,
-            amount=origin_price,
-            next_payment=origin_price,
-            customer_name=current_user.name or current_user.email,
-            method="REQUEST_UPGRADE",
-            price=final_price,
-            requested_at=now,
-            start_date=now,
-            end_date=active_payment.end_date,
-            total_link=PACKAGE_CONFIG[new_package]["total_link"],
-            next_total_link=PACKAGE_CONFIG[new_package]["total_link"],
-            total_create=PACKAGE_CONFIG[new_package]["total_create"],
-            description=f"{new_package} 추가 기능을 구매하세요",
+        payment_user_ugrade_pay = PaymentService.get_payment_must_pay(
+            user_id, active_payment.id, active_payment.package_name, new_package
         )
-        db.session.add(new_payment)
-        db.session.commit()
+        origin_price = PACKAGE_CONFIG[new_package]["price"]
+        order_id = generate_order_id()
+
+        payment_data = {
+            "parent_id": parent_id,
+            "user_id": user_id,
+            "order_id": order_id,
+            "package_name": new_package,
+            "amount": origin_price,
+            "next_payment": origin_price,
+            "customer_name": current_user.name or current_user.email,
+            "method": "REQUEST_UPGRADE",
+            "price": payment_user_ugrade_pay["price"],
+            "requested_at": now,
+            "start_date": now,
+            "end_date": active_payment.end_date,
+            "total_link": PACKAGE_CONFIG[new_package]["total_link"],
+            "next_total_link": PACKAGE_CONFIG[new_package]["total_link"],
+            "total_create": PACKAGE_CONFIG[new_package]["total_create"],
+            "description": f"{new_package} 추가 기능을 구매하세요",
+        }
+        new_payment = PaymentService.create_payment(**payment_data)
+        logger.info(payment_data)
+        payment_data_log = {
+            "payment_id": new_payment.id if new_payment else None,
+            "status_code": 200,
+            "response_json": json.dumps(payment_data, ensure_ascii=False, default=str),
+            "description": json.dumps(
+                payment_user_ugrade_pay, ensure_ascii=False, default=str
+            ),
+        }
+        logger.info(payment_data_log)
+        PaymentService.create_payment_log(**payment_data_log)
         return new_payment
 
     @staticmethod
@@ -390,7 +401,7 @@ class PaymentService:
                     # Payment.status == "PAID",
                     Payment.end_date >= today,
                 )
-                .order_by(Payment.end_date.desc())
+                .order_by(Payment.id.desc())
                 .first()
             )
 
@@ -406,6 +417,7 @@ class PaymentService:
 
             payment_addons = PaymentService.get_payment_basic_addon(payment_basic.id)
             end_date = payment_basic.end_date.date()
+            start_date = payment_basic.start_date.date()
             remaining_days = min((end_date - today).days, 30)
             if remaining_days < 1:
                 return {
@@ -427,6 +439,17 @@ class PaymentService:
             price_to_pay = int(total_amount / duration * remaining_days)
             price_discount = total_amount - price_to_pay
 
+            current_package_detail = const.PACKAGE_CONFIG["BASIC"]
+            # tiền 1 ngày của gói hiện tại
+            base_day_price = int(
+                total_amount / current_package_detail.get("duration_days", 30)
+            )
+            used_days = (today - start_date).days if start_date else 0
+            # tien đã sử dụng
+            used_money = base_day_price * used_days if used_days else 0
+            money_rollback = total_amount - used_money
+            price_to_pay = max(0, total_amount - used_money)
+
             return {
                 "addon_count": addon_count,
                 "payment_addons": [
@@ -437,7 +460,7 @@ class PaymentService:
                 "message": f"Bạn có thể mua addon. Còn {remaining_days} ngày. calculate_addon_price",
                 "duration": duration,
                 "amount": total_amount,
-                "discount": price_discount,
+                "discount": used_money,
                 "price": price_to_pay,
                 "addon_price": total_amount,
                 "total_discount": price_discount * addon_count,
@@ -447,6 +470,10 @@ class PaymentService:
                 "basic_payment_id": payment_basic.id,
                 "basic_price": basic_price,
                 "basic_end_date": end_date.strftime("%Y-%m-%d"),
+                "used_days": used_days,
+                "used_money": used_money,
+                "money_rollback": money_rollback,
+                "base_day_price": base_day_price,
             }
         except Exception as ex:
 
@@ -552,7 +579,6 @@ class PaymentService:
             today = datetime.now().date()
             start_date_default = today
             end_date_default = today + timedelta(days=30)
-            logger.info(addon_count)
 
             # Kiểm tra gói mới có hợp lệ không
             new_package_info = const.PACKAGE_CONFIG.get(new_package)
@@ -704,11 +730,20 @@ class PaymentService:
             # tính tiền basic và addon
 
             current_price = PaymentService.get_total_price(current_payment.id)
+            # tiền 1 ngày của gói hiện tại
+            base_day_price = current_price / current_package_detail.get(
+                "duration_days", 30
+            )
+
+            # tien đã sử dụng
+            used_money = base_day_price * used_days if used_days else 0
+            money_rollback = current_price - used_money
 
             current_days = current_package_detail.get("duration_days", 30)
-            discount = int(current_price / current_days * remaining_days)
+            discount = used_money
             new_package_price = new_package_info["price"]
-            upgrade_price = max(0, new_package_price - discount)
+
+            upgrade_price = max(0, new_package_price - money_rollback)
             amount = upgrade_price
             discount_welcome = (
                 new_package_info["price_origin"] - new_package_info["price"]
@@ -723,9 +758,12 @@ class PaymentService:
                 "upgrade_origin_price": new_package_price,
                 "current_package": current_package,
                 "current_price": current_price,
+                "base_day_price": base_day_price,
                 "remaining_days": remaining_days,
                 "used_days": used_days,
-                "discount": discount,
+                "used_money": used_money,
+                "money_rollback": money_rollback,
+                "discount": used_money,
                 "amount": new_package_price,
                 "price": upgrade_price,
                 "new_package_price": new_package_price,
@@ -750,6 +788,61 @@ class PaymentService:
                 "message": "Có lỗi xảy ra khi tính toán nâng cấp.",
                 "message_en": "Error occurred while calculating upgrade.",
             }
+
+    @staticmethod
+    def get_payment_must_pay(user_id, payment_id, current_package, upgrade_package):
+        # Tính toán giá nâng cấp gói
+        current_package_detail = const.PACKAGE_CONFIG[current_package]
+        new_package_info = const.PACKAGE_CONFIG[upgrade_package]
+        today = datetime.now().date()
+        current_payment = (
+            Payment.query.filter(
+                Payment.user_id == user_id,
+                Payment.package_name != "ADDON",
+                Payment.end_date >= today,
+            )
+            .order_by(Payment.end_date.desc())
+            .first()
+        )
+
+        start_date = (
+            current_payment.start_date.date() if current_payment.start_date else None
+        )
+
+        used_days = (today - start_date).days if start_date else 0
+
+        current_price = PaymentService.get_total_price(payment_id)
+        # tiền 1 ngày của gói hiện tại
+        base_day_price = current_price / current_package_detail.get("duration_days", 30)
+
+        # tien đã sử dụng
+        used_money = base_day_price * used_days if used_days else 0
+        money_rollback = current_price - used_money
+
+        current_days = current_package_detail.get("duration_days", 30)
+        discount = used_money
+        new_package_price = new_package_info["price"]
+
+        upgrade_price = max(0, new_package_price - money_rollback)
+        discount_welcome = new_package_info["price_origin"] - new_package_info["price"]
+        return {
+            "upgrade_origin_price": new_package_price,
+            "current_package": current_package,
+            "current_price": current_price,
+            "base_day_price": base_day_price,
+            "used_days": used_days,
+            "used_money": used_money,
+            "money_rollback": money_rollback,
+            "discount": discount,
+            "amount": new_package_price,
+            "price": upgrade_price,
+            "new_package_price": new_package_price,
+            "new_package_price_origin": new_package_info["price_origin"],
+            "discount_welcome": discount_welcome,
+            "start_date": start_date.strftime("%Y-%m-%d") if start_date else None,
+            "current_package_detail": current_package_detail,
+            "current_days": current_days,
+        }
 
     @staticmethod
     def confirm_payment_toss(payment_key, order_id, amount):
@@ -832,17 +925,21 @@ class PaymentService:
                 end_date = payment.end_date
                 child_amount = payment.amount
                 child_total_link = payment.total_link
+                total_create = payment.total_create
 
                 if parent_id > 0:
-
                     payment_parent = PaymentService.find_payment(parent_id)
                     parent_amount = payment_parent.amount
                     parent_total_link = payment_parent.total_link
 
                     # update old payment để không thể tự động trừ tiền
                     # vì ngày kết thúc của gói nâng cấp sẽ bằng gói mới
+                    is_renew = 0
+                    if package_name != "ADDON":
+                        # Nếu là gói nâng cấp thì không cần đánh dấu is_renew
+                        is_renew = 1
                     data_update_old_payment = {
-                        "is_renew": 1,
+                        "is_renew": is_renew,
                         "next_payment": child_amount + parent_amount,
                         "next_total_link": min(child_total_link + parent_total_link, 7),
                     }
@@ -850,12 +947,10 @@ class PaymentService:
 
                 user_detail = UserService.find_user(user_id)
                 if package_name == "ADDON":
-
                     if user_detail:
                         total_link_active = user_detail.total_link_active
-                        data_update = {
-                            "total_link_active": total_link_active + total_link,
-                        }
+                        new_total_link_active = min(total_link_active + total_link, 3)
+                        data_update = {"total_link_active": new_total_link_active}
 
                         UserService.update_user(user_id, **data_update)
                         data_user_history = {
@@ -869,7 +964,7 @@ class PaymentService:
                             "description": "Basic 추가 기능을 구매하세요.",
                             "value": 0,
                             "num_days": 0,
-                            "total_link_active": 0,
+                            "total_link_active": new_total_link_active,
                         }
                         UserService.create_user_history(**data_user_history)
                 else:
@@ -879,7 +974,7 @@ class PaymentService:
                             message="유효하지 않은 패키지입니다.", code=201
                         ).to_dict()
 
-                    subscription_expired = payment.end_date
+                    subscription_expired = end_date
 
                     batch_total = UserService.get_total_batch_total(user_id)
                     login_user_subscription = user_detail.subscription
@@ -892,19 +987,17 @@ class PaymentService:
                     data_update = {
                         "subscription": package_name,
                         "subscription_expired": subscription_expired,
-                        "batch_total": batch_total + payment.total_create,
+                        "batch_total": batch_total + total_create,
                         "batch_remain": batch_remain,
-                        "total_link_active": min(
-                            total_link_active + payment.total_link, 7
-                        ),
+                        "total_link_active": min(total_link_active + total_link, 7),
                     }
 
                     UserService.update_user(user_id, **data_update)
                     data_user_history = {
                         "user_id": user_id,
                         "type": "payment",
-                        "object_id": payment.id,
-                        "object_start_time": payment.start_date,
+                        "object_id": object_id,
+                        "object_start_time": start_date,
                         "object_end_time": subscription_expired,
                         "title": package_data["pack_name"],
                         "description": package_data["pack_description"],
@@ -1256,14 +1349,16 @@ class PaymentService:
 
     @staticmethod
     def get_user_billings(data_search):
-        query = Payment.query.filter(Payment.method != "NEW_USER")
         search_key = data_search.get("search_key", "")
         user_id_login = data_search.get("user_id_login", "")
-        query = query.filter(Payment.user_id == user_id_login)
-
-        if search_key != "":
+        filters = [
+            Payment.method != "NEW_USER",
+            Payment.user_id == user_id_login,
+            Payment.status == const.PAID,
+        ]
+        if search_key:
             search_pattern = f"%{search_key}%"
-            query = query.filter(
+            filters.append(
                 or_(
                     Payment.package_name.ilike(search_pattern),
                     Payment.customer_name.ilike(search_pattern),
@@ -1271,10 +1366,129 @@ class PaymentService:
                 )
             )
 
-         
+        query = Payment.query.filter(*filters)
         query = query.order_by(Payment.id.desc())
+        pagination = query.paginate(
+            page=data_search["page"], per_page=data_search["per_page"], error_out=False
+        )
+        return pagination
+
+    @staticmethod
+    def find_refund(id):
+        return Refund.query.get(id)
+
+    @staticmethod
+    def find_refund_by_payment_id(id):
+        return Refund.query.filter(Refund.payment_id == id).first()
+
+    @staticmethod
+    def create_refund_payment(*args, **kwargs):
+        try:
+            refund_detail = Refund(*args, **kwargs)
+            refund_detail.save()
+            return refund_detail
+        except Exception as ex:
+            logger.error(f"Error creating payment_log: {ex}")
+            return None
+
+    @staticmethod
+    def get_payment_must_refund(payment_id):
+        # Tính toán giá refund
+        today = datetime.now().date()
+        payment_detail = PaymentService.find_payment(payment_id)
+        package_name = payment_detail.package_name
+        current_package_detail = const.PACKAGE_CONFIG[package_name]
+        start_date = payment_detail.start_date.date()
+        end_date = payment_detail.end_date.date()
+        used_days = (today - start_date).days if start_date else 0
+        current_price = int(payment_detail.price)
+        # tiền 1 ngày của gói hiện tại
+        base_day_price = int(
+            current_price / current_package_detail.get("duration_days", 30)
+        )
+
+        # tien đã sử dụng
+        used_money = base_day_price * used_days if used_days else 0
+        money_rollback = current_price - used_money
+
+        current_days = current_package_detail.get("duration_days", 30)
+        discount = used_money
+
+        return {
+            "package_name": package_name,
+            "current_price": current_price,
+            "base_day_price": base_day_price,
+            "used_days": used_days,
+            "used_money": used_money,
+            "money_rollback": money_rollback,
+            "discount": discount,
+            "start_date": start_date.strftime("%Y-%m-%d") if start_date else None,
+            "end_date": end_date.strftime("%Y-%m-%d") if end_date else None,
+            "current_days": current_days,
+            "current_package_detail": current_package_detail,
+        }
+
+    @staticmethod
+    def get_admin_refund_billings(data_search):
+        query = Refund.query
+        search_key = data_search.get("search_key", "")
+
+        if search_key != "":
+            query = query.join(User, Refund.user_id == User.id)
+            search_pattern = f"%{search_key}%"
+            query = query.filter(
+                or_(
+                    Refund.package_name.ilike(search_pattern),
+                    Refund.customer_name.ilike(search_pattern),
+                    User.email.ilike(search_pattern),
+                )
+            )
+
+        # Xử lý type_order
+        order = data_search.get("type_order", "id_desc")
+        if order == "id_asc":
+            query = query.order_by(Refund.id.asc())
+        else:
+            query = query.order_by(Refund.id.desc())
+
+        # Xử lý type_Refund
+        package = data_search.get("type_payment")
+        if package in ["BASIC", "STANDARD", "BUSINESS", "FREE"]:
+            query = query.filter(Refund.package_name == package)
+
+
+        time_range = data_search.get("time_range")
+        if time_range == "today":
+            start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(Refund.created_at >= start)
+        elif time_range == "last_week":
+            query = query.filter(Refund.created_at >= datetime.now() - timedelta(days=7))
+        elif time_range == "last_month":
+            query = query.filter(Refund.created_at >= datetime.now() - timedelta(days=30))
+        elif time_range == "last_year":
+            query = query.filter(Refund.created_at >= datetime.now() - timedelta(days=365))
+        elif time_range == "from_to":
+            if "from_date" in data_search:
+                from_date = datetime.strptime(data_search["from_date"], "%Y-%m-%d")
+                query = query.filter(Refund.created_at >= from_date)
+            if "to_date" in data_search:
+                to_date = datetime.strptime(data_search["to_date"], "%Y-%m-%d") + timedelta(days=1)
+                query = query.filter(Refund.created_at < to_date)
 
         pagination = query.paginate(
             page=data_search["page"], per_page=data_search["per_page"], error_out=False
         )
         return pagination
+
+    @staticmethod
+    def deleteRefundPayment(post_ids):
+        try:
+           
+            Refund.query.filter(Refund.id.in_(post_ids)).delete(
+                synchronize_session=False
+            )
+            db.session.commit()
+        except Exception as ex:
+            db.session.rollback()
+            return 0
+        return 1

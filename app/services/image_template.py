@@ -13,6 +13,7 @@ from app.lib.query import (
     update_by_id,
 )
 
+from app.lib.logger import log_create_content_message, logger
 
 class ImageTemplateService:
 
@@ -78,6 +79,7 @@ class ImageTemplateService:
         )
 
         image_urls = []
+        image_s3_urls = []
         other_images = []
         other_captions = []
         file_size = 0
@@ -90,6 +92,7 @@ class ImageTemplateService:
                     template, captions, parse_color, post.batch_id
                 )
                 image_urls.append(res_visual["image_url"])
+                image_s3_urls.append(res_visual["image_s3_url"])
                 file_size += res_visual["file_size"]
                 if len(process_images) > 1:
                     other_captions = captions[1:]
@@ -108,6 +111,7 @@ class ImageTemplateService:
                     is_avif=is_avif,
                 )
                 image_urls.append(res_visual["image_url"])
+                image_s3_urls.append(res_visual["image_s3_url"])
                 file_size += res_visual["file_size"]
                 other_images = process_images[1:]
                 other_captions = captions[1:]
@@ -122,9 +126,11 @@ class ImageTemplateService:
                     is_avif=is_avif,
                 )
                 image_urls.append(res_visual["image_url"])
+                image_s3_urls.append(res_visual["image_s3_url"])
                 file_size += res_visual["file_size"]
                 other_images = process_images[1:]
                 other_captions = captions[1:]
+                
 
         for index, image_url in enumerate(other_images):
             image_caption = other_captions[index] if index < len(other_captions) else ""
@@ -136,10 +142,12 @@ class ImageTemplateService:
                 is_avif=is_avif,
             )
             image_urls.append(res_img["image_url"])
+            image_s3_urls.append(res_img["image_s3_url"])
             file_size += res_img["file_size"]
 
         return {
             "image_urls": image_urls,
+            "image_s3_urls": image_s3_urls,
             "file_size": file_size,
             "mime_type": "image/jpeg",
         }

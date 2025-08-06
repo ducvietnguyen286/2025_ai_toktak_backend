@@ -594,6 +594,10 @@ class FacebookService(BaseService):
 
         images = post.images
         images = json.loads(images)
+        images_s3 = post.images_s3
+        images_s3 = json.loads(post.images_s3 or "[]")
+        if len(images_s3) > 0:
+            images = images_s3
 
         photo_ids = self.unpublish_images(
             images=images, page_id=page_id, page_access_token=page_access_token

@@ -6,6 +6,7 @@ import json
 from app.services.auth import AuthService
 from app.services.payment_services import PaymentService
 from app.services.notification import NotificationServices
+from app.services.shotstack_services import ShotStackService
 from app.services.user import UserService
 from app.decorators import parameters, admin_required
 from app.lib.response import Response
@@ -15,6 +16,7 @@ import const
 import traceback
 import datetime
 from dateutil.relativedelta import relativedelta
+from app.enums.messages import message_payment
 
 from app.lib.string import generate_order_id
 
@@ -40,6 +42,7 @@ class APICreateNewPayment(Resource):
 
         current_user = AuthService.get_current_identity()
         user_id_login = current_user.id
+        batch_remain = current_user.batch_remain
         user_subscription = current_user.subscription
         if user_subscription == "FREE":
             message = f"{package_name} 요금제가 성공적으로 등록되었습니다."
@@ -47,55 +50,101 @@ class APICreateNewPayment(Resource):
             message = f"{package_name} 요금제가 성공적으로 등록되었습니다."
         # Kiểm tra xem đã đăng kí gói nào chưa
         active = PaymentService.has_active_subscription(user_id_login)
+        log_make_repayment_message(active)
+        # đã mua gói nhưng mà hết quyền tạo nội dung thì kiểm tra xem có gói nào còn hạn sử dụng không
+        # còn nế batch_remain == 0 thì được mua gói mới mà không cần kiểm tra gói cũ
         if active:
             active_status = active.status
+            log_make_repayment_message(active_status)
+            log_make_repayment_message(batch_remain)
             if active_status == "PENDING":
-                message = f"고객님께서 {package_name} 패키지 구매를 요청하셨습니다. 서비스 이용을 위해 시스템의 확인을 기다려 주시기 바랍니다."
-                message_en = f" You have purchased the {package_name} package. Please wait for system confirmation to start using the service."
+                message = (
+                    message_payment.CHECK_BUY_PAYMENT.value["error_message"].format(
+                        package_name=package_name
+                    ),
+                )
+                message_en = (
+                    message_payment.CHECK_BUY_PAYMENT.value["error_message_en"].format(
+                        package_name=package_name
+                    ),
+                )
                 return Response(
                     message=message, message_en=message_en, code=201
                 ).to_dict()
 
-            # Đã đăng kí gói nào chưa
-            # Không cho downgrade
-            if not PaymentService.can_upgrade(active.package_name, package_name):
-                message = f"{active.package_name}에서 {package_name}(으)로 하향 변경할 수 없습니다."
+            if batch_remain == 0:
+                # update payment cũ để lần sau không tự động gia hạn
+                old_payment = active.id
+                data_update_old_payment = {
+                    "description": json.dumps(
+                        {
+                            "vi": "Gói payment cũ sẽ không được gia hạn.",
+                            "en": "The old payment package will not be renewed.",
+                            "ko": "기존 결제 패키지는 갱신되지 않습니다.",
+                        }
+                    ),
+                    "is_renew": 1,
+                }
+                PaymentService.update_payment(old_payment, **data_update_old_payment)
+            else:
+                # Đã đăng kí gói nào chưa
+                # Không cho downgrade
+                if not PaymentService.can_upgrade(active.package_name, package_name):
+                    message = (
+                        message_payment.CHECK_UPGRADE_PAYMENT.value[
+                            "error_message"
+                        ].format(
+                            old_package_name=active.package_name,
+                            package_name=package_name,
+                        ),
+                    )
+                    message_en = (
+                        message_payment.CHECK_UPGRADE_PAYMENT.value[
+                            "error_message_en"
+                        ].format(
+                            old_package_name=active.package_name,
+                            package_name=package_name,
+                        ),
+                    )
+
+                    NotificationServices.create_notification(
+                        user_id=user_id_login,
+                        title=message,
+                        notification_type="payment",
+                    )
+                    return Response(
+                        message=message, message_en=message_en, code=201
+                    ).to_dict()
+
+                # Kiểm tra có được phép upgrade không
+                if not PaymentService.process_subscription_request(
+                    current_user, package_name
+                ):
+                    message = f"이전 요금제가 아직 유효하기 때문에 {package_name} 요금제로 업그레이드하실 수 없습니다."
+                    NotificationServices.create_notification(
+                        user_id=user_id_login,
+                        title=message,
+                        notification_type="payment",
+                    )
+                    return Response(message=message, code=201).to_dict()
+
+                # ✅ Được phép upgrade
+                message = f"{active.package_name} 요금제를 {package_name} 요금제로 성공적으로 업그레이드했습니다."
+                parent_id = active.id
+                payment_upgrade = PaymentService.upgrade_package(
+                    current_user, package_name, parent_id
+                )
+
                 NotificationServices.create_notification(
                     user_id=user_id_login,
                     title=message,
                     notification_type="payment",
                 )
-                return Response(message=message, code=201).to_dict()
-
-            # Kiểm tra có được phép upgrade không
-            if not PaymentService.process_subscription_request(
-                current_user, package_name
-            ):
-                message = f"이전 요금제가 아직 유효하기 때문에 {package_name} 요금제로 업그레이드하실 수 없습니다."
-                NotificationServices.create_notification(
-                    user_id=user_id_login,
-                    title=message,
-                    notification_type="payment",
-                )
-                return Response(message=message, code=201).to_dict()
-
-            # ✅ Được phép upgrade
-            message = f"{active.package_name} 요금제를 {package_name} 요금제로 성공적으로 업그레이드했습니다."
-            parent_id = active.id
-            payment_upgrade = PaymentService.upgrade_package(current_user, package_name , parent_id)
-            
-            
-                    
-            NotificationServices.create_notification(
-                user_id=user_id_login,
-                title=message,
-                notification_type="payment",
-            )
-            return Response(
-                message=message,
-                data={"payment": payment_upgrade._to_json()},
-                code=200,
-            ).to_dict()
+                return Response(
+                    message=message,
+                    data={"payment": payment_upgrade._to_json()},
+                    code=200,
+                ).to_dict()
 
         # Đăng kí gói mới
         payment = PaymentService.create_new_payment(
@@ -261,12 +310,11 @@ class APIAdminNotificationHistories(Resource):
 @ns.route("/admin/approval")
 class APIPaymentApproval(Resource):
     @jwt_required()
+    @admin_required()
     def post(self):
         data = request.get_json()
         payment_id = data.get("payment_id")
-
         result = PaymentService.approvalPayment(payment_id)
-
         return result
 
 
@@ -309,10 +357,15 @@ class APIDeletePending(Resource):
     )
     def post(self, args):
         try:
-            return Response(
-                message="",
-                code=200,
-            ).to_dict()
+
+            config = ShotStackService.get_settings()
+            IS_PAYMENT_DRAFT = config.get("IS_PAYMENT_DRAFT", "0")
+            # Nếu IS_PAYMENT_DRAFT là 1 thì không thực hiện xóa
+            if IS_PAYMENT_DRAFT == "1":
+                return Response(
+                    message="",
+                    code=200,
+                ).to_dict()
 
             payment_id = args.get("payment_id", "")
 
@@ -455,9 +508,6 @@ class APIPaymentConfirm(Resource):
             }
 
             PaymentService.create_payment_log(**payment_data_log)
-            logger.info("_------------------------------------payment_data_log")
-            logger.info(payment_data_log)
-            logger.info(payment_data)
 
             if status_code == 200:
                 # Thanh toán thành công, cập nhật DB
@@ -729,5 +779,170 @@ class APIGetHistory(Resource):
             "page": billings.page,
             "per_page": billings.per_page,
             "total_pages": billings.pages,
-            "data": [billing_detail.to_dict_user() for billing_detail in billings.items],
+            "data": [
+                billing_detail.to_dict_user() for billing_detail in billings.items
+            ],
         }, 200
+
+
+@ns.route("/refund/request")
+class RefundRequest(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            user_id_login = AuthService.get_user_id()
+            data = request.get_json()
+            payment_id = data.get("payment_id")
+
+            payment_refund_detail = PaymentService.get_payment_must_refund(payment_id)
+
+            payment_refund = PaymentService.find_refund_by_payment_id(payment_id)
+            if payment_refund:
+                error_message = message_payment.CHECK_EXITS_REFUND_PAYMENT.value[
+                    "error_message"
+                ]
+                error_message_en = message_payment.CHECK_EXITS_REFUND_PAYMENT.value[
+                    "error_message_en"
+                ]
+
+                return Response(
+                    message=error_message,
+                    message_en=error_message_en,
+                    code=201,
+                ).to_dict()
+
+            refund_data_log = {
+                "payment_id": payment_id,
+                "user_id": user_id_login,
+                "package_name": payment_refund_detail["package_name"],
+                "amount": payment_refund_detail["money_rollback"],
+                "reason": "사용자가 환불을 요청했습니다.",
+                "admin_note": "",
+            }
+
+            refund = PaymentService.create_refund_payment(**refund_data_log)
+            if not refund:
+                return Response(
+                    message=message_payment.CREATE_FAIL_REFUND_PAYMENT.value[
+                        "error_message"
+                    ],
+                    message_en=message_payment.CREATE_FAIL_REFUND_PAYMENT.value[
+                        "error_message"
+                    ],
+                    code=201,
+                ).to_dict()
+
+            return Response(
+                message=message_payment.CREATE_REFUND_PAYMENT.value["error_message"],
+                message_en=message_payment.CREATE_REFUND_PAYMENT.value["error_message"],
+                data={"refund": refund.to_dict()},
+            ).to_dict()
+
+        except Exception as ex:
+            logger.error(f"[Webhook] ❌ Lỗi xử lý webhook: {ex}")
+            return Response(
+                message="Xử lý thất bại", data={"status": "FAILED"}, code=500
+            ).to_dict()
+
+
+
+@ns.route("/admin/refund_histories")
+class APIAdminNotificationHistories(Resource):
+    @jwt_required()
+    @admin_required()
+    def get(self):
+        page = request.args.get("page", const.DEFAULT_PAGE, type=int)
+        per_page = request.args.get("per_page", const.DEFAULT_PER_PAGE, type=int)
+        status = request.args.get("status", const.UPLOADED, type=int)
+        type_order = request.args.get("type_order", "", type=str)
+        type_post = request.args.get("type_post", "", type=str)
+        time_range = request.args.get("time_range", "", type=str)
+        type_payment = request.args.get("type_payment", "", type=str)
+        search_key = request.args.get("search_key", "", type=str)
+        from_date = request.args.get("from_date", "", type=str)
+        to_date = request.args.get("to_date", "", type=str)
+        data_search = {
+            "page": page,
+            "per_page": per_page,
+            "status": status,
+            "type_order": type_order,
+            "type_post": type_post,
+            "time_range": time_range,
+            "type_payment": type_payment,
+            "search_key": search_key,
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        billings = PaymentService.get_admin_refund_billings(data_search)
+        return {
+            "status": True,
+            "message": "Success",
+            "total": billings.total,
+            "page": billings.page,
+            "per_page": billings.per_page,
+            "total_pages": billings.pages,
+            "data": [post.to_dict() for post in billings.items],
+        }, 200
+
+
+
+
+@ns.route("/admin/delete_refund")
+class APIDeleteAccount(Resource):
+    @jwt_required()
+    @parameters(
+        type="object",
+        properties={
+            "post_ids": {"type": "string"},
+        },
+        required=["post_ids"],
+    )
+    def post(self, args):
+        try:
+            post_ids = args.get("post_ids", "")
+            # Chuyển chuỗi post_ids thành list các integer
+            if not post_ids:
+                return Response(
+                    message="No post_ids provided",
+                    code=201,
+                ).to_dict()
+
+            # Tách chuỗi và convert sang list integer
+            id_list = [int(id.strip()) for id in post_ids.split(",")]
+
+            if not id_list:
+                return Response(
+                    message="Invalid post_ids format",
+                    code=201,
+                ).to_dict()
+
+            process_delete = PaymentService.deleteRefundPayment(id_list)
+            if process_delete == 1:
+                message = "Delete Refund Success"
+            else:
+                message = "Delete Refund Fail"
+
+            return Response(
+                message=message,
+                code=200,
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(f"Exception: Delete Refund Fail  :  {str(e)}")
+            return Response(
+                message="Delete Refund Fail",
+                code=201,
+            ).to_dict()
+            
+@ns.route("/admin/refund_detail/<path:id>")
+class APIRefundDetailById(Resource):
+
+    @jwt_required()
+    @admin_required()
+    def get(self, id):
+
+        user = PaymentService.find_refund(id)
+        return Response(
+            data=user._to_json(),
+            message="Get User Info",
+        ).to_dict()

@@ -14,7 +14,7 @@ class PaymentLog(db.Model, BaseModel):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     # Quan hệ 1-n với Payment
-    payment = db.relationship("Payment", backref="logs")
+    payment = db.relationship("Payment", lazy="joined")
 
     def to_dict(self):
         return {

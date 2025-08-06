@@ -138,50 +138,60 @@ class CreateContent:
             user_id = batch.user_id
             url = data.get("input_url", "")
 
+<<<<<<< HEAD
             if is_advance == 0:
+=======
+            log_create_content_message(f"is_advance: {is_advance}")
+>>>>>>> a84945672f1d3f72a3b4d418e0916c3d30c5437a
 
-                data = Scraper().scraper({"url": url, "batch_id": batch_id})
+            # if is_advance == 0:
+            url = data.get("input_url", "")
 
-                if not data:
-                    NotificationServices.create_notification(
-                        user_id=user_id,
-                        status=const.NOTIFICATION_FALSE,
-                        title=f"❌ 해당 {url} 은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
-                        description=f"Scraper False {url}",
-                    )
+            log_create_content_message(f"url: {url}")
 
-                    redis_user_batch_key = f"toktak:users:batch_remain:{user_id}"
-                    user = UserService.find_user(user_id)
-                    redis_client.set(
-                        redis_user_batch_key, user.batch_remain + 1, ex=180
-                    )
+            data = Scraper().scraper({"url": url, "batch_id": batch_id})
 
-                    self.update_batch_error_analyze(batch_id)
+            log_create_content_message(f"data: {data}")
 
-                    return None
-
-                thumbnail_url = data.get("image", "")
-                thumbnails = data.get("thumbnails", [])
-
-                shorten_link, is_shorted = ShortenServices.shorted_link(url)
-                data["base_url"] = shorten_link
-                data["shorten_link"] = shorten_link if is_shorted else ""
-
-                product_name = data.get("name", "")
-                product_name_cleared = call_chatgpt_clear_product_name(product_name)
-                if product_name_cleared:
-                    data["name"] = product_name_cleared
-
-                BatchService.update_batch(
-                    batch_id,
-                    thumbnail=thumbnail_url,
-                    thumbnails=json.dumps(thumbnails),
-                    base_url=shorten_link,
-                    shorten_link=shorten_link,
-                    content=json.dumps(data),
+            if not data:
+                NotificationServices.create_notification(
+                    user_id=user_id,
+                    status=const.NOTIFICATION_FALSE,
+                    title=f"❌ 해당 {url} 은 분석이 불가능합니다. 올바른 링크인지 확인해주세요.",
+                    description=f"Scraper False {url}",
                 )
-            else:
-                data = json.loads(batch.content)
+
+                redis_user_batch_key = f"toktak:users:batch_remain:{user_id}"
+                user = UserService.find_user(user_id)
+                redis_client.set(redis_user_batch_key, user.batch_remain + 1, ex=180)
+
+                self.update_batch_error_analyze(batch_id)
+
+                return None
+
+            thumbnail_url = data.get("image", "")
+            thumbnails = data.get("thumbnails", [])
+
+            shorten_link, is_shorted = ShortenServices.shorted_link(url)
+            data["base_url"] = shorten_link
+            data["shorten_link"] = shorten_link if is_shorted else ""
+
+            product_name = data.get("name", "")
+            product_name_cleared = call_chatgpt_clear_product_name(product_name)
+            if product_name_cleared:
+                data["name"] = product_name_cleared
+
+            BatchService.update_batch(
+                batch_id,
+                thumbnail=thumbnail_url,
+                thumbnails=json.dumps(thumbnails),
+                base_url=shorten_link,
+                shorten_link=shorten_link,
+                content=json.dumps(data),
+            )
+            log_create_content_message(f"batch_id: {batch_id}")
+            # else:
+            #     data = json.loads(batch.content)
 
             if not is_advance:
                 user_template = PostService.get_template_video_by_user_id(user_id)
@@ -309,6 +319,10 @@ class CreateContent:
                 "thumbnails": json.dumps(thumbnails),
                 "content": json.dumps(content),
             }
+            log_create_content_message(
+                f"Updating batch {batch_id} with images and thumbnails"
+            )
+            log_create_content_message(data_update_batch)
             BatchService.update_batch(batch_id, **data_update_batch)
             return batch_id
 
@@ -412,6 +426,7 @@ class CreateContent:
                 cleared_images = data.get("cleared_images", [])
 
                 process_images = json.loads(thumbnails)
+                process_s3_images = json.loads(thumbnails)
                 if process_images and len(process_images) < need_count:
                     current_length = len(process_images)
                     need_length = need_count - current_length
@@ -447,6 +462,7 @@ class CreateContent:
                 render_id = ""
                 hooking = []
                 maker_images = []
+                maker_s3_images = []
                 captions = []
                 thumbnail = batch.thumbnail
                 file_size = 0
@@ -470,6 +486,7 @@ class CreateContent:
                         render_id,
                         hooking,
                         maker_images,
+                        maker_s3_images,
                         captions,
                     ) = result
 
@@ -482,6 +499,7 @@ class CreateContent:
                     (
                         response,
                         maker_images,
+                        maker_s3_images,
                         captions,
                         file_size,
                         mime_type,
@@ -570,11 +588,11 @@ class CreateContent:
                 if should_replace_shortlink(url):
                     shorten_link = batch.shorten_link
                     description = description.replace(url, shorten_link)
-
                 post = PostService.update_post(
                     post.id,
                     thumbnail=thumbnail,
                     images=json.dumps(maker_images),
+                    images_s3=json.dumps(maker_s3_images),
                     captions=json.dumps(captions),
                     title=title,
                     subtitle=subtitle,
@@ -761,6 +779,7 @@ def process_create_post_image(process_images, data, batch, post):
     )
     response = None
     maker_images = []
+    maker_s3_images = []
     captions = []
     file_size = 0
     mime_type = ""
@@ -778,7 +797,7 @@ def process_create_post_image(process_images, data, batch, post):
             return None
 
         is_avif = check_is_avif(data)
-
+        log_create_content_message(process_images)
         response = call_chatgpt_create_social(process_images, data, post.id)
         if response:
             parse_caption = json.loads(response)
@@ -796,9 +815,11 @@ def process_create_post_image(process_images, data, batch, post):
                 is_avif=is_avif,
             )
             image_urls = img_res.get("image_urls", [])
+            image_s3_urls = img_res.get("image_s3_urls", [])
             file_size = img_res.get("file_size", 0)
             mime_type = img_res.get("mime_type", "")
             maker_images = image_urls
+            maker_s3_images = image_s3_urls
         else:
             message_error = MessageError.CREATE_POST_IMAGE.value
             log_create_content_message(f"Error creating image post: {message_error}")
@@ -811,7 +832,7 @@ def process_create_post_image(process_images, data, batch, post):
 
             return None
 
-        return response, maker_images, captions, file_size, mime_type
+        return response, maker_images , maker_s3_images, captions, file_size, mime_type
     except Exception as e:
         traceback = e.__traceback__
         if traceback:
@@ -835,6 +856,7 @@ def process_create_post_video(process_images, data, batch, post):
     )
     response = None
     maker_images = []
+    maker_s3_images = []
     render_id = ""
     hooking = []
     captions = []
@@ -856,10 +878,11 @@ def process_create_post_video(process_images, data, batch, post):
             captions = split_text_by_sentences(caption, len(process_images))
 
             for image_url in process_images:
-                maker_image = ImageMaker.save_image_for_short_video(
+                maker_image , image_s3_url = ImageMaker.save_image_for_short_video(
                     image_url, batch_id, is_avif=is_avif
                 )
                 maker_images.append(maker_image)
+                maker_s3_images.append(image_s3_url)
 
             # Tạo video từ ảnh
             if len(maker_images) > 0:
@@ -895,10 +918,6 @@ def process_create_post_video(process_images, data, batch, post):
                 log_create_content_message(f"Data make video: {data_make_video}")
 
                 result = ShotStackService.create_video_from_images_v2(data_make_video)
-
-                logger.info(
-                    f"ShotStackService.create_video_from_images_v2 result: {result}"
-                )
 
                 if result["status_code"] == 200:
                     render_id = result["response"]["id"]
@@ -958,7 +977,7 @@ def process_create_post_video(process_images, data, batch, post):
             )
             return None
 
-        return response, render_id, hooking, maker_images, captions
+        return response, render_id, hooking, maker_images, maker_s3_images, captions
     except Exception as e:
         traceback = e.__traceback__
         if traceback:

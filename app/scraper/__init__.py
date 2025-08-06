@@ -22,6 +22,9 @@ def get_page_scraper(params):
     scraper = None
     parsed_url = urlparse(url)
     netloc = parsed_url.netloc
+
+    logger.info(f"netloc: {netloc}")
+
     if "domeggook." in netloc:
         scraper = DomeggookScraper(params)
     elif "coupang." in netloc:
@@ -43,6 +46,7 @@ def get_page_scraper(params):
 
 class Scraper:
     def scraper(self, params):
+        logger.info(f"params: {params}")
         response = get_page_scraper(params)
         if not response:
             parsed_url = urlparse(params["url"])
