@@ -11,6 +11,7 @@ from app.models.setting import Setting
 from app.lib.logger import logger
 from app.lib.response import Response
 from app.models.request_log import RequestLog
+from app.services.setting import SettingService
 import const
 
 from app.services.admin_notification import AdminNotificationService
@@ -55,10 +56,8 @@ class APIUpdateSetting(Resource):
             settings_dict = {
                 setting.setting_name: setting.setting_value for setting in settings
             }
-            
-            for key in redis_client.scan_iter(f"{const.REDIS_KEY_SETTING_HOME}:*"):
-                redis_client.delete(key)
-
+            SettingService.clear_settings_cache()
+            SettingService.get_settings() 
             return Response(
                 data=settings_dict,
                 message="Update setting thanh cong",

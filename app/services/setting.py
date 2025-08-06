@@ -26,3 +26,4 @@ class SettingService:
     @staticmethod
     def clear_settings_cache():
         redis_client.delete(const.REDIS_KEY_ALL_SETTINGS)
+        redis_client.delete(const.REDIS_KEY_SETTING_HOME)
