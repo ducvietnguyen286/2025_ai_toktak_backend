@@ -8,8 +8,8 @@ flask run --port=6001 --host=0.0.0.0
 
 git pull origin main && sudo systemctl restart toktak.service
 
-/// Ubunut 
-python3.9 -m venv venv
+/// Ubunut 82
+python3.10 -m venv venv
 source venv/bin/activate
 
 
