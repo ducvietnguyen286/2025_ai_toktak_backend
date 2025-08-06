@@ -381,6 +381,7 @@ def start_scheduler(app):
     twelve_oh_one_trigger = CronTrigger(hour=0, minute=1, timezone=kst)
 
     every_3_hours_trigger = CronTrigger(hour="*/3", minute=0, timezone=kst)
+    eleven_pm_kst_trigger = CronTrigger(hour=23, minute=0, timezone=kst)
 
     scheduler.add_job(
         func=lambda: cleanup_pending_batches(app),
