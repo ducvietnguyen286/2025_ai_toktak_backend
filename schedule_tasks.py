@@ -47,7 +47,7 @@ from app.models.video_create import VideoCreate
 from sqlalchemy import or_, text
 
 from app.third_parties.telegram import send_slack_message
-
+from app.lib.logger import log_critical_database, log_critical_emergency_kill, log_critical_infrastructure
 
 UPLOAD_BASE_PATH = "uploads"
 VOICE_BASE_PATH = "static/voice/gtts_voice"
@@ -274,89 +274,86 @@ def auto_extend_payment_task(app):
 
 
 def auto_kill_long_connections(app):
-    """
-    Tự động kill các connections > 60 giây
-    Chạy mỗi phút để duy trì connection pool sạch sẽ
-    """
+    """Tự động kill các connections > 60 giây với critical monitoring"""
     app.logger.info("🔪 Start auto_kill_long_connections...")
 
     with app.app_context():
         killed_count = 0
         try:
-            # Get all sleep connections
-            result = db.session.execute(text("SHOW FULL PROCESSLIST")).fetchall()
-
-            sleep_connections = []
-            for row in result:
-                if len(row) >= 5 and row[4] == "Sleep":
-                    connection_info = {
-                        "id": row[0],
-                        "user": row[1],
-                        "host": row[2],
-                        "db": row[3],
-                        "command": row[4],
-                        "time": row[5],
-                        "state": row[6] if len(row) > 6 else "",
-                        "info": row[7] if len(row) > 7 else "",
-                    }
-                    sleep_connections.append(connection_info)
-
-            app.logger.info(f"📊 Found {len(sleep_connections)} sleep connections")
-
-            # Kill connections > 100 seconds
-            threshold_seconds = 100
-            for conn in sleep_connections:
-                if conn["time"] > threshold_seconds and conn["user"] == "toktak":
-                    try:
-                        db.session.execute(text(f"KILL {conn['id']}"))
-                        app.logger.info(
-                            f"🔪 Killed connection ID {conn['id']} (Sleep {conn['time']}s) from {conn['host']}"
-                        )
-                        killed_count += 1
-                    except Exception as e:
-                        app.logger.error(
-                            f"❌ Failed to kill connection {conn['id']}: {e}"
-                        )
-
-            # Get stats after cleanup
+            # Get connection stats
             current_result = db.session.execute(
                 text("SHOW STATUS LIKE 'Threads_connected'")
             ).fetchone()
             current_connections = int(current_result[1]) if current_result else 0
+            
+            max_result = db.session.execute(
+                text("SHOW VARIABLES LIKE 'max_connections'")
+            ).fetchone()
+            max_connections = int(max_result[1]) if max_result else 200
 
-            sleep_after = len(
-                [
-                    conn
-                    for conn in sleep_connections
-                    if conn["time"] <= threshold_seconds
-                ]
-            )
-
-            if killed_count > 0:
-                app.logger.info(
-                    f"✅ Killed {killed_count} long connections. Current: {current_connections}, Sleep remaining: {sleep_after}"
+            # ⚠️ CRITICAL: Check connection pool exhaustion
+            usage_percent = (current_connections / max_connections) * 100
+            if usage_percent > 35:
+                log_critical_database(
+                    "Database connection pool near exhaustion - immediate attention required", 
+                    current_connections, 
+                    max_connections
                 )
 
-                # Alert if still too many connections
-                if sleep_after > 50:
-                    alert_msg = (
-                        f"⚠️ HIGH SLEEP CONNECTIONS ALERT!\n"
-                        f"Killed: {killed_count} connections\n"
-                        f"Sleep remaining: {sleep_after}\n"
-                        f"Current total: {current_connections}\n"
-                        f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                    )
-                    app.logger.warning(alert_msg)
-                    send_slack_message(alert_msg)
-            else:
-                app.logger.info(
-                    f"✅ No long connections to kill. Current: {current_connections}, Sleep: {len(sleep_connections)}"
+            # Get sleep connections
+            result = db.session.execute(text("SHOW FULL PROCESSLIST")).fetchall()
+            sleep_connections = [r for r in result if len(r) >= 5 and r[4] == "Sleep"]
+            
+            app.logger.info(f"📊 Found {len(sleep_connections)} sleep connections")
+
+            # ⚠️ CRITICAL: Too many sleep connections  
+            if len(sleep_connections) > 100:
+                log_critical_infrastructure(
+                    f"Excessive sleep connections detected: {len(sleep_connections)} connections - system stability at risk", 
+                    "DATABASE", 
+                    send_alert=True
                 )
+
+            # Kill long connections
+            threshold_seconds = 100
+            for conn in sleep_connections:
+                if conn[5] > threshold_seconds and conn[1] == "toktak":
+                    try:
+                        db.session.execute(text(f"KILL {conn[0]}"))
+                        app.logger.info(f"🔪 Killed connection ID {conn[0]} (Sleep {conn[5]}s)")
+                        killed_count += 1
+                    except Exception as e:
+                        app.logger.error(f"❌ Failed to kill connection {conn[0]}: {e}")
+
+            # ⚠️ CRITICAL: Emergency mass kill
+            if killed_count > 50:
+                log_critical_emergency_kill(killed_count, current_connections)
+            elif killed_count > 0:
+                app.logger.info(f"✅ Killed {killed_count} long connections. Current: {current_connections}")
+
+            # Alert if still high after cleanup
+            remaining_sleep = len(sleep_connections) - killed_count
+            if remaining_sleep > 50:
+                alert_msg = (
+                    f"⚠️ HIGH SLEEP CONNECTIONS ALERT!\n"
+                    f"Killed: {killed_count} connections\n"
+                    f"Sleep remaining: {remaining_sleep}\n"
+                    f"Current total: {current_connections}\n"
+                    f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                )
+                app.logger.warning(alert_msg)
+                send_slack_message(alert_msg)
 
         except Exception as e:
+            # ⚠️ CRITICAL: Monitor system failure
+            log_critical_infrastructure(
+                f"Connection monitoring system failed: {str(e)} - manual intervention required", 
+                "MONITOR", 
+                send_alert=True
+            )
             app.logger.error(f"❌ Error in auto_kill_long_connections: {str(e)}")
         finally:
-            # CRITICAL: Force cleanup session to prevent connection leaks
+            # Force cleanup session
             try:
                 if db.session.is_active:
                     db.session.rollback()
