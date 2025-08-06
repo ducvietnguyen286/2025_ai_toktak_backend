@@ -11,6 +11,7 @@ from werkzeug.exceptions import default_exceptions
 
 load_dotenv(override=False)
 
+from app.lib.logger import setup_consumer_logging
 from app.lib.logger import log_facebook_message
 from app.errors.handler import api_error_handler
 from app.extensions import redis_client, db
@@ -27,8 +28,7 @@ RABBITMQ_QUEUE_FACEBOOK = os.environ.get("RABBITMQ_QUEUE_FACEBOOK") or "hello"
 
 
 def __config_logging(app):
-    app.logger.setLevel(logging.DEBUG)
-    app.logger.info("Start FACEBOOK Consumer...")
+    return setup_consumer_logging(app, "FACEBOOK")
 
 
 def __init_app(app):
