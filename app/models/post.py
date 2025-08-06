@@ -13,7 +13,7 @@ class Post(db.Model, BaseModel):
     thumbnail = db.Column(db.String(500), nullable=False, default="")
     captions = db.Column(db.Text, nullable=True)
     images = db.Column(db.Text, nullable=True)
-    images_s3 = db.Column(db.Text, nullable=True)
+    images_s3 = db.Column(db.Text, nullable=True, default="[]")
     title = db.Column(db.String(500), nullable=False, default="")
     subtitle = db.Column(db.String(500), nullable=False, default="")
     content = db.Column(db.Text, nullable=False, default="")

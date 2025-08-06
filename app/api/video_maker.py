@@ -333,74 +333,86 @@ def download_video(video_url, batch_id, is_s3=0, full_date_create_s3=""):
     # Domain hiện tại
     current_domain = os.environ.get("CURRENT_DOMAIN", "http://localhost:5000")
     IS_MOUNT = int(os.environ.get("IS_MOUNT", 0))
+    IS_DOWLOAD_VIDEO = int(os.environ.get("IS_DOWLOAD_VIDEO", 0))
 
     S3_PATCH_FOLDER = os.getenv("S3_PATCH_FOLDER", "")
+    file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
+    file_download = f"{current_domain}/{file_path}"
 
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            headers = {"User-Agent": "Mozilla/5.0"}
-            response = requests.get(
-                video_url, stream=True, headers=headers, timeout=TIMEOUT
-            )
-            response.raise_for_status()
+    if IS_DOWLOAD_VIDEO == 1:
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                headers = {"User-Agent": "Mozilla/5.0"}
+                response = requests.get(
+                    video_url, stream=True, headers=headers, timeout=TIMEOUT
+                )
+                response.raise_for_status()
 
-            content_type = response.headers.get("Content-Type", "")
-            if "video" not in content_type:
+                content_type = response.headers.get("Content-Type", "")
+                if "video" not in content_type:
+                    log_webhook_message(
+                        f"❌ URL không phải (lần thử {attempt}/{MAX_RETRIES} video: batch_id: {batch_id} : {video_url} (Content-Type: {content_type})"
+                    )
+                    return None
+
+                with open(video_filename, "wb") as video_file:
+                    for chunk in response.iter_content(chunk_size=16384):
+                        if chunk:
+                            video_file.write(chunk)
+
+                # Kiểm tra kích thước file
+                size = os.path.getsize(video_filename)
+                if size < 1024:  # <1KB
+                    log_webhook_message(
+                        f"⚠️ Video tải về quá nhỏ ({size} bytes), có thể lỗi: batch_id: {batch_id} : {video_filename}"
+                    )
+                    return None
+
+                # Thành công
                 log_webhook_message(
-                    f"❌ URL không phải (lần thử {attempt}/{MAX_RETRIES} video: batch_id: {batch_id} : {video_url} (Content-Type: {content_type})"
+                    f"✅ Đã tải file video (lần thử {attempt}/{MAX_RETRIES} batch_id: {batch_id} : {video_filename}"
                 )
-                return None
+                file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
+                file_download = f"{current_domain}/{file_path}"
+                if IS_MOUNT == 1:
+                    video_filename = (
+                        Path(video_filename).as_posix().replace("static/voice", "/mnt")
+                    )
 
-            with open(video_filename, "wb") as video_file:
-                for chunk in response.iter_content(chunk_size=16384):
-                    if chunk:
-                        video_file.write(chunk)
+                if is_s3 == 1:
+                    video_filename = f"{S3_PATCH_FOLDER}/{bucket}/{full_date_create_s3}/short_video_{batch_id}.mp4"
+                return {
+                    "file_path": video_filename,
+                    "file_download": file_download,
+                }
 
-            # Kiểm tra kích thước file
-            size = os.path.getsize(video_filename)
-            if size < 1024:  # <1KB
+            except requests.exceptions.Timeout:
                 log_webhook_message(
-                    f"⚠️ Video tải về quá nhỏ ({size} bytes), có thể lỗi: batch_id: {batch_id} : {video_filename}"
+                    f"⚠️ Timeout khi tải video batch_id: {batch_id} (lần thử {attempt}/{MAX_RETRIES}): {video_url}"
                 )
-                return None
-
-            # Thành công
-            log_webhook_message(
-                f"✅ Đã tải file video (lần thử {attempt}/{MAX_RETRIES} batch_id: {batch_id} : {video_filename}"
-            )
-            file_path = os.path.relpath(video_filename, "static").replace("\\", "/")
-            file_download = f"{current_domain}/{file_path}"
-            if IS_MOUNT == 1:
-                video_filename = (
-                    Path(video_filename).as_posix().replace("static/voice", "/mnt")
+            except requests.exceptions.ConnectionError as e:
+                log_webhook_message(
+                    f"🚫 Không kết nối được tới máy chủ (lần thử {attempt}/{MAX_RETRIES} batch_id: {batch_id} : {video_url} - Error: {e}"
+                )
+            except requests.exceptions.RequestException as e:
+                log_webhook_message(
+                    f"⚠️ Lỗi khi tải video batch_id: {batch_id} (lần thử {attempt}/{MAX_RETRIES}): {video_url} - Error: {e}"
+                )
+            except Exception as e:
+                log_webhook_message(
+                    f"❌ Lỗi hệ thống khi tải video batch_id: {batch_id} : {e}"
                 )
 
-            if is_s3 == 1:
-                video_filename = f"{S3_PATCH_FOLDER}/{bucket}/{full_date_create_s3}/short_video_{batch_id}.mp4"
-            return {
-                "file_path": video_filename,
-                "file_download": file_download,
-            }
+            if attempt < MAX_RETRIES:
+                sleep(RETRY_DELAY)
+    else:
+        if is_s3 == 1:
+            video_filename = f"{S3_PATCH_FOLDER}/{bucket}/{full_date_create_s3}/short_video_{batch_id}.mp4"
 
-        except requests.exceptions.Timeout:
-            log_webhook_message(
-                f"⚠️ Timeout khi tải video batch_id: {batch_id} (lần thử {attempt}/{MAX_RETRIES}): {video_url}"
-            )
-        except requests.exceptions.ConnectionError as e:
-            log_webhook_message(
-                f"🚫 Không kết nối được tới máy chủ (lần thử {attempt}/{MAX_RETRIES} batch_id: {batch_id} : {video_url} - Error: {e}"
-            )
-        except requests.exceptions.RequestException as e:
-            log_webhook_message(
-                f"⚠️ Lỗi khi tải video batch_id: {batch_id} (lần thử {attempt}/{MAX_RETRIES}): {video_url} - Error: {e}"
-            )
-        except Exception as e:
-            log_webhook_message(
-                f"❌ Lỗi hệ thống khi tải video batch_id: {batch_id} : {e}"
-            )
-
-        if attempt < MAX_RETRIES:
-            sleep(RETRY_DELAY)
+    return {
+        "file_path": video_filename,
+        "file_download": file_download,
+    }
 
     log_webhook_message(
         f"❌ Tải video thất bại batch_id: {batch_id} sau {MAX_RETRIES} lần: {video_url}"
