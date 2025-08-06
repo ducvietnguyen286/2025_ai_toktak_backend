@@ -11,8 +11,6 @@ import pillow_avif
 from PIL import Image, ImageDraw, ImageFont
 import requests
 import cv2
-import boto3
-from botocore.exceptions import NoCredentialsError
 
 from app.services.setting import SettingService
 
@@ -28,6 +26,7 @@ from app.lib.logger import logger
 # from app.extensions import sam_model
 
 from app.lib.header import generate_desktop_user_agent
+from app.lib.s3util import S3Utils
 from app.services.ocr_result import OCRResultService
 from app.third_parties.google import GoogleVision
 from gevent import sleep
@@ -886,7 +885,7 @@ class ImageMaker:
         if is_s3 == 1:
             s3_date_create = time.strftime("%Y/%m/%d")
             s3_key = f"{s3_date_create}/{batch_id}/{image_name}"
-            image_s3_url = ImageMaker.upload_local_file_to_s3(image_path, s3_key)
+            image_s3_url = S3Utils.upload_local_file_to_s3(image_path, s3_key)
             logger.info(f"Uploaded to S3: {image_s3_url}")
 
         file_size = os.path.getsize(image_path)
@@ -956,7 +955,7 @@ class ImageMaker:
         if is_s3 == 1:
             s3_date_create = time.strftime("%Y/%m/%d")
             s3_key = f"{s3_date_create}/{batch_id}/{image_name}"
-            image_s3_url = ImageMaker.upload_local_file_to_s3(image_path, s3_key)
+            image_s3_url = S3Utils.upload_local_file_to_s3(image_path, s3_key)
             logger.info(f"Uploaded to S3: {image_s3_url}")
 
         image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
@@ -1025,7 +1024,7 @@ class ImageMaker:
         if is_s3 == 1:
             s3_date_create = time.strftime("%Y/%m/%d")
             s3_key = f"{s3_date_create}/{batch_id}/{image_name}"
-            image_s3_url = ImageMaker.upload_local_file_to_s3(image_path, s3_key)
+            image_s3_url = S3Utils.upload_local_file_to_s3(image_path, s3_key)
             logger.info(f"Uploaded to S3: {image_s3_url}")
 
         image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{new_name}"
@@ -1139,7 +1138,7 @@ class ImageMaker:
         if is_s3 == 1:
             s3_date_create = time.strftime("%Y/%m/%d")
             s3_key = f"{s3_date_create}/{batch_id}/{image_name}"
-            image_s3_url = ImageMaker.upload_local_file_to_s3(image_path, s3_key)
+            image_s3_url = S3Utils.upload_local_file_to_s3(image_path, s3_key)
             logger.info(f"Uploaded to S3: {image_s3_url}")
 
         image_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{image_name}"
@@ -1393,33 +1392,6 @@ class ImageMaker:
         return image_path
 
     @staticmethod
-    def upload_local_file_to_s3(local_path, s3_key):
-        try:
-            if not os.path.exists(local_path):
-                logger.warning(f"File not found: {local_path}")
-                return ""
-
-            session = boto3.session.Session(
-                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-                region_name=os.getenv("AWS_DEFAULT_REGION", "ap-northeast-2"),
-            )
-            s3 = session.resource("s3")
-            bucket = os.getenv("AWS_BUCKET")
-
-            with open(local_path, "rb") as f:
-                s3.Bucket(bucket).put_object(
-                    Key=s3_key, Body=f, ContentType="image/jpeg"
-                )
-
-            return f"https://{bucket}.s3.{os.getenv('AWS_DEFAULT_REGION')}.amazonaws.com/{s3_key}"
-        except NoCredentialsError:
-            logger.error("❌ S3 credentials not found.")
-        except Exception as e:
-            logger.error(f"❌ Error uploading to S3: {e}")
-        return ""
-
-    @staticmethod
     def request_content_image(image_url):
         try:
             user_agent = generate_desktop_user_agent()
@@ -1498,7 +1470,7 @@ class ImageMaker:
             if is_s3 == 1:
                 s3_date_create = time.strftime("%Y/%m/%d")
                 s3_key = f"{s3_date_create}/{batch_id}/{image_name}"
-                image_s3_url = ImageMaker.upload_local_file_to_s3(image_path, s3_key)
+                image_s3_url = S3Utils.upload_local_file_to_s3(image_path, s3_key)
                 logger.info(f"Uploaded to S3: {image_s3_url}")
             return image_url ,image_s3_url
         except Exception as e:
