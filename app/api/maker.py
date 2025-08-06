@@ -639,6 +639,17 @@ class APIBatchs(Resource):
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
         batches = BatchService.get_all_batches(page, per_page, user_id)
+
+        ids = [batch.id for batch in batches["items"]]
+
+        posts = PostService.post_by_batch_ids(ids)
+        post_dict = {}
+        for post in posts:
+            post_dict.setdefault(post["batch_id"], []).append(post)
+
+        for batch in batches["items"]:
+            batch.posts = post_dict.get(batch.id, [])
+
         return {
             "status": True,
             "message": "Success",
@@ -646,7 +657,10 @@ class APIBatchs(Resource):
             "page": batches["page"],
             "per_page": batches["per_page"],
             "total_pages": batches["pages"],
-            "data": [batch_detail.to_dict() for batch_detail in batches["items"]],
+            "data": [
+                {**batch.to_dict(), "posts": batch.posts}  # đã được gán ở bước trên
+                for batch in batches["items"]
+            ],
         }, 200
 
 

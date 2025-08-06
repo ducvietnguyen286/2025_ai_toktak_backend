@@ -528,3 +528,15 @@ class PostService:
         else:
             # Không có post nào, tuỳ chọn: trả về 0 hoặc None
             return 0
+
+    @staticmethod
+    def post_by_batch_ids(ids):
+        if not ids:
+            return []
+
+        posts = select_with_filter(
+            Post,
+            order_by=[Post.id.asc()],
+            filters=[Post.batch_id.in_(ids)],
+        )
+        return [post._to_json() for post in posts]
