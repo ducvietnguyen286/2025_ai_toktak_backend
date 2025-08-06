@@ -275,23 +275,15 @@ def log_critical_infrastructure(message, component="SYSTEM", send_alert=False):
     
     if send_alert:
         try:
-            from app.third_parties.telegram import send_slack_message, send_telegram_message
-            
+            from app.third_parties.telegram import send_slack_message
             current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             alert_text = f"🚨 CRITICAL SYSTEM ALERT\n\n{critical_msg}\n\nTime: {current_time}\nServer: TokTak Production"
-            
             # Gửi Slack alert
             slack_success = send_slack_message(alert_text)
             if slack_success:
                 logger.info("✅ Critical alert sent to Slack successfully")
             else:
                 logger.warning("⚠️ Failed to send Slack alert")
-            
-            # Gửi Telegram alert
-            telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
-            if telegram_token:
-                send_telegram_message(alert_text)
-                logger.info("✅ Critical alert sent to Telegram successfully")
                 
         except Exception as e:
             logger.error(f"❌ Failed to send critical alert: {e}")
