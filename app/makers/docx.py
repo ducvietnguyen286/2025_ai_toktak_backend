@@ -14,7 +14,10 @@ from app.lib.logger import logger
 from app.makers.images import ImageMaker
 import zipfile
 
+from app.services.setting import SettingService
+
 from app.lib.header import generate_desktop_user_agent
+from app.lib.s3util import S3Utils
 
 date_create = datetime.datetime.now().strftime("%Y_%m_%d")
 UPLOAD_FOLDER = os.path.join(os.getcwd(), f"uploads/{date_create}")
@@ -81,8 +84,16 @@ class DocxMaker:
         timestamp = int(time.time())
         unique_id = uuid.uuid4().hex
         file_name = f"{timestamp}_{unique_id}"
-        txt_path = f"{UPLOAD_FOLDER}/{batch_id}/{file_name}.txt"
-        zip_path = f"{UPLOAD_FOLDER}/{batch_id}/{file_name}.zip"
+
+        bucket = os.getenv("AWS_BUCKET")
+        s3_date_create = time.strftime("%Y/%m/%d")
+        save_dir = os.path.join(
+            "static", "voice", "gtts_voice", bucket, s3_date_create, str(batch_id)
+        )
+        os.makedirs(save_dir, exist_ok=True)
+
+        txt_path = f"{save_dir}/{file_name}.txt"
+        zip_path = f"{save_dir}/{file_name}.zip"
         os.makedirs(os.path.dirname(txt_path), exist_ok=True)
         txt_lines = []
 
@@ -141,8 +152,20 @@ class DocxMaker:
         except Exception as e:
             logger.error(f"⚠️ Lỗi khi xoá file sau khi zip: {e}")
 
-        docx_url = f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}.zip"
         file_size = os.path.getsize(zip_path)
+        setting_system = SettingService.get_settings()
+        is_s3 = int(setting_system["IS_S3_DRIVER"])
+        image_s3_url = ""
+        if is_s3 == 1:
+            s3_date_create = time.strftime("%Y/%m/%d")
+            s3_key = f"{s3_date_create}/{batch_id}/{file_name}.zip"
+            docx_url = S3Utils.upload_local_file_to_s3(zip_path, s3_key)
+            logger.info(f"Uploaded to S3: {image_s3_url}")
+        else:
+            docx_url = (
+                f"{CURRENT_DOMAIN}/files/{date_create}/{batch_id}/{file_name}.zip"
+            )
+
         return {
             "zip_path": zip_path,
             "file_size": file_size,
