@@ -28,20 +28,6 @@ ALLOWED_IPS = {"118.70.171.129", "218.154.54.97"}
 # Endpoint không cần kiểm tra IP
 EXCLUDED_ENDPOINTS = {"/api/v1/setting/get_public_config"}
 
-
-@application.route("/files/<path:filename>")
-def get_file(filename):
-    try:
-        return send_from_directory(UPLOAD_FOLDER, filename)
-    except FileNotFoundError:
-        abort(404)
-
-
-@application.route("/voice/<path:filename>")
-def serve_static(filename):
-    return send_from_directory(VOICE_FOLDER, filename)
-
-
 @application.route("/", methods=["GET"])
 def index():
     headers = dict(request.headers)
