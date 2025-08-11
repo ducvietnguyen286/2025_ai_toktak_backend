@@ -7,7 +7,7 @@ import os
 
 from dotenv import load_dotenv
 from flask import app, request , send_from_directory , abort
-
+from app.lib.logger import log
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path=dotenv_path, override=True)
@@ -33,6 +33,11 @@ def index():
     headers = dict(request.headers)
     params = dict(request.args)
     is_show_headers = params.get("show_header", "false").lower() == "true"
+
+    # Test log: log truy cập vào trang chủ, có thể truyền batch_id nếu muốn
+    with log.contextualize(batch_id=params.get("batch_id", "NO_BATCH")):
+        log.info("Truy cập endpoint / với params: {}", params)
+
     if is_show_headers:
         return {
             "message": "Welcome to the Flask API",
